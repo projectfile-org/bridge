@@ -1,0 +1,48 @@
+{{.Marker}}
+# Edit projectfile.toml [org.projectfile.funding] to customise this file —
+# direct edits will be overwritten on the next `pf-cli generate FUNDING.yml`.
+{{- with .GitHub}}
+github:
+{{- range .}}
+  - {{.}}
+{{- end}}
+{{- end}}
+{{- with .Patreon}}
+patreon: {{.}}
+{{- end}}
+{{- with .KoFi}}
+ko_fi: {{.}}
+{{- end}}
+{{- with .Liberapay}}
+liberapay: {{.}}
+{{- end}}
+{{- with .Tidelift}}
+tidelift: {{.}}
+{{- end}}
+{{- with .CommunityBridge}}
+community_bridge: {{.}}
+{{- end}}
+{{- with .IssueHunt}}
+issuehunt: {{.}}
+{{- end}}
+{{- with .OpenCollective}}
+open_collective: {{.}}
+{{- end}}
+{{- with .LFXCrowdfunding}}
+lfx_crowdfunding: {{.}}
+{{- end}}
+{{- with .Polar}}
+polar: {{.}}
+{{- end}}
+{{- with .BuyMeACoffee}}
+buy_me_a_coffee: {{.}}
+{{- end}}
+{{- with .ThanksDev}}
+thanks_dev: {{.}}
+{{- end}}
+{{- with .Custom}}
+custom:
+{{- range .}}
+  - {{.}}
+{{- end}}
+{{- end}}

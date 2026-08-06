@@ -1,0 +1,26 @@
+{{- with readmeSection "quick-start"}}
+## {{.Title}}
+{{- range $g := .Groups}}
+{{- with $g.Prefix}}
+
+{{.}}
+{{- end}}
+{{- with $g.Commands}}
+
+```{{$g.Syntax}}
+{{range .}}{{.}}
+{{end -}}
+```
+{{- end}}
+{{- with $g.Postfix}}
+
+{{.}}
+{{- end}}
+{{- end}}
+{{- else}}
+{{- with docLink "QUICKSTART.md" (t "quick-start.title")}}
+## {{.Label}}
+
+{{printf (t "quick-start.body") .Filename}}
+{{- end}}
+{{- end}}

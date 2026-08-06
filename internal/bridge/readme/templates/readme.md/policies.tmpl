@@ -1,0 +1,5 @@
+{{- with staticLinks}}
+## {{t "policies.title"}}
+
+{{range .}}- [{{.Label}}]({{.Filename}})
+{{end}}{{end}}

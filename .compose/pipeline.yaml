@@ -1,0 +1,24 @@
+# SPDX-FileCopyrightText: 2026 Damián Búho <damian.buho@proton.me>
+#
+# SPDX-License-Identifier: MIT
+
+---
+name: dev-projectfile-bridge
+services:
+  projectfile-bridge:
+    container_name: ${M6E_CONTAINER_INSTANCE}
+    image: ${M6E_IMAGE_FULLNAME}
+    # Preset: large (2.0c, 4g) — CI build/test container. Bounded so it can't starve the shared host.
+    deploy:
+      resources:
+        limits:
+          cpus: "2.0"
+          memory: 4g
+    networks:
+      - dev-projectfile-bridge-network
+    environment:
+      - LANG
+      - TZ
+networks:
+  dev-projectfile-bridge-network:
+    name: dev-projectfile-bridge-network

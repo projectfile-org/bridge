@@ -1,0 +1,19 @@
+This project is licensed under the SPDX expression:
+
+ {{.Expression}}
+
+{{if eq .Conjunction "AND"}}
+This is a conjunctive expression — you must comply with the terms of ALL
+of the licenses listed below simultaneously. The full text of each licence
+is in a sibling file:
+{{else}}
+This is a disjunctive expression — you may use, modify, and redistribute the
+project under the terms of any one of the licenses listed below. The full
+text of each licence is in a sibling file:
+{{end}}
+
+{{range .Terms}} - LICENSES/{{.}}.txt
+{{end}}
+{{if .Holders}}Copyright (c) {{.Year}} {{range $i, $h := .Holders}}{{if $i}}, {{end}}{{$h}}{{end}}
+{{else}}Copyright (c) {{.Year}}
+{{end}}

@@ -1,0 +1,66 @@
+{{.Marker}}
+
+# Declaración de Diversidad, Equidad e Inclusión del Proyecto
+
+{{.ProjectName}}
+
+{{if .Scope}}Alcance de este archivo DEI.md: {{.Scope}}.{{else}}Alcance de este archivo DEI.md: este proyecto y sus espacios comunitarios.{{end}}
+
+Nuestro proyecto prioriza y reflexiona sobre la DEI mediante una revisión periódica de las políticas y el desempeño del proyecto. Esta reflexión se documenta en el siguiente archivo DEI.md basándose en métricas DEI específicas del [proyecto CHAOSS](https://chaoss.community).
+
+### [Acceso al proyecto](https://chaoss.community/?p=4953)
+
+El acceso al proyecto se aborda en nuestro proyecto a través de diversos esfuerzos. Con estos esfuerzos, pretendemos favorecer el acceso para todas las personas. Los esfuerzos específicos en nuestro proyecto incluyen:
+
+{{if .ProjectAccess}}{{range .ProjectAccess}}- {{.}}
+{{end}}{{else}}- *Ejemplo — edita estos puntos para describir cómo tu proyecto aborda el acceso.*
+- Todas las reuniones virtuales se transcriben y las personas pueden unirse por ordenador o teléfono. No se requiere vídeo para participar.
+- Las reuniones virtuales tienen en cuenta las zonas horarias globales para que miembros de distintas regiones puedan participar.
+- Se proporcionan servicios de traducción para la documentación del proyecto cuando sea factible.
+- Todas las áreas del proyecto están abiertas a contribuciones de la comunidad.
+{{end}}
+### [Transparencia en la comunicación](https://chaoss.community/?p=4957)
+
+La transparencia en la comunicación se aborda en nuestro proyecto a través de diversos esfuerzos. Con estos esfuerzos, pretendemos favorecer la transparencia para todas las personas. Los esfuerzos específicos en nuestro proyecto incluyen:
+
+{{if .CommTransparency}}{{range .CommTransparency}}- {{.}}
+{{end}}{{else}}- *Ejemplo — edita estos puntos para describir cómo tu proyecto aborda la transparencia en la comunicación.*
+- Toda la documentación del proyecto está disponible públicamente.
+- La documentación pertinente se comparte al inicio de cada reunión del grupo de trabajo.
+- Las decisiones que afectan al proyecto se comparten entre los grupos de trabajo y canales para que las personas puedan participar en el proceso.
+- Cualquier información que no pueda hacerse pública se marca como interna y se lista por su nombre.
+{{end}}
+### [Experiencia de las personas recién llegadas](https://chaoss.community/?p=4891)
+
+La experiencia de las personas recién llegadas se aborda en nuestro proyecto a través de diversos esfuerzos. Con estos esfuerzos, pretendemos favorecer la experiencia de incorporación para todas las personas nuevas. Los esfuerzos específicos en nuestro proyecto incluyen:
+
+{{if .NewcomerExperiences}}{{range .NewcomerExperiences}}- {{.}}
+{{end}}{{else}}- *Ejemplo — edita estos puntos para describir cómo tu proyecto aborda la experiencia de las personas recién llegadas.*
+- Se celebran eventos y horas de atención para personas recién llegadas de forma periódica, abiertos a quien tenga interés.
+- Existe una guía de inicio rápido disponible a través de la navegación del proyecto.
+- Las personas contribuyentes por primera vez se identifican para que quienes revisan puedan asistirlas mejor.
+- La documentación para personas contribuyentes incluye un recorrido para realizar la primera contribución.
+{{end}}
+### [Liderazgo inclusivo](https://chaoss.community/?p=3522)
+
+El liderazgo inclusivo se aborda en nuestro proyecto a través de diversos esfuerzos. Con estos esfuerzos, pretendemos favorecer oportunidades de liderazgo para las personas del proyecto que tengan interés. Los esfuerzos específicos en nuestro proyecto incluyen:
+
+{{if .InclusiveLeadership}}{{range .InclusiveLeadership}}- {{.}}
+{{end}}{{else}}- *Ejemplo — edita estos puntos para describir cómo tu proyecto aborda el liderazgo inclusivo.*
+- Nuestro documento de gobernanza se revisa periódicamente para identificar los roles que guían la dirección del proyecto.
+- Las reuniones del grupo de trabajo ofrecen la oportunidad de ser lideradas por distintas personas en cada reunión.
+- El proyecto garantiza una candidatura diversa al seleccionar a nuevas personas mantenedoras.
+- Una o más personas mantenedoras participan en reuniones o eventos de grupos de DEI.
+{{end}}
+{{if .HasOther}}
+### Otros esfuerzos
+
+Nuestro proyecto realiza otros esfuerzos relacionados con la DEI o tiene planes al respecto que no se mencionan arriba.
+
+{{range .OtherEfforts}}- {{.}}
+{{end}}{{end}}
+Reconocemos que la inclusión del archivo DEI.md y la reflexión proporcionada sobre las métricas DEI específicas no garantizan la seguridad ni la inclusión de la comunidad. La inclusión del archivo DEI.md señala que, como proyecto, estamos comprometidos a centrar la DEI en nuestro proyecto y a revisar y reflexionar periódicamente sobre nuestras prácticas DEI.
+
+Si consideras que el archivo DEI.md no aborda adecuadamente las preocupaciones que tienes sobre la seguridad y la inclusión de la comunidad, haznoslo saber.{{if .ContactEmail}} Puedes informar de tus preocupaciones a nuestro equipo del Código de Conducta en **<{{.ContactEmail}}>**.{{else}} Puedes informar de tus preocupaciones a nuestro equipo del Código de Conducta — *[indica un enlace o dirección de contacto]*.{{end}}
+
+Última revisión: {{if .LastReviewed}}{{.LastReviewed}}{{else}}[Indica la fecha]{{end}}

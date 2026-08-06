@@ -1,0 +1,90 @@
+---
+# SPDX-FileCopyrightText: 2026 Damián Búho <damian.buho@proton.me>
+#
+# SPDX-License-Identifier: MIT
+
+# The canonical readme message catalog. Every other messages/<lang>.yaml is a
+# translation of exactly these keys — a key missing there falls back to here.
+#
+# A `%s` is a Markdown link target the bridge substitutes at render time; keep
+# exactly one per body string. Titles double as the link text in their own
+# block, so they are repeated inside the body sentence rather than interpolated:
+# a language that declines nouns needs both forms independently.
+
+# Blocks
+logo.alt: logo
+screenshots.title: Screenshots
+features.title: Features
+features.body: See [Features](%s) for the full list.
+benchmarks.title: Benchmarks
+benchmarks.body: See [Benchmarks](%s) for performance numbers.
+quick-start.title: Quick Start
+quick-start.body: See [Quick Start](%s) to get going in five minutes.
+requirements.title: Requirements
+requirements.body: See [Requirements](%s) for prerequisites.
+installation.title: Installation
+installation.body: See [Installation](%s) for setup steps.
+usage.title: Usage
+usage.body: See [Usage](%s) for examples.
+building.title: Building
+building.goals: "Pipeline entry points:"
+documentation.title: Documentation
+faq.title: FAQ
+faq.body: See [FAQ](%s) for common questions.
+roadmap.title: Roadmap
+roadmap.body: See the [Roadmap](%s) for what is planned next.
+configuration.title: Configuration
+configuration.body: See [Configuration](%s) for every setting.
+policies.title: Policies
+links.title: Links
+funding.title: Funding
+funding.body: See [Funding](%s) if you’d like to support this project.
+license.title: License
+license.body: This project is licensed under %s — see the [LICENSE](LICENSE) file for details.
+
+# Artifacts block — what the project ships. The kind key is DERIVED from the
+# declared `kind`, so a project inventing one only needs a line here (and falls
+# back to the bare kind string until it gets one).
+artifacts.title: What this provides
+artifacts.ports: listens on
+artifact.kind.image: Container image
+artifact.kind.binary: Executable
+artifact.kind.package: Package
+artifact.kind.service: Service
+artifact.kind.website: Website
+artifact.kind.archive: Archive
+artifact.kind.module: Module
+
+# Policies block — key is the health file’s basename, lower-cased.
+policy.contributing: How to contribute
+policy.security: Security policy
+policy.support: Getting support
+policy.code-of-conduct: Code of Conduct
+
+# Building block — key is the probed file’s role.
+build.build: How to build
+build.makefile: Makefile reference
+
+# Links block — headings, then one label per link type.
+link.group.project: Project
+link.group.community: Community
+link.group.security: Security
+link.group.other: Other
+link.type.homepage: Homepage
+link.type.source-code: Source Code
+link.type.bugs: Issue tracker
+link.type.documentation: Documentation
+link.type.changelog: Changelog
+link.type.wiki: Wiki
+link.type.faq: FAQ
+link.type.package-registry: Package Registry
+link.type.chat: Chat
+link.type.forum: Discussions
+link.type.contact: Contact
+link.type.enforcement: Code of Conduct Enforcement
+link.type.first-contribution: First Contribution Guide
+link.type.donation: Donate
+link.type.translate: Help Translate
+link.type.security-policy: Security Policy
+link.type.security-report: Report a Vulnerability
+link.type.bug-bounty: Bug Bounty

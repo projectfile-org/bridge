@@ -1,0 +1,26 @@
+{{- with readmeSection "installation"}}
+## {{.Title}}
+{{- range $g := .Groups}}
+{{- with $g.Prefix}}
+
+{{.}}
+{{- end}}
+{{- with $g.Commands}}
+
+```{{$g.Syntax}}
+{{range .}}{{.}}
+{{end -}}
+```
+{{- end}}
+{{- with $g.Postfix}}
+
+{{.}}
+{{- end}}
+{{- end}}
+{{- else}}
+{{- with docLink "INSTALL.md" (t "installation.title")}}
+## {{.Label}}
+
+{{printf (t "installation.body") .Filename}}
+{{- end}}
+{{- end}}

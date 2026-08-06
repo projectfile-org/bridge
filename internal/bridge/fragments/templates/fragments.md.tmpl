@@ -1,0 +1,16 @@
+{{- .REUSEHeader -}}
+# {{.Title}}
+{{- if .HasProject}}
+
+{{.ProjectHeading}}
+
+{{range .ProjectFragments}}{{.Body}}
+
+{{end}}{{end -}}
+{{- range .Inherited}}
+
+{{.Heading}}
+
+{{.Body}}
+
+{{end -}}

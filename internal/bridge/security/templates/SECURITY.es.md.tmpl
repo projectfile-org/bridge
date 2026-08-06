@@ -1,0 +1,45 @@
+{{.Marker}}
+
+# Política de seguridad
+
+{{- if .SupportedVersions}}
+
+## Versiones con soporte
+
+Las siguientes versiones de {{.ProjectName}} reciben actualizaciones de seguridad:
+
+{{range .SupportedVersions}}- {{.}}
+{{end}}
+{{- end}}
+
+## Cómo informar de una vulnerabilidad
+
+{{- if .ReportURL}}
+
+Informa de las vulnerabilidades de seguridad a través de nuestro canal privado
+de divulgación:
+
+ <{{.ReportURL}}>
+{{- else if .Contact}}
+
+Informa de las vulnerabilidades de seguridad escribiendo a **<{{.Contact}}>**.
+No abras incidencias públicas para informes sensibles de seguridad.
+{{- end}}
+
+Procuramos acusar recibo de los informes en un plazo de {{if .DisclosureWindow}}{{.DisclosureWindow}}{{else}}30 días{{end}} y coordinar
+la divulgación en cuanto exista una corrección.
+{{- if .GPGKey}}
+
+Puedes cifrar los informes sensibles con nuestra clave GPG:
+
+```text
+{{.GPGKey}}
+```
+{{- end}}
+{{- if .BugBountyURL}}
+
+## Programa de recompensas
+
+{{.ProjectName}} participa en un programa de recompensas por errores — consulta
+{{.BugBountyURL}} para conocer el alcance y las recompensas.
+{{- end}}

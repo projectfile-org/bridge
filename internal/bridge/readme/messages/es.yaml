@@ -1,0 +1,84 @@
+---
+# SPDX-FileCopyrightText: 2026 Damián Búho <damian.buho@proton.me>
+#
+# SPDX-License-Identifier: MIT
+
+# Spanish readme messages. Mirrors messages/en.yaml key for key; anything left
+# out falls back to English. Keep the single `%s` in every body string.
+
+# Bloques
+logo.alt: logotipo
+screenshots.title: Capturas de pantalla
+features.title: Características
+features.body: Consulta [Características](%s) para ver la lista completa.
+benchmarks.title: Pruebas de rendimiento
+benchmarks.body: Consulta [Pruebas de rendimiento](%s) para ver las cifras.
+quick-start.title: Inicio rápido
+quick-start.body: Consulta [Inicio rápido](%s) para empezar en cinco minutos.
+requirements.title: Requisitos
+requirements.body: Consulta [Requisitos](%s) para conocer los prerrequisitos.
+installation.title: Instalación
+installation.body: Consulta [Instalación](%s) para ver los pasos de instalación.
+usage.title: Uso
+usage.body: Consulta [Uso](%s) para ver ejemplos.
+building.title: Compilación
+building.goals: "Puntos de entrada de la canalización:"
+documentation.title: Documentación
+faq.title: Preguntas frecuentes
+faq.body: Consulta [Preguntas frecuentes](%s) para las dudas más habituales.
+roadmap.title: Hoja de ruta
+roadmap.body: Consulta la [Hoja de ruta](%s) para ver lo que viene.
+configuration.title: Configuración
+configuration.body: Consulta [Configuración](%s) para ver todos los ajustes.
+policies.title: Políticas
+links.title: Enlaces
+funding.title: Financiación
+funding.body: Consulta [Financiación](%s) si quieres apoyar este proyecto.
+license.title: Licencia
+license.body: Este proyecto se publica bajo la licencia %s — consulta el archivo [LICENSE](LICENSE) para más detalles.
+
+# Bloque de artefactos — lo que el proyecto entrega. La clave de cada tipo se
+# deriva del `kind` declarado.
+artifacts.title: Qué entrega este proyecto
+artifacts.ports: escucha en
+artifact.kind.image: Imagen de contenedor
+artifact.kind.binary: Ejecutable
+artifact.kind.package: Paquete
+artifact.kind.service: Servicio
+artifact.kind.website: Sitio web
+artifact.kind.archive: Archivo comprimido
+artifact.kind.module: Módulo
+
+# Bloque de políticas
+policy.contributing: Cómo contribuir
+policy.security: Política de seguridad
+policy.support: Cómo obtener ayuda
+policy.code-of-conduct: Código de conducta
+
+# Bloque de compilación
+build.build: Cómo compilar
+build.makefile: Referencia del Makefile
+
+# Bloque de enlaces
+link.group.project: Proyecto
+link.group.community: Comunidad
+link.group.security: Seguridad
+link.group.other: Otros
+link.type.homepage: Página principal
+link.type.source-code: Código fuente
+link.type.bugs: Seguimiento de incidencias
+link.type.documentation: Documentación
+link.type.changelog: Registro de cambios
+link.type.wiki: Wiki
+link.type.faq: Preguntas frecuentes
+link.type.package-registry: Registro de paquetes
+link.type.chat: Chat
+link.type.forum: Debates
+link.type.contact: Contacto
+link.type.enforcement: Aplicación del código de conducta
+link.type.first-contribution: Guía de primera contribución
+link.type.donation: Donar
+link.type.translate: Ayuda a traducir
+link.type.security-policy: Política de seguridad
+link.type.security-report: Informar de una vulnerabilidad
+link.type.bug-bounty: Programa de recompensas

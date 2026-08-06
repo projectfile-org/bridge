@@ -1,0 +1,3 @@
+{{- with badgeRows}}{{range $r, $row := .}}{{if $r}}
+{{end}}{{range $i, $b := $row.Badges}}{{if $i}} {{end}}{{if $b.Href}}[![{{$b.Alt}}]({{$b.Img}})]({{$b.Href}}){{else}}![{{$b.Alt}}]({{$b.Img}}){{end}}{{end}}
+{{end}}{{end -}}

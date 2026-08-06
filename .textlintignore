@@ -1,0 +1,14 @@
+# SPDX-FileCopyrightText: 2026 Damián Búho <damian.buho@proton.me>
+#
+# SPDX-License-Identifier: MIT
+
+# Verbatim third-party SPDX boilerplate — legal text we MUST NOT edit. A licence
+# derives its force from being byte-identical to the published text, so the
+# autofixable rules (typographic apostrophes, terminology) would do real damage
+# here; the pair-match rules also false-positive on parentheses inside long legal
+# sentences. Path follows the corpus, which moved out of core in the 2.1 cut.
+internal/bridge/license/spdx/
+
+# Go templates carry `{{ }}` directives that confuse pair-match rules. The
+# generator tests verify the rendered output, which is what humans read.
+internal/generators/template/templates/

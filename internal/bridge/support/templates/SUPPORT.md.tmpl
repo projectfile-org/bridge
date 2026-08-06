@@ -1,0 +1,54 @@
+{{.Marker}}
+
+# Getting Support
+
+Thanks for using **{{.ProjectName}}**!
+This document explains where to get help and how to ask effective questions.
+
+{{if .BeforeLinks}}## Before You Ask
+
+Please check these first — your question may already be answered:
+
+{{range .BeforeLinks}}- [{{.Label}}]({{.URL}})
+{{end}}
+{{end}}
+## Where to Ask
+
+{{range .Rows}}- **{{template "want" .Kind}}** — {{.GoTo}}
+{{end}}
+
+## How to Ask a Good Question
+
+To help us help you, please include:
+
+1. **What you’re trying to do** — the goal, not just the error.
+2. **What you tried** — code, commands, config.
+3. **What happened** vs. what you expected.
+4. **Environment** — OS, version of {{.ProjectName}}, runtime version.
+5. **A minimal reproducible example**, if possible.
+
+See [Stack Overflow’s MCVE guide](https://stackoverflow.com/help/minimal-reproducible-example)
+for tips.
+
+
+## Response Times
+
+{{if .ResponseTime}}{{.ResponseTime}}.{{else}}This is a community-maintained project. Maintainers respond when they can — typically within a few days, but there are no guarantees. Please be patient and respectful.{{end}}
+{{if .StatusPage}}
+
+## Service Status
+
+Current service health is available at the [status page]({{.StatusPage}}).
+{{end}}{{if .EOL}}
+
+## Supported Versions
+
+The following {{.ProjectName}} versions currently receive support:
+
+{{range .EOL}}- **{{.Version}}** — supported until {{.Date}}
+{{end}}
+{{end}}
+
+{{- define "want" -}}
+{{if eq . "usage-question"}}Ask a usage question{{else if eq . "bug"}}Report a reproducible bug{{else if eq . "chat"}}Chat with the community{{else if eq . "security"}}Report a security vulnerability{{else if eq . "contributing"}}Contribute to the project{{else if eq . "paid-support"}}Get commercial support / SLA{{else}}{{.}}{{end}}
+{{- end -}}

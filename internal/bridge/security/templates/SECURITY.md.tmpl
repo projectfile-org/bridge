@@ -1,0 +1,44 @@
+{{.Marker}}
+
+# Security Policy
+
+{{- if .SupportedVersions}}
+
+## Supported Versions
+
+The following {{.ProjectName}} versions currently receive security updates:
+
+{{range .SupportedVersions}}- {{.}}
+{{end}}
+{{- end}}
+
+## Reporting a Vulnerability
+
+{{- if .ReportURL}}
+
+Please report security vulnerabilities through our private disclosure channel:
+
+ <{{.ReportURL}}>
+{{- else if .Contact}}
+
+Please report security vulnerabilities by emailing **<{{.Contact}}>**. Do not
+file public issues for security-sensitive reports.
+{{- end}}
+
+We aim to acknowledge reports within {{if .DisclosureWindow}}{{.DisclosureWindow}}{{else}}30 days{{end}} and to coordinate
+disclosure once a fix is available.
+{{- if .GPGKey}}
+
+You may encrypt sensitive reports using our GPG key:
+
+```text
+{{.GPGKey}}
+```
+{{- end}}
+{{- if .BugBountyURL}}
+
+## Bug Bounty
+
+{{.ProjectName}} participates in a bug bounty programme — see {{.BugBountyURL}}
+for scope and reward details.
+{{- end}}

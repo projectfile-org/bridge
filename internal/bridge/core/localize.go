@@ -1,0 +1,256 @@
+// SPDX-FileCopyrightText: 2026 Damián Búho <damian.buho@proton.me>
+//
+// SPDX-License-Identifier: MIT
+
+package core
+
+import (
+	"bytes"
+	"path/filepath"
+	"regexp"
+	"strings"
+
+	"kiota.ch/projectfile/core/v2/pkg/genlog"
+	"kiota.ch/projectfile/core/v2/pkg/projectfile"
+)
+
+// The localization contract shared by every community health file.
+//
+// A localizable artefact is one canonical file (README.md, CONTRIBUTING.md, …)
+// plus one variant per language declared in org.projectfile.i18n.languages.
+// The variant's name inserts the BCP 47 tag before the extension
+// (CONTRIBUTING.es.md) — the convention GitHub, GitLab and Forgejo readers
+// already expect — and its body comes from a sibling template carrying the
+// same infix (CONTRIBUTING.es.md.tmpl).
+//
+// Translations are prose, so they cannot be derived: a language with no
+// template is SKIPPED with a warning rather than emitting the canonical
+// English body under a localized name. A half-translated file lies to its
+// reader; an absent one merely does not exist yet.
+
+// Canonical community health filenames. These bridges cross-reference each
+// other's output — SUPPORT.md points at SECURITY.md, CONTRIBUTING.md points
+// at SUPPORT.md, README.md links them all — and every such reference has to
+// be resolved per language, so the names get one home here rather than being
+// re-spelled as literals in each bridge and template.
+const (
+	FileReadme        = "README.md"
+	FileContributing  = "CONTRIBUTING.md"
+	FileCodeOfConduct = "CODE_OF_CONDUCT.md"
+	FileDEI           = "DEI.md"
+	FileSecurity      = "SECURITY.md"
+	FileSupport       = "SUPPORT.md"
+)
+
+// defaultLangLabel labels the canonical file in the cross-language bar. The
+// canonical variant carries no language infix, so it has no tag of its own.
+const defaultLangLabel = "EN"
+
+// langBarSeparator joins entries in the cross-language bar.
+const langBarSeparator = " · "
+
+// LangLink is one entry in the cross-language link bar: where to find this
+// same document in another language.
+type LangLink struct {
+	Code     string // BCP 47 tag; empty for the canonical file
+	Label    string // display text — the upper-cased tag, "EN" for canonical
+	Filename string // repo-relative target, e.g. "CONTRIBUTING.es.md"
+}
+
+// LocalizedFilename maps a canonical filename and a language to the variant's
+// on-disk name: ("CONTRIBUTING.md", "es") → "CONTRIBUTING.es.md". The empty
+// language is the canonical file and passes through unchanged.
+func LocalizedFilename(base, lang string) string {
+	if lang == "" {
+		return base
+	}
+	ext := filepath.Ext(base)
+	return strings.TrimSuffix(base, ext) + "." + lang + ext
+}
+
+// LocalizedTemplateName is the template backing a variant. Template names are
+// always "<filename>.tmpl", so the language infix lands in the same position
+// as it does on disk: ("CONTRIBUTING.md", "es") → "CONTRIBUTING.es.md.tmpl".
+func LocalizedTemplateName(base, lang string) string {
+	return LocalizedFilename(base, lang) + ".tmpl"
+}
+
+// HasTemplate reports whether a template is resolvable — as a project-local
+// override under dir, or as an embedded template some bridge registered at
+// init(). This is the probe RenderLocalized uses to decide whether a declared
+// language has a translation; Render itself errors on a miss, which is the
+// wrong answer when the miss is expected.
+func HasTemplate(dir, name string) bool {
+	if dir != "" {
+		if _, ok, err := ReadLocalTemplate(dir, filepath.Join(LocalTemplatesDir, name)); err == nil && ok {
+			return true
+		}
+	}
+	_, registered := loaders[name]
+	return registered
+}
+
+// LocalizedSibling resolves a cross-reference to another community health
+// file from inside a localized document: SUPPORT.es.md links SECURITY.es.md,
+// not SECURITY.md, so a reader who arrived in their own language stays in it.
+//
+// It cannot verify the sibling: the §5 binary split means each pf-bridge-*
+// links only its own bridge, so SECURITY's templates are invisible from
+// inside pf-bridge-support. The declared language set is the contract
+// instead — a project that declares `es` is asking for Spanish across every
+// health file, and the sibling bridge warns by name about any translation it
+// is missing. Callers only pass a lang that survived translatableLangs for
+// their own file, so the canonical case is never guessed at.
+func LocalizedSibling(base, lang string) string {
+	return LocalizedFilename(base, lang)
+}
+
+// LanguageLinks builds the cross-language bar for one render: every language
+// variant of base EXCEPT the active one, canonical file included. Returns nil
+// when no extra languages are configured, so a single-language project never
+// grows a bar pointing at itself.
+func LanguageLinks(base, active string, langs []string) []LangLink {
+	if len(langs) == 0 {
+		return nil
+	}
+	all := append([]string{""}, langs...)
+	out := make([]LangLink, 0, len(all))
+	for _, lang := range all {
+		if lang == active {
+			continue
+		}
+		out = append(out, LangLink{
+			Code:     lang,
+			Label:    langLabel(lang),
+			Filename: LocalizedFilename(base, lang),
+		})
+	}
+	return out
+}
+
+// langLabel is the bar's display text for a language tag.
+func langLabel(lang string) string {
+	if lang == "" {
+		return defaultLangLabel
+	}
+	return strings.ToUpper(lang)
+}
+
+// h1Prefix is the ATX level-1 heading every generated health file opens with.
+var h1Prefix = []byte("# ")
+
+// InsertLanguageBar places the cross-language bar immediately above the
+// document's first H1 — after any managed marker or HTML comment the template
+// emitted, and above the title where a reader looking for their own language
+// finds it first. A body with no H1 (degenerate, but never a reason to drop
+// the bar) takes it at the very top.
+//
+// Doing this here rather than in each template is what keeps the translated
+// templates pure prose: a new locale is one file, with no bar markup to
+// forget.
+func InsertLanguageBar(body []byte, base, active string, langs []string) []byte {
+	links := LanguageLinks(base, active, langs)
+	if len(links) == 0 {
+		return body
+	}
+	var bar strings.Builder
+	for i, l := range links {
+		if i > 0 {
+			bar.WriteString(langBarSeparator)
+		}
+		bar.WriteString("[" + l.Label + "](" + l.Filename + ")")
+	}
+	bar.WriteString("\n\n")
+
+	at := h1Offset(body)
+	genlog.Decision("language_bar", strings.TrimSpace(bar.String()), "org.projectfile.i18n.languages", base)
+	out := make([]byte, 0, len(body)+bar.Len())
+	out = append(out, body[:at]...)
+	out = append(out, bar.String()...)
+	return append(out, body[at:]...)
+}
+
+// h1Offset returns the byte offset of the first line that opens an H1, or 0
+// when the body has none.
+func h1Offset(body []byte) int {
+	if bytes.HasPrefix(body, h1Prefix) {
+		return 0
+	}
+	if i := bytes.Index(body, append([]byte("\n"), h1Prefix...)); i >= 0 {
+		return i + 1
+	}
+	return 0
+}
+
+// LocalizedSpec describes one localizable derive-only artefact. Bridges hand
+// it to RenderLocalized instead of driving Render themselves, so the naming
+// rule, the missing-translation policy, the cross-language bar and the final
+// assembly live in exactly one place.
+type LocalizedSpec struct {
+	// Filename is the canonical on-disk name, e.g. "CONTRIBUTING.md".
+	Filename string
+	// Langs are the extra languages from org.projectfile.i18n.languages.
+	Langs []string
+	// View returns the template data for one language, called once per
+	// rendered language so localized-strings resolve in that language.
+	View func(lang string) any
+}
+
+// RenderLocalized renders the canonical file plus one variant per declared
+// language. A language whose template is missing is skipped with a warning
+// naming the file the project would have to add; the canonical file always
+// renders, so a bad locale list can never block regenerating the rest.
+func RenderLocalized(pf *projectfile.Document, spec LocalizedSpec, opts Options) (Output, error) {
+	// Resolve which languages actually render BEFORE rendering any of them:
+	// the cross-language bar goes into every variant, so a language dropped
+	// for a missing template must be dropped from the bar too — otherwise
+	// each file advertises a translation that was never written.
+	translated := translatableLangs(spec.Filename, spec.Langs, opts.Dir)
+
+	header := []byte(REUSEHeader(pf, StyleHTML))
+	out := Output{Files: map[string][]byte{}}
+	for _, lang := range append([]string{""}, translated...) {
+		tmpl := LocalizedTemplateName(spec.Filename, lang)
+		body, err := Render(opts.Dir, tmpl, spec.View(lang))
+		if err != nil {
+			return Output{}, err
+		}
+		genlog.Decision("rendered", LocalizedFilename(spec.Filename, lang), tmpl, "lang="+langLabel(lang))
+		body = InsertLanguageBar(body, spec.Filename, lang, translated)
+		out.Files[LocalizedFilename(spec.Filename, lang)] = append(append([]byte{}, header...), CollapseBlankLines(body)...)
+	}
+	return out, nil
+}
+
+// translatableLangs filters a declared language list down to the ones that
+// have a template for this file, warning once per drop with the exact path
+// the project would have to add.
+func translatableLangs(filename string, langs []string, dir string) []string {
+	out := make([]string, 0, len(langs))
+	for _, lang := range langs {
+		tmpl := LocalizedTemplateName(filename, lang)
+		if !HasTemplate(dir, tmpl) {
+			genlog.Warn("no template for language — file skipped",
+				"file", LocalizedFilename(filename, lang),
+				"lang", lang,
+				"hint", "add "+filepath.Join(LocalTemplatesDir, tmpl))
+			continue
+		}
+		out = append(out, lang)
+	}
+	return out
+}
+
+var (
+	multiBlankRe   = regexp.MustCompile(`\n{3,}`)
+	trailingBlanks = regexp.MustCompile(`\n+\z`)
+)
+
+// CollapseBlankLines normalizes generated markdown: runs of blank lines
+// collapse to one and the body ends in exactly one newline. Templates full of
+// conditional blocks leave ragged whitespace behind; every renderer wants the
+// same cleanup, so it lives here rather than once per bridge.
+func CollapseBlankLines(body []byte) []byte {
+	out := multiBlankRe.ReplaceAllLiteral(body, []byte("\n\n"))
+	return trailingBlanks.ReplaceAllLiteral(out, []byte("\n"))
+}

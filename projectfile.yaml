@@ -1,0 +1,135 @@
+---
+# SPDX-FileCopyrightText: 2026 Damián Búho <damian.buho@proton.me>
+#
+# SPDX-License-Identifier: MIT
+$schema: https://projectfile.org/schema/v1.json
+copyright:
+  year: 2026
+identity:
+  created: "2026-07-07"
+  name: bridge
+  summary: pf-bridge projects the projectfile onto files, forges, and the repository
+  title: projectfile/bridge
+includes:
+  - .makefile/b19/ci.yaml
+  - .makefile/b19/images/go.yaml
+  - .makefile/b19/images/ubuntu.yaml
+  - .makefile/library/languages/go.yaml
+  - https://kiota.ch/damian-buho/metadata/raw/branch/main/include.yaml
+  - https://kiota.ch/projectfile/metadata/raw/branch/main/include.yaml
+kind: SoftwareSourceCode
+links:
+  - label: Source Code on Codeberg
+    type: source-code
+    url: https://codeberg.org/projectfile/bridge
+  - label: Source Code on GitHub
+    type: source-code
+    url: https://github.com/damian-buho/projectfile-bridge
+  - label: Source Code on kiota.ch
+    type: source-code
+    url: https://kiota.ch/projectfile/bridge
+  - label: Issues on Codeberg
+    type: bugs
+    url: https://codeberg.org/projectfile/bridge/issues
+  - label: Issues on GitHub
+    type: bugs
+    url: https://github.com/damian-buho/projectfile-bridge/issues
+org:
+  projectfile:
+    artifacts:
+      go-binary:
+        command: pf-bridge
+        kind: binary
+        path: dist/pf-bridge
+    build:
+      args:
+        GOPROXY: ""
+    ci:
+      env:
+        GOPROXY: https://kiota.ch/api/packages/projectfile/go,direct
+      forgejo:
+        credentials:
+          FORGEJO_TOKEN: ${{ secrets.RELEASE_TOKEN }}
+      nodes:
+        binaries-built:
+          matrix:
+            axes:
+              GOARCH:
+                - amd64
+                - arm64
+              GOOS:
+                - linux
+                - darwin
+          needs:
+            build-binaries: true
+            gsa: true
+            source-is-ready: true
+        binaries-released:
+          matrix:
+            axes:
+              GOARCH:
+                - amd64
+                - arm64
+              GOOS:
+                - linux
+                - darwin
+          needs:
+            binaries-built: true
+            forgejo-release: true
+            gh-release: true
+          when:
+            events:
+              - tag
+        published:
+          needs:
+            binaries-released: true
+            install-binary: true
+      tools:
+        build-binaries:
+          artifact: dist
+          env:
+            - GOPROXY
+            - GOOS
+            - GOARCH
+            - GITHUB_REF_NAME
+          guard: go.mod
+          image: GO_TOOL_IMAGE
+          m6e:
+            prefer-local: true
+          run: .scripts/build-binaries.sh
+        forgejo-release:
+          action: forgejo-release
+          env:
+            - FORGEJO_TOKEN
+          gha: false
+          m6e: false
+        gh-release:
+          env:
+            - GH_TOKEN
+          forgejo: false
+          m6e: false
+          run: .scripts/gh-release.sh "$${{ github.ref_name }}"
+        install-binary:
+          forgejo: false
+          gha: false
+          run: .scripts/install-binary.sh
+    readme:
+      usage:
+        - name: binary
+          prefix: "Project the projectfile onto the files a forge expects:"
+          commands:
+            - pf-bridge --list
+            - pf-bridge readme --force
+            - pf-bridge all
+    status: maintained
+repositories:
+  - issues: true
+    role: mirror
+    type: git
+    url: ssh://git@codeberg.org/projectfile/bridge.git
+  - role: mirror
+    type: git
+    url: git@github.com:damian-buho/projectfile-bridge.git
+  - role: origin
+    type: git
+    url: ssh://git@kiota.ch/projectfile/bridge.git

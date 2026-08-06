@@ -1,0 +1,84 @@
+---
+# SPDX-FileCopyrightText: 2026 Damián Búho <damian.buho@proton.me>
+#
+# SPDX-License-Identifier: MIT
+
+# Ukrainian readme messages. Mirrors messages/en.yaml key for key; anything
+# left out falls back to English. Keep the single `%s` in every body string.
+
+# Блоки
+logo.alt: логотип
+screenshots.title: Знімки екрана
+features.title: Можливості
+features.body: Див. [Можливості](%s), щоб переглянути повний перелік.
+benchmarks.title: Продуктивність
+benchmarks.body: Див. [Продуктивність](%s), щоб переглянути результати вимірювань.
+quick-start.title: Швидкий старт
+quick-start.body: Див. [Швидкий старт](%s), щоб почати за п’ять хвилин.
+requirements.title: Вимоги
+requirements.body: Див. [Вимоги](%s), щоб дізнатися про передумови.
+installation.title: Встановлення
+installation.body: Див. [Встановлення](%s), щоб переглянути кроки встановлення.
+usage.title: Використання
+usage.body: Див. [Використання](%s), щоб переглянути приклади.
+building.title: Збирання
+building.goals: "Точки входу конвеєра:"
+documentation.title: Документація
+faq.title: Поширені запитання
+faq.body: Див. [Поширені запитання](%s), щоб знайти відповіді на типові питання.
+roadmap.title: Дорожня карта
+roadmap.body: Див. [Дорожню карту](%s), щоб дізнатися про заплановане.
+configuration.title: Налаштування
+configuration.body: Див. [Налаштування](%s), щоб переглянути всі параметри.
+policies.title: Політики
+links.title: Посилання
+funding.title: Фінансування
+funding.body: Див. [Фінансування](%s), якщо ви хочете підтримати цей проєкт.
+license.title: Ліцензія
+license.body: Цей проєкт ліцензовано на умовах %s — див. файл [LICENSE](LICENSE) для подробиць.
+
+# Блок артефактів — те, що проєкт постачає. Ключ типу походить від
+# оголошеного `kind`.
+artifacts.title: Що надає цей проєкт
+artifacts.ports: слухає на
+artifact.kind.image: Образ контейнера
+artifact.kind.binary: Виконуваний файл
+artifact.kind.package: Пакет
+artifact.kind.service: Служба
+artifact.kind.website: Вебсайт
+artifact.kind.archive: Архів
+artifact.kind.module: Модуль
+
+# Блок політик
+policy.contributing: Як зробити внесок
+policy.security: Політика безпеки
+policy.support: Як отримати підтримку
+policy.code-of-conduct: Кодекс поведінки
+
+# Блок збирання
+build.build: Як зібрати проєкт
+build.makefile: Довідник із Makefile
+
+# Блок посилань
+link.group.project: Проєкт
+link.group.community: Спільнота
+link.group.security: Безпека
+link.group.other: Інше
+link.type.homepage: Домашня сторінка
+link.type.source-code: Вихідний код
+link.type.bugs: Трекер задач
+link.type.documentation: Документація
+link.type.changelog: Журнал змін
+link.type.wiki: Вікі
+link.type.faq: Поширені запитання
+link.type.package-registry: Реєстр пакетів
+link.type.chat: Чат
+link.type.forum: Обговорення
+link.type.contact: Контакти
+link.type.enforcement: Застосування кодексу поведінки
+link.type.first-contribution: Посібник для першого внеску
+link.type.donation: Підтримати
+link.type.translate: Допомогти з перекладом
+link.type.security-policy: Політика безпеки
+link.type.security-report: Повідомити про вразливість
+link.type.bug-bounty: Програма винагород за вразливості

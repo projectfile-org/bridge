@@ -1,0 +1,14 @@
+# SPDX-FileCopyrightText: 2026 Damián Búho <damian.buho@proton.me>
+#
+# SPDX-License-Identifier: MIT
+
+# Sibling to .gitignore for `fd`-driven scans (e.g. lint walkers). Excludes
+# verbatim third-party content we never want linted as natural language.
+#
+# This is the load-bearing one for prose lint: auto-textlint discovers files with
+# `fd --extension md --extension txt`, so the corpus is only spared here —
+# .textlintignore alone would not stop it, since the paths arrive as explicit
+# arguments. A licence derives its force from being byte-identical to the
+# published text, so an autofixable rule (apostrophes, terminology) rewriting it
+# would do real damage.
+internal/bridge/license/spdx/

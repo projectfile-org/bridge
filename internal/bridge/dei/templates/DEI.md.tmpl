@@ -1,0 +1,66 @@
+{{.Marker}}
+
+# Diversity, Equity, and Inclusion Project Statement
+
+{{.ProjectName}}
+
+{{if .Scope}}Scope of this DEI.md file: {{.Scope}}.{{else}}Scope of this DEI.md file: this project and its community spaces.{{end}}
+
+Our project prioritizes and reflects on DEI through a regular review of project policies and performance. This reflection is documented in the following DEI.md file based on specific [CHAOSS project](https://chaoss.community) DEI metrics.
+
+### [Project Access](https://chaoss.community/?p=4953)
+
+Project access is addressed in our project through various efforts. Through these efforts, we aim to support access for all. Specific efforts in our project include:
+
+{{if .ProjectAccess}}{{range .ProjectAccess}}- {{.}}
+{{end}}{{else}}- *Sample — edit these to describe how your project addresses access.*
+- All virtual meetings are transcribed, and members can join via computer or phone. Video is not required to participate.
+- Virtual meetings are attentive to global time zones so members across regions can participate.
+- Translation services are provided for project documentation where feasible.
+- All areas of the project are open to community contributions.
+{{end}}
+### [Communication Transparency](https://chaoss.community/?p=4957)
+
+Communication transparency is addressed in our project through a variety of different efforts. Through these efforts, we aim to support transparency for all. Specific efforts in our project include:
+
+{{if .CommTransparency}}{{range .CommTransparency}}- {{.}}
+{{end}}{{else}}- *Sample — edit these to describe how your project addresses communication transparency.*
+- All project documentation is publicly available.
+- Appropriate documentation is shared at the start of every working group meeting.
+- Decisions that impact the project are shared across working groups and channels so members can participate in the process.
+- Any information that cannot be made public is marked as internal and listed by name.
+{{end}}
+### [Newcomer Experiences](https://chaoss.community/?p=4891)
+
+The newcomer experience is addressed in our project through a variety of different efforts. Through these efforts, we aim to support the newcomer experience for all new members. Specific efforts in our project include:
+
+{{if .NewcomerExperiences}}{{range .NewcomerExperiences}}- {{.}}
+{{end}}{{else}}- *Sample — edit these to describe how your project addresses the newcomer experience.*
+- Newcomer events and office hours are held regularly, open to all with an interest.
+- A quick start guide for newcomers is available through the project navigation.
+- First-time contributors are identified so reviewers can better assist them.
+- Contributor documentation includes a walkthrough for making a first contribution.
+{{end}}
+### [Inclusive Leadership](https://chaoss.community/?p=3522)
+
+Inclusive leadership is addressed in our project through a variety of different efforts. Through these efforts, we aim to support leadership opportunities for project members with an interest. Specific efforts in our project include:
+
+{{if .InclusiveLeadership}}{{range .InclusiveLeadership}}- {{.}}
+{{end}}{{else}}- *Sample — edit these to describe how your project addresses inclusive leadership.*
+- Our governance document is reviewed on a regular basis to identify roles that guide the project's direction.
+- Working group meetings provide the opportunity to be led by different people at each meeting.
+- The project ensures a diverse candidate slate when selecting new maintainers.
+- One or more maintainers participate in DEI group meetings or events.
+{{end}}
+{{if .HasOther}}
+### Other Efforts
+
+Our project is doing other DEI-related efforts or has plans to, that are not mentioned above.
+
+{{range .OtherEfforts}}- {{.}}
+{{end}}{{end}}
+We recognize that the inclusion of the DEI.md file and the provided reflection on the specific DEI metrics does not ensure community safety nor community inclusiveness. The inclusion of the DEI.md file signals that we, as a project, are committed to centering DEI in our project and regularly reviewing and reflecting on our project DEI practices.
+
+If you do not feel that the DEI.md file appropriately addresses concerns you have about community safety and inclusiveness, please let us know.{{if .ContactEmail}} You can report your concerns to our Code of Conduct team at **<{{.ContactEmail}}>**.{{else}} You can report your concerns to our Code of Conduct team — *[provide a reporting link or address]*.{{end}}
+
+Last Reviewed: {{if .LastReviewed}}{{.LastReviewed}}{{else}}[Enter Date]{{end}}

@@ -1,0 +1,7 @@
+{{- with docLink "FEATURES.md" (t "features.title")}}
+## {{.Label}}
+
+{{range featureHeadings}}- {{.}}
+{{end}}
+{{printf (t "features.body") .Filename}}
+{{end -}}

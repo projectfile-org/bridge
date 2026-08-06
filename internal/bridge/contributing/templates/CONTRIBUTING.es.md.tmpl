@@ -1,0 +1,227 @@
+# Cómo contribuir a {{.ProjectName}}
+
+Ante todo, ¡gracias por dedicar tu tiempo a contribuir! ❤️
+
+Toda forma de contribución se agradece y se valora. Consulta la [Tabla de contenidos](#tabla-de-contenidos) para conocer las distintas maneras de ayudar y cómo las gestiona este proyecto. Lee la sección correspondiente antes de hacer tu aportación: nos facilitará mucho el trabajo a quienes mantenemos el proyecto y hará la experiencia más agradable para todo el mundo.
+
+> Y si el proyecto te gusta pero no tienes tiempo para contribuir, no pasa nada. Hay otras formas sencillas de apoyarlo y mostrar tu agradecimiento, que también nos harían mucha ilusión:
+>
+{{- if .StarsEnabled}}{{if .ForgeStars}}{{range .ForgeStars}}
+> - Dale una estrella al proyecto en {{.Label}}{{end}}{{else}}
+> - Dale una estrella al proyecto{{end}}{{end}}
+> - Menciona este proyecto en el readme del tuyo
+> - Habla del proyecto en encuentros locales y cuéntaselo a tus amistades y colegas
+{{- if .AuthorFollows}}{{range .AuthorFollows}}
+> - Sigue {{.Label}}{{end}}{{end}}
+{{- if .AuthorSites}}{{range .AuthorSites}}
+> - {{.Label}}{{end}}{{end}}
+{{- if .ProjectSocials}}{{range .ProjectSocials}}
+> - {{.Label}}{{end}}{{end}}
+{{- if .HasFunding}}
+> - Apóyanos económicamente — consulta [FUNDING.md](FUNDING.md)
+{{end}}
+
+<!-- omit in toc -->
+## Tabla de contenidos
+
+{{range .Sections -}}
+{{if eq . "question"}}- [Tengo una pregunta](#tengo-una-pregunta)
+{{end -}}
+{{if eq . "legal"}}{{end -}}
+{{if eq . "bugs"}}- [Cómo informar de fallos](#cómo-informar-de-fallos)
+{{end -}}
+{{if eq . "enhancements"}}- [Cómo sugerir mejoras](#cómo-sugerir-mejoras)
+{{end -}}
+{{if eq . "first_contribution"}}- [Tu primera contribución de código](#tu-primera-contribución-de-código)
+{{end -}}
+{{if eq . "docs"}}{{if $.DocsURL}}- [Mejorar la documentación](#mejorar-la-documentación)
+{{end}}{{end -}}
+{{if eq . "styleguides"}}{{if $.HasStyleGuideContent}}- [Guías de estilo](#guías-de-estilo)
+    - [Mensajes de commit](#mensajes-de-commit)
+{{end}}{{end -}}
+{{if eq . "overview"}}- [Resumen](#resumen)
+{{end -}}
+{{if eq . "setup"}}- [Configuración local](#configuración-local)
+{{end -}}
+{{if eq . "build"}}- [Compilación](#compilación)
+{{end -}}
+{{if eq . "test"}}- [Pruebas](#pruebas)
+{{end -}}
+{{if eq . "style"}}- [Estilo de código](#estilo-de-código)
+{{end -}}
+{{if eq . "submitting"}}- [Enviar cambios](#enviar-cambios)
+{{end -}}
+{{if eq . "license_acknowledgement"}}- [Licencias](#licencias)
+{{end -}}
+{{if eq . "chat"}}- [Dónde preguntar](#dónde-preguntar)
+{{end -}}
+{{if eq . "join"}}{{if $.ContactURL}}- [Unirse al equipo del proyecto](#unirse-al-equipo-del-proyecto)
+{{end}}{{end -}}
+{{end}}
+
+{{range .Sections}}
+
+{{if eq . "question"}}## Tengo una pregunta
+
+Antes de preguntar, revisa [{{$.SupportFile}}]({{$.SupportFile}}): explica dónde conseguir ayuda y cómo formular preguntas eficaces.
+
+{{end}}
+{{if eq . "legal"}}
+> ### Aviso legal
+>
+> Al contribuir a este proyecto, debes aceptar que eres la autoría del 100 % del contenido, que dispones de los derechos necesarios sobre él y que el contenido que aportas puede publicarse bajo la licencia del proyecto.
+
+{{end}}
+{{if eq . "bugs"}}## Cómo informar de fallos
+
+<!-- omit in toc -->
+### Antes de enviar un informe de fallo
+
+Un buen informe de fallo evita que otras personas tengan que perseguirte para obtener más información. Por eso te pedimos que investigues con cuidado, reúnas información y describas el problema con detalle. Completa estos pasos por adelantado para ayudarnos a corregir cualquier posible fallo lo antes posible.
+
+- Asegúrate de estar usando la última versión.
+- Comprueba que se trata realmente de un fallo y no de un error por tu parte, por ejemplo, componentes o versiones incompatibles del entorno (asegúrate de haber leído la{{if $.DocsURL}} [documentación]({{$.DocsURL}}){{end}}{{if not $.DocsURL}} documentación{{end}}. Si lo que buscas es ayuda, consulta [{{$.SupportFile}}]({{$.SupportFile}})).
+- Para ver si otras personas han tenido (y quizá ya resuelto) el mismo problema, comprueba que no exista ya un informe de tu fallo o error en el{{if $.BugsURL}} [gestor de incidencias]({{$.BugsURL}}?q=label%3Abug){{end}}{{if not $.BugsURL}} gestor de incidencias{{end}}.
+- Busca también en internet (incluido Stack Overflow) por si el problema ya se ha comentado fuera de la comunidad.
+- Reúne información sobre el fallo:
+    - Traza de la pila (traceback)
+    - Sistema operativo, plataforma y versión (Windows, Linux, macOS, x86, ARM)
+    - Versión del intérprete, compilador, SDK, entorno de ejecución o gestor de paquetes, según lo que resulte relevante.
+    - Si es posible, la entrada que usaste y la salida obtenida
+    - ¿Puedes reproducir el problema de forma fiable? ¿Y con versiones anteriores?
+
+<!-- omit in toc -->
+### ¿Cómo envío un buen informe de fallo?
+
+{{if $.SecurityContact}}> Nunca informes de problemas de seguridad, vulnerabilidades o fallos que incluyan información sensible en el gestor de incidencias ni en ningún otro lugar público. Los fallos sensibles deben enviarse por correo a <{{$.SecurityContact}}>.
+
+{{end}}Usamos{{if $.BugsURL}} [incidencias]({{$.BugsURL}}){{end}}{{if not $.BugsURL}} incidencias{{end}} para seguir fallos y errores. Si te topas con un problema en el proyecto:
+
+- Abre{{if $.NewIssueURL}} una [incidencia]({{$.NewIssueURL}}){{end}}{{if not $.NewIssueURL}} una incidencia{{end}}. (Como todavía no podemos saber si se trata de un fallo, te pedimos que no lo des por hecho ni etiquetes la incidencia.)
+- Explica el comportamiento que esperabas y el que se produjo realmente.
+- Aporta todo el contexto posible y describe los *pasos de reproducción* que otra persona pueda seguir para recrear el problema. Esto suele incluir tu código. En un buen informe conviene aislar el problema y crear un caso de prueba reducido.
+- Incluye la información que reuniste en el apartado anterior.
+
+Una vez enviada:
+
+- El equipo del proyecto etiquetará la incidencia según corresponda.
+- Alguien del equipo intentará reproducir el problema con los pasos que aportaste. Si no hay pasos de reproducción o no existe una forma evidente de reproducirlo, el equipo te los pedirá y marcará la incidencia como `needs-repro`. Los fallos con la etiqueta `needs-repro` no se abordarán hasta que puedan reproducirse.
+- Si el equipo logra reproducir el problema, se marcará como `needs-fix`, posiblemente junto a otras etiquetas (como `critical`), y quedará a la espera de que [alguien lo implemente](#tu-primera-contribución-de-código).
+
+{{end}}
+{{if eq . "enhancements"}}## Cómo sugerir mejoras
+
+Esta sección te guía para enviar una propuesta de mejora para {{$.ProjectName}}, **tanto funcionalidades completamente nuevas como pequeñas mejoras de lo existente**. Seguir estas indicaciones ayudará a quienes mantienen el proyecto y a la comunidad a entender tu propuesta y a encontrar sugerencias relacionadas.
+
+<!-- omit in toc -->
+### Antes de enviar una propuesta de mejora
+
+- Asegúrate de estar usando la última versión.
+- Lee con atención la{{if $.DocsURL}} [documentación]({{$.DocsURL}}){{end}}{{if not $.DocsURL}} documentación{{end}} y averigua si la funcionalidad ya existe, quizá mediante alguna configuración concreta.
+- Haz una{{if $.BugsURL}} [búsqueda]({{$.BugsURL}}){{end}}{{if not $.BugsURL}} búsqueda{{end}} para ver si ya se ha propuesto. Si es así, comenta en la incidencia existente en lugar de abrir una nueva.
+- Valora si tu idea encaja con el alcance y los objetivos del proyecto. Te corresponde a ti argumentar de forma convincente el valor de esta funcionalidad. Ten en cuenta que buscamos funcionalidades útiles para la mayoría de quienes usan el proyecto, no solo para un grupo reducido. Si tu propuesta se dirige a una minoría, plantéate escribir una extensión o biblioteca complementaria.
+
+<!-- omit in toc -->
+### ¿Cómo envío una buena propuesta de mejora?
+
+Las propuestas de mejora se gestionan como{{if $.BugsURL}} [incidencias]({{$.BugsURL}}){{end}}{{if not $.BugsURL}} incidencias{{end}}.
+
+- Usa un **título claro y descriptivo** que identifique la propuesta.
+- Describe la mejora sugerida **paso a paso** y con el mayor detalle posible.
+- **Describe el comportamiento actual** y **explica qué comportamiento esperabas** y por qué. Aquí también puedes indicar qué alternativas no te sirven.
+- **Explica por qué esta mejora sería útil** para la mayoría de quienes usan {{$.ProjectName}}. También puedes señalar otros proyectos que lo hayan resuelto mejor y que sirvan de inspiración.
+
+{{end}}
+{{if eq . "first_contribution"}}## Tu primera contribución de código
+
+{{if $.FirstContributionURL}}¿Es tu primera vez con este código? Empieza por la [guía de primera contribución]({{$.FirstContributionURL}}) para una introducción suave.
+
+{{end}}{{if eq $.Workflow "github-flow"}}Este proyecto usa **GitHub Flow**: crea una rama a partir de `{{$.DefaultBranch}}`, haz tus cambios y abre una solicitud de incorporación.
+{{end}}{{if eq $.Workflow "git-flow"}}Este proyecto usa **Git Flow**: ramas de funcionalidad desde `develop`, ramas de publicación desde `develop` y ramas de corrección urgente desde `{{$.DefaultBranch}}`.
+{{end}}{{if eq $.Workflow "gitlab-flow"}}Este proyecto usa **GitLab Flow**: ramas de funcionalidad que se integran en `{{$.DefaultBranch}}` con despliegues por entorno.
+{{end}}{{if eq $.Workflow "trunk-based"}}Este proyecto usa **desarrollo basado en tronco**: se publica directamente en `{{$.DefaultBranch}}` o mediante ramas de funcionalidad de vida corta con banderas de funcionalidad.
+{{end}}{{if eq $.Workflow "centralized"}}Este proyecto usa un **flujo centralizado**: los commits van directamente a `{{$.DefaultBranch}}`.
+{{end}}
+{{end}}
+{{if eq . "docs"}}{{if $.DocsURL}}## Mejorar la documentación
+
+La documentación está en [{{$.DocsURL}}]({{$.DocsURL}}). Correcciones, mejoras y secciones nuevas son bienvenidas: abre una solicitud de incorporación contra las fuentes de la documentación.
+
+{{end}}{{end}}
+{{if eq . "overview"}}## Resumen
+
+{{$.ProjectName}} es {{if $.Summary}}{{$.Summary}}{{else}}un proyecto en desarrollo activo{{end}}. Consulta el readme del proyecto para conocer la arquitectura general y sus objetivos.
+
+{{end}}
+{{if eq . "setup"}}## Configuración local
+
+Clona el repositorio{{with $.SourceCodeURL}} desde <{{.}}>{{end}} y asegúrate de que tu entorno de desarrollo cumple los requisitos declarados en los metadatos del proyecto.
+
+{{end}}
+{{if eq . "build"}}## Compilación
+
+El proyecto incluye un `Makefile` (o una herramienta de construcción equivalente); ejecuta `make help` para descubrir los objetivos disponibles. Para proyectos en Go: `make build-binaries` compila un binario nativo en `dist/`.
+
+{{end}}
+{{if eq . "test"}}## Pruebas
+
+Ejecuta `make test` para lanzar el conjunto de pruebas registrado. Añade pruebas nuevas para cualquier cambio de comportamiento; los cambios de formato no deberían requerirlas.
+
+{{end}}
+{{if eq . "styleguides"}}{{if $.HasStyleGuideContent}}## Guías de estilo
+
+### Mensajes de commit
+
+{{if eq $.CommitStyle "conventional"}}Este proyecto usa [Conventional Commits](https://www.conventionalcommits.org/):
+{{end}}{{if eq $.CommitStyle "gitmoji"}}Este proyecto usa las convenciones de commit de [Gitmoji](https://gitmoji.dev/):
+{{end}}{{if eq $.CommitStyle "free"}}No hay convenciones estrictas para los mensajes de commit: escribe mensajes claros y descriptivos.
+{{end}}{{if eq $.CommitStyle ""}}Usa [Conventional Commits](https://www.conventionalcommits.org/) en los mensajes de commit:
+
+- `feat: add new parser`
+- `fix: resolve null dereference in handler`
+- `docs: update API reference`
+- `refactor:`, `test:`, `chore:`, `ci:`, `build:`, `perf:`
+{{end}}
+{{end}}{{end}}
+{{if eq . "style"}}## Estilo de código
+
+{{if $.StyleGuideURL}}Consulta la guía de estilo del proyecto en <{{$.StyleGuideURL}}>.
+{{else}}Ejecuta `make lint format` antes de abrir una solicitud de incorporación. La configuración del formateador y del linter del proyecto es la fuente de verdad; si contradicen a este documento, mandan ellos.
+{{end}}
+
+{{end}}
+{{if eq . "submitting"}}## Enviar cambios
+
+{{if eq $.Workflow "github-flow"}}1. Haz un fork del repositorio y crea una rama de funcionalidad desde `{{$.DefaultBranch}}`.
+{{else if eq $.Workflow "git-flow"}}1. Crea una rama de funcionalidad desde `develop`.
+{{else if eq $.Workflow "trunk-based"}}1. Crea una rama de funcionalidad de vida corta desde `{{$.DefaultBranch}}` (o publica directamente usando banderas de funcionalidad).
+{{else}}1. Haz un fork del repositorio y crea una rama temática.
+{{end}}
+2. Haz tus cambios — mantén los commits pequeños y centrados.
+3. Usa [Conventional Commits](https://www.conventionalcommits.org/) en el mensaje del commit.
+{{if $.CLAURL}}4. Firma el [CLA]({{$.CLAURL}}) si aún no lo has hecho.
+{{end}}
+
+{{end}}
+{{if eq . "license_acknowledgement"}}## Licencias
+
+Al contribuir a {{$.ProjectName}}, aceptas que tus aportaciones se publiquen bajo {{if $.LicenseSPDX}}la licencia {{$.LicenseSPDX}} del proyecto{{else}}la licencia declarada del proyecto{{end}}.
+
+{{end}}
+{{if eq . "chat"}}{{if $.ChatURL}}## Dónde preguntar
+
+Únete al chat del proyecto en <{{$.ChatURL}}>.
+
+{{end}}{{end}}
+{{if eq . "join"}}{{if $.ContactURL}}## Unirse al equipo del proyecto
+
+¿Te interesa formar parte del equipo? Escríbenos a <{{$.ContactURL}}>.
+
+{{end}}{{end}}
+{{end}}
+{{with .CoCURL}}
+
+---
+
+Se espera que todas las personas que contribuyen sigan el [Código de Conducta]({{.}}).
+{{end}}

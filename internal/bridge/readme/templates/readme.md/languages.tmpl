@@ -1,0 +1,3 @@
+{{- if .Languages}}
+{{range $i, $l := .Languages}}{{if $i}} · {{end}}[{{.Label}}]({{.Filename}}){{end}}
+{{end -}}

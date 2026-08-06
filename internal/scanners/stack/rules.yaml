@@ -1,0 +1,219 @@
+---
+# SPDX-FileCopyrightText: 2026 Damián Búho <damian.buho@proton.me>
+#
+# SPDX-License-Identifier: MIT
+
+# Detection rules for `pf-cli scan stacks`.
+#
+# Each rule has exactly one of `file`, `glob`, or `dir`, plus a `tags` list.
+# Order does not matter; all matching rules contribute. Tags are deduplicated.
+# An empty `tags: []` documents a marker we deliberately ignore — useful so a
+# reader knows we recognised the file but chose not to score it.
+
+# ---- manifests (high-confidence) ----
+- file: go.mod
+  tags:
+    - go
+- file: Cargo.toml
+  tags:
+    - rust
+- file: package.json
+  tags:
+    - node
+- file: composer.json
+  tags:
+    - php
+- file: pyproject.toml
+  tags:
+    - python
+- file: setup.py
+  tags:
+    - python
+- file: requirements.txt
+  tags:
+    - python
+- file: Gemfile
+  tags:
+    - ruby
+- file: mix.exs
+  tags:
+    - elixir
+- file: rebar.config
+  tags:
+    - erlang
+- file: gleam.toml
+  tags:
+    - gleam
+- file: build.zig
+  tags:
+    - zig
+- file: shard.yml
+  tags:
+    - crystal
+- file: stack.yaml
+  tags:
+    - haskell
+- file: cabal.project
+  tags:
+    - haskell
+- file: pom.xml
+  tags:
+    - java
+    - jvm
+- file: build.gradle
+  tags:
+    - java
+    - jvm
+- file: build.gradle.kts
+  tags:
+    - kotlin
+    - jvm
+- file: build.sbt
+  tags:
+    - scala
+    - jvm
+- file: deno.json
+  tags:
+    - deno
+- file: deno.jsonc
+  tags:
+    - deno
+- file: bunfig.toml
+  tags:
+    - bun
+- file: Dockerfile
+  tags:
+    - docker
+- file: docker-compose.yaml
+  tags:
+    - docker
+- file: docker-compose.yml
+  tags:
+    - docker
+- file: CMakeLists.txt
+  tags:
+    - cpp
+- # heuristic; cmake also drives C; refined by source globs
+  file: Makefile
+  tags: [] # too generic to contribute a tag
+- file: astro.config.mjs
+  tags:
+    - astro
+    - node
+- file: astro.config.ts
+  tags:
+    - astro
+    - node
+    - typescript
+- file: next.config.js
+  tags:
+    - nextjs
+    - react
+    - node
+- file: next.config.ts
+  tags:
+    - nextjs
+    - react
+    - typescript
+    - node
+- file: svelte.config.js
+  tags:
+    - svelte
+    - node
+- file: vite.config.js
+  tags:
+    - node
+- file: vite.config.ts
+  tags:
+    - node
+    - typescript
+
+# ---- source-file globs (broader, recurses through tree) ----
+- glob: "**/*.go"
+  tags:
+    - go
+- glob: "**/*.rs"
+  tags:
+    - rust
+- glob: "**/*.py"
+  tags:
+    - python
+- glob: "**/*.rb"
+  tags:
+    - ruby
+- glob: "**/*.php"
+  tags:
+    - php
+- glob: "**/*.cpp"
+  tags:
+    - cpp
+- glob: "**/*.cc"
+  tags:
+    - cpp
+- glob: "**/*.cxx"
+  tags:
+    - cpp
+- glob: "**/*.hpp"
+  tags:
+    - cpp
+- glob: "**/*.c"
+  tags:
+    - c
+- glob: "**/*.h"
+  tags: [] # ambiguous (c or cpp); leave unscored
+- glob: "**/*.cs"
+  tags:
+    - dotnet
+- glob: "**/*.kt"
+  tags:
+    - kotlin
+    - jvm
+- glob: "**/*.java"
+  tags:
+    - java
+    - jvm
+- glob: "**/*.scala"
+  tags:
+    - scala
+    - jvm
+- glob: "**/*.ts"
+  tags:
+    - typescript
+- glob: "**/*.tsx"
+  tags:
+    - typescript
+    - react
+- glob: "**/*.jsx"
+  tags:
+    - javascript
+    - react
+- glob: "**/*.vue"
+  tags:
+    - vue
+- glob: "**/*.svelte"
+  tags:
+    - svelte
+- glob: "**/*.astro"
+  tags:
+    - astro
+- glob: "**/*.ex"
+  tags:
+    - elixir
+- glob: "**/*.erl"
+  tags:
+    - erlang
+- glob: "**/*.hs"
+  tags:
+    - haskell
+- glob: "**/*.zig"
+  tags:
+    - zig
+- glob: "**/*.cr"
+  tags:
+    - crystal
+- glob: "**/*.gleam"
+  tags:
+    - gleam
+- glob: "**/*.wasm"
+  tags:
+    - wasm

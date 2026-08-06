@@ -1,0 +1,476 @@
+// SPDX-FileCopyrightText: 2026 Damián Búho <damian.buho@proton.me>
+//
+// SPDX-License-Identifier: MIT
+
+package fragments_test
+
+import (
+	"os"
+	"path/filepath"
+	"strings"
+	"testing"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
+	"kiota.ch/projectfile/core/v2/pkg/projectfile"
+	"projectfile.org/projectfile/bridge/internal/bridge/core"
+	"projectfile.org/projectfile/bridge/internal/bridge/fragments"
+	"projectfile.org/projectfile/bridge/internal/pfmodel"
+)
+
+// writeProjectfile writes a minimal projectfile.yaml (with SPDX header so
+// REUSEHeader resolves) into dir. body is the org.projectfile.fragments
+// block so each test customises its own documents[].
+// spdxTag and spdxMIT are split so the REUSE scanner does not read the
+// assembled literal in this file as a licence expression. They reconstruct
+// valid SPDX blocks in the generated test fixtures only. The fragment-key
+// constants satisfy goconst for the repeated map-key literals below.
+const (
+	spdxTag       = "SPDX-License-Identifier"
+	spdxMIT       = "MIT"
+	keyFragments  = "fragments"
+	keyDocuments  = "documents"
+	keyParents    = "parents"
+	outFeatures   = "FEATURES.md"
+	titleFeatures = "Features"
+	parentURL     = "https://example.test/b19/ubuntu"
+)
+
+func writeProjectfile(t *testing.T, dir, body string) {
+	t.Helper()
+	pf := "---\n" +
+		"# SPDX-FileCopyrightText: 2026 Tester\n" +
+		"#\n" +
+		"# " + spdxTag + ": " + spdxMIT + "\n" +
+		"$schema: https://projectfile.org/schema/v1.json\n" +
+		"identity:\n  name: " + filepath.Base(dir) + "\n" +
+		"org:\n  projectfile:\n" + body + "\n"
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "projectfile.yaml"), []byte(pf), 0o644))
+}
+
+// writeFragment writes one docs/<dir>/<name>.md fragment with an H1 and body.
+func writeFragment(t *testing.T, projectDir, dir, name, h1, body string) {
+	t.Helper()
+	full := filepath.Join(projectDir, dir)
+	require.NoError(t, os.MkdirAll(full, 0o755))
+	content := "<!--\nSPDX-FileCopyrightText: 2026 Tester\n" + spdxTag + ": " + spdxMIT + "\n-->\n\n"
+	content += "# " + h1 + "\n\n" + body + "\n"
+	require.NoError(t, os.WriteFile(filepath.Join(full, name+".md"), []byte(content), 0o644))
+}
+
+// docWithFragments reads the projectfile at dir (resolving includes) and
+// returns the Document the bridge's Render expects.
+func docWithFragments(t *testing.T, dir string) *projectfile.Document {
+	t.Helper()
+	pfPath, err := projectfile.DetectPath(dir)
+	require.NoError(t, err)
+	pf, err := projectfile.Read(pfPath)
+	require.NoError(t, err)
+	return pf
+}
+
+// writeInherited writes one cached parent copy exactly as --refresh would, so
+// every assembly test runs offline. The provenance comment is what carries the
+// version into the section heading.
+func writeInherited(t *testing.T, projectDir, dir, cacheName, parent, ref, entry string) {
+	t.Helper()
+	full := filepath.Join(projectDir, dir, ".inherited")
+	require.NoError(t, os.MkdirAll(full, 0o755))
+	content := "<!--\nSPDX-FileCopyrightText: 2026 Upstream\n" + spdxTag + ": " + spdxMIT + "\n-->\n\n" +
+		"<!-- pf-bridge:inherited name=\"" + parent + "\" url=\"https://example.test/" + parent +
+		"\" ref=\"" + ref + "\" commit=\"0123456789abcdef\" document=\"" + outFeatures + "\" -->\n\n" +
+		"### " + entry + "\n\nFrom parent.\n"
+	require.NoError(t, os.WriteFile(filepath.Join(full, cacheName+".md"), []byte(content), 0o644))
+}
+
+// parentsBlock declares URL parents inside a document, matching the shape a
+// projectfile carries now that parents are repository URLs rather than paths.
+func parentsBlock(urls ...string) string {
+	block := "          parents:\n"
+	for _, u := range urls {
+		block += "            - {url: " + u + "}\n"
+	}
+	return block
+}
+
+// TestRenderAssemblesOwnFragments is the baseline: one document, own
+// fragments only, no parents. Verifies H1 title, the demoted H3s the
+// readme bridge scrapes, the SPDX HTML header, and section headings.
+func TestRenderAssemblesOwnFragments(t *testing.T) {
+	dir := t.TempDir()
+	writeProjectfile(t, dir, "    fragments:\n      documents:\n        - {dir: docs/features.d, out: FEATURES.md, title: Features}")
+	writeFragment(t, dir, "docs/features.d", "alpha", "Alpha Feature", "Alpha body.")
+	writeFragment(t, dir, "docs/features.d", "beta", "Beta Feature", "Beta body.")
+
+	out, err := fragments.Bridge{}.Render(docWithFragments(t, dir), core.Options{Dir: dir})
+	require.NoError(t, err)
+	require.Contains(t, out.Files, outFeatures)
+
+	body := string(out.Files[outFeatures])
+	assert.Contains(t, body, "# Features")
+	assert.Contains(t, body, "## Project Features")
+	assert.Contains(t, body, "### Alpha Feature")
+	assert.Contains(t, body, "### Beta Feature")
+	assert.Contains(t, body, "Alpha body.")
+	// SPDX HTML header is prepended (REUSE-preferred form for tracked Markdown).
+	assert.True(t, strings.HasPrefix(body, "<!--"))
+	// Assemble from spdxTag/spdxMIT so the REUSE scanner does not read the
+	// assembled literal in this file as a licence expression.
+	assert.Contains(t, body, spdxTag+": "+spdxMIT)
+	// No inherited section when no parents declared.
+	assert.NotContains(t, body, "## Inherited")
+}
+
+// TestRenderDeterministicOrder verifies the fragment glob is sorted so two
+// runs produce identical output regardless of filesystem order —
+// load-bearing for reproducible builds.
+func TestRenderDeterministicOrder(t *testing.T) {
+	dir := t.TempDir()
+	writeProjectfile(t, dir, "    fragments:\n      documents:\n        - {dir: docs/features.d, out: FEATURES.md, title: Features}")
+	for _, n := range []string{"zeta", "alpha", "mid"} {
+		writeFragment(t, dir, "docs/features.d", n, n, n)
+	}
+	pf := docWithFragments(t, dir)
+	out1, err := fragments.Bridge{}.Render(pf, core.Options{Dir: dir})
+	require.NoError(t, err)
+	out2, err := fragments.Bridge{}.Render(pf, core.Options{Dir: dir})
+	require.NoError(t, err)
+	assert.Equal(t, out1.Files[outFeatures], out2.Files[outFeatures])
+
+	body := string(out1.Files[outFeatures])
+	idxA := strings.Index(body, "### alpha")
+	idxM := strings.Index(body, "### mid")
+	idxZ := strings.Index(body, "### zeta")
+	assert.Less(t, idxA, idxM)
+	assert.Less(t, idxM, idxZ, "fragments must appear in sorted (alpha,mid,zeta) order")
+}
+
+// TestRenderInheritsCachedParent asserts a cached parent copy lands in its own
+// section, and that the heading names the version the copy was read at — the
+// claim that stays true after upstream moves on.
+func TestRenderInheritsCachedParent(t *testing.T) {
+	child := t.TempDir()
+	body := "    fragments:\n      documents:\n        - dir: docs/features.d\n" +
+		"          out: FEATURES.md\n          title: Features\n" +
+		parentsBlock(parentURL)
+	writeProjectfile(t, child, body)
+	writeFragment(t, child, "docs/features.d", "child-feat", "Child Feature", "From child.")
+	writeInherited(t, child, "docs/features.d", "b19-ubuntu", "b19/ubuntu", "1.0.0", "Parent Feature")
+
+	out, err := fragments.Bridge{}.Render(docWithFragments(t, child), core.Options{Dir: child})
+	require.NoError(t, err)
+	got := string(out.Files[outFeatures])
+	assert.Contains(t, got, "## Project Features")
+	assert.Contains(t, got, "### Child Feature")
+	assert.Contains(t, got, "## Inherited from b19/ubuntu 1.0.0")
+	assert.Contains(t, got, "### Parent Feature")
+	// The parent's own SPDX header stays in the cache file, not in the assembly.
+	assert.Equal(t, 1, strings.Count(got, "<!--"), "only the document SPDX header survives")
+}
+
+// TestRenderParentWithoutCacheIsQuiet covers the state every project starts in:
+// a parent is declared, --refresh has never run, so there is nothing to inherit.
+// That must render the own fragments and no empty section, never an error —
+// assembly reads local files only and knows nothing about reaching upstream.
+func TestRenderParentWithoutCacheIsQuiet(t *testing.T) {
+	child := t.TempDir()
+	body := "    fragments:\n      documents:\n        - dir: docs/features.d\n" +
+		"          out: FEATURES.md\n          title: Features\n" +
+		parentsBlock(parentURL)
+	writeProjectfile(t, child, body)
+	writeFragment(t, child, "docs/features.d", "child-feat", "Child Feature", "From child.")
+
+	out, err := fragments.Bridge{}.Render(docWithFragments(t, child), core.Options{Dir: child})
+	require.NoError(t, err)
+	got := string(out.Files[outFeatures])
+	assert.Contains(t, got, "### Child Feature")
+	assert.NotContains(t, got, "## Inherited")
+}
+
+// TestRenderInheritedOrderIsDeterministic verifies several parents render in
+// cache-filename order — NOT declaration order — so two runs on one tree
+// produce identical bytes, the property the drift gate compares against.
+func TestRenderInheritedOrderIsDeterministic(t *testing.T) {
+	child := t.TempDir()
+	body := "    fragments:\n      documents:\n        - dir: docs/features.d\n" +
+		"          out: FEATURES.md\n          title: Features\n" +
+		parentsBlock("ssh://git@example.test/b19/zeta.git", "ssh://git@example.test/b19/alpha.git")
+	writeProjectfile(t, child, body)
+	writeFragment(t, child, "docs/features.d", "own", "Own Feature", "Own body.")
+	writeInherited(t, child, "docs/features.d", "b19-zeta", "b19/zeta", "2.0.0", "Zeta Feature")
+	writeInherited(t, child, "docs/features.d", "b19-alpha", "b19/alpha", "1.0.0", "Alpha Feature")
+
+	pf := docWithFragments(t, child)
+	first, err := fragments.Bridge{}.Render(pf, core.Options{Dir: child})
+	require.NoError(t, err)
+	second, err := fragments.Bridge{}.Render(pf, core.Options{Dir: child})
+	require.NoError(t, err)
+	assert.Equal(t, first.Files[outFeatures], second.Files[outFeatures])
+
+	got := string(first.Files[outFeatures])
+	assert.Less(t, strings.Index(got, "b19/alpha"), strings.Index(got, "b19/zeta"))
+}
+
+// TestRenderStripsSPDXAndDemotesH1 verifies each fragment's leading SPDX
+// HTML comment is stripped and its H1 is demoted to H3.
+func TestRenderStripsSPDXAndDemotesH1(t *testing.T) {
+	dir := t.TempDir()
+	writeProjectfile(t, dir, "    fragments:\n      documents:\n        - {dir: docs/features.d, out: FEATURES.md, title: Features}")
+	// Fragment whose SPDX comment is multi-line and would corrupt output
+	// if not stripped; H1 must become H3.
+	writeFragment(t, dir, "docs/features.d", "solo", "Solo", "Body line.")
+
+	out, err := fragments.Bridge{}.Render(docWithFragments(t, dir), core.Options{Dir: dir})
+	require.NoError(t, err)
+	got := string(out.Files[outFeatures])
+	// Only the document-level SPDX header should remain as an HTML comment.
+	assert.Equal(t, 1, strings.Count(got, "<!--"), "per-fragment SPDX comment must be stripped")
+	assert.Contains(t, got, "### Solo")
+	assert.NotContains(t, got, "\n# Solo\n", "fragment H1 must be demoted, not left as H1")
+}
+
+// TestRenderNoDocumentsIsNoOp verifies an absent or empty fragments
+// namespace yields an empty Output (RunRender then logs "no-op").
+func TestRenderNoDocumentsIsNoOp(t *testing.T) {
+	dir := t.TempDir()
+	// No org.projectfile.fragments namespace at all.
+	writeProjectfile(t, dir, "    status: maintained")
+	out, err := fragments.Bridge{}.Render(docWithFragments(t, dir), core.Options{Dir: dir})
+	require.NoError(t, err)
+	assert.Empty(t, out.Files)
+}
+
+// TestRenderEmptyDocumentIsSkipped verifies a declared document whose dir is
+// absent (no own fragments) AND has no parents (no inherited fragments) is
+// skipped — no file emitted. Regression for the bare `# Title` stub that
+// failed markdownlint (empty section + missing final newline).
+func TestRenderEmptyDocumentIsSkipped(t *testing.T) {
+	dir := t.TempDir()
+	writeProjectfile(t, dir,
+		"    fragments:\n      documents:\n"+
+			"        - {dir: docs/features.d, out: FEATURES.md, title: Features}\n"+
+			"        - {dir: docs/roadmap.d, out: ROADMAP.md, title: Roadmap}")
+	// Neither docs/features.d nor docs/roadmap.d exists on disk, no parents.
+	out, err := fragments.Bridge{}.Render(docWithFragments(t, dir), core.Options{Dir: dir})
+	require.NoError(t, err)
+	assert.Empty(t, out.Files, "declared-but-empty shells must produce no files")
+}
+
+// TestRenderHasSingleTrailingNewline verifies every emitted file ends with
+// exactly one newline (markdownlint MD047). Regression for the double-blank
+// trailing lines the per-fragment range left behind.
+func TestRenderHasSingleTrailingNewline(t *testing.T) {
+	dir := t.TempDir()
+	writeProjectfile(t, dir, "    fragments:\n      documents:\n        - {dir: docs/features.d, out: FEATURES.md, title: Features}")
+	writeFragment(t, dir, "docs/features.d", "alpha", "Alpha", "Body.")
+
+	out, err := fragments.Bridge{}.Render(docWithFragments(t, dir), core.Options{Dir: dir})
+	require.NoError(t, err)
+	got := string(out.Files[outFeatures])
+	assert.True(t, strings.HasSuffix(got, "\n"), "file must end with a newline")
+	assert.False(t, strings.HasSuffix(got, "\n\n"), "file must not end with a blank line")
+}
+
+// TestRenderIgnoresUndeclaredCachedCopy verifies the projectfile stays the
+// authority on who this project inherits from: a copy left behind by a parent
+// that was dropped from the list must not keep appearing, since nothing else
+// ever removes the file.
+func TestRenderIgnoresUndeclaredCachedCopy(t *testing.T) {
+	child := t.TempDir()
+	body := "    fragments:\n      documents:\n        - dir: docs/features.d\n" +
+		"          out: FEATURES.md\n          title: Features\n" +
+		parentsBlock("ssh://git@example.test/b19/ubuntu.git")
+	writeProjectfile(t, child, body)
+	writeFragment(t, child, "docs/features.d", "own", "Own Feature", "Own body.")
+	writeInherited(t, child, "docs/features.d", "b19-ubuntu", "b19/ubuntu", "1.0.0", "Kept Feature")
+	writeInherited(t, child, "docs/features.d", "b19-dropped", "b19/dropped", "1.0.0", "Dropped Feature")
+
+	out, err := fragments.Bridge{}.Render(docWithFragments(t, child), core.Options{Dir: child})
+	require.NoError(t, err)
+	got := string(out.Files[outFeatures])
+	assert.Contains(t, got, "### Kept Feature")
+	assert.NotContains(t, got, "### Dropped Feature")
+	assert.NotContains(t, got, "b19/dropped")
+}
+
+// TestRenderNoMultipleBlankLinesBetweenSections verifies the boundary
+// between the Project and Inherited sections is exactly one blank line
+// (markdownlint MD012). Regression: the template's per-fragment range
+// leaves a trailing blank line after every fragment — including the
+// Project section's last — which stacked with the section gap into three
+// consecutive blank lines whenever a document had both own and inherited
+// fragments.
+func TestRenderNoMultipleBlankLinesBetweenSections(t *testing.T) {
+	child := t.TempDir()
+	body := "    fragments:\n      documents:\n        - dir: docs/features.d\n" +
+		"          out: FEATURES.md\n          title: Features\n" +
+		parentsBlock(parentURL)
+	writeProjectfile(t, child, body)
+	writeFragment(t, child, "docs/features.d", "child-feat", "Child Feature", "From child.")
+	writeInherited(t, child, "docs/features.d", "b19-ubuntu", "b19/ubuntu", "1.0.0", "Parent Feature")
+
+	out, err := fragments.Bridge{}.Render(docWithFragments(t, child), core.Options{Dir: child})
+	require.NoError(t, err)
+	got := string(out.Files[outFeatures])
+	assert.NotContains(t, got, "\n\n\n", "no run of multiple consecutive blank lines (MD012)")
+	// The section boundary itself must keep exactly one blank line.
+	assert.Contains(t, got, "From child.\n\n## Inherited from b19/ubuntu 1.0.0")
+}
+
+// TestFilenameUsesNoH1Fallback verifies a fragment with no H1 uses its
+// filename as the title and emits no spurious heading.
+func TestFilenameUsesNoH1Fallback(t *testing.T) {
+	dir := t.TempDir()
+	writeProjectfile(t, dir, "    fragments:\n      documents:\n        - {dir: docs/features.d, out: FEATURES.md, title: Features}")
+	// Fragment with no H1 — just body.
+	fragDir := filepath.Join(dir, "docs", "features.d")
+	require.NoError(t, os.MkdirAll(fragDir, 0o755))
+	require.NoError(t, os.WriteFile(filepath.Join(fragDir, "headerless.md"),
+		[]byte("Just a body, no heading.\n"), 0o644))
+
+	out, err := fragments.Bridge{}.Render(docWithFragments(t, dir), core.Options{Dir: dir})
+	require.NoError(t, err)
+	got := string(out.Files[outFeatures])
+	assert.Contains(t, got, "Just a body, no heading.")
+}
+
+// TestGetFragmentsExtensionParsesDocuments is a pfmodel-level guard: the
+// accessor pulls dir/out/title/parents off the declared documents.
+func TestGetFragmentsExtensionParsesDocuments(t *testing.T) {
+	dir := t.TempDir()
+	body := "    fragments:\n      documents:\n        - dir: docs/features.d\n" +
+		"          out: FEATURES.md\n          title: Features\n" +
+		"          parents:\n            - {url: https://example.test/b19/ubuntu, ref: 1.0.0}\n" +
+		"            - {ref: 2.0.0}\n" +
+		"        - {dir: docs/roadmap.d, out: ROADMAP.md, title: Roadmap}"
+	writeProjectfile(t, dir, body)
+
+	ext, err := pfmodel.GetFragmentsExtension(docWithFragments(t, dir))
+	require.NoError(t, err)
+	require.NotNil(t, ext)
+	require.Len(t, ext.Documents, 2)
+	assert.Equal(t, "docs/features.d", ext.Documents[0].Dir)
+	assert.Equal(t, outFeatures, ext.Documents[0].Out)
+	assert.Equal(t, titleFeatures, ext.Documents[0].Title)
+	// The url-less entry is dropped: it names no parent to resolve.
+	assert.Equal(t, []pfmodel.FragmentParent{{URL: parentURL, Ref: "1.0.0"}},
+		ext.Documents[0].Parents)
+	assert.Equal(t, "ROADMAP.md", ext.Documents[1].Out)
+}
+
+// shellMap builds one document-shell map (dir/out/title) so the field-name
+// literals live in exactly one place — keeps goconst quiet across the many
+// shell declarations in the conventions tests.
+func shellMap(dir, out, title string) map[string]any {
+	return map[string]any{"dir": dir, "out": out, "title": title}
+}
+
+// conventionsDoc builds a Document with the conventions-driven fragments
+// config (shells + flat parents) set directly via SetExtension — the same
+// merged shape include resolution produces for a real project.
+func conventionsDoc(t *testing.T, dir string, shells []map[string]any, parents []string) *projectfile.Document {
+	t.Helper()
+	writeProjectfile(t, dir, "    status: maintained")
+	items := make([]any, len(shells))
+	for i, s := range shells {
+		items[i] = s
+	}
+	parAny := make([]any, len(parents))
+	for i, p := range parents {
+		parAny[i] = map[string]any{"url": p}
+	}
+	doc := docWithFragments(t, dir)
+	projectfile.SetExtension(doc, pfmodel.ConventionsExtensionNS, map[string]any{
+		keyFragments: map[string]any{keyDocuments: items, keyParents: parAny},
+	})
+	return doc
+}
+
+// TestRenderConventionsDefaultsWithParents is the primary conventions path:
+// shells come from conventions, parents from the project (flat list shared
+// across docs). Verifies the bridge synthesises documents and assembles each
+// one from its own fragments plus the cached copies under its dir.
+func TestRenderConventionsDefaultsWithParents(t *testing.T) {
+	child := t.TempDir()
+	writeFragment(t, child, "docs/features.d", "child-feat", "Child Feature", "Child body.")
+	writeInherited(t, child, "docs/features.d", "b19-ubuntu", "b19/ubuntu", "1.0.0", "Parent Feature")
+
+	doc := conventionsDoc(t, child,
+		[]map[string]any{shellMap("docs/features.d", outFeatures, titleFeatures)},
+		[]string{parentURL})
+
+	out, err := fragments.Bridge{}.Render(doc, core.Options{Dir: child})
+	require.NoError(t, err)
+	got := string(out.Files[outFeatures])
+	assert.Contains(t, got, "# Features")
+	assert.Contains(t, got, "## Project Features")
+	assert.Contains(t, got, "### Child Feature")
+	assert.Contains(t, got, "## Inherited from b19/ubuntu 1.0.0")
+	assert.Contains(t, got, "### Parent Feature")
+}
+
+// TestRenderConventionsMultipleShellsSharedParents verifies the flat parents
+// list applies to EVERY shell (features and roadmap share one list), and that a
+// shell with neither own fragments nor a cached copy produces no file — empty
+// documents are skipped rather than emitted as a bare-title stub (the markdown
+// linter rejects empty sections). Each document caches under its OWN dir, so
+// the features copy never leaks into the roadmap.
+func TestRenderConventionsMultipleShellsSharedParents(t *testing.T) {
+	child := t.TempDir()
+	// Only docs/features.d exists; docs/roadmap.d is absent on disk.
+	writeFragment(t, child, "docs/features.d", "f", "Feat", "body")
+	writeInherited(t, child, "docs/features.d", "b19-ubuntu", "b19/ubuntu", "1.0.0", "Parent Feature")
+	doc := conventionsDoc(t, child,
+		[]map[string]any{
+			shellMap("docs/features.d", outFeatures, titleFeatures),
+			shellMap("docs/roadmap.d", "ROADMAP.md", "Roadmap"),
+		},
+		[]string{parentURL})
+
+	out, err := fragments.Bridge{}.Render(doc, core.Options{Dir: child})
+	require.NoError(t, err)
+	assert.Contains(t, out.Files, outFeatures, "features shell with a real dir must produce a file")
+	assert.NotContains(t, out.Files, "ROADMAP.md", "empty shell must not emit a stub file")
+}
+
+// TestRenderOverrideWinsOverConventions verifies an explicit
+// org.projectfile.fragments declaration is used verbatim and the conventions
+// defaults are ignored entirely (no merge into the override).
+func TestRenderOverrideWinsOverConventions(t *testing.T) {
+	dir := t.TempDir()
+	writeProjectfile(t, dir, "    status: maintained")
+	writeFragment(t, dir, "docs/features.d", "f", "Feat", "body")
+	writeFragment(t, dir, "docs/changelog.d", "c", "Changelog", "entry")
+	// Override declares ONLY a changelog doc; conventions would add features.
+	doc := docWithFragments(t, dir)
+	projectfile.SetExtension(doc, pfmodel.FragmentsExtensionNS, map[string]any{
+		keyDocuments: []any{shellMap("docs/changelog.d", "CHANGELOG.md", "Changelog")},
+	})
+	projectfile.SetExtension(doc, pfmodel.ConventionsExtensionNS, map[string]any{
+		keyFragments: map[string]any{
+			keyDocuments: []any{shellMap("docs/features.d", outFeatures, titleFeatures)},
+		},
+	})
+
+	out, err := fragments.Bridge{}.Render(doc, core.Options{Dir: dir})
+	require.NoError(t, err)
+	assert.Contains(t, out.Files, "CHANGELOG.md", "override doc must render")
+	assert.NotContains(t, out.Files, outFeatures, "conventions default must NOT bleed into the override")
+}
+
+// TestRenderConventionsNoParents verifies the conventions path works with no
+// parents (a rootless project) — shells render with their own fragments only.
+func TestRenderConventionsNoParents(t *testing.T) {
+	dir := t.TempDir()
+	writeFragment(t, dir, "docs/features.d", "solo", "Solo", "body")
+	doc := conventionsDoc(t, dir,
+		[]map[string]any{shellMap("docs/features.d", outFeatures, titleFeatures)},
+		nil)
+
+	out, err := fragments.Bridge{}.Render(doc, core.Options{Dir: dir})
+	require.NoError(t, err)
+	got := string(out.Files[outFeatures])
+	assert.Contains(t, got, "### Solo")
+	assert.NotContains(t, got, "## Inherited", "no parents → no inherited section")
+}

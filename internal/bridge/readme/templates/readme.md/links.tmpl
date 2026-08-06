@@ -1,0 +1,8 @@
+{{- with linkGroups}}
+## {{t "links.title"}}
+
+{{range .}}### {{.Heading}}
+
+{{range .Links}}- [{{.Label}}]({{.URL}})
+{{end}}
+{{end}}{{end}}
