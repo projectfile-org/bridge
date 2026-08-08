@@ -1,30 +1,26 @@
-{{.Marker}}
+<!--
+SPDX-FileCopyrightText: 2026 this project
+SPDX-License-Identifier: MIT
+-->
+
+<!-- pf-cli-managed: yes -->
+
+[Español](SECURITY.es.md) · [Українська](SECURITY.uk.md)
 
 # Security Policy
 
-{{- if .SupportedVersions}}
-
 ## Supported Versions
 
-The following {{.ProjectName}} versions currently receive security updates:
+The following this project versions currently receive security updates:
 
-{{range .SupportedVersions}}- {{.}}
-{{end}}
-{{- end}}
+- \>= 2.0 (current)
+- 1.x (security only)
 
 ## Reporting a Vulnerability
 
 **Please do not report security vulnerabilities through public issues, discussions, or change requests.**
 
-{{- if .ReportURL}}
-
-Report them through our private disclosure channel:
-
- <{{.ReportURL}}>
-{{- else if .Contact}}
-
-Report them by emailing **<{{.Contact}}>**.
-{{- end}}
+Report them by emailing **<security@example.org>**.
 
 Please include as much of the following as you can — it helps us triage and resolve the report faster:
 
@@ -38,9 +34,8 @@ Please include as much of the following as you can — it helps us triage and re
 - Relevant log files, if possible
 - Proof-of-concept or exploit code, if possible
 
-We aim to acknowledge reports within {{if .DisclosureWindow}}{{.DisclosureWindow}}{{else}}30 days{{end}} and to coordinate
+We aim to acknowledge reports within 14 days and to coordinate
 disclosure once a fix is available.
-{{- if .GPGKey}}
 
 ## Encrypting a Report
 
@@ -49,45 +44,37 @@ If you would like to send us an encrypted report, follow these steps.
 Import our public key:
 
 ```sh
-gpg --keyserver keys.openpgp.org --recv-keys {{.GPGKey}}
+gpg --keyserver keys.openpgp.org --recv-keys B64C122EE16C3746
 ```
-{{- if .GPGKeyURL}}
 
 Or download it directly and import it:
 
 ```sh
-gpg --import pubkey.asc   # downloaded from {{.GPGKeyURL}}
+gpg --import pubkey.asc   # downloaded from https://example.org/pubkey.asc
 ```
-{{- end}}
-{{- if .GPGFingerprint}}
 
 Verify the fingerprint matches before you trust it:
 
 ```sh
-gpg --fingerprint {{.GPGKey}}
+gpg --fingerprint B64C122EE16C3746
 ```
 
 The output must show:
 
 ```text
-{{.GPGFingerprint}}
+155E 3428 F7AC 5533 6D9A  1E8C B64C 122E E16C 3746
 ```
-{{- end}}
 
 Encrypt your message to us:
 
 ```sh
-gpg --encrypt --armor --recipient {{.GPGKey}} message.txt
+gpg --encrypt --armor --recipient B64C122EE16C3746 message.txt
 ```
-{{- end}}
-{{- if .BugBountyURL}}
 
 ## Bug Bounty
 
-{{.ProjectName}} participates in a bug bounty programme — see {{.BugBountyURL}}
+this project participates in a bug bounty programme — see https://example.org/.well-known/security.txt
 for scope and reward details.
-{{- end}}
-{{- if .Acknowledged}}
 
 ## Acknowledged Vulnerabilities
 
@@ -96,6 +83,6 @@ depends on an upstream release, or the advisory does not apply to this project):
 
 | ID | Reason |
 | --- | --- |
-{{range .Acknowledged}}| {{.ID}} | {{if .Reason}}{{.Reason}}{{else}}—{{end}} |
-{{end}}
-{{- end}}
+| CVE-2024-12345 | Vulnerable code path is unreachable in this project |
+| GHSA-abcd-1234-efgh | Fixed in pinned upstream v1.2.3 |
+| GO-2024-0001 | — |

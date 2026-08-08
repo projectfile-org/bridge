@@ -7,6 +7,7 @@ package security
 import (
 	"fmt"
 	"os"
+	"strings"
 
 	"kiota.ch/projectfile/core/v2/pkg/genlog"
 	"kiota.ch/projectfile/core/v2/pkg/projectfile"
@@ -88,7 +89,11 @@ func (Bridge) Render(pf *projectfile.Document, opts core.Options) (core.Output, 
 		windowSrc = "default (per-language, from template)"
 	}
 
-	emitDecisionTrace(contact, contactSrc, ext, window, windowSrc)
+	gpgKeyURL := pfmodel.LinkURL(pf, "pgp-key")
+	acknowledged := acknowledgedVulns(pf)
+	versions := mdSafeVersions(ext.SupportedVersions)
+
+	emitDecisionTrace(contact, contactSrc, ext, window, windowSrc, gpgKeyURL, len(acknowledged))
 
 	return core.RenderLocalized(pf, core.LocalizedSpec{
 		Filename: filenameSecurity,
@@ -99,10 +104,13 @@ func (Bridge) Render(pf *projectfile.Document, opts core.Options) (core.Output, 
 				ProjectName:       pfmodel.DisplayNameForLang(pf, lang),
 				Contact:           contact,
 				ReportURL:         ext.ReportURL,
-				SupportedVersions: ext.SupportedVersions,
+				SupportedVersions: versions,
 				DisclosureWindow:  window,
 				GPGKey:            ext.GPGKey,
+				GPGFingerprint:    ext.GPGFingerprint,
+				GPGKeyURL:         gpgKeyURL,
 				BugBountyURL:      ext.BugBountyURL,
+				Acknowledged:      acknowledged,
 			}
 		},
 	}, opts)
@@ -140,13 +148,16 @@ func extensionToMap(ext *pfmodel.SecurityExtension) map[string]any {
 	if ext.GPGKey != "" {
 		m["gpg-key"] = ext.GPGKey
 	}
+	if ext.GPGFingerprint != "" {
+		m["gpg-fingerprint"] = ext.GPGFingerprint
+	}
 	if ext.BugBountyURL != "" {
 		m["bug-bounty-url"] = ext.BugBountyURL
 	}
 	return m
 }
 
-func emitDecisionTrace(contact, contactSrc string, ext *pfmodel.SecurityExtension, window, windowSrc string) {
+func emitDecisionTrace(contact, contactSrc string, ext *pfmodel.SecurityExtension, window, windowSrc string, gpgKeyURL string, ackCount int) {
 	genlog.Decision("contact", valueOrEmpty(contact), contactSrc, "[org.projectfile.security].contact")
 	genlog.Decision("report-url", valueOrEmpty(ext.ReportURL), "[org.projectfile.security].report-url", "")
 	genlog.Decision("disclosure-window", window, windowSrc, "[org.projectfile.security].disclosure-window")
@@ -158,9 +169,39 @@ func emitDecisionTrace(contact, contactSrc string, ext *pfmodel.SecurityExtensio
 	if ext.GPGKey != "" {
 		genlog.Decision("gpg-key", ext.GPGKey, "[org.projectfile.security].gpg-key", "")
 	}
+	if ext.GPGFingerprint != "" {
+		genlog.Decision("gpg-fingerprint", ext.GPGFingerprint, "[org.projectfile.security].gpg-fingerprint", "")
+	}
+	if gpgKeyURL != "" {
+		genlog.Decision("gpg-key-url", gpgKeyURL, "links[].type=pgp-key", "")
+	}
 	if ext.BugBountyURL != "" {
 		genlog.Decision("bug-bounty-url", ext.BugBountyURL, "[org.projectfile.security].bug-bounty-url", "")
 	}
+	if ackCount == 0 {
+		genlog.Decision("acknowledged", "(unset, section omitted)", "org.projectfile.vulnerabilities.suppress", "")
+	} else {
+		genlog.Decision("acknowledged", fmt.Sprintf("%d entries", ackCount), "org.projectfile.vulnerabilities.suppress", "")
+	}
+}
+
+// acknowledgedVulns reads org.projectfile.vulnerabilities.suppress — the same
+// list the scanner bridges fan out to .trivyignore/.grype.yaml/osv-scanner.toml
+// — and maps it to the view. A suppressed finding is a reviewed one, so the
+// disclosure table names exactly what the scanners skip.
+func acknowledgedVulns(pf *projectfile.Document) []ackView {
+	vuln, _ := pfmodel.GetVulnerabilitiesExtension(pf)
+	if vuln == nil {
+		return nil
+	}
+	out := make([]ackView, 0, len(vuln.Suppress))
+	for _, s := range vuln.Suppress {
+		if s.ID == "" {
+			continue
+		}
+		out = append(out, ackView{ID: s.ID, Reason: s.Reason})
+	}
+	return out
 }
 
 func valueOrEmpty(s string) string {
@@ -168,4 +209,24 @@ func valueOrEmpty(s string) string {
 		return "(unset, omitted)"
 	}
 	return s
+}
+
+// mdSafeVersions escapes a leading '>' or '<' on each version so it cannot
+// start a Markdown blockquote continuation or an inline HTML tag when the list
+// renders. A SemVer range like ">= 2.0" would otherwise absorb the next item;
+// "\>" renders as a literal '>' on GitHub/Forgejo. The escape is applied only
+// at the start, so mid-string characters keep their meaning.
+func mdSafeVersions(versions []string) []string {
+	if len(versions) == 0 {
+		return nil
+	}
+	out := make([]string, len(versions))
+	for i, v := range versions {
+		if strings.HasPrefix(v, ">") || strings.HasPrefix(v, "<") {
+			out[i] = `\` + v
+		} else {
+			out[i] = v
+		}
+	}
+	return out
 }

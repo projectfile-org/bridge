@@ -1,30 +1,26 @@
-{{.Marker}}
+<!--
+SPDX-FileCopyrightText: 2026 this project
+SPDX-License-Identifier: MIT
+-->
+
+<!-- pf-cli-managed: yes -->
+
+[English](SECURITY.md) · [Español](SECURITY.es.md)
 
 # Політика безпеки
 
-{{- if .SupportedVersions}}
-
 ## Версії, що підтримуються
 
-Наведені версії {{.ProjectName}} отримують оновлення безпеки:
+Наведені версії this project отримують оновлення безпеки:
 
-{{range .SupportedVersions}}- {{.}}
-{{end}}
-{{- end}}
+- \>= 2.0 (current)
+- 1.x (security only)
 
 ## Як повідомити про вразливість
 
 **Не повідомляйте про вразливості безпеки через публічні задачі, обговорення або запити на зміну.**
 
-{{- if .ReportURL}}
-
-Зробіть це через наш приватний канал розкриття:
-
- <{{.ReportURL}}>
-{{- else if .Contact}}
-
-Зробіть це, написавши на **<{{.Contact}}>**.
-{{- end}}
+Зробіть це, написавши на **<security@example.org>**.
 
 Додайте стільки з наведеного, скільки зможете — це допоможе нам швидше розсортувати та вирішити повідомлення:
 
@@ -38,9 +34,8 @@
 - Відповідні файли журналів, якщо можливо
 - Доказ концепції або код експлойту, якщо можливо
 
-Ми прагнемо підтвердити отримання повідомлення протягом {{if .DisclosureWindow}}{{.DisclosureWindow}}{{else}}30 днів{{end}} і
+Ми прагнемо підтвердити отримання повідомлення протягом 14 days і
 скоординувати розкриття, щойно буде готове виправлення.
-{{- if .GPGKey}}
 
 ## Шифрування повідомлення
 
@@ -49,45 +44,37 @@
 Імпортуйте наш відкритий ключ:
 
 ```sh
-gpg --keyserver keys.openpgp.org --recv-keys {{.GPGKey}}
+gpg --keyserver keys.openpgp.org --recv-keys B64C122EE16C3746
 ```
-{{- if .GPGKeyURL}}
 
 Або завантажте його безпосередньо й імпортуйте:
 
 ```sh
-gpg --import pubkey.asc   # завантажено з {{.GPGKeyURL}}
+gpg --import pubkey.asc   # завантажено з https://example.org/pubkey.asc
 ```
-{{- end}}
-{{- if .GPGFingerprint}}
 
 Перевірте, що відбиток збігається, перш ніж довіритися йому:
 
 ```sh
-gpg --fingerprint {{.GPGKey}}
+gpg --fingerprint B64C122EE16C3746
 ```
 
 Вивід має показати:
 
 ```text
-{{.GPGFingerprint}}
+155E 3428 F7AC 5533 6D9A  1E8C B64C 122E E16C 3746
 ```
-{{- end}}
 
 Зашифруйте своє повідомлення для нас:
 
 ```sh
-gpg --encrypt --armor --recipient {{.GPGKey}} message.txt
+gpg --encrypt --armor --recipient B64C122EE16C3746 message.txt
 ```
-{{- end}}
-{{- if .BugBountyURL}}
 
 ## Винагорода за вразливості
 
-{{.ProjectName}} бере участь у програмі винагород за вразливості — див.
-{{.BugBountyURL}} щодо обсягу та розміру винагород.
-{{- end}}
-{{- if .Acknowledged}}
+this project бере участь у програмі винагород за вразливості — див.
+https://example.org/.well-known/security.txt щодо обсягу та розміру винагород.
 
 ## Визнані вразливості
 
@@ -96,6 +83,6 @@ gpg --encrypt --armor --recipient {{.GPGKey}} message.txt
 
 | ID | Причина |
 | --- | --- |
-{{range .Acknowledged}}| {{.ID}} | {{if .Reason}}{{.Reason}}{{else}}—{{end}} |
-{{end}}
-{{- end}}
+| CVE-2024-12345 | Vulnerable code path is unreachable in this project |
+| GHSA-abcd-1234-efgh | Fixed in pinned upstream v1.2.3 |
+| GO-2024-0001 | — |

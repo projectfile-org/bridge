@@ -159,6 +159,7 @@ type SecurityExtension struct {
 	SupportedVersions []string `toml:"supported-versions" yaml:"supported-versions" json:"supported-versions"`
 	DisclosureWindow  string   `toml:"disclosure-window"  yaml:"disclosure-window"  json:"disclosure-window"`
 	GPGKey            string   `toml:"gpg-key"            yaml:"gpg-key"            json:"gpg-key"`
+	GPGFingerprint    string   `toml:"gpg-fingerprint"    yaml:"gpg-fingerprint"    json:"gpg-fingerprint"`
 	BugBountyURL      string   `toml:"bug-bounty-url"     yaml:"bug-bounty-url"     json:"bug-bounty-url"`
 }
 

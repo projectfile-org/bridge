@@ -1,0 +1,33 @@
+---
+# SPDX-FileCopyrightText: 2026 Damián Búho <damian.buho@proton.me>
+#
+# SPDX-License-Identifier: MIT
+title: sec-fixture
+display-name: SecFixture
+org:
+  projectfile:
+    i18n:
+      languages: [es, uk]
+    security:
+      disclosure-window: 14 days
+      gpg-key: B64C122EE16C3746
+      gpg-fingerprint: 155E 3428 F7AC 5533 6D9A  1E8C B64C 122E E16C 3746
+      bug-bounty-url: https://example.org/.well-known/security.txt
+      supported-versions:
+        - ">= 2.0 (current)"
+        - "1.x (security only)"
+    vulnerabilities:
+      suppress:
+        - id: CVE-2024-12345
+          reason: Vulnerable code path is unreachable in this project
+        - id: GHSA-abcd-1234-efgh
+          reason: Fixed in pinned upstream v1.2.3
+        - id: GO-2024-0001
+links:
+  - type: pgp-key
+    url: https://example.org/pubkey.asc
+people:
+  - given-names: Jane
+    family-names: Maintainer
+    email: security@example.org
+    roles: [security]

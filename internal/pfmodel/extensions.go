@@ -122,6 +122,7 @@ func GetSecurityExtension(doc *projectfile.Document) (*SecurityExtension, error)
 		SupportedVersions: strListVal(m, "supported-versions"),
 		DisclosureWindow:  strVal(m, "disclosure-window"),
 		GPGKey:            strVal(m, "gpg-key"),
+		GPGFingerprint:    strVal(m, "gpg-fingerprint"),
 		BugBountyURL:      strVal(m, "bug-bounty-url"),
 	}, nil
 }

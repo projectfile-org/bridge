@@ -1,30 +1,26 @@
-{{.Marker}}
+<!--
+SPDX-FileCopyrightText: 2026 this project
+SPDX-License-Identifier: MIT
+-->
+
+<!-- pf-cli-managed: yes -->
+
+[English](SECURITY.md) · [Українська](SECURITY.uk.md)
 
 # Política de seguridad
 
-{{- if .SupportedVersions}}
-
 ## Versiones con soporte
 
-Las siguientes versiones de {{.ProjectName}} reciben actualizaciones de seguridad:
+Las siguientes versiones de this project reciben actualizaciones de seguridad:
 
-{{range .SupportedVersions}}- {{.}}
-{{end}}
-{{- end}}
+- \>= 2.0 (current)
+- 1.x (security only)
 
 ## Cómo informar de una vulnerabilidad
 
 **No informes de vulnerabilidades de seguridad a través de incidencias, debates o solicitudes de cambio públicos.**
 
-{{- if .ReportURL}}
-
-Hazlo a través de nuestro canal privado de divulgación:
-
- <{{.ReportURL}}>
-{{- else if .Contact}}
-
-Hazlo escribiendo a **<{{.Contact}}>**.
-{{- end}}
+Hazlo escribiendo a **<security@example.org>**.
 
 Incluye toda la información que puedas de la siguiente lista; nos ayuda a clasificar y resolver el informe más rápido:
 
@@ -38,9 +34,8 @@ Incluye toda la información que puedas de la siguiente lista; nos ayuda a clasi
 - Archivos de registro relevantes, si es posible
 - Código de prueba de concepto o de explotación, si es posible
 
-Procuramos acusar recibo de los informes en un plazo de {{if .DisclosureWindow}}{{.DisclosureWindow}}{{else}}30 días{{end}} y coordinar
+Procuramos acusar recibo de los informes en un plazo de 14 days y coordinar
 la divulgación en cuanto exista una corrección.
-{{- if .GPGKey}}
 
 ## Cifrar un informe
 
@@ -49,45 +44,37 @@ Si quieres enviarnos un informe cifrado, sigue estos pasos.
 Importa nuestra clave pública:
 
 ```sh
-gpg --keyserver keys.openpgp.org --recv-keys {{.GPGKey}}
+gpg --keyserver keys.openpgp.org --recv-keys B64C122EE16C3746
 ```
-{{- if .GPGKeyURL}}
 
 O descárgala directamente e impórtala:
 
 ```sh
-gpg --import pubkey.asc   # descargada de {{.GPGKeyURL}}
+gpg --import pubkey.asc   # descargada de https://example.org/pubkey.asc
 ```
-{{- end}}
-{{- if .GPGFingerprint}}
 
 Verifica que la huella coincide antes de confiar en ella:
 
 ```sh
-gpg --fingerprint {{.GPGKey}}
+gpg --fingerprint B64C122EE16C3746
 ```
 
 La salida debe mostrar:
 
 ```text
-{{.GPGFingerprint}}
+155E 3428 F7AC 5533 6D9A  1E8C B64C 122E E16C 3746
 ```
-{{- end}}
 
 Cifra tu mensaje para nosotros:
 
 ```sh
-gpg --encrypt --armor --recipient {{.GPGKey}} message.txt
+gpg --encrypt --armor --recipient B64C122EE16C3746 message.txt
 ```
-{{- end}}
-{{- if .BugBountyURL}}
 
 ## Programa de recompensas
 
-{{.ProjectName}} participa en un programa de recompensas por errores — consulta
-{{.BugBountyURL}} para conocer el alcance y las recompensas.
-{{- end}}
-{{- if .Acknowledged}}
+this project participa en un programa de recompensas por errores — consulta
+https://example.org/.well-known/security.txt para conocer el alcance y las recompensas.
 
 ## Vulnerabilidades reconocidas
 
@@ -97,6 +84,6 @@ aplica a este proyecto):
 
 | ID | Motivo |
 | --- | --- |
-{{range .Acknowledged}}| {{.ID}} | {{if .Reason}}{{.Reason}}{{else}}—{{end}} |
-{{end}}
-{{- end}}
+| CVE-2024-12345 | Vulnerable code path is unreachable in this project |
+| GHSA-abcd-1234-efgh | Fixed in pinned upstream v1.2.3 |
+| GO-2024-0001 | — |
