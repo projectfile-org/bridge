@@ -65,9 +65,10 @@ func (Bridge) Render(pf *projectfile.Document, opts core.Options) (core.Output, 
 		Filename: filenameDEI,
 		Langs:    pfmodel.Languages(pf),
 		View: func(lang string) any {
+			strLang := core.ResolveLang(lang, pf)
 			return deiView{
 				Marker:       core.MarkerHTML,
-				ProjectName:  pfmodel.DisplayNameForLang(pf, lang),
+				ProjectName:  pfmodel.DisplayNameForLang(pf, strLang),
 				Scope:        ext.Scope,
 				LastReviewed: ext.LastReviewed,
 				ContactEmail: contact,

@@ -159,7 +159,7 @@ func TestTemplateLSResolvesActiveLang(t *testing.T) {
 	out, err := Bridge{}.Render(pf, core.Options{Dir: dir, Mode: modeWrite, Force: true})
 	require.NoError(t, err)
 	assert.Contains(t, string(out.Files["README.md"]), "[Hello]")
-	assert.Contains(t, string(out.Files["README.es.md"]), "[Hola]")
+	assert.Contains(t, string(out.Files["docs/es/README.md"]), "[Hola]")
 }
 
 // TestPFLookupNilDoc verifies the helper never panics on a nil Doc — the

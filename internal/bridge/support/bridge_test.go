@@ -53,13 +53,13 @@ func TestRenderSingleLanguage(t *testing.T) {
 }
 
 // TestRenderEmitsOneFilePerShippedLanguage verifies the declared languages
-// drive the multi-file output for a community health file, the same way they
-// already did for README.
+// drive the multi-file output for a community health file: the canonical file
+// at the root, one variant per language under docs/<lang>/.
 func TestRenderEmitsOneFilePerShippedLanguage(t *testing.T) {
 	out, err := support.Bridge{}.Render(localizedDoc("es", "uk"), core.Options{Offline: true})
 	require.NoError(t, err)
 	assert.ElementsMatch(t,
-		[]string{"SUPPORT.md", "SUPPORT.es.md", "SUPPORT.uk.md"},
+		[]string{"SUPPORT.md", "docs/es/SUPPORT.md", "docs/uk/SUPPORT.md"},
 		keys(out.Files))
 }
 
@@ -69,7 +69,7 @@ func TestRenderResolvesTitlePerLanguage(t *testing.T) {
 	out, err := support.Bridge{}.Render(localizedDoc("es"), core.Options{Offline: true})
 	require.NoError(t, err)
 	assert.Contains(t, string(out.Files["SUPPORT.md"]), "**Widget**")
-	assert.Contains(t, string(out.Files["SUPPORT.es.md"]), "**Artilugio**")
+	assert.Contains(t, string(out.Files["docs/es/SUPPORT.md"]), "**Artilugio**")
 }
 
 // TestRenderTranslatesRowVocabulary verifies the "Where to Ask" question
@@ -79,7 +79,7 @@ func TestRenderTranslatesRowVocabulary(t *testing.T) {
 	out, err := support.Bridge{}.Render(localizedDoc("es"), core.Options{Offline: true})
 	require.NoError(t, err)
 	assert.Contains(t, string(out.Files["SUPPORT.md"]), "**Report a security vulnerability**")
-	assert.Contains(t, string(out.Files["SUPPORT.es.md"]), "**Informar de una vulnerabilidad de seguridad**")
+	assert.Contains(t, string(out.Files["docs/es/SUPPORT.md"]), "**Informar de una vulnerabilidad de seguridad**")
 }
 
 // TestRenderCrossLinksStayInLanguage verifies a localized document links the
@@ -88,18 +88,18 @@ func TestRenderCrossLinksStayInLanguage(t *testing.T) {
 	out, err := support.Bridge{}.Render(localizedDoc("es"), core.Options{Offline: true})
 	require.NoError(t, err)
 	assert.Contains(t, string(out.Files["SUPPORT.md"]), "[SECURITY.md](SECURITY.md)")
-	assert.Contains(t, string(out.Files["SUPPORT.es.md"]), "[SECURITY.es.md](SECURITY.es.md)")
+	assert.Contains(t, string(out.Files["docs/es/SUPPORT.md"]), "[docs/es/SECURITY.md](docs/es/SECURITY.md)")
 }
 
 // TestRenderSkipsUntranslatedLanguage is the missing-translation policy: a
 // declared language with no template produces no file at all — never the
-// English body under a localized name — and never appears in the bar of the
-// files that did render.
+// default-language body under a localized name — and never appears in the bar
+// of the files that did render.
 func TestRenderSkipsUntranslatedLanguage(t *testing.T) {
 	out, err := support.Bridge{}.Render(localizedDoc("es", "zz"), core.Options{Offline: true})
 	require.NoError(t, err)
-	assert.ElementsMatch(t, []string{"SUPPORT.md", "SUPPORT.es.md"}, keys(out.Files))
-	assert.NotContains(t, string(out.Files["SUPPORT.md"]), "SUPPORT.zz.md",
+	assert.ElementsMatch(t, []string{"SUPPORT.md", "docs/es/SUPPORT.md"}, keys(out.Files))
+	assert.NotContains(t, string(out.Files["SUPPORT.md"]), "docs/zz/SUPPORT.md",
 		"a skipped language must not be advertised in the cross-language bar")
 }
 
@@ -110,10 +110,10 @@ func TestRenderCrossLanguageBar(t *testing.T) {
 	require.NoError(t, err)
 
 	en := string(out.Files["SUPPORT.md"])
-	assert.Contains(t, en, "[ES](SUPPORT.es.md)")
-	assert.Contains(t, en, "[UK](SUPPORT.uk.md)")
+	assert.Contains(t, en, "[Español](docs/es/SUPPORT.md)")
+	assert.Contains(t, en, "[Українська](docs/uk/SUPPORT.md)")
 
-	es := string(out.Files["SUPPORT.es.md"])
-	assert.Contains(t, es, "[EN](SUPPORT.md)")
-	assert.NotContains(t, es, "[ES](SUPPORT.es.md)", "a variant must not link to itself")
+	es := string(out.Files["docs/es/SUPPORT.md"])
+	assert.Contains(t, es, "[English](SUPPORT.md)")
+	assert.NotContains(t, es, "[Español](docs/es/SUPPORT.md)", "a variant must not link to itself")
 }

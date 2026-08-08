@@ -114,7 +114,7 @@ func TestRenderLocalizedSections(t *testing.T) {
 	require.NoError(t, err)
 	require.Len(t, out.Files, 3)
 
-	es := string(out.Files["README.es.md"])
+	es := string(out.Files["docs/es/README.md"])
 	assert.Contains(t, es, "## Instalación")
 	assert.Contains(t, es, "Consulta [Instalación](INSTALL.md)")
 	assert.Contains(t, es, "## Políticas")
@@ -123,7 +123,7 @@ func TestRenderLocalizedSections(t *testing.T) {
 	assert.Contains(t, es, "[Código fuente](https://example.com/repo)")
 	assert.NotContains(t, es, "## Installation")
 
-	uk := string(out.Files["README.uk.md"])
+	uk := string(out.Files["docs/uk/README.md"])
 	assert.Contains(t, uk, "## Встановлення")
 	assert.Contains(t, uk, "## Політики")
 	assert.NotContains(t, uk, "## Policies")
@@ -152,9 +152,9 @@ func TestRenderPrefersLanguageTemplate(t *testing.T) {
 	out, err := Bridge{}.Render(pf, core.Options{Dir: dir, Mode: modeWrite, Force: true})
 	require.NoError(t, err)
 
-	assert.Contains(t, string(out.Files["README.es.md"]), "SOLO-EN-ESPAÑOL")
-	assert.NotContains(t, string(out.Files["README.es.md"]), "## Licencia")
-	assert.Contains(t, string(out.Files["README.uk.md"]), "## Ліцензія",
+	assert.Contains(t, string(out.Files["docs/es/README.md"]), "SOLO-EN-ESPAÑOL")
+	assert.NotContains(t, string(out.Files["docs/es/README.md"]), "## Licencia")
+	assert.Contains(t, string(out.Files["docs/uk/README.md"]), "## Ліцензія",
 		"a sibling language keeps the neutral template")
 	assert.Contains(t, string(out.Files[filenameReadme]), "## License")
 }

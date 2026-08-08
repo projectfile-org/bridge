@@ -155,12 +155,16 @@ const (
 // localizes its own strings through `t`, so a variant is only needed by a
 // block a project wants to *restructure* per language — translating one is
 // a catalog edit, not a template copy.
+//
+// Template names keep the infix form (license.es.tmpl) — only disk OUTPUT moved
+// under docs/<lang>/, template lookup did not — so this uses the infix, not
+// LocalizedFilename.
 func blockCandidates(blockName, lang string) []string {
 	name := blockName + tmplExt
 	if lang == "" {
 		return []string{name}
 	}
-	return []string{core.LocalizedFilename(name, lang), name}
+	return []string{core.LocalizedTemplateInfix(name, lang), name}
 }
 
 // renderBlock implements the 4-tier block resolution algorithm, each template
@@ -254,13 +258,15 @@ func execBlockTemplate(name string, body []byte, data readmeView, dir string, ex
 			// t resolves a catalog message in the active render language,
 			// falling back to English. This is what keeps section headings
 			// and boilerplate sentences out of the templates themselves, so
-			// one structural template serves every language.
-			"t": func(key string) string { return translate(data.Lang, key) },
+			// one structural template serves every language. StrLang maps the
+			// canonical render sentinel to the default language so a non-
+			// English-default project's root README resolves its own language.
+			"t": func(key string) string { return translate(data.StrLang, key) },
 			// ls resolves a *LocalizedString in the active render language so
 			// templates can call ExtractLocalizedStringForLang inline — that
 			// resolution is a function, not a field, so it can't be pre-baked.
 			"ls": func(ls *projectfile.LocalizedString) string {
-				return projectfile.ExtractLocalizedStringForLang(ls, data.Lang)
+				return projectfile.ExtractLocalizedStringForLang(ls, data.StrLang)
 			},
 			// projectName wraps DisplayName so templates don't reach into core
 			// for the namespace/name fallback logic.
@@ -278,16 +284,19 @@ func execBlockTemplate(name string, body []byte, data readmeView, dir string, ex
 			// block name; nil when the document declares none or none survived,
 			// so the template's {{else}} falls back to its companion-file probe.
 			"readmeSection": func(name string) *sectionView {
-				return buildSection(data.Doc, ext, name, data.Lang)
+				return buildSection(data.Doc, ext, name, data.StrLang)
 			},
 			// artifacts lists what the project SHIPS, from
 			// org.projectfile.artifacts: one entry per declared artifact with
 			// its kind localized and its address resolved.
-			"artifacts": func() []artifactView { return buildArtifacts(data.Doc, data.Lang) },
+			"artifacts": func() []artifactView { return buildArtifacts(data.Doc, data.StrLang) },
 			// linkGroups buckets Doc.Links by category in render order.
-			"linkGroups": func() []linkGroup { return buildLinkGroups(data.Doc, data.Lang) },
-			// staticLinks probes the community-health files at the repo root.
-			"staticLinks": func() []staticLink { return probeHealthFiles(dir, data.Lang) },
+			"linkGroups": func() []linkGroup { return buildLinkGroups(data.Doc, data.StrLang) },
+			// staticLinks probes the community-health files. Path probing uses
+			// the render sentinel (Lang) so the default language probes the
+			// root; labels resolve in StrLang so a non-English-default project
+			// labels them in its own language.
+			"staticLinks": func() []staticLink { return probeHealthFiles(dir, data.Lang, data.StrLang) },
 			// docLink probes one companion file; nil when absent so
 			// {{with docLink "FILE" "Label"}} drops the block cleanly.
 			"docLink": func(filename, label string) *staticLink {
@@ -298,7 +307,7 @@ func execBlockTemplate(name string, body []byte, data readmeView, dir string, ex
 			"logo":        func() []string { return probeLogo(dir) },
 			"screenshots": func() []screenshot { return probeScreenshots(dir) },
 			"docLinks":    func() []staticLink { return listDocsMarkdown(dir) },
-			"buildLinks":  func() []staticLink { return probeBuildLinks(dir, data.Lang) },
+			"buildLinks":  func() []staticLink { return probeBuildLinks(dir, data.StrLang) },
 			// featureHeadings reads FEATURES.md's H3 feature titles for the
 			// features block bullet list; nil when the file is absent.
 			"featureHeadings": func() []string { return featureHeadings(dir) },

@@ -314,7 +314,7 @@ func TestMultiLangEmitsOneFilePerLanguage(t *testing.T) {
 	out, err := Bridge{}.Render(pf, core.Options{Dir: dir, Mode: modeWrite, Force: true})
 	require.NoError(t, err)
 	assert.ElementsMatch(t,
-		[]string{"README.md", "README.es.md", "README.uk.md"},
+		[]string{"README.md", "docs/es/README.md", "docs/uk/README.md"},
 		keys(out.Files))
 }
 
@@ -345,8 +345,8 @@ func TestMultiLangResolvesSummaryPerLanguage(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.Contains(t, string(out.Files["README.md"]), summaryEN)
-	assert.Contains(t, string(out.Files["README.es.md"]), summaryES)
-	assert.Contains(t, string(out.Files["README.uk.md"]), summaryUK)
+	assert.Contains(t, string(out.Files["docs/es/README.md"]), summaryES)
+	assert.Contains(t, string(out.Files["docs/uk/README.md"]), summaryUK)
 }
 
 // TestMultiLangCrossLinks verifies the cross-language bar appears at the top
@@ -364,24 +364,24 @@ func TestMultiLangCrossLinks(t *testing.T) {
 	require.NoError(t, err)
 
 	en := string(out.Files["README.md"])
-	es := string(out.Files["README.es.md"])
-	uk := string(out.Files["README.uk.md"])
+	es := string(out.Files["docs/es/README.md"])
+	uk := string(out.Files["docs/uk/README.md"])
 
-	// The default variant links to es and uk (labelled EN for itself, but
-	// excluded — so only ES and UK appear).
-	assert.Contains(t, en, "[ES](README.es.md)")
-	assert.Contains(t, en, "[UK](README.uk.md)")
+	// The default variant links to es and uk under docs/<lang>/, labelled with
+	// each language's endonym, and never to itself.
+	assert.Contains(t, en, "[Español](docs/es/README.md)")
+	assert.Contains(t, en, "[Українська](docs/uk/README.md)")
 	assert.NotContains(t, en, "](README.md)", "default variant must not link to itself")
 
-	// es variant links to en + uk, never to itself.
-	assert.Contains(t, es, "[EN](README.md)")
-	assert.Contains(t, es, "[UK](README.uk.md)")
-	assert.NotContains(t, es, "](README.es.md)", "es variant must not link to itself")
+	// es variant links to the canonical (English) root + uk, never to itself.
+	assert.Contains(t, es, "[English](README.md)")
+	assert.Contains(t, es, "[Українська](docs/uk/README.md)")
+	assert.NotContains(t, es, "](docs/es/README.md)", "es variant must not link to itself")
 
-	// uk variant links to en + es, never to itself.
-	assert.Contains(t, uk, "[EN](README.md)")
-	assert.Contains(t, uk, "[ES](README.es.md)")
-	assert.NotContains(t, uk, "](README.uk.md)", "uk variant must not link to itself")
+	// uk variant links to the canonical (English) root + es, never to itself.
+	assert.Contains(t, uk, "[English](README.md)")
+	assert.Contains(t, uk, "[Español](docs/es/README.md)")
+	assert.NotContains(t, uk, "](docs/uk/README.md)", "uk variant must not link to itself")
 }
 
 // TestSingleLangHasNoLanguagesBlock verifies that without a languages config,
@@ -412,6 +412,47 @@ func TestReadmeLanguagesReadsSharedNamespace(t *testing.T) {
 		},
 	}
 	assert.Equal(t, []string{"es", "uk"}, pfmodel.Languages(pf))
+}
+
+// keyDefaultLanguage is the default-language key inside org.projectfile.i18n.
+const keyDefaultLanguage = "default-language"
+
+// TestDefaultLanguageReanchorsRootRender verifies that a non-English default
+// language makes the root README resolve strings in that language and routes
+// English under docs/en/ — the Spanish-first project case.
+func TestDefaultLanguageReanchorsRootRender(t *testing.T) {
+	dir := t.TempDir()
+	pf := minimalDoc(t)
+	pf.Identity.Summary = &projectfile.LocalizedString{
+		Langs: map[string]string{"en": summaryEN, "es": summaryES},
+	}
+	pf.Extensions = map[string]any{
+		pfmodel.I18NExtensionNS: map[string]any{
+			keyDefaultLanguage: "es",
+			keyLanguages:       []any{"en"},
+		},
+	}
+
+	out, err := Bridge{}.Render(pf, core.Options{Dir: dir, Mode: modeWrite, Force: true})
+	require.NoError(t, err)
+
+	// The root README is Spanish (the default language); English moved under
+	// docs/en/. The default language is never also a variant, so only two
+	// files render.
+	assert.ElementsMatch(t, []string{"README.md", "docs/en/README.md"}, keys(out.Files))
+
+	// Root resolves the Spanish summary; the canonical "## License" heading
+	// is Spanish too, proving the catalog resolved in the default language.
+	root := string(out.Files["README.md"])
+	assert.Contains(t, root, summaryES, "root README resolves the default language")
+	assert.Contains(t, root, "## Licencia", "root README catalog text is Spanish")
+	assert.NotContains(t, root, summaryEN, "root README must not fall through to English")
+
+	// The English copy lives under docs/en/ and carries the cross-language bar
+	// back to the Spanish root.
+	en := string(out.Files["docs/en/README.md"])
+	assert.Contains(t, en, summaryEN)
+	assert.Contains(t, en, "[Español](README.md)", "English variant links the Spanish root")
 }
 
 // TestReadmeLanguagesAbsentReturnsNil verifies the absence path so a single
@@ -486,7 +527,7 @@ func TestRenderUsesExtraContentPerLang(t *testing.T) {
 	require.NoError(t, err)
 
 	enBody := string(out.Files["README.md"])
-	esBody := string(out.Files["README.es.md"])
+	esBody := string(out.Files["docs/es/README.md"])
 
 	assert.Contains(t, enBody, "Important notice in English")
 	assert.NotContains(t, enBody, "Aviso importante")

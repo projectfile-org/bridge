@@ -137,9 +137,13 @@ func (Bridge) Render(pf *projectfile.Document, opts core.Options) (core.Output, 
 		Filename: filenameContributing,
 		Langs:    pfmodel.Languages(pf),
 		View: func(lang string) any {
+			// strLang resolves the render sentinel to the default language for
+			// string resolution; the raw sentinel is kept for the sibling-file
+			// path so the default language renders at the root.
+			strLang := core.ResolveLang(lang, pf)
 			return contribView{
-				ProjectName:          pfmodel.DisplayNameForLang(pf, lang),
-				Summary:              projectfile.ExtractLocalizedStringForLang(pf.Identity.Summary, lang),
+				ProjectName:          pfmodel.DisplayNameForLang(pf, strLang),
+				Summary:              projectfile.ExtractLocalizedStringForLang(pf.Identity.Summary, strLang),
 				SupportFile:          core.LocalizedSibling(core.FileSupport, lang),
 				RepoURL:              repoURL(pf),
 				SourceCodeURL:        sourceCodeURL,

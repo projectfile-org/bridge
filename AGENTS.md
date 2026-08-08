@@ -229,21 +229,52 @@ notes, how-to-add-a-bridge, forge/scanner/derive detail) currently live in
 
 ## Localized community health files
 
-`org.projectfile.i18n.languages` is the **document-level** locale list — one
-declaration, honoured by every localizable renderer. Each declared BCP 47 tag
-yields a variant named with the tag before the extension
-(`CONTRIBUTING.es.md`) alongside the canonical file, which always renders.
-Localizable set: readme, CONTRIBUTING, CODE_OF_CONDUCT, SECURITY, SUPPORT.
+`org.projectfile.i18n` is the **document-level** localization declaration. Two
+keys:
+
+- `languages` — the locale list (BCP 47 tags) honoured by every localizable
+  renderer.
+- `default-language` — the project’s primary language. A BCP 47 tag; defaults
+  to `en`. The canonical root-level files are written in this language; every
+  OTHER language renders under `docs/<lang>/`.
+
+Localizable set: readme, CONTRIBUTING, CODE_OF_CONDUCT, SECURITY, SUPPORT, DEI.
 LICENSE is deliberately excluded — a licence’s legal force lives in its
 canonical text.
 
+**Layout.** The locale lives in the directory, not the filename: the canonical
+(default-language) file renders at the repository root, and each other
+language renders under `docs/<lang>/` keeping the canonical basename:
+
+```text
+README.md              CONTRIBUTING.md              SECURITY.md          ← default (en)
+docs/es/README.md      docs/es/CONTRIBUTING.md      docs/es/SECURITY.md
+docs/uk/README.md      docs/uk/CONTRIBUTING.md      docs/uk/SECURITY.md
+```
+
+When `default-language` is not `en`, the English copies move under `docs/en/`
+and the root files render in the declared default language. The default
+language is never also a variant (it is the root file), so listing it in
+`languages` is a no-op — it is dropped with a diagnostic.
+
 The machinery is `internal/bridge/core/localize.go`: `LocalizedSpec` +
-`RenderLocalized` own the naming rule, the missing-translation policy, the
-cross-language bar and the final assembly, so a bridge opts in by handing over
-a per-language view instead of calling `Render` itself. Translated bodies come
-from sibling templates (`SUPPORT.es.md.tmpl`), registered by walking each
-bridge’s embedded `templates/` dir (`core.RegisterTemplateTree`) — adding a
-locale is one file, never a `register.go` edit. `es` and `uk` ship embedded.
+`RenderLocalized` own the naming rule (`LocalizedFilename` → `docs/<lang>/`),
+the missing-translation policy, the cross-language bar and the final assembly,
+so a bridge opts in by handing over a per-language view instead of calling
+`Render` itself. Translated bodies come from sibling templates that keep the
+infix form (`SUPPORT.es.md.tmpl`) — only OUTPUT relocated under `docs/<lang>/`,
+template lookup did not — registered by walking each bridge’s embedded
+`templates/` dir (`core.RegisterTemplateTree`). Adding a locale is one file,
+never a `register.go` edit. `es` and `uk` ship embedded.
+
+**Default-language re-anchoring.** The render loop’s `""` sentinel is the
+canonical root render. `core.ResolveLang(lang, pf)` maps that sentinel to the
+default language for STRING resolution (catalog messages, LocalizedString
+fields), so a Spanish-first project’s root readme resolves Spanish. PATH
+resolution (`LocalizedFilename`, `LocalizedSibling`) keeps the raw sentinel so
+the default language renders at the root, not under `docs/<defLang>/`. Each
+bridge’s `View(lang)` closure applies this split: string-resolving helpers
+receive `ResolveLang(lang, pf)`, path-resolving helpers receive the raw `lang`.
 
 Two rules that shape the code:
 
@@ -253,15 +284,16 @@ Two rules that shape the code:
     localized question via a `{{define “want”}}` block), the SECURITY
     disclosure-window fallback, the SUPPORT response-time fallback. Go decides
     *which* rows exist and where they point; the template says what they mean.
-- **A missing translation is skipped, never faked.** No canonical-language
+- **A missing translation is skipped, never faked.** No default-language
     body ever ships under a localized name; the warning names the template to
     add, and the language is dropped from the cross-language bar of the files
     that did render.
 
-Cross-references stay in-language (`core.LocalizedSibling`). It cannot verify
-the sibling — the §5 binary split hides other bridges’ templates from a given
-`pf-bridge-*` — so the declared language set is the contract, and the sibling
-bridge warns by name about anything it is missing.
+Cross-references stay in-language (`core.LocalizedSibling` →
+`docs/<lang>/SECURITY.md`). It cannot verify the sibling — the §5 binary split
+hides other bridges’ templates from a given `pf-bridge-*` — so the declared
+language set is the contract, and the sibling bridge warns by name about
+anything it is missing.
 
 The readme is the one exception to “a locale is a template”, and deliberately
 so. Its eighteen blocks are three-line fragments, not prose: a per-language
@@ -271,20 +303,23 @@ flat catalog per language (`internal/bridge/readme/messages/<lang>.yaml`,
 reached from templates via the `t` function and from Go via `lookupMessage`)
 and keeps one structural template per block. A block that needs a different
 *shape* — not just different words — in some language still ships
-`readme.md/<block>.<lang>.tmpl`, which wins over the neutral template within
-its own tier.
+`readme.md/<block>.<lang>.tmpl` (resolved via `LocalizedTemplateInfix`, which
+keeps the infix form), which wins over the neutral template within its own
+tier.
 
 Two consequences worth knowing: the catalog is the home of every user-visible
 label the readme derives (policies link text, link-group headings, link-type
 names), keyed by a **derived** suffix (a link’s `type`, a health file’s
 basename), so adding either is a catalog edit and not a Go edit; and a
 `messages/<lang>.yaml` missing a key falls back to English per key rather than
-dropping the file — the whole-file skip rule above governs the other four
+dropping the file — the whole-file skip rule above governs the other five
 documents, whose unit of translation is the document.
 
 Remaining limit: labels the bridge humanizes from a filename (`docs/*.md` in
 the documentation block) are the file’s own name, so they read the same in
-every language.
+every language. The `docs/<lang>/` locale directories are skipped by the docs
+listing (they hold localized health files, surfaced through the language bar,
+not generic documentation).
 
 ## Build
 

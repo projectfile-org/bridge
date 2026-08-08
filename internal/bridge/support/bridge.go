@@ -47,7 +47,7 @@ func (Bridge) Render(pf *projectfile.Document, opts core.Options) (core.Output, 
 	// The trace reports the canonical render; each language rebuilds these
 	// with its own link labels inside the per-language view below.
 	beforeLinks := buildBeforeLinks(pf, "")
-	rows := buildTableRows(pf, "")
+	rows := buildTableRows(pf, "", "")
 
 	// The response-time fallback is a full sentence of prose, so the template
 	// owns it: passing the field through empty lets each localized template
@@ -76,11 +76,18 @@ func (Bridge) Render(pf *projectfile.Document, opts core.Options) (core.Output, 
 		Filename: filenameSupport,
 		Langs:    pfmodel.Languages(pf),
 		View: func(lang string) any {
+			// strLang is the concrete tag for string resolution: the render
+			// sentinel "" maps to the default language so a non-English-default
+			// project's root file resolves names/labels in that language. Path
+			// resolution (LocalizedSibling in buildTableRows) keeps the raw
+			// sentinel so the default language renders at the root, not under
+			// docs/<defLang>/.
+			strLang := core.ResolveLang(lang, pf)
 			return supportView{
 				Marker:       core.MarkerHTML,
-				ProjectName:  pfmodel.DisplayNameForLang(pf, lang),
-				BeforeLinks:  buildBeforeLinks(pf, lang),
-				Rows:         buildTableRows(pf, lang),
+				ProjectName:  pfmodel.DisplayNameForLang(pf, strLang),
+				BeforeLinks:  buildBeforeLinks(pf, strLang),
+				Rows:         buildTableRows(pf, lang, strLang),
 				ResponseTime: responseTime,
 				StatusPage:   statusPageURL,
 				EOL:          eolViews,
@@ -121,17 +128,22 @@ func buildBeforeLinks(pf *projectfile.Document, lang string) []beforeLink {
 // links[] and can produce multiple rows when multiple entries of the same
 // type exist (e.g., two paid-support providers, two chat channels).
 //
+// pathLang is the render sentinel used for sibling-file paths (the default
+// language renders at root); strLang is the concrete tag used for link-label
+// string resolution. They differ only for the canonical render of a non-
+// English-default project.
+//
 // Each row carries a stable Kind rather than an English question: the "what
 // do you want to do" column is prose, so the template owns its wording and a
 // translated template renders the same rows in its own language.
-func buildTableRows(pf *projectfile.Document, lang string) []tableRow {
+func buildTableRows(pf *projectfile.Document, pathLang, strLang string) []tableRow {
 	var rows []tableRow
 
-	for _, ll := range resolveLabeledLinks(pf, projectfile.LinkForum, "Discussions", lang) {
+	for _, ll := range resolveLabeledLinks(pf, projectfile.LinkForum, "Discussions", strLang) {
 		rows = append(rows, tableRow{Kind: kindUsageQuestion, GoTo: mdLink(ll)})
 	}
 
-	for _, ll := range resolveLabeledLinks(pf, projectfile.LinkBugs, "Issues", lang) {
+	for _, ll := range resolveLabeledLinks(pf, projectfile.LinkBugs, "Issues", strLang) {
 		rows = append(rows, tableRow{Kind: kindBug, GoTo: mdLink(ll)})
 	}
 
@@ -140,17 +152,17 @@ func buildTableRows(pf *projectfile.Document, lang string) []tableRow {
 	// since the spec doesn't distinguish Q&A vs Ideas forum links; the user
 	// can add a second `links[type=forum]` entry with a distinguishing label.
 
-	for _, ll := range resolveLabeledLinks(pf, projectfile.LinkChat, "Chat", lang) {
+	for _, ll := range resolveLabeledLinks(pf, projectfile.LinkChat, "Chat", strLang) {
 		rows = append(rows, tableRow{Kind: kindChat, GoTo: mdLink(ll)})
 	}
 
-	security := core.LocalizedSibling(core.FileSecurity, lang)
+	security := core.LocalizedSibling(core.FileSecurity, pathLang)
 	rows = append(rows, tableRow{Kind: kindSecurity, GoTo: "[" + security + "](" + security + ")"})
 
-	contributing := core.LocalizedSibling(core.FileContributing, lang)
+	contributing := core.LocalizedSibling(core.FileContributing, pathLang)
 	rows = append(rows, tableRow{Kind: kindContributing, GoTo: "[" + contributing + "](" + contributing + ")"})
 
-	for _, ll := range resolveLabeledLinks(pf, "paid-support", "Commercial Support", lang) {
+	for _, ll := range resolveLabeledLinks(pf, "paid-support", "Commercial Support", strLang) {
 		rows = append(rows, tableRow{Kind: kindPaidSupport, GoTo: mdLink(ll)})
 	}
 

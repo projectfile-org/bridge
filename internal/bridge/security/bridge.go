@@ -109,9 +109,10 @@ func (Bridge) Render(pf *projectfile.Document, opts core.Options) (core.Output, 
 		Filename: filenameSecurity,
 		Langs:    pfmodel.Languages(pf),
 		View: func(lang string) any {
+			strLang := core.ResolveLang(lang, pf)
 			return securityView{
 				Marker:            core.MarkerHTML,
-				ProjectName:       pfmodel.DisplayNameForLang(pf, lang),
+				ProjectName:       pfmodel.DisplayNameForLang(pf, strLang),
 				Contact:           contact,
 				ReportURL:         ext.ReportURL,
 				SupportedVersions: versions,

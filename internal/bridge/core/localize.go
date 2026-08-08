@@ -12,21 +12,28 @@ import (
 
 	"kiota.ch/projectfile/core/v2/pkg/genlog"
 	"kiota.ch/projectfile/core/v2/pkg/projectfile"
+	"projectfile.org/projectfile/bridge/internal/pfmodel"
 )
 
 // The localization contract shared by every community health file.
 //
 // A localizable artefact is one canonical file (README.md, CONTRIBUTING.md, …)
-// plus one variant per language declared in org.projectfile.i18n.languages.
-// The variant's name inserts the BCP 47 tag before the extension
-// (CONTRIBUTING.es.md) — the convention GitHub, GitLab and Forgejo readers
-// already expect — and its body comes from a sibling template carrying the
-// same infix (CONTRIBUTING.es.md.tmpl).
+// written in the default language (org.projectfile.i18n.default-language,
+// "en" by default) at the repo root, plus one variant per other language
+// declared in org.projectfile.i18n.languages. Each variant keeps the canonical
+// basename and lives under docs/<lang>/ — docs/es/CONTRIBUTING.md — so the
+// locale is in the directory, not the filename. This keeps the repo root clean
+// when many locales ship. The variant's body comes from a template carrying
+// the BCP 47 infix before the extension (CONTRIBUTING.es.md.tmpl); only OUTPUT
+// moves under docs/<lang>/, template lookup is unchanged.
+//
+// When default-language is not "en", the English copies move under docs/en/
+// and the root files render in the declared default language.
 //
 // Translations are prose, so they cannot be derived: a language with no
-// template is SKIPPED with a warning rather than emitting the canonical
-// English body under a localized name. A half-translated file lies to its
-// reader; an absent one merely does not exist yet.
+// template is SKIPPED with a warning rather than emitting the default-language
+// body under a localized name. A half-translated file lies to its reader; an
+// absent one merely does not exist yet.
 
 // Canonical community health filenames. These bridges cross-reference each
 // other's output — SUPPORT.md points at SECURITY.md, CONTRIBUTING.md points
@@ -42,15 +49,11 @@ const (
 	FileSupport       = "SUPPORT.md"
 )
 
-// defaultLangLabel labels the canonical file in the cross-language bar. The
-// canonical variant carries no language infix, so it has no tag of its own.
-const defaultLangLabel = "English"
-
 // langLabels maps a BCP 47 tag to the language's own name (endonym) — what a
 // speaker of that language recognizes at a glance in the bar. The canonical
-// file uses defaultLangLabel. A tag without an entry falls back to its
-// upper-cased code so an undeclared locale still renders something rather than
-// empty; add endonyms here as new locales land.
+// file is labelled with its default language's endonym. A tag without an entry
+// falls back to its upper-cased code so an undeclared locale still renders
+// something rather than empty; add endonyms here as new locales land.
 var langLabels = map[string]string{
 	"en": "English",
 	"es": "Español",
@@ -64,26 +67,61 @@ const langBarSeparator = " · "
 // same document in another language.
 type LangLink struct {
 	Code     string // BCP 47 tag; empty for the canonical file
-	Label    string // display text — the upper-cased tag, "EN" for canonical
-	Filename string // repo-relative target, e.g. "CONTRIBUTING.es.md"
+	Label    string // display text — the upper-cased tag, endonym for canonical
+	Filename string // repo-relative target, e.g. "docs/es/CONTRIBUTING.md"
+}
+
+// LocalizedDir is the directory every non-default-language variant writes to.
+// The locale lives in the directory, not the filename, so a repo with many
+// locales keeps a clean root: README.es.md became docs/es/README.md.
+const LocalizedDir = "docs"
+
+// ResolveLang turns a render-sentinel language tag into a concrete BCP 47 tag.
+// The empty string is the canonical root-file render: it resolves to the
+// project's default language (org.projectfile.i18n.default-language, "en" by
+// default). Any non-empty tag passes through unchanged. Bridges call this at
+// the boundary where the render loop's "" sentinel meets a string resolver
+// (the message catalog, ExtractLocalizedStringForLang) so a Spanish-first
+// project's root file resolves Spanish strings rather than English.
+func ResolveLang(lang string, pf *projectfile.Document) string {
+	if lang == "" {
+		return pfmodel.DefaultLanguage(pf)
+	}
+	return lang
 }
 
 // LocalizedFilename maps a canonical filename and a language to the variant's
-// on-disk name: ("CONTRIBUTING.md", "es") → "CONTRIBUTING.es.md". The empty
-// language is the canonical file and passes through unchanged.
+// repo-relative path. The empty language is the canonical (default-language)
+// file at the root and passes through unchanged. A non-empty language places
+// the variant under docs/<lang>/, keeping the canonical basename:
+// ("CONTRIBUTING.md", "es") → "docs/es/CONTRIBUTING.md".
 func LocalizedFilename(base, lang string) string {
+	if lang == "" {
+		return base
+	}
+	return LocalizedDir + "/" + lang + "/" + base
+}
+
+// LocalizedTemplateName is the template backing a variant. Template names keep
+// the language infix before the extension regardless of the output directory:
+// ("CONTRIBUTING.md", "es") → "CONTRIBUTING.es.md.tmpl". The canonical
+// (empty-lang) case is the base name + ".tmpl", unchanged from the
+// LocalizedFilename passthrough — only OUTPUT relocated under docs/<lang>/,
+// template lookup did not.
+func LocalizedTemplateName(base, lang string) string {
+	return LocalizedTemplateInfix(base, lang) + ".tmpl"
+}
+
+// LocalizedTemplateInfix maps a canonical filename and a language to the
+// template-name base (without the ".tmpl" suffix): the canonical file for the
+// empty language, or the infix form for a variant. ("CONTRIBUTING.md", "")
+// → "CONTRIBUTING.md"; ("CONTRIBUTING.md", "es") → "CONTRIBUTING.es.md".
+func LocalizedTemplateInfix(base, lang string) string {
 	if lang == "" {
 		return base
 	}
 	ext := filepath.Ext(base)
 	return strings.TrimSuffix(base, ext) + "." + lang + ext
-}
-
-// LocalizedTemplateName is the template backing a variant. Template names are
-// always "<filename>.tmpl", so the language infix lands in the same position
-// as it does on disk: ("CONTRIBUTING.md", "es") → "CONTRIBUTING.es.md.tmpl".
-func LocalizedTemplateName(base, lang string) string {
-	return LocalizedFilename(base, lang) + ".tmpl"
 }
 
 // HasTemplate reports whether a template is resolvable — as a project-local
@@ -102,8 +140,9 @@ func HasTemplate(dir, name string) bool {
 }
 
 // LocalizedSibling resolves a cross-reference to another community health
-// file from inside a localized document: SUPPORT.es.md links SECURITY.es.md,
-// not SECURITY.md, so a reader who arrived in their own language stays in it.
+// file from inside a localized document: docs/es/SUPPORT.md links
+// docs/es/SECURITY.md, not the root SECURITY.md, so a reader who arrived in
+// their own language stays in it.
 //
 // It cannot verify the sibling: the §5 binary split means each pf-bridge-*
 // links only its own bridge, so SECURITY's templates are invisible from
@@ -117,10 +156,11 @@ func LocalizedSibling(base, lang string) string {
 }
 
 // LanguageLinks builds the cross-language bar for one render: every language
-// variant of base EXCEPT the active one, canonical file included. Returns nil
-// when no extra languages are configured, so a single-language project never
-// grows a bar pointing at itself.
-func LanguageLinks(base, active string, langs []string) []LangLink {
+// variant of base EXCEPT the active one, the canonical (default-language) file
+// included. defLang is the project's default language; it labels the canonical
+// entry with its endonym. Returns nil when no extra languages are configured,
+// so a single-language project never grows a bar pointing at itself.
+func LanguageLinks(base, active, defLang string, langs []string) []LangLink {
 	if len(langs) == 0 {
 		return nil
 	}
@@ -132,17 +172,22 @@ func LanguageLinks(base, active string, langs []string) []LangLink {
 		}
 		out = append(out, LangLink{
 			Code:     lang,
-			Label:    langLabel(lang),
+			Label:    langLabel(lang, defLang),
 			Filename: LocalizedFilename(base, lang),
 		})
 	}
 	return out
 }
 
-// langLabel is the bar's display text for a language tag.
-func langLabel(lang string) string {
+// langLabel is the bar's display text for a language tag. The empty tag (the
+// canonical root file) is labelled with the default language's endonym, so a
+// Spanish-first project's root file reads "Español" rather than "English".
+func langLabel(lang, defLang string) string {
 	if lang == "" {
-		return defaultLangLabel
+		if label, ok := langLabels[defLang]; ok {
+			return label
+		}
+		return strings.ToUpper(defLang)
 	}
 	if label, ok := langLabels[lang]; ok {
 		return label
@@ -159,11 +204,11 @@ var h1Prefix = []byte("# ")
 // finds it first. A body with no H1 (degenerate, but never a reason to drop
 // the bar) takes it at the very top.
 //
-// Doing this here rather than in each template is what keeps the translated
-// templates pure prose: a new locale is one file, with no bar markup to
-// forget.
-func InsertLanguageBar(body []byte, base, active string, langs []string) []byte {
-	links := LanguageLinks(base, active, langs)
+// defLang labels the canonical entry with its endonym. Doing this here rather
+// than in each template is what keeps the translated templates pure prose: a
+// new locale is one file, with no bar markup to forget.
+func InsertLanguageBar(body []byte, base, active, defLang string, langs []string) []byte {
+	links := LanguageLinks(base, active, defLang, langs)
 	if len(links) == 0 {
 		return body
 	}
@@ -214,23 +259,32 @@ type LocalizedSpec struct {
 // language. A language whose template is missing is skipped with a warning
 // naming the file the project would have to add; the canonical file always
 // renders, so a bad locale list can never block regenerating the rest.
+//
+// The canonical (root) render resolves its strings in the project's default
+// language, so a Spanish-first project's root file reads in Spanish.
 func RenderLocalized(pf *projectfile.Document, spec LocalizedSpec, opts Options) (Output, error) {
 	// Resolve which languages actually render BEFORE rendering any of them:
 	// the cross-language bar goes into every variant, so a language dropped
 	// for a missing template must be dropped from the bar too — otherwise
 	// each file advertises a translation that was never written.
 	translated := translatableLangs(spec.Filename, spec.Langs, opts.Dir)
+	defLang := pfmodel.DefaultLanguage(pf)
 
 	header := []byte(REUSEHeader(pf, StyleHTML))
 	out := Output{Files: map[string][]byte{}}
 	for _, lang := range append([]string{""}, translated...) {
 		tmpl := LocalizedTemplateName(spec.Filename, lang)
+		// The View receives the render sentinel ("" for the canonical root
+		// render), NOT a resolved tag: path- producing code inside the view
+		// (LocalizedSibling output keys) must keep "" so the default language
+		// renders at the root, not under docs/<defLang>/. String resolution
+		// (catalog, LocalizedString) maps "" → defLang itself via ResolveLang.
 		body, err := Render(opts.Dir, tmpl, spec.View(lang))
 		if err != nil {
 			return Output{}, err
 		}
-		genlog.Decision("rendered", LocalizedFilename(spec.Filename, lang), tmpl, "lang="+langLabel(lang))
-		body = InsertLanguageBar(body, spec.Filename, lang, translated)
+		genlog.Decision("rendered", LocalizedFilename(spec.Filename, lang), tmpl, "lang="+langLabel(lang, defLang))
+		body = InsertLanguageBar(body, spec.Filename, lang, defLang, translated)
 		out.Files[LocalizedFilename(spec.Filename, lang)] = append(append([]byte{}, header...), CollapseBlankLines(body)...)
 	}
 	return out, nil

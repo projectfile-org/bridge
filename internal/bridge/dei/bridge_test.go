@@ -164,10 +164,10 @@ func TestRenderLocalizedVariants(t *testing.T) {
 	out, err := b.Render(pf, core.Options{Offline: true})
 	require.NoError(t, err)
 	assert.Contains(t, out.Files, "DEI.md")
-	assert.Contains(t, out.Files, "DEI.es.md")
-	assert.Contains(t, out.Files, "DEI.uk.md")
-	assert.Contains(t, string(out.Files["DEI.es.md"]), "Declaración de Diversidad")
-	assert.Contains(t, string(out.Files["DEI.uk.md"]), "Заява про різноманітність")
+	assert.Contains(t, out.Files, "docs/es/DEI.md")
+	assert.Contains(t, out.Files, "docs/uk/DEI.md")
+	assert.Contains(t, string(out.Files["docs/es/DEI.md"]), "Declaración de Diversidad")
+	assert.Contains(t, string(out.Files["docs/uk/DEI.md"]), "Заява про різноманітність")
 }
 
 // ── bridge identity ─────────────────────────────────────────────────────────

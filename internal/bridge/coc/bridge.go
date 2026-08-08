@@ -95,9 +95,10 @@ func (Bridge) Render(pf *projectfile.Document, opts core.Options) (core.Output, 
 		Filename: filenameCOC,
 		Langs:    pfmodel.Languages(pf),
 		View: func(lang string) any {
+			strLang := core.ResolveLang(lang, pf)
 			return cocView{
 				Marker:       core.MarkerHTML,
-				ProjectName:  pfmodel.DisplayNameForLang(pf, lang),
+				ProjectName:  pfmodel.DisplayNameForLang(pf, strLang),
 				ContactEmail: email,
 				Covenant:     covenant,
 				Scope:        scope,

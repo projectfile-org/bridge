@@ -48,7 +48,8 @@ const keyBlocks = "blocks"
 // template-only change with no Go edit here.
 type readmeView struct {
 	Doc       *projectfile.Document
-	Lang      string
+	Lang      string // render sentinel: "" for the canonical root render
+	StrLang   string // concrete tag for string resolution: Lang resolved to the default language
 	Languages []core.LangLink
 }
 
@@ -325,7 +326,8 @@ func newReadmeView(pf *projectfile.Document, lang string, langs []string) readme
 	return readmeView{
 		Doc:       pf,
 		Lang:      lang,
-		Languages: core.LanguageLinks(filenameReadme, lang, langs),
+		StrLang:   core.ResolveLang(lang, pf),
+		Languages: core.LanguageLinks(filenameReadme, lang, pfmodel.DefaultLanguage(pf), langs),
 	}
 }
 
@@ -565,35 +567,42 @@ func docLink(dir, filename, label string) *staticLink {
 }
 
 // probeHealthFiles walks healthFiles and returns a staticLink per existing
-// file, in the declared order. Labels come from healthFileLabels with a
+// file, in the declared order. Labels come from healthFileLabel with a
 // filename fallback.
 //
-// In a localized render each link prefers the same-language variant on disk
-// (README.es.md → CONTRIBUTING.es.md) and falls back to the canonical file,
-// so a reader who arrived in their own language stays in it.
-func probeHealthFiles(dir, lang string) []staticLink {
+// pathLang selects the on-disk variant (the render sentinel; the default
+// language probes the root, others probe docs/<lang>/); strLang resolves the
+// label's catalog text. They differ only for the canonical render of a non-
+// English-default project, whose root file still probes root paths but wants
+// labels in the default language.
+func probeHealthFiles(dir, pathLang, strLang string) []staticLink {
 	var out []staticLink
 	for _, f := range healthFiles {
 		target := f
-		if localized := core.LocalizedFilename(f, lang); fileExists(dir, localized) {
+		if localized := core.LocalizedFilename(f, pathLang); fileExists(dir, localized) {
 			target = localized
 		} else if !fileExists(dir, f) {
 			continue
 		}
-		out = append(out, staticLink{Filename: target, Label: healthFileLabel(f, lang)})
+		out = append(out, staticLink{Filename: target, Label: healthFileLabel(f, strLang)})
 	}
 	return out
 }
 
 // listDocsMarkdown lists every docs/*.md file as a static link, excluding the
-// meta-docs in docMarkdownExcluded. Label is the file's first Markdown heading,
-// falling back to the humanized filename when the file has no heading. Returns
-// nil when docs/ is absent or empty.
+// meta-docs in docMarkdownExcluded and the per-language docs/<lang>/ directories
+// (localized health files live there; they are not generic documentation and
+// are surfaced through the policies block's language bar instead). Label is the
+// file's first Markdown heading, falling back to the humanized filename when
+// the file has no heading. Returns nil when docs/ is absent or empty.
 func listDocsMarkdown(dir string) []staticLink {
 	entries := readDir(dir, docsDir)
 	var out []staticLink
 	for _, e := range entries {
 		if e.IsDir() {
+			// A locale directory (docs/<lang>/) holds localized health files,
+			// not standalone documentation — skip it so the docs block does
+			// not list "es", "uk", … as document titles.
 			continue
 		}
 		name := e.Name()
@@ -802,7 +811,7 @@ func formatDecisionTrace(dir, lang string, v readmeView, ext *pfmodel.ReadmeExte
 			)
 		}
 	}
-	for _, s := range probeHealthFiles(dir, lang) {
+	for _, s := range probeHealthFiles(dir, lang, lang) {
 		genlog.Decision("static_link", s.Label+" → "+s.Filename, "policies probe", "")
 	}
 	for _, r := range buildBadgeRows(v.Doc, ext) {
