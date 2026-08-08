@@ -93,7 +93,17 @@ func (Bridge) Render(pf *projectfile.Document, opts core.Options) (core.Output, 
 	acknowledged := acknowledgedVulns(pf)
 	versions := mdSafeVersions(ext.SupportedVersions)
 
-	emitDecisionTrace(contact, contactSrc, ext, window, windowSrc, gpgKeyURL, len(acknowledged))
+	// gpg-fingerprint is OPTIONAL and often unset; derive it from the network
+	// (pgp-key URL, then keys.openpgp.org) so a project that only set gpg-key
+	// still gets the verify block. An explicit value always wins; Offline skips
+	// the fetch; any derive failure leaves the field empty and the block omits.
+	fp := ext.GPGFingerprint
+	fpSrc := "[org.projectfile.security].gpg-fingerprint"
+	if fp == "" {
+		fp, fpSrc = deriveFingerprint(ext.GPGKey, gpgKeyURL, opts)
+	}
+
+	emitDecisionTrace(contact, contactSrc, ext, window, windowSrc, gpgKeyURL, len(acknowledged), fp, fpSrc)
 
 	return core.RenderLocalized(pf, core.LocalizedSpec{
 		Filename: filenameSecurity,
@@ -107,7 +117,7 @@ func (Bridge) Render(pf *projectfile.Document, opts core.Options) (core.Output, 
 				SupportedVersions: versions,
 				DisclosureWindow:  window,
 				GPGKey:            ext.GPGKey,
-				GPGFingerprint:    ext.GPGFingerprint,
+				GPGFingerprint:    fp,
 				GPGKeyURL:         gpgKeyURL,
 				BugBountyURL:      ext.BugBountyURL,
 				Acknowledged:      acknowledged,
@@ -157,7 +167,7 @@ func extensionToMap(ext *pfmodel.SecurityExtension) map[string]any {
 	return m
 }
 
-func emitDecisionTrace(contact, contactSrc string, ext *pfmodel.SecurityExtension, window, windowSrc string, gpgKeyURL string, ackCount int) {
+func emitDecisionTrace(contact, contactSrc string, ext *pfmodel.SecurityExtension, window, windowSrc string, gpgKeyURL string, ackCount int, fp, fpSrc string) {
 	genlog.Decision("contact", valueOrEmpty(contact), contactSrc, "[org.projectfile.security].contact")
 	genlog.Decision("report-url", valueOrEmpty(ext.ReportURL), "[org.projectfile.security].report-url", "")
 	genlog.Decision("disclosure-window", window, windowSrc, "[org.projectfile.security].disclosure-window")
@@ -169,8 +179,8 @@ func emitDecisionTrace(contact, contactSrc string, ext *pfmodel.SecurityExtensio
 	if ext.GPGKey != "" {
 		genlog.Decision("gpg-key", ext.GPGKey, "[org.projectfile.security].gpg-key", "")
 	}
-	if ext.GPGFingerprint != "" {
-		genlog.Decision("gpg-fingerprint", ext.GPGFingerprint, "[org.projectfile.security].gpg-fingerprint", "")
+	if fp != "" {
+		genlog.Decision("gpg-fingerprint", fp, fpSrc, "")
 	}
 	if gpgKeyURL != "" {
 		genlog.Decision("gpg-key-url", gpgKeyURL, "links[].type=pgp-key", "")
