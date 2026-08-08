@@ -37,14 +37,14 @@ func TestLanguageLinksExcludesActive(t *testing.T) {
 
 	en := core.LanguageLinks(core.FileSupport, "", langs)
 	assert.Equal(t, []core.LangLink{
-		{Code: "es", Label: "ES", Filename: "SUPPORT.es.md"},
-		{Code: "uk", Label: "UK", Filename: "SUPPORT.uk.md"},
+		{Code: "es", Label: "Español", Filename: "SUPPORT.es.md"},
+		{Code: "uk", Label: "Українська", Filename: "SUPPORT.uk.md"},
 	}, en, "canonical variant lists the translations only")
 
 	es := core.LanguageLinks(core.FileSupport, "es", langs)
 	assert.Equal(t, []core.LangLink{
-		{Code: "", Label: "EN", Filename: "SUPPORT.md"},
-		{Code: "uk", Label: "UK", Filename: "SUPPORT.uk.md"},
+		{Code: "", Label: "English", Filename: "SUPPORT.md"},
+		{Code: "uk", Label: "Українська", Filename: "SUPPORT.uk.md"},
 	}, es, "a translation links back to the canonical file and the siblings")
 }
 
@@ -61,7 +61,7 @@ func TestInsertLanguageBarAboveH1(t *testing.T) {
 	body := []byte("<!-- pf-cli-managed: yes -->\n\n# Getting Support\n\nBody.\n")
 	out := string(core.InsertLanguageBar(body, core.FileSupport, "", []string{"es"}))
 	assert.Equal(t,
-		"<!-- pf-cli-managed: yes -->\n\n[ES](SUPPORT.es.md)\n\n# Getting Support\n\nBody.\n",
+		"<!-- pf-cli-managed: yes -->\n\n[Español](SUPPORT.es.md)\n\n# Getting Support\n\nBody.\n",
 		out)
 }
 
@@ -76,7 +76,7 @@ func TestInsertLanguageBarNoLanguagesIsNoop(t *testing.T) {
 // bar still renders, at the top, rather than being silently dropped.
 func TestInsertLanguageBarNoHeading(t *testing.T) {
 	out := string(core.InsertLanguageBar([]byte("no heading here\n"), core.FileSupport, "es", []string{"es"}))
-	assert.Equal(t, "[EN](SUPPORT.md)\n\nno heading here\n", out)
+	assert.Equal(t, "[English](SUPPORT.md)\n\nno heading here\n", out)
 }
 
 // TestLocalizedSiblingStaysInLanguage verifies a cross-reference from a

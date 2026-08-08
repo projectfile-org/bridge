@@ -44,7 +44,18 @@ const (
 
 // defaultLangLabel labels the canonical file in the cross-language bar. The
 // canonical variant carries no language infix, so it has no tag of its own.
-const defaultLangLabel = "EN"
+const defaultLangLabel = "English"
+
+// langLabels maps a BCP 47 tag to the language's own name (endonym) — what a
+// speaker of that language recognizes at a glance in the bar. The canonical
+// file uses defaultLangLabel. A tag without an entry falls back to its
+// upper-cased code so an undeclared locale still renders something rather than
+// empty; add endonyms here as new locales land.
+var langLabels = map[string]string{
+	"en": "English",
+	"es": "Español",
+	"uk": "Українська",
+}
 
 // langBarSeparator joins entries in the cross-language bar.
 const langBarSeparator = " · "
@@ -132,6 +143,9 @@ func LanguageLinks(base, active string, langs []string) []LangLink {
 func langLabel(lang string) string {
 	if lang == "" {
 		return defaultLangLabel
+	}
+	if label, ok := langLabels[lang]; ok {
+		return label
 	}
 	return strings.ToUpper(lang)
 }
