@@ -86,6 +86,12 @@ gpg --encrypt --armor --recipient {{.GPGKey}} message.txt
 
 {{.ProjectName}} participates in a bug bounty programme — see {{.BugBountyURL}}
 for scope and reward details.
+{{- else}}
+
+## Bug Bounty
+
+{{.ProjectName}} does not currently run a bug bounty programme. We still welcome
+responsibly disclosed reports — see the contact channel above.
 {{- end}}
 {{- if .Acknowledged}}
 

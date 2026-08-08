@@ -86,6 +86,13 @@ gpg --encrypt --armor --recipient {{.GPGKey}} message.txt
 
 {{.ProjectName}} participa en un programa de recompensas por errores — consulta
 {{.BugBountyURL}} para conocer el alcance y las recompensas.
+{{- else}}
+
+## Programa de recompensas
+
+{{.ProjectName}} no ofrece actualmente un programa de recompensas. Aun así
+agradecemos los informes divulgados de forma responsable — consulta el canal de
+contacto anterior.
 {{- end}}
 {{- if .Acknowledged}}
 

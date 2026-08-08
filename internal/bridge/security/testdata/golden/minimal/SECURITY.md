@@ -29,3 +29,8 @@ Please include as much of the following as you can — it helps us triage and re
 
 We aim to acknowledge reports within 30 days and to coordinate
 disclosure once a fix is available.
+
+## Bug Bounty
+
+this project does not currently run a bug bounty programme. We still welcome
+responsibly disclosed reports — see the contact channel above.
