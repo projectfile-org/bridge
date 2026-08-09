@@ -15,6 +15,7 @@
 package pfmodel
 
 import (
+	"cmp"
 	"fmt"
 
 	"kiota.ch/projectfile/core/v2/pkg/projectfile"
@@ -47,6 +48,20 @@ const (
 	FragmentsExtensionNS       = "org.projectfile.fragments"
 	ArtifactsExtensionNS       = "org.projectfile.artifacts"
 )
+
+// PriorityDefault is the priority an item carries when it declares none. A
+// stable sort by priority keeps declaration order for every default item, so a
+// document that never sets priority renders byte-identical to the pre-priority
+// layout. The value sits above the typical "pin to first" values (10, 0) and
+// below "pin after the defaults" values (100, 200) so either end of the scale
+// has room without colliding with the default.
+const PriorityDefault = 50
+
+// ByPriorityDesc is the single comparator every priority-aware sort uses, so
+// the direction lives in exactly one place. Higher number renders FIRST. A
+// negative result (a sorts before b) is returned when a has the higher
+// priority, matching slices.SortStableFunc / cmp.Compare semantics.
+func ByPriorityDesc(a, b int) int { return cmp.Compare(b, a) }
 
 // lookupNS resolves a reverse-DNS namespace on a Document via the core façade.
 // Each accessor calls this so the flat-key vs dotted-table distinction lives

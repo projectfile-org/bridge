@@ -366,11 +366,16 @@ type ReadmeSectionGroup struct {
 // the badge's group: the readme renders one line per row, so a fragment that
 // only knows about npm can drop its badge next to the other ecosystem badges
 // without knowing what else the document carries. Empty is a row like any
-// other — the unnamed one.
+// other — the unnamed one. Priority orders badges WITHIN a row: higher renders
+// first, PriorityDefault keeps declaration order, so a fleet-wide badge
+// (support-ukraine) can be pinned to the head of the static row from one entry.
 type Shield struct {
 	Name string
 	Img  string
 	Href string
 	Alt  string
 	Row  string
+	// Priority is the advisory render order within a row. Higher = first; the
+	// zero value (unset) means PriorityDefault and stays in declaration order.
+	Priority int
 }

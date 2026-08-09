@@ -19,6 +19,7 @@ const (
 	keyShieldName = "name"
 	keyShieldImg  = "img"
 	keyShieldHref = "href"
+	keyShields    = "shields"
 )
 
 // GetReadmeExtension must surface shields with all four fields preserved.
@@ -27,7 +28,7 @@ func TestGetReadmeExtensionShields(t *testing.T) {
 		Extensions: map[string]any{
 			pfmodel.ReadmeExtensionNS: map[string]any{
 				"blocks": []any{"basics", "badges", "license"},
-				"shields": []any{
+				keyShields: []any{
 					map[string]any{
 						keyShieldName: "dockerhub pulls",
 						keyShieldImg:  "https://img.shields.io/docker/pulls/foo",
@@ -65,7 +66,7 @@ func TestGetReadmeExtensionShieldsSkipsMalformed(t *testing.T) {
 	doc := &projectfile.Document{
 		Extensions: map[string]any{
 			pfmodel.ReadmeExtensionNS: map[string]any{
-				"shields": []any{
+				keyShields: []any{
 					"not-a-map",
 					map[string]any{keyShieldName: "ok", keyShieldImg: "i", keyShieldHref: "h"},
 				},
@@ -78,6 +79,38 @@ func TestGetReadmeExtensionShieldsSkipsMalformed(t *testing.T) {
 	require.NotNil(t, ext)
 	require.Len(t, ext.Shields, 1)
 	assert.Equal(t, "ok", ext.Shields[0].Name)
+}
+
+// GetReadmeExtension must parse a shield's advisory `priority` so the render
+// layer can order badges within a row. An unset priority stays the zero value;
+// the render layer owns the unset→PriorityDefault promotion, keeping the model
+// an honest mirror of the source.
+func TestGetReadmeExtensionShieldsParsesPriority(t *testing.T) {
+	doc := &projectfile.Document{
+		Extensions: map[string]any{
+			pfmodel.ReadmeExtensionNS: map[string]any{
+				keyShields: []any{
+					map[string]any{
+						keyShieldName: "support-ukraine",
+						keyShieldImg:  "https://example.test/ukr.svg",
+						keyPriority:   300,
+					},
+					map[string]any{
+						keyShieldName: "changelog",
+						keyShieldImg:  "https://example.test/log.svg",
+						// priority omitted — stays zero.
+					},
+				},
+			},
+		},
+	}
+
+	ext, err := pfmodel.GetReadmeExtension(doc)
+	require.NoError(t, err)
+	require.NotNil(t, ext)
+	require.Len(t, ext.Shields, 2)
+	assert.Equal(t, 300, ext.Shields[0].Priority, "explicit priority parsed")
+	assert.Zero(t, ext.Shields[1].Priority, "absent priority stays zero; render layer promotes it")
 }
 
 // GetReadmeExtension must preserve the lang→text map of an extras content

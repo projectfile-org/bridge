@@ -49,11 +49,12 @@ func GetReadmeExtension(doc *projectfile.Document) (*ReadmeExtension, error) {
 				continue
 			}
 			ext.Shields = append(ext.Shields, Shield{
-				Name: strVal(em, "name"),
-				Img:  strVal(em, "img"),
-				Href: strVal(em, "href"),
-				Alt:  strVal(em, "alt"),
-				Row:  strVal(em, "row"),
+				Name:     strVal(em, "name"),
+				Img:      strVal(em, "img"),
+				Href:     strVal(em, "href"),
+				Alt:      strVal(em, "alt"),
+				Row:      strVal(em, "row"),
+				Priority: intVal(em, keyPriority),
 			})
 		}
 	}

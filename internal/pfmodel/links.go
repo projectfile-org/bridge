@@ -13,6 +13,11 @@ import (
 // here so pfmodel is the only package this file imports.
 const LinkSourceCode = projectfile.LinkSourceCode
 
+// keyPriority is the §139 additional-key name a link (or shield map) carries
+// its advisory render priority under. Shared by LinkPriority and the shield
+// parser so the literal lives in one place (goconst).
+const keyPriority = "priority"
+
 // LinkByType returns the canonical entry for a given link type from doc.Links,
 // applying the §5.11 selection rule: the entry with Preferred=true if any,
 // else the sole entry of that type, else the first entry of that type in
@@ -53,6 +58,29 @@ func LinkURL(doc *projectfile.Document, linkType string) string {
 		return l.URL
 	}
 	return ""
+}
+
+// LinkPriority reads the advisory priority a link carries via the spec's §139
+// additional-key channel (l.Extra), the same channel the `related` tag rides
+// on. Priority is OPTIONAL; an absent or non-numeric value returns
+// PriorityDefault, so a stable sort keeps the link in declaration order. This
+// is what lets priority order links[] across every document that consumes them
+// (readme, SUPPORT, CONTRIBUTING) with no schema change: `priority` is just one
+// more key core preserves untouched.
+func LinkPriority(l projectfile.Link) int {
+	raw, ok := l.Extra[keyPriority]
+	if !ok {
+		return PriorityDefault
+	}
+	switch n := raw.(type) {
+	case int:
+		return n
+	case int64:
+		return int(n)
+	case float64:
+		return int(n)
+	}
+	return PriorityDefault
 }
 
 // LinksByType returns all entries of a given link type in document order.
