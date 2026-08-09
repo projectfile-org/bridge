@@ -30,9 +30,7 @@ Toda forma de contribución se agradece y se valora. Consulta la [Tabla de conte
 - [Tengo una pregunta](#tengo-una-pregunta)
 - [Cómo informar de fallos](#cómo-informar-de-fallos)
 - [Cómo sugerir mejoras](#cómo-sugerir-mejoras)
-- [Tu primera contribución de código](#tu-primera-contribución-de-código)
-- [Guías de estilo](#guías-de-estilo)
-    - [Mensajes de commit](#mensajes-de-commit)
+- [Convenciones](#convenciones)
 
 ## Tengo una pregunta
 
@@ -76,7 +74,7 @@ Una vez enviada:
 
 - El equipo del proyecto etiquetará la incidencia según corresponda.
 - Alguien del equipo intentará reproducir el problema con los pasos que aportaste. Si no hay pasos de reproducción o no existe una forma evidente de reproducirlo, el equipo te los pedirá y marcará la incidencia como `needs-repro`. Los fallos con la etiqueta `needs-repro` no se abordarán hasta que puedan reproducirse.
-- Si el equipo logra reproducir el problema, se marcará como `needs-fix`, posiblemente junto a otras etiquetas (como `critical`), y quedará a la espera de que [alguien lo implemente](#tu-primera-contribución-de-código).
+- Si el equipo logra reproducir el problema, se marcará como `needs-fix`, posiblemente junto a otras etiquetas (como `critical`), y quedará a la espera de que [alguien lo implemente](#convenciones).
 
 ## Cómo sugerir mejoras
 
@@ -100,14 +98,10 @@ Las propuestas de mejora se gestionan como [incidencias](https://codeberg.org/pr
 - **Describe el comportamiento actual** y **explica qué comportamiento esperabas** y por qué. Aquí también puedes indicar qué alternativas no te sirven.
 - **Explica por qué esta mejora sería útil** para la mayoría de quienes usan projectfile/bridge. También puedes señalar otros proyectos que lo hayan resuelto mejor y que sirvan de inspiración.
 
-## Tu primera contribución de código
+## Convenciones
 
-Este proyecto usa **Git Flow**: ramas de funcionalidad desde `develop`, ramas de publicación desde `develop` y ramas de corrección urgente desde `main`.
-
-## Guías de estilo
-
-### Mensajes de commit
-
-Este proyecto usa [Conventional Commits](https://www.conventionalcommits.org/):
+- **Workflow:** Git Flow — feature branches from `develop`, release branches from `develop`, hotfix branches from `main`.
+- **Commits:** [Conventional Commits](https://www.conventionalcommits.org/)
+- **Versioning:** [Semantic Versioning](https://semver.org/)
 
 <!-- textlint-enable -->

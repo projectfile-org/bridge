@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"net/url"
 	"os"
+	"sort"
 	"strings"
 
 	"kiota.ch/projectfile/core/v2/pkg/genlog"
@@ -36,7 +37,7 @@ func (Bridge) Policy() core.Policy      { return core.Policy{ScaffoldOnce: true}
 // defaultSections matches the spec's documented default list.
 var defaultSections = []string{
 	"question", "legal", "bugs", "enhancements",
-	"first_contribution", "docs", "styleguides",
+	"conventions", "docs",
 	"join",
 }
 
@@ -65,7 +66,7 @@ func (Bridge) Render(pf *projectfile.Document, opts core.Options) (core.Output, 
 		sectionsSrc = "default"
 	}
 
-	// Resolve conventions (commit-style, workflow, style-guide-url).
+	// Resolve conventions (commit-style, workflow, versioning, style-guide-url).
 	conv, _ := pfmodel.GetConventionsExtension(pf)
 	if conv == nil {
 		conv = &pfmodel.ConventionsExtension{}
@@ -73,6 +74,7 @@ func (Bridge) Render(pf *projectfile.Document, opts core.Options) (core.Output, 
 	core.ApplyUserConventionsFallback(conv)
 	commitStyle := conv.CommitStyle
 	workflow := conv.Workflow
+	versioning := conv.Versioning
 	styleGuideURL := pfmodel.ConventionsStyleGuideURL(conv, pf.Stack)
 
 	// Resolve URLs: links[] first, extension fields override.
@@ -122,11 +124,15 @@ func (Bridge) Render(pf *projectfile.Document, opts core.Options) (core.Output, 
 	projectSocials = filterFollows(projectSocials, follow, false)
 	hasFunding = follow.Allow("funding", false) && hasFunding
 
-	hasStyleGuideContent := commitStyle != "" || styleGuideURL != ""
+	// Build the data-driven Conventions section rows once: workflow, commits,
+	// versioning, then one row per declared stack style-guide-url. Resolved in
+	// Go so the template is a uniform range and any unknown enum value degrades
+	// to a raw-value bullet instead of vanishing.
+	conventionRows := buildConventions(workflow, commitStyle, versioning, defaultBranch, conv, pf)
 
 	emitDecisionTrace(pf, ext, sections, sectionsSrc, docsURL, bugsURL,
-		chatURL, cocURL, claURL, securityContact, commitStyle, workflow, styleGuideURL,
-		authorFollows, authorSites, projectSocials, forgeStars, hasFunding, hasStyleGuideContent)
+		chatURL, cocURL, claURL, securityContact, commitStyle, workflow, versioning, styleGuideURL,
+		authorFollows, authorSites, projectSocials, forgeStars, hasFunding)
 
 	// Only three things vary per language here: the project's own display
 	// name, its summary (both localized-strings), and the SUPPORT.md
@@ -166,7 +172,7 @@ func (Bridge) Render(pf *projectfile.Document, opts core.Options) (core.Output, 
 				AuthorSites:          authorSites,
 				ProjectSocials:       projectSocials,
 				HasFunding:           hasFunding,
-				HasStyleGuideContent: hasStyleGuideContent,
+				Conventions:          conventionRows,
 				ForgeStars:           forgeStars,
 				StarsEnabled:         starsEnabled,
 			}
@@ -205,6 +211,122 @@ func repoURL(pf *projectfile.Document) string {
 	return repo.URL
 }
 
+// buildConventions assembles the data-driven rows of the Conventions section:
+// workflow, commits, versioning, then one row per declared stack
+// style-guide-url. Each row's Detail is pre-rendered markdown. Unknown enum
+// values degrade to a raw-value bullet rather than vanishing, so arbitrary
+// projectfile values stay visible. Empty workflow/versioning produce no row;
+// empty commit-style falls back to Conventional Commits (matching the prior
+// default-when-unset behaviour).
+func buildConventions(workflow, commitStyle, versioning, defaultBranch string,
+	conv *pfmodel.ConventionsExtension, pf *projectfile.Document,
+) []conventionItem {
+	var rows []conventionItem
+	if d := workflowDetail(workflow, defaultBranch); d != "" {
+		rows = append(rows, conventionItem{Label: "Workflow", Detail: d})
+	}
+	rows = append(rows, conventionItem{Label: "Commits", Detail: commitDetail(commitStyle)})
+	if d := versioningDetail(versioning); d != "" {
+		rows = append(rows, conventionItem{Label: "Versioning", Detail: d})
+	}
+	rows = append(rows, languageStyleRows(conv, pf)...)
+	return rows
+}
+
+// workflowDetail maps a workflow value to its rendered sentence. Known values
+// interpolate the default branch; unknown values degrade to a raw-value
+// bullet. Returns "" so an unset workflow yields no row.
+func workflowDetail(workflow, defaultBranch string) string {
+	switch workflow {
+	case "":
+		return ""
+	case "github-flow":
+		return fmt.Sprintf("GitHub Flow — branch from `%s`, open a pull request.", defaultBranch)
+	case "git-flow":
+		return fmt.Sprintf("Git Flow — feature branches from `develop`, release branches from `develop`, hotfix branches from `%s`.", defaultBranch)
+	case "gitlab-flow":
+		return fmt.Sprintf("GitLab Flow — feature branches merged into `%s` with environment-specific deployments.", defaultBranch)
+	case "trunk-based":
+		return fmt.Sprintf("Trunk-Based Development — commit to `%s` directly or via short-lived feature branches with feature flags.", defaultBranch)
+	case "centralized":
+		return fmt.Sprintf("centralized — commits go directly to `%s`.", defaultBranch)
+	default:
+		return fmt.Sprintf("uses the `%s` workflow.", workflow)
+	}
+}
+
+// commitDetail maps a commit-style value to its rendered text. Empty defaults
+// to Conventional Commits, preserving the prior default-when-unset behaviour;
+// unknown values degrade to the raw value.
+func commitDetail(commitStyle string) string {
+	switch commitStyle {
+	case "", "conventional":
+		return "[Conventional Commits](https://www.conventionalcommits.org/)"
+	case "gitmoji":
+		return "[Gitmoji](https://gitmoji.dev/)"
+	case "free":
+		return "no strict convention — write clear, descriptive messages."
+	default:
+		return commitStyle
+	}
+}
+
+// versioningDetail maps a versioning value to its rendered text. Known values
+// get a link or label; unknown values degrade to the raw value. Returns "" so
+// an unset versioning yields no row.
+func versioningDetail(versioning string) string {
+	switch versioning {
+	case "":
+		return ""
+	case "semantic":
+		return "[Semantic Versioning](https://semver.org/)"
+	case "calver":
+		return "[Calendar Versioning](https://calver.org/)"
+	case "rolling":
+		return "rolling — no discrete releases."
+	case "none":
+		return "none."
+	default:
+		return versioning
+	}
+}
+
+// languageStyleRows emits one row per declared stack tag that carries a
+// non-empty per-language style-guide-url. Stack tags listed in pf.Stack come
+// first (in declared order); any remaining convention-languages follow in
+// deterministic sorted order. The label is the raw stack tag — no embedded
+// display-name table — so arbitrary tags stay honest.
+func languageStyleRows(conv *pfmodel.ConventionsExtension, pf *projectfile.Document) []conventionItem {
+	if conv == nil || len(conv.Languages) == 0 {
+		return nil
+	}
+	seen := map[string]bool{}
+	var rows []conventionItem
+	add := func(tag, url string) {
+		if url == "" || seen[tag] {
+			return
+		}
+		seen[tag] = true
+		rows = append(rows, conventionItem{Label: tag + " style", Detail: "<" + url + ">"})
+	}
+	for _, tag := range pf.Stack {
+		if lang, ok := conv.Languages[tag]; ok {
+			add(tag, lang.StyleGuideURL)
+		}
+	}
+	remainder := make([]string, 0, len(conv.Languages))
+	for tag := range conv.Languages {
+		if !seen[tag] {
+			remainder = append(remainder, tag)
+		}
+	}
+	sort.Strings(remainder)
+	for _, tag := range remainder {
+		add(tag, conv.Languages[tag].StyleGuideURL)
+	}
+	return rows
+}
+
 func licenseSPDX(pf *projectfile.Document) string {
 	if pf == nil || pf.License == nil {
 		return ""
@@ -214,9 +336,9 @@ func licenseSPDX(pf *projectfile.Document) string {
 
 func emitDecisionTrace(pf *projectfile.Document, ext *pfmodel.ContributingExtension,
 	sections []string, sectionsSrc, docsURL, bugsURL, chatURL, cocURL,
-	claURL, securityContact, commitStyle, workflow, styleGuideURL string,
+	claURL, securityContact, commitStyle, workflow, versioning, styleGuideURL string,
 	authorFollows, authorSites, projectSocials, forgeStars []followLink,
-	hasFunding, hasStyleGuideContent bool,
+	hasFunding bool,
 ) {
 	genlog.Decision("project_name", pfmodel.DisplayName(pf), "identity.title.en or namespace/name", "")
 	genlog.Decision("sections", strings.Join(sections, ", "), sectionsSrc, "[org.projectfile.contributing].sections")
@@ -227,9 +349,9 @@ func emitDecisionTrace(pf *projectfile.Document, ext *pfmodel.ContributingExtens
 	genlog.Decision("cla_url", valOrUnset(claURL), "links[type=cla] or ext.cla-url", "")
 	genlog.Decision("security_contact", valOrUnset(securityContact), "people[role=security].email or links[type=security-report]", "")
 	genlog.Decision("commit_style", valOrDefault(commitStyle, "conventional"), "org.projectfile.conventions.commit-style", "")
-	genlog.Decision("workflow", valOrDefault(workflow, "(unset, no workflow section)"), "org.projectfile.conventions.workflow", "")
+	genlog.Decision("workflow", valOrDefault(workflow, "(unset, no workflow row)"), "org.projectfile.conventions.workflow", "")
+	genlog.Decision("versioning", valOrDefault(versioning, "(unset, no versioning row)"), "org.projectfile.conventions.versioning", "")
 	genlog.Decision("style_guide_url", valOrUnset(styleGuideURL), "org.projectfile.conventions.style-guide-url", "")
-	genlog.Decision("has_style_guide_content", fmt.Sprintf("%v", hasStyleGuideContent), "commit-style or style-guide-url present", "")
 	genlog.Decision("recommend_to_star", ext.RecommendToStar.Mode(), "org.projectfile.contributing.recommend-to-star", "default: none (bool|map host->bool)")
 	genlog.Decision("recommend_to_follow", ext.RecommendToFollow.Mode(), "org.projectfile.contributing.recommend-to-follow", "default: none (bool|map platform->bool)")
 	for _, f := range forgeStars {

@@ -121,6 +121,9 @@ func ApplyUserConventionsFallback(conv *pfmodel.ConventionsExtension) {
 	if conv.Workflow == "" {
 		conv.Workflow = c.Workflow
 	}
+	// versioning intentionally has no user-config fallback yet: the pinned
+	// core ConventionsSection predates the field. Add it here once core
+	// publishes a version carrying Versioning.
 	if conv.StyleGuideURL == "" {
 		conv.StyleGuideURL = c.StyleGuideURL
 	}

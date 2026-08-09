@@ -179,10 +179,11 @@ func GetConventionsExtension(doc *projectfile.Document) (*ConventionsExtension, 
 	ext := &ConventionsExtension{
 		CommitStyle:   strVal(m, keyCommitStyle),
 		Workflow:      strVal(m, "workflow"),
+		Versioning:    strVal(m, "versioning"),
 		StyleGuideURL: strVal(m, "style-guide-url"),
 	}
 	for k, v := range m {
-		if k == keyCommitStyle || k == "workflow" || k == "style-guide-url" {
+		if k == keyCommitStyle || k == "workflow" || k == "versioning" || k == "style-guide-url" {
 			continue
 		}
 		sub, ok := v.(map[string]any)

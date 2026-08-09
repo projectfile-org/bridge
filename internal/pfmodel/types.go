@@ -227,6 +227,7 @@ type ReleaseBranch struct {
 type ConventionsExtension struct {
 	CommitStyle   string
 	Workflow      string
+	Versioning    string
 	StyleGuideURL string
 	Languages     map[string]LangConventions
 }

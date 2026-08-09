@@ -117,6 +117,14 @@ func withContributing(pf *projectfile.Document, ext map[string]any) *projectfile
 	return pf
 }
 
+// withConventions attaches an org.projectfile.conventions extension to pf.
+func withConventions(pf *projectfile.Document, ext map[string]any) *projectfile.Document {
+	if len(ext) > 0 {
+		projectfile.SetExtension(pf, pfmodel.ConventionsExtensionNS, ext)
+	}
+	return pf
+}
+
 func docWithAuthor(handles map[string]any) *projectfile.Document {
 	return &projectfile.Document{
 		Identity: projectfile.Identity{Name: "follow-proj"},
@@ -227,4 +235,97 @@ func TestFollowToggleMapAllowlist(t *testing.T) {
 	assert.Contains(t, body, "Follow [author (Test Author) on Mastodon]")
 	assert.NotContains(t, body, "on GitHub]", "false key must be hidden")
 	assert.NotContains(t, body, "on Codeberg]", "absent key must be hidden in allowlist mode")
+}
+
+// ── Conventions section ─────────────────────────────────────────────────────
+
+// TestRenderConventionsReplacesOldSections confirms the compact Conventions
+// section replaced the old "Your First Code Contribution" and "Style guides"
+// blocks in the default section list.
+func TestRenderConventionsReplacesOldSections(t *testing.T) {
+	b := contributing.Bridge{}
+	pf := &projectfile.Document{Identity: projectfile.Identity{Name: "conv-proj"}}
+	out, err := b.Render(pf, core.Options{Offline: true})
+	require.NoError(t, err)
+	body := string(out.Files["CONTRIBUTING.md"])
+	assert.Contains(t, body, "## Conventions")
+	assert.NotContains(t, body, "## Your First Code Contribution", "old section must be gone")
+	assert.NotContains(t, body, "## Style guides", "old section must be gone")
+}
+
+// TestRenderConventionsVersioningKnown renders the SemVer link for the
+// documented semantic value.
+func TestRenderConventionsVersioningKnown(t *testing.T) {
+	b := contributing.Bridge{}
+	pf := withConventions(&projectfile.Document{Identity: projectfile.Identity{Name: "v-proj"}},
+		map[string]any{"versioning": "semantic"})
+	out, err := b.Render(pf, core.Options{Offline: true})
+	require.NoError(t, err)
+	body := string(out.Files["CONTRIBUTING.md"])
+	assert.Contains(t, body, "**Versioning:** [Semantic Versioning](https://semver.org/)")
+}
+
+// TestRenderConventionsVersioningArbitrary guards the graceful-degradation
+// rule: an unknown versioning value must surface as a raw bullet, not vanish.
+func TestRenderConventionsVersioningArbitrary(t *testing.T) {
+	b := contributing.Bridge{}
+	pf := withConventions(&projectfile.Document{Identity: projectfile.Identity{Name: "v-proj"}},
+		map[string]any{"versioning": "my-scheme"})
+	out, err := b.Render(pf, core.Options{Offline: true})
+	require.NoError(t, err)
+	body := string(out.Files["CONTRIBUTING.md"])
+	assert.Contains(t, body, "**Versioning:** my-scheme", "unknown value must render raw, not drop")
+}
+
+// TestRenderConventionsWorkflowArbitrary guards graceful degradation for an
+// unknown workflow: the raw value surfaces and the default branch is NOT
+// interpolated (no known sentence template applies).
+func TestRenderConventionsWorkflowArbitrary(t *testing.T) {
+	b := contributing.Bridge{}
+	pf := withConventions(&projectfile.Document{Identity: projectfile.Identity{Name: "w-proj"}},
+		map[string]any{"workflow": "weird-flow"})
+	out, err := b.Render(pf, core.Options{Offline: true})
+	require.NoError(t, err)
+	body := string(out.Files["CONTRIBUTING.md"])
+	assert.Contains(t, body, "**Workflow:** uses the `weird-flow` workflow.")
+}
+
+// TestRenderConventionsWorkflowKnownInterpolatesBranch confirms a known
+// workflow value interpolates the default branch into its sentence.
+func TestRenderConventionsWorkflowKnownInterpolatesBranch(t *testing.T) {
+	b := contributing.Bridge{}
+	pf := withConventions(&projectfile.Document{
+		Identity:     projectfile.Identity{Name: "w-proj"},
+		Repositories: []projectfile.Repository{{Role: "origin", Branch: "trunk"}},
+	}, map[string]any{"workflow": "git-flow"})
+	out, err := b.Render(pf, core.Options{Offline: true})
+	require.NoError(t, err)
+	body := string(out.Files["CONTRIBUTING.md"])
+	assert.Contains(t, body, "**Workflow:** Git Flow — feature branches from `develop`")
+	assert.Contains(t, body, "hotfix branches from `trunk`.", "default branch must be interpolated")
+}
+
+// TestRenderConventionsLanguageStyles renders one bullet per declared stack
+// style-guide-url, labelled by the raw stack tag.
+func TestRenderConventionsLanguageStyles(t *testing.T) {
+	b := contributing.Bridge{}
+	pf := withConventions(&projectfile.Document{
+		Identity: projectfile.Identity{Name: "ls-proj"},
+		Stack:    []string{"js"},
+	}, map[string]any{"js": map[string]any{"style-guide-url": "https://standardjs.com"}})
+	out, err := b.Render(pf, core.Options{Offline: true})
+	require.NoError(t, err)
+	body := string(out.Files["CONTRIBUTING.md"])
+	assert.Contains(t, body, "**js style:** <https://standardjs.com>")
+}
+
+// TestRenderConventionsCommitsDefault confirms an unset commit-style still
+// renders the default Conventional Commits bullet (prior behaviour preserved).
+func TestRenderConventionsCommitsDefault(t *testing.T) {
+	b := contributing.Bridge{}
+	pf := &projectfile.Document{Identity: projectfile.Identity{Name: "c-proj"}}
+	out, err := b.Render(pf, core.Options{Offline: true})
+	require.NoError(t, err)
+	body := string(out.Files["CONTRIBUTING.md"])
+	assert.Contains(t, body, "**Commits:** [Conventional Commits](https://www.conventionalcommits.org/)")
 }

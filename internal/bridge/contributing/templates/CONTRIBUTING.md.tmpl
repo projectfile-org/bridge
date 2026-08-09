@@ -32,13 +32,10 @@ All types of contributions are encouraged and valued. See the [Table of Contents
 {{end -}}
 {{if eq . "enhancements"}}- [Suggesting Enhancements](#suggesting-enhancements)
 {{end -}}
-{{if eq . "first_contribution"}}- [Your First Code Contribution](#your-first-code-contribution)
-{{end -}}
 {{if eq . "docs"}}{{if $.DocsURL}}- [Improving The Documentation](#improving-the-documentation)
 {{end}}{{end -}}
-{{if eq . "styleguides"}}{{if $.HasStyleGuideContent}}- [Style guides](#style-guides)
-    - [Commit Messages](#commit-messages)
-{{end}}{{end -}}
+{{if eq . "conventions"}}- [Conventions](#conventions)
+{{end -}}
 {{if eq . "overview"}}- [Overview](#overview)
 {{end -}}
 {{if eq . "setup"}}- [Local Setup](#local-setup)
@@ -106,7 +103,7 @@ Once it’s filed:
 
 - The project team will label the issue accordingly.
 - A team member will try to reproduce the issue with your provided steps. If there are no reproduction steps or no obvious way to reproduce the issue, the team will ask you for those steps and mark the issue as `needs-repro`. Bugs with the `needs-repro` tag will not be addressed until they are reproduced.
-- If the team is able to reproduce the issue, it will be marked `needs-fix`, as well as possibly other tags (such as `critical`), and the issue will be left to be [implemented by someone](#your-first-code-contribution).
+- If the team is able to reproduce the issue, it will be marked `needs-fix`, as well as possibly other tags (such as `critical`), and the issue will be left to be [implemented by someone](#conventions).
 
 {{end}}
 {{if eq . "enhancements"}}## Suggesting Enhancements
@@ -131,17 +128,6 @@ Enhancement suggestions are tracked as{{if $.BugsURL}} [issues]({{$.BugsURL}}){{
 - **Describe the current behavior** and **explain which behavior you expected to see instead** and why. At this point you can also tell which alternatives do not work for you.
 - **Explain why this enhancement would be useful** to most {{$.ProjectName}} users. You may also want to point out the other projects that solved it better and which could serve as inspiration.
 
-{{end}}
-{{if eq . "first_contribution"}}## Your First Code Contribution
-
-{{if $.FirstContributionURL}}New to the codebase? Start with the [first contribution guide]({{$.FirstContributionURL}}) for a gentle walkthrough.
-
-{{end}}{{if eq $.Workflow "github-flow"}}This project uses **GitHub Flow**: create a branch from `{{$.DefaultBranch}}`, make your changes, and open a pull request.
-{{end}}{{if eq $.Workflow "git-flow"}}This project uses **Git Flow**: feature branches from `develop`, release branches from `develop`, hotfix branches from `{{$.DefaultBranch}}`.
-{{end}}{{if eq $.Workflow "gitlab-flow"}}This project uses **GitLab Flow**: feature branches merged into `{{$.DefaultBranch}}` with environment-specific deployments.
-{{end}}{{if eq $.Workflow "trunk-based"}}This project uses **Trunk-Based Development**: commit to `{{$.DefaultBranch}}` directly or via short-lived feature branches with feature flags.
-{{end}}{{if eq $.Workflow "centralized"}}This project uses a **centralized workflow**: commits go directly to `{{$.DefaultBranch}}`.
-{{end}}
 {{end}}
 {{if eq . "docs"}}{{if $.DocsURL}}## Improving The Documentation
 
@@ -168,21 +154,11 @@ The project ships with a `Makefile` (or equivalent build tool); run `make help` 
 Run `make test` to execute the registered test suite. Add new tests for any behavioural change; format-only changes should not require new tests.
 
 {{end}}
-{{if eq . "styleguides"}}{{if $.HasStyleGuideContent}}## Style guides
+{{if eq . "conventions"}}## Conventions
 
-### Commit Messages
-
-{{if eq $.CommitStyle "conventional"}}This project uses [Conventional Commits](https://www.conventionalcommits.org/):
-{{end}}{{if eq $.CommitStyle "gitmoji"}}This project uses [Gitmoji](https://gitmoji.dev/) commit conventions:
-{{end}}{{if eq $.CommitStyle "free"}}There are no strict commit message conventions — write clear, descriptive messages.
-{{end}}{{if eq $.CommitStyle ""}}Use [Conventional Commits](https://www.conventionalcommits.org/) for commit messages:
-
-- `feat: add new parser`
-- `fix: resolve null dereference in handler`
-- `docs: update API reference`
-- `refactor:`, `test:`, `chore:`, `ci:`, `build:`, `perf:`
+{{range $.Conventions}}- **{{.Label}}:** {{.Detail}}
 {{end}}
-{{end}}{{end}}
+{{end}}
 {{if eq . "style"}}## Code Style
 
 {{if $.StyleGuideURL}}See the project style guide at <{{$.StyleGuideURL}}>.

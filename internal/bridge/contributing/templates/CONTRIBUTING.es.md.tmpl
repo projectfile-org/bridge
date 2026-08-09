@@ -32,13 +32,10 @@ Toda forma de contribución se agradece y se valora. Consulta la [Tabla de conte
 {{end -}}
 {{if eq . "enhancements"}}- [Cómo sugerir mejoras](#cómo-sugerir-mejoras)
 {{end -}}
-{{if eq . "first_contribution"}}- [Tu primera contribución de código](#tu-primera-contribución-de-código)
-{{end -}}
 {{if eq . "docs"}}{{if $.DocsURL}}- [Mejorar la documentación](#mejorar-la-documentación)
 {{end}}{{end -}}
-{{if eq . "styleguides"}}{{if $.HasStyleGuideContent}}- [Guías de estilo](#guías-de-estilo)
-    - [Mensajes de commit](#mensajes-de-commit)
-{{end}}{{end -}}
+{{if eq . "conventions"}}- [Convenciones](#convenciones)
+{{end -}}
 {{if eq . "overview"}}- [Resumen](#resumen)
 {{end -}}
 {{if eq . "setup"}}- [Configuración local](#configuración-local)
@@ -106,7 +103,7 @@ Una vez enviada:
 
 - El equipo del proyecto etiquetará la incidencia según corresponda.
 - Alguien del equipo intentará reproducir el problema con los pasos que aportaste. Si no hay pasos de reproducción o no existe una forma evidente de reproducirlo, el equipo te los pedirá y marcará la incidencia como `needs-repro`. Los fallos con la etiqueta `needs-repro` no se abordarán hasta que puedan reproducirse.
-- Si el equipo logra reproducir el problema, se marcará como `needs-fix`, posiblemente junto a otras etiquetas (como `critical`), y quedará a la espera de que [alguien lo implemente](#tu-primera-contribución-de-código).
+- Si el equipo logra reproducir el problema, se marcará como `needs-fix`, posiblemente junto a otras etiquetas (como `critical`), y quedará a la espera de que [alguien lo implemente](#convenciones).
 
 {{end}}
 {{if eq . "enhancements"}}## Cómo sugerir mejoras
@@ -131,17 +128,6 @@ Las propuestas de mejora se gestionan como{{if $.BugsURL}} [incidencias]({{$.Bug
 - **Describe el comportamiento actual** y **explica qué comportamiento esperabas** y por qué. Aquí también puedes indicar qué alternativas no te sirven.
 - **Explica por qué esta mejora sería útil** para la mayoría de quienes usan {{$.ProjectName}}. También puedes señalar otros proyectos que lo hayan resuelto mejor y que sirvan de inspiración.
 
-{{end}}
-{{if eq . "first_contribution"}}## Tu primera contribución de código
-
-{{if $.FirstContributionURL}}¿Es tu primera vez con este código? Empieza por la [guía de primera contribución]({{$.FirstContributionURL}}) para una introducción suave.
-
-{{end}}{{if eq $.Workflow "github-flow"}}Este proyecto usa **GitHub Flow**: crea una rama a partir de `{{$.DefaultBranch}}`, haz tus cambios y abre una solicitud de incorporación.
-{{end}}{{if eq $.Workflow "git-flow"}}Este proyecto usa **Git Flow**: ramas de funcionalidad desde `develop`, ramas de publicación desde `develop` y ramas de corrección urgente desde `{{$.DefaultBranch}}`.
-{{end}}{{if eq $.Workflow "gitlab-flow"}}Este proyecto usa **GitLab Flow**: ramas de funcionalidad que se integran en `{{$.DefaultBranch}}` con despliegues por entorno.
-{{end}}{{if eq $.Workflow "trunk-based"}}Este proyecto usa **desarrollo basado en tronco**: se publica directamente en `{{$.DefaultBranch}}` o mediante ramas de funcionalidad de vida corta con banderas de funcionalidad.
-{{end}}{{if eq $.Workflow "centralized"}}Este proyecto usa un **flujo centralizado**: los commits van directamente a `{{$.DefaultBranch}}`.
-{{end}}
 {{end}}
 {{if eq . "docs"}}{{if $.DocsURL}}## Mejorar la documentación
 
@@ -168,21 +154,11 @@ El proyecto incluye un `Makefile` (o una herramienta de construcción equivalent
 Ejecuta `make test` para lanzar el conjunto de pruebas registrado. Añade pruebas nuevas para cualquier cambio de comportamiento; los cambios de formato no deberían requerirlas.
 
 {{end}}
-{{if eq . "styleguides"}}{{if $.HasStyleGuideContent}}## Guías de estilo
+{{if eq . "conventions"}}## Convenciones
 
-### Mensajes de commit
-
-{{if eq $.CommitStyle "conventional"}}Este proyecto usa [Conventional Commits](https://www.conventionalcommits.org/):
-{{end}}{{if eq $.CommitStyle "gitmoji"}}Este proyecto usa las convenciones de commit de [Gitmoji](https://gitmoji.dev/):
-{{end}}{{if eq $.CommitStyle "free"}}No hay convenciones estrictas para los mensajes de commit: escribe mensajes claros y descriptivos.
-{{end}}{{if eq $.CommitStyle ""}}Usa [Conventional Commits](https://www.conventionalcommits.org/) en los mensajes de commit:
-
-- `feat: add new parser`
-- `fix: resolve null dereference in handler`
-- `docs: update API reference`
-- `refactor:`, `test:`, `chore:`, `ci:`, `build:`, `perf:`
+{{range $.Conventions}}- **{{.Label}}:** {{.Detail}}
 {{end}}
-{{end}}{{end}}
+{{end}}
 {{if eq . "style"}}## Estilo de código
 
 {{if $.StyleGuideURL}}Consulta la guía de estilo del proyecto en <{{$.StyleGuideURL}}>.

@@ -32,7 +32,11 @@ type contribView struct {
 	AuthorSites          []followLink
 	ProjectSocials       []followLink
 	HasFunding           bool
-	HasStyleGuideContent bool
+	// Conventions is the data-driven rows of the Conventions section: workflow,
+	// commits, versioning, and one row per declared stack style-guide-url.
+	// Each Detail is pre-rendered markdown; the template just loops, so a user
+	// overriding the template only restyles the loop.
+	Conventions []conventionItem
 	// ForgeStars holds one entry per links[type=source-code] forge so the
 	// "Star the project" appreciation block surfaces every mirror. Each
 	// Label is a pre-built markdown link "[host](url)".
@@ -41,6 +45,16 @@ type contribView struct {
 	// unset or false) no star line renders at all. When true with an empty
 	// ForgeStars the template falls back to a bare "Star the project".
 	StarsEnabled bool
+}
+
+// conventionItem is one row of the Conventions section. Label is the bold
+// lead ("Workflow", "Commits", "Versioning", or a stack tag like "js");
+// Detail is the pre-resolved markdown that follows the colon. Resolved in Go
+// so the template is a uniform range — any unknown enum value degrades to a
+// raw-value bullet rather than vanishing.
+type conventionItem struct {
+	Label  string
+	Detail string
 }
 
 type followLink struct {

@@ -29,9 +29,7 @@ All types of contributions are encouraged and valued. See the [Table of Contents
 - [I Have a Question](#i-have-a-question)
 - [Reporting Bugs](#reporting-bugs)
 - [Suggesting Enhancements](#suggesting-enhancements)
-- [Your First Code Contribution](#your-first-code-contribution)
-- [Style guides](#style-guides)
-    - [Commit Messages](#commit-messages)
+- [Conventions](#conventions)
 
 ## I Have a Question
 
@@ -75,7 +73,7 @@ Once it’s filed:
 
 - The project team will label the issue accordingly.
 - A team member will try to reproduce the issue with your provided steps. If there are no reproduction steps or no obvious way to reproduce the issue, the team will ask you for those steps and mark the issue as `needs-repro`. Bugs with the `needs-repro` tag will not be addressed until they are reproduced.
-- If the team is able to reproduce the issue, it will be marked `needs-fix`, as well as possibly other tags (such as `critical`), and the issue will be left to be [implemented by someone](#your-first-code-contribution).
+- If the team is able to reproduce the issue, it will be marked `needs-fix`, as well as possibly other tags (such as `critical`), and the issue will be left to be [implemented by someone](#conventions).
 
 ## Suggesting Enhancements
 
@@ -99,12 +97,8 @@ Enhancement suggestions are tracked as [issues](https://codeberg.org/projectfile
 - **Describe the current behavior** and **explain which behavior you expected to see instead** and why. At this point you can also tell which alternatives do not work for you.
 - **Explain why this enhancement would be useful** to most projectfile/bridge users. You may also want to point out the other projects that solved it better and which could serve as inspiration.
 
-## Your First Code Contribution
+## Conventions
 
-This project uses **Git Flow**: feature branches from `develop`, release branches from `develop`, hotfix branches from `main`.
-
-## Style guides
-
-### Commit Messages
-
-This project uses [Conventional Commits](https://www.conventionalcommits.org/):
+- **Workflow:** Git Flow — feature branches from `develop`, release branches from `develop`, hotfix branches from `main`.
+- **Commits:** [Conventional Commits](https://www.conventionalcommits.org/)
+- **Versioning:** [Semantic Versioning](https://semver.org/)
