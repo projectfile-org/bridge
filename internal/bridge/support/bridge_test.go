@@ -5,6 +5,7 @@
 package support_test
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -116,4 +117,34 @@ func TestRenderCrossLanguageBar(t *testing.T) {
 	es := string(out.Files["docs/es/SUPPORT.md"])
 	assert.Contains(t, es, "[English](SUPPORT.md)")
 	assert.NotContains(t, es, "[Español](docs/es/SUPPORT.md)", "a variant must not link to itself")
+}
+
+// TestRenderBeforeLinksPriorityOrdersWithinType: a §139 `priority` on a
+// links[] entry reorders the "Before You Ask" list within its type (higher
+// first). resolveLabeledLinks is the chokepoint both Before-You-Ask and
+// Where-to-Ask read through, so this also covers the table rows.
+func TestRenderBeforeLinksPriorityOrdersWithinType(t *testing.T) {
+	pf := localizedDoc()
+	pf.Links = []projectfile.Link{
+		{
+			Type: projectfile.LinkDocumentation, URL: "https://example.test/docs",
+			Label: &projectfile.LocalizedString{Bare: "Docs"},
+		},
+		{
+			Type: projectfile.LinkDocumentation, URL: "https://example.test/guide",
+			Label: &projectfile.LocalizedString{Bare: "Pinned Guide"},
+			Extra: map[string]any{"priority": 300},
+		},
+	}
+
+	out, err := support.Bridge{}.Render(pf, core.Options{Offline: true})
+	require.NoError(t, err)
+	body := string(out.Files["SUPPORT.md"])
+
+	guideIdx := strings.Index(body, "[Pinned Guide]")
+	docsIdx := strings.Index(body, "[Docs]")
+	require.NotEqual(t, -1, guideIdx)
+	require.NotEqual(t, -1, docsIdx)
+	assert.Less(t, guideIdx, docsIdx,
+		"higher-priority documentation link renders first in Before You Ask")
 }
