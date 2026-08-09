@@ -34,7 +34,7 @@ pf-bridge-readme       # sync (newer side wins)
 ```
 
 The first `to` run creates `README.md`. Subsequent runs overwrite **only**
-files carrying the managed marker (`<!-- pf-cli-managed: yes -->`); pass
+files carrying the managed marker; pass
 `--force` to overwrite a file lacking it.
 
 ## Composition model
@@ -61,6 +61,7 @@ rich project fills every section.
 | `quick-start`   | `readme.quick-start` groups, else `QUICKSTART.md` probe                                    | yes            |
 | `requirements`  | `REQUIREMENTS.md` probe                                                                    | yes            |
 | `artifacts`     | `org.projectfile.artifacts` — what the project ships                                       | yes            |
+| `platforms`     | `operating-system` × `architecture` (spec §4.8a) — OCI platform set                        | yes            |
 | `installation`  | `readme.installation` groups, else `INSTALL.md` probe                                      | yes            |
 | `usage`         | `readme.usage` groups, else `USAGE.md` probe                                               | yes            |
 | `configuration` | `CONFIGURATION.md` probe                                                                   | yes            |
@@ -69,6 +70,7 @@ rich project fills every section.
 | `faq`           | `FAQ.md` probe                                                                             | yes            |
 | `roadmap`       | `ROADMAP.md` probe                                                                         | yes            |
 | `policies`      | CONTRIBUTING / SECURITY / SUPPORT / CODE_OF_CONDUCT `.md` probe (human-readable labels)    | yes            |
+| `collection`    | `readme.collection.links` — manual sibling-projects bar (injected at `placement`)          | yes            |
 | `links`         | top-level `links[]`, categorized                                                           | yes            |
 | `funding`       | `FUNDING.md` probe                                                                         | yes            |
 | `license`       | `license.spdx`                                                                             | yes            |
@@ -235,6 +237,12 @@ docker pull kiota.ch/b19/ubuntu/resolute:latest
 docker pull kiota.ch/b19/ubuntu/noble:latest
 ```
 
+When a group fans out to more than one command, the bridge renders the **first**
+cell as a showcased default block, then a one-line variant summary
+(`B19_LLVM_SERIES: 22, 21`), then the remaining cells — so a reader sees the
+primary image to grab and every other variant, instead of an undifferentiated
+wall of pulls. A single-cell group renders one block with no summary.
+
 Two sources of several values, either of which works:
 
 1. **Several matching artifacts** — `{kind=image}` on a project declaring two
@@ -242,7 +250,9 @@ Two sources of several values, either of which works:
 1. **A `{AXIS}` matrix placeholder** inside a resolved value, expanded against
     `org.projectfile.ci.matrix.axes` — the same substitution m6e and ci-resolver
     perform when building. Only axes the document *declares* are substituted, so
-    a shell brace (`docker inspect --format '{{.Id}}'`) is left alone.
+    a shell brace (`docker inspect --format '{{.Id}}'`) is left alone. YAML
+    scalar axis values are coerced to their string form, so an integer axis
+    (`B19_LLVM_SERIES: [22, 21]`) substitutes as `22`/`21`, not silently drops.
 
 Prose (`prefix`/`postfix`) cannot fan out — a sentence has no per-value form — so
 a multi-valued reference there leaves the sentence unresolved, and it is dropped
@@ -260,6 +270,35 @@ usage:
     syntax: dockerfile
     commands:
       - FROM ${org.projectfile.artifacts{kind=image}.ref}
+```
+
+### Building block: which goals are highlighted
+
+When the `building` block derives its entry points from the CI DAG (no
+`readme.building` section declared), it lists one `make <name>` line per
+`goal: true` node. Two refinements narrow that list and fill in the local-dev
+story:
+
+- **`tags: [readme]`** on a goal node opts it into the highlighted set. The
+    block prefers tagged goals and falls back to **every** goal when none are
+    tagged, so a project that never opts in keeps the full list it always had.
+    `m6e/core/goals/publish.yaml` tags `published` by default; a project tags
+    further goals to surface them.
+- **The intro explains `make` and the dev loop.** A line notes that bare `make`
+    runs the default target (`make help` lists them all); when the DAG declares
+    a `dev-container` node (the container plane’s selectable dev node), a second
+    line advertises `make ci-dag M6E_CI_TARGETS=dev` as the local dev loop.
+
+```yaml
+# m6e/core/goals/publish.yaml
+org:
+  projectfile:
+    ci:
+      nodes:
+        published:
+          goal: true
+          description: Build, test, scan and publish the release artifacts
+          tags: [readme]   # highlighted in the README
 ```
 
 ### Inheritable / traitable sections
@@ -394,6 +433,11 @@ the template prints. The category comes from the link’s `type`:
     `first-contribution`, `donation`, `translate`
 - **Security** — `security-policy`, `security-report`, `bug-bounty`
 - **Other** — any unrecognized `type`
+
+When a project’s links all fall in a single group (the near-universal case —
+source-code + bugs), the `### <group>` subheading is omitted: it would only
+repeat the `## Links` title. A project mixing groups keeps the subheadings,
+since they then carry information the title does not.
 
 Each link’s label falls back from `link.label` to the catalog entry for its
 `type` (`link.type.source-code` → “Source Code”), then to the raw `type`.
@@ -779,5 +823,9 @@ plane runs `pf-bridge readme --force` to generate, the forges run
 `--check` means the same thing — any field the sync *would* have moved is drift.
 
 The bridge is **write-only** (`from` is a no-op): the readme is a projection
-of the projectfile, not a source of truth. Generation prepends the REUSE
-SPDX header and the managed marker; everything between is block output.
+of the projectfile, not a source of truth. Generation prepends a single HTML
+comment holding both the REUSE SPDX header and the managed marker
+(`pf-cli-managed: yes` folded in before the closing `-->`); everything between
+is block output. `core.HasMarker` recognises all three sentinel forms — the
+hash line, the standalone HTML comment, and the folded inner line — so the
+merged header still reads as managed.

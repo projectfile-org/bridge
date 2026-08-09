@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"text/template"
 
 	"kiota.ch/projectfile/core/v2/pkg/genlog"
@@ -47,6 +48,7 @@ const (
 	blockBadges        = "badges"
 	blockScreenshots   = "screenshots"
 	blockArtifacts     = "artifacts"
+	blockPlatforms     = "platforms"
 	blockFeatures      = "features"
 	blockBenchmarks    = "benchmarks"
 	blockQuickStart    = "quick-start"
@@ -59,6 +61,7 @@ const (
 	blockFAQ           = "faq"
 	blockRoadmap       = "roadmap"
 	blockPolicies      = "policies"
+	blockCollection    = "collection"
 	blockLinks         = "links"
 	blockFunding       = "funding"
 	blockLicense       = "license"
@@ -73,7 +76,7 @@ const (
 var defaultBlocks = []string{
 	blockLanguages, blockLogo, blockBasics, blockBadges, blockScreenshots,
 	blockFeatures, blockBenchmarks, blockQuickStart, blockRequirements,
-	blockArtifacts, blockInstallation, blockUsage, blockConfiguration, blockBuilding,
+	blockArtifacts, blockPlatforms, blockInstallation, blockUsage, blockConfiguration, blockBuilding,
 	blockDocumentation, blockFAQ, blockRoadmap,
 	blockPolicies, blockLinks, blockFunding, blockLicense,
 }
@@ -87,6 +90,11 @@ func (b Bridge) Render(pf *projectfile.Document, opts core.Options) (core.Output
 	if ext != nil && len(ext.Blocks) > 0 {
 		blocks = ext.Blocks
 	}
+	// The collection bar is injected at the project's chosen placement rather
+	// than holding a fixed slot, so a namespace can park its siblings under the
+	// badges (a navigational header) or after the links (a "see also" footer).
+	// No-op when the project declares no collection links.
+	blocks = withCollection(blocks, ext)
 
 	// configuredLangs is the document-wide list from org.projectfile.i18n
 	// (e.g. [es, uk]) — the same list every community health file honours.
@@ -128,9 +136,7 @@ func (Bridge) renderLang(pf *projectfile.Document, ext *pfmodel.ReadmeExtension,
 		}
 	}
 
-	out := []byte(core.REUSEHeader(pf, core.StyleHTML))
-	out = append(out, core.MarkerHTML...)
-	out = append(out, '\n')
+	out := []byte(mergedHTMLHeader(pf))
 	for i, p := range parts {
 		out = append(out, p...)
 		if i < len(parts)-1 {
@@ -216,6 +222,27 @@ func renderBlock(dir, blockName string, data readmeView, ext *pfmodel.ReadmeExte
 	return nil, nil
 }
 
+// mergedHTMLHeader builds the README header as a single HTML comment holding
+// both the REUSE SPDX block and the pf-cli-managed sentinel. The two lived as
+// separate comments before; folding them cuts the header to one block without
+// losing the licence declaration or the overwrite-marker HasMarker scans for.
+//
+// REUSE-compliant: the marker line carries no SPDX-* tag, so it neither
+// declares a licence nor trips the REUSE-Ignore rules. The marker text stays on
+// its own line inside the comment, which core.HasMarker recognises via
+// MarkerInner.
+func mergedHTMLHeader(pf *projectfile.Document) string {
+	header := core.REUSEHeader(pf, core.StyleHTML) // <!--\n…SPDX…\n-->\n\n
+	// Insert the marker line immediately before the closing "-->".
+	closeIdx := strings.Index(header, "-->")
+	if closeIdx < 0 {
+		// Defensive: a header without a closing comment is malformed; fall back
+		// to the two-block form rather than publishing a broken header.
+		return header + core.MarkerHTML + "\n"
+	}
+	return header[:closeIdx] + core.MarkerInner + "\n" + header[closeIdx:]
+}
+
 // execTracedBlock executes one resolved block template and traces which tier
 // and which file it came from. A block rendering to only whitespace is dropped
 // (nil, nil) — that is how every probe-driven block disappears when its data
@@ -290,8 +317,29 @@ func execBlockTemplate(name string, body []byte, data readmeView, dir string, ex
 			// org.projectfile.artifacts: one entry per declared artifact with
 			// its kind localized and its address resolved.
 			"artifacts": func() []artifactView { return buildArtifacts(data.Doc, data.StrLang) },
+			// platforms lists the OCI platforms the project builds for, from
+			// org.projectfile.operating-system × org.projectfile.architecture
+			// (spec §4.8a). Empty when neither extension is declared, so the
+			// block drops for a non-shipping project.
+			"platforms": func() []string { return buildPlatforms(data.Doc) },
 			// linkGroups buckets Doc.Links by category in render order.
 			"linkGroups": func() []linkGroup { return buildLinkGroups(data.Doc, data.StrLang) },
+			// collectionLinks is the manual "other projects" bar (siblings in
+			// the same namespace), declared under readme.collection. Returns nil
+			// when the project declares none, so the block drops silently.
+			"collectionLinks": func() []pfmodel.CollectionLink {
+				if ext == nil {
+					return nil
+				}
+				return ext.Collection.Links
+			},
+			// readmeGoals lists the CI goals the building block highlights,
+			// preferring goals tagged `readme` and falling back to every goal
+			// when none are tagged. Returns nil for a project with no CI DAG.
+			"readmeGoals": func() []goalView { return buildReadmeGoals(data.Doc) },
+			// hasDevContainer reports whether the CI DAG declares a dev-container
+			// node, so the building block can advertise the local dev loop.
+			"hasDevContainer": func() bool { return hasDevContainer(data.Doc) },
 			// staticLinks probes the community-health files. Path probing uses
 			// the render sentinel (Lang) so the default language probes the
 			// root; labels resolve in StrLang so a non-English-default project

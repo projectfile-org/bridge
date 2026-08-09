@@ -1,0 +1,3 @@
+{{- with collectionLinks}}
+{{range $i, $l := .}}{{if $i}} | {{end}}[{{.Label}}]({{.URL}}){{end}}
+{{end -}}

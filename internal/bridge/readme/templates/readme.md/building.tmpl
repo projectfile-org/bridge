@@ -8,7 +8,7 @@
 {{- with $g.Commands}}
 
 ```{{$g.Syntax}}
-{{range .}}{{.}}
+{{range $g.Commands}}{{.}}
 {{end -}}
 ```
 {{- end}}
@@ -24,27 +24,14 @@
      node is exactly a `make <name>` target — pf-ci renders one workflow file
      per goal, and m6e exposes one launcher per goal.
 
-     Three guards are load-bearing. The outer `with` skips a project with no CI
-     namespace at all — `pf` coerces a miss to "", which `range` cannot iterate.
-     `if $node` skips a NULL node (the shape a bare `ci:` override leaves
-     behind), which would otherwise abort the render with a nil-pointer error.
-     `with .description` skips a goal that has none, which would otherwise print
-     a literal <no value>.
+     readmeGoals prefers goals tagged `readme` (the advisory tags[] value) and
+     falls back to every goal when none are tagged, so a project that does not
+     opt in keeps the full list it always had.
 
-     Ranging a map iterates in sorted key order, so the list is stable with no
-     sort helper. Lines accumulate into $goals first because the heading must
-     not print for a project that has neither goals nor build docs.
+     The intro explains `make` with no arguments (the default target) and the
+     dev-container dev loop when the DAG declares a dev-container node.
 */ -}}
-{{- $goals := "" -}}
-{{- with pf "org.projectfile.ci.nodes" -}}
-{{- range $name, $node := . -}}
-{{- if $node -}}{{- if $node.goal -}}
-{{- $line := printf "- `make %s`" $name -}}
-{{- with $node.description -}}{{- $line = printf "%s — %s" $line . -}}{{- end -}}
-{{- $goals = printf "%s%s\n" $goals $line -}}
-{{- end -}}{{- end -}}
-{{- end -}}
-{{- end -}}
+{{- $goals := readmeGoals -}}
 {{- if or buildLinks $goals}}
 ## {{t "building.title"}}
 {{- with buildLinks}}
@@ -56,7 +43,16 @@
 
 {{t "building.goals"}}
 
-{{.}}
+{{range .}}- `make {{.Name}}`{{with .Description}} — {{.}}{{end}}
+{{end -}}
+{{- end}}
+{{- with $goals}}
+
+{{t "building.intro.make"}}
+{{- if hasDevContainer}}
+
+{{t "building.intro.dev"}}
+{{- end}}
 {{- end}}
 {{- end}}
 {{- end}}

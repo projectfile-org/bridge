@@ -24,10 +24,14 @@ requirements.title: Requirements
 requirements.body: See [Requirements](%s) for prerequisites.
 installation.title: Installation
 installation.body: See [Installation](%s) for setup steps.
+installation.variants: "Available variants:"
 usage.title: Usage
 usage.body: See [Usage](%s) for examples.
+usage.variants: "Available variants:"
 building.title: Building
 building.goals: "Pipeline entry points:"
+building.intro.make: "Run `make` with no arguments for the default target; run `make help` to list every target."
+building.intro.dev: "For the local dev loop, `make ci-dag M6E_CI_TARGETS=dev` brings up the dev-container."
 documentation.title: Documentation
 faq.title: FAQ
 faq.body: See [FAQ](%s) for common questions.
@@ -47,6 +51,7 @@ license.body: This project is licensed under %s — see the [LICENSE](LICENSE) f
 # back to the bare kind string until it gets one).
 artifacts.title: What this provides
 artifacts.ports: listens on
+platforms.title: Supported platforms
 artifact.kind.image: Container image
 artifact.kind.binary: Executable
 artifact.kind.package: Package

@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 	"strconv"
 	"strings"
 
@@ -27,6 +28,15 @@ const (
 	groupSecurity  = "security"
 	groupOther     = "other"
 )
+
+// linkTypeSourceCode is the `links[].type` value for a source-code mirror —
+// the most common link type in the fleet, declared once so the production map
+// and the tests share one literal (goconst).
+const linkTypeSourceCode = "source-code"
+
+// archAMD64 is the OCI architecture vocabulary value used across the platforms
+// tests; declared once for the same goconst reason.
+const archAMD64 = "amd64"
 
 // keyBlocks is the YAML key for the blocks list inside the readme extension.
 // Read by core (parsed into ReadmeExtension.Blocks); the bridge only writes it
@@ -135,6 +145,68 @@ func buildArtifacts(doc *projectfile.Document, lang string) []artifactView {
 	return out
 }
 
+// osExtensionNS and archExtensionNS are the spec §4.8a platform-targeting
+// extensions the platforms block reads. Declared here because pfmodel owns no
+// constant for them — they are advisory build/distribution data, opaque to the
+// core model.
+const (
+	osExtensionNS   = "org.projectfile.operating-system"
+	archExtensionNS = "org.projectfile.architecture"
+)
+
+// platformDefaultOS is the OS a consumer assumes for a container build when the
+// project declares no operating-system list (spec §4.8a: absent = unconstrained,
+// a consumer typically assumes `linux`).
+const platformDefaultOS = "linux"
+
+// buildPlatforms renders the OCI platform set the project targets, as the
+// cartesian product of operating-system × architecture (spec §4.8a). Returns the
+// set in sorted order so the line is stable across renders.
+//
+// A project that declares only architectures still ships: the OS defaults to
+// `linux` (the spec's stated assumption for container builds). A project that
+// declares NEITHER ships nothing publishable here, so the block is dropped — the
+// platforms section is a build-target statement, not a property every project has.
+func buildPlatforms(doc *projectfile.Document) []string {
+	oses := strFieldList(doc, osExtensionNS)
+	arches := strFieldList(doc, archExtensionNS)
+	if len(oses) == 0 && len(arches) == 0 {
+		return nil
+	}
+	if len(oses) == 0 {
+		oses = []string{platformDefaultOS}
+	}
+	var out []string
+	for _, os := range oses {
+		for _, arch := range arches {
+			out = append(out, os+"/"+arch)
+		}
+	}
+	slices.Sort(out)
+	for _, p := range out {
+		genlog.Decision("platform", p, osExtensionNS+" x "+archExtensionNS, "")
+	}
+	return out
+}
+
+// strFieldList reads an extension namespace whose value is a list of strings and
+// returns it coerced, mirroring the matrix-axis coercion: YAML integer items are
+// rendered as their plain form. Returns nil for an absent or non-list extension.
+func strFieldList(doc *projectfile.Document, ns string) []string {
+	v := pfLookup(doc, ns)
+	items, ok := v.([]any)
+	if !ok {
+		return nil
+	}
+	var out []string
+	for _, item := range items {
+		if s := scalarToString(item); s != "" {
+			out = append(out, s)
+		}
+	}
+	return out
+}
+
 // artifactKindLabel is an artifact kind's display text in lang. The catalog key
 // is derived from the kind (`artifact.kind.image`) rather than mapped, so a new
 // kind needs no Go edit. An unknown — or untranslated — kind falls back to the
@@ -191,8 +263,8 @@ type staticLink struct {
 // into groupOther. The per-type display label is NOT here — it lives in the
 // message catalog under link.type.<type>, so adding a type is a catalog edit.
 var linkCategories = map[string]string{
-	"homepage":    groupProject,
-	"source-code": groupProject,
+	"homepage":         groupProject,
+	linkTypeSourceCode: groupProject,
 	// bugs is the issue tracker — a project resource, and the ONE link type
 	// this fleet uses that had no mapping, so every README grew an "Other"
 	// heading holding nothing but trackers.
@@ -550,6 +622,67 @@ func buildLinkGroups(pf *projectfile.Document, lang string) []linkGroup {
 			Heading: translate(lang, keyPrefixLinkGroup+key),
 			Links:   entries,
 		})
+	}
+	return out
+}
+
+// collectionPlacementDefault is the placement assumed when a project declares a
+// collection but no placement: the bar reads as a navigational header, right
+// under the badges where a reader's eye lands first.
+const collectionPlacementDefault = "after-badges"
+
+// collectionAnchors maps a placement tag to the well-known block the collection
+// bar is inserted AFTER. A placement not named here falls back to the default,
+// so an unknown tag still renders the bar rather than silently dropping it.
+var collectionAnchors = map[string]string{
+	collectionPlacementDefault: blockBadges,
+	"after-links":              blockLinks,
+}
+
+// withCollection inserts the collection block into the block list at the
+// placement the project requests. The block is omitted entirely when the
+// project declares no collection links — the template would render nothing, so
+// holding a slot would only clutter a project's block list.
+//
+// The insertion runs AFTER an explicit `blocks:` override too, so a project
+// that redeclares its block list still gets its siblings bar — the collection
+// is a navigational concern, not content a project should have to re-slot.
+func withCollection(blocks []string, ext *pfmodel.ReadmeExtension) []string {
+	if ext == nil || len(ext.Collection.Links) == 0 {
+		return blocks
+	}
+	placement := ext.Collection.Placement
+	if placement == "" {
+		placement = collectionPlacementDefault
+	}
+	anchor, ok := collectionAnchors[placement]
+	if !ok {
+		anchor = collectionAnchors[collectionPlacementDefault]
+	}
+	genlog.Decision("collection", placement, "siblings bar", "anchor="+anchor)
+	return insertAfter(blocks, blockCollection, anchor)
+}
+
+// insertAfter returns dst with ins inserted immediately after the first
+// occurrence of anchor. When anchor is absent ins is appended at the end, and
+// an ins already present is not duplicated.
+func insertAfter(blocks []string, ins, anchor string) []string {
+	for _, b := range blocks {
+		if b == ins {
+			return blocks // already slotted
+		}
+	}
+	out := make([]string, 0, len(blocks)+1)
+	inserted := false
+	for _, b := range blocks {
+		out = append(out, b)
+		if !inserted && b == anchor {
+			out = append(out, ins)
+			inserted = true
+		}
+	}
+	if !inserted {
+		out = append(out, ins)
 	}
 	return out
 }

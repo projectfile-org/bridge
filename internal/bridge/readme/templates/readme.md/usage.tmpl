@@ -5,10 +5,22 @@
 
 {{.}}
 {{- end}}
-{{- with $g.Commands}}
+{{- if and $g.Variants (gt (len $g.Commands) 1)}}
 
 ```{{$g.Syntax}}
-{{range .}}{{.}}
+{{index $g.Commands 0}}
+```
+
+{{t (printf "%s.variants" "usage")}} {{$g.Variants}}
+
+```{{$g.Syntax}}
+{{range $i, $c := $g.Commands}}{{if $i}}{{.}}
+{{end}}{{end -}}
+```
+{{- else if $g.Commands}}
+
+```{{$g.Syntax}}
+{{range $g.Commands}}{{.}}
 {{end -}}
 ```
 {{- end}}

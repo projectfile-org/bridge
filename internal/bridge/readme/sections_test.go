@@ -10,25 +10,39 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"kiota.ch/projectfile/core/v2/pkg/projectfile"
 	"projectfile.org/projectfile/bridge/internal/pfmodel"
 )
 
 // Repeated fixture keys, named so goconst sees one home per string.
 const (
-	keyImage    = "image"
-	keyCommands = "commands"
-	keyName     = "name"
-	keyPrefix   = "prefix"
-	keyKind     = "kind"
-	keyAxes     = "axes"
-	keyRef      = "ref"
-	keyMatrix   = "matrix"
+	keyImage       = "image"
+	keyCommands    = "commands"
+	keyName        = "name"
+	keyPrefix      = "prefix"
+	keyKind        = "kind"
+	keyAxes        = "axes"
+	keyRef         = "ref"
+	keyMatrix      = "matrix"
+	keyLabel       = "label"
+	keyURL         = "url"
+	keyDescription = "description"
+	keyGoal        = "goal"
+	// CI node-name and field fixtures shared across the goal-filter tests.
+	nodePublished    = "published"
+	nodeAnalyze      = "analyze"
+	nodeDevContainer = "dev-container"
+	keyTags          = "tags"
 	// pathCLI stands in for a build output in the address-chain cases.
 	pathCLI     = "dist/pf-cli"
 	artifactsNS = "org.projectfile.artifacts"
 	// refImage is the address every recipe below installs from — the ONE thing
 	// a project has to declare for the docker-pull group to render.
 	refImage = "docker pull ${org.projectfile.artifacts{kind=image}.ref}"
+	// Fixture strings shared across the matrix, goal and link tests.
+	descPublish    = "Publish"
+	urlExampleRepo = "https://example.com/repo"
+	urlExampleX    = "https://x"
 )
 
 // imageArtifact is the shape a container project declares (or inherits from a
@@ -227,7 +241,7 @@ func TestUndeclaredBraceSurvives(t *testing.T) {
 	pf := minimalDoc(t)
 	pf.Extensions = map[string]any{
 		ciExtensionNS: map[string]any{
-			keyMatrix: map[string]any{keyAxes: map[string]any{"GOARCH": []any{"amd64"}}},
+			keyMatrix: map[string]any{keyAxes: map[string]any{"GOARCH": []any{archAMD64}}},
 		},
 		readmeNS: map[string]any{
 			blockUsage: []any{group("inspect", "Inspect it:", `docker inspect --format '{{.Id}}' x`)},
@@ -237,6 +251,297 @@ func TestUndeclaredBraceSurvives(t *testing.T) {
 	out := renderDoc(t, t.TempDir(), pf)
 
 	assert.Contains(t, out, `docker inspect --format '{{.Id}}' x`)
+}
+
+// TestIntegerAxisValuesAreCoerced: YAML decodes a bare `B19_LLVM_SERIES: [22, 21]`
+// as INTEGER items, but ci-resolver/m6e substitute the plain token "22"/"21" per
+// cell. The README must coerce the same way or the {AXIS} placeholder survives
+// into the published pull line — which is exactly the bug that left b19/llvm's
+// README showing `llvm-{B19_LLVM_SERIES}` while b19/php (quoted strings) resolved.
+func TestIntegerAxisValuesAreCoerced(t *testing.T) {
+	pf := minimalDoc(t)
+	pf.Extensions = map[string]any{
+		ciExtensionNS: map[string]any{
+			keyImage: "b19/llvm/{B19_LLVM_SERIES}",
+			keyMatrix: map[string]any{keyAxes: map[string]any{
+				"B19_LLVM_SERIES": []any{22, 21}, // integers, not quoted strings
+			}},
+		},
+		artifactsNS: imageArtifact("kiota.ch/${org.projectfile.ci.image}:latest"),
+		readmeNS: map[string]any{
+			blockInstallation: []any{group(keyImage, "Pull one:", refImage)},
+		},
+	}
+
+	out := renderDoc(t, t.TempDir(), pf)
+
+	assert.Contains(t, out, "docker pull kiota.ch/b19/llvm/22:latest")
+	assert.Contains(t, out, "docker pull kiota.ch/b19/llvm/21:latest")
+	assert.NotContains(t, out, "{B19_LLVM_SERIES}", "an integer axis must substitute, not survive")
+}
+
+// TestScalarToStringCoercesAxisShapes pins the matrix-cell rendering for every
+// YAML scalar shape a projectfile may carry.
+func TestScalarToStringCoercesAxisShapes(t *testing.T) {
+	assert.Equal(t, "22", scalarToString(22))
+	assert.Equal(t, "8.5", scalarToString(8.5))
+	assert.Equal(t, "cli", scalarToString("cli"))
+	assert.Equal(t, "true", scalarToString(true))
+	assert.Empty(t, scalarToString(nil), "nil is not a matrix value")
+	assert.Empty(t, scalarToString([]any{"x"}), "a composite is not a matrix value")
+}
+
+// TestMatrixSectionRendersDefaultThenVariants: a matrix install group renders
+// the FIRST cell (the default) as its own fenced block, then a one-line summary
+// of the axes, then the remaining cells — so a reader sees the primary image to
+// grab and every other variant, rather than an undifferentiated wall of pulls.
+func TestMatrixSectionRendersDefaultThenVariants(t *testing.T) {
+	pf := minimalDoc(t)
+	pf.Extensions = map[string]any{
+		ciExtensionNS: map[string]any{
+			keyImage: "b19/llvm/{B19_LLVM_SERIES}",
+			keyMatrix: map[string]any{keyAxes: map[string]any{
+				"B19_LLVM_SERIES": []any{22, 21},
+			}},
+		},
+		artifactsNS: imageArtifact("kiota.ch/${org.projectfile.ci.image}:latest"),
+		readmeNS: map[string]any{
+			blockInstallation: []any{group(keyImage, "Pull the published image:", refImage)},
+		},
+	}
+
+	out := renderDoc(t, t.TempDir(), pf)
+
+	// The default (first cell) renders in its own block.
+	assert.Contains(t, out, "docker pull kiota.ch/b19/llvm/22:latest")
+	// The variant summary line names the axis and every value.
+	assert.Contains(t, out, "Available variants: B19_LLVM_SERIES: 22, 21")
+	// The non-default cell renders in the second block, not collapsed onto the
+	// default line.
+	assert.Contains(t, out, "docker pull kiota.ch/b19/llvm/21:latest")
+}
+
+// TestNonMatrixSectionRendersSingleBlock: a single-image project (no matrix)
+// renders exactly one fenced block with no variant note — the matrix reshape
+// must not add a redundant "variants" line for the ~130 single-image projects.
+func TestNonMatrixSectionRendersSingleBlock(t *testing.T) {
+	pf := minimalDoc(t)
+	pf.Extensions = map[string]any{
+		artifactsNS: imageArtifact("kiota.ch/d9t/dind:latest"),
+		readmeNS: map[string]any{
+			blockInstallation: []any{group(keyImage, "Pull the published image:", refImage)},
+		},
+	}
+
+	out := renderDoc(t, t.TempDir(), pf)
+
+	assert.Contains(t, out, "```sh\ndocker pull kiota.ch/d9t/dind:latest\n```")
+	assert.NotContains(t, out, "Available variants")
+}
+
+// TestMatrixSummaryOrdersAxes deterministically: a two-axis matrix renders its
+// axis summary in sorted axis order with values joined by "·".
+func TestMatrixSummaryOrdersAxes(t *testing.T) {
+	summary := matrixSummary(map[string][]string{
+		"B19_PHP_SAPI":   {"cli", "fpm"},
+		"B19_PHP_SERIES": {"8.5", "8.4", "8.3"},
+	})
+	assert.Equal(t, "B19_PHP_SAPI: cli, fpm · B19_PHP_SERIES: 8.5, 8.4, 8.3", summary)
+	assert.Empty(t, matrixSummary(nil))
+}
+
+// ciNodes builds an org.projectfile.ci.nodes extension for the goal-filter
+// tests: each entry is name → {goal, description, tags}.
+func ciNodes(entries ...map[string]any) map[string]any {
+	nodes := map[string]any{}
+	for _, e := range entries {
+		name, _ := e[keyName].(string)
+		if name == "" {
+			continue
+		}
+		entry := map[string]any{}
+		for k, v := range e {
+			if k != keyName {
+				entry[k] = v
+			}
+		}
+		nodes[name] = entry
+	}
+	return map[string]any{ciExtensionNS: map[string]any{"nodes": nodes}}
+}
+
+// TestReadmeGoalsPrefersTagged: a goal tagged `readme` is the only one
+// highlighted, even when other goals exist. This is how a project narrows the
+// README's "Pipeline entry points" to the headline target.
+func TestReadmeGoalsPrefersTagged(t *testing.T) {
+	pf := minimalDoc(t)
+	pf.Extensions = ciNodes(
+		map[string]any{keyName: nodePublished, keyGoal: true, keyDescription: descPublish, keyTags: []any{goalTag}},
+		map[string]any{keyName: nodeAnalyze, keyGoal: true, keyDescription: "Analyze"},
+	)
+	got := buildReadmeGoals(pf)
+	require.Len(t, got, 1)
+	assert.Equal(t, nodePublished, got[0].Name)
+}
+
+// TestReadmeGoalsFallbackAllWhenNoneTagged: a project that tags no goal keeps
+// every goal in the list — the opt-in never removes information a project that
+// never heard of the tag was showing.
+func TestReadmeGoalsFallbackAllWhenNoneTagged(t *testing.T) {
+	pf := minimalDoc(t)
+	pf.Extensions = ciNodes(
+		map[string]any{keyName: nodePublished, keyGoal: true, keyDescription: descPublish},
+		map[string]any{keyName: nodeAnalyze, keyGoal: true, keyDescription: "Analyze"},
+	)
+	got := buildReadmeGoals(pf)
+	require.Len(t, got, 2)
+}
+
+// TestReadmeGoalsSkipsNonGoalsAndDescriptionless: only goal nodes WITH a
+// description survive — a non-goal (dev-container) and a goal lacking a
+// description are dropped, so the list never prints a literal <no value>.
+func TestReadmeGoalsSkipsNonGoalsAndDescriptionless(t *testing.T) {
+	pf := minimalDoc(t)
+	pf.Extensions = ciNodes(
+		map[string]any{keyName: nodeDevContainer, keyDescription: "Dev loop"}, // not a goal
+		map[string]any{keyName: "tagless", keyGoal: true},                     // no description
+	)
+	assert.Empty(t, buildReadmeGoals(pf))
+}
+
+// TestBuildingBlockAdvertisesDevContainer: when the DAG declares a
+// dev-container node, the building block renders the dev-loop line — answering
+// the question "how do I run this locally" the README previously left open.
+func TestBuildingBlockAdvertisesDevContainer(t *testing.T) {
+	pf := minimalDoc(t)
+	pf.Extensions = ciNodes(
+		map[string]any{keyName: nodePublished, keyGoal: true, keyDescription: descPublish, keyTags: []any{goalTag}},
+		map[string]any{keyName: nodeDevContainer, keyDescription: "Dev loop"},
+	)
+	out := renderDoc(t, t.TempDir(), pf)
+	assert.Contains(t, out, "M6E_CI_TARGETS=dev")
+	assert.Contains(t, out, "make` with no arguments")
+}
+
+// TestBuildingBlockOmitsDevLoopWhenNoDevContainer: a project with no
+// dev-container node renders the make-intro but not the dev-loop line.
+func TestBuildingBlockOmitsDevLoopWhenNoDevContainer(t *testing.T) {
+	pf := minimalDoc(t)
+	pf.Extensions = ciNodes(
+		map[string]any{keyName: nodePublished, keyGoal: true, keyDescription: descPublish, keyTags: []any{goalTag}},
+	)
+	out := renderDoc(t, t.TempDir(), pf)
+	assert.Contains(t, out, "make` with no arguments")
+	assert.NotContains(t, out, "M6E_CI_TARGETS=dev")
+}
+
+// TestLinksSingleGroupDropsSubheading: a project whose links all fall in one
+// group (the near-universal case — source-code + bugs) renders `## Links` with
+// NO `###` subheading. The heading would only repeat what the section title
+// already says.
+func TestLinksSingleGroupDropsSubheading(t *testing.T) {
+	pf := minimalDoc(t)
+	pf.Links = []projectfile.Link{
+		{Type: linkTypeSourceCode, URL: urlExampleRepo},
+		{Type: "bugs", URL: "https://example.com/issues"},
+	}
+	out := renderDoc(t, t.TempDir(), pf)
+	assert.Contains(t, out, "## Links")
+	assert.Contains(t, out, "[Source Code](https://example.com/repo)")
+	assert.Contains(t, out, "[Issue tracker](https://example.com/issues)")
+	assert.NotContains(t, out, "### Project", "single group renders no subheading")
+}
+
+// TestLinksMultipleGroupsKeepSubheadings: a project mixing project and community
+// links keeps the per-group subheadings, because they now carry information the
+// section title does not.
+func TestLinksMultipleGroupsKeepSubheadings(t *testing.T) {
+	pf := minimalDoc(t)
+	pf.Links = []projectfile.Link{
+		{Type: linkTypeSourceCode, URL: urlExampleRepo},
+		{Type: "chat", URL: "https://example.com/chat"},
+	}
+	out := renderDoc(t, t.TempDir(), pf)
+	assert.Contains(t, out, "### Project")
+	assert.Contains(t, out, "### Community")
+}
+
+// collectionExt builds a readme collection extension map for the link-bar tests.
+// links is []any (each a map[string]any) to mirror how a YAML decoder yields a
+// list, so the production parser's .([]any) assertion holds.
+func collectionExt(placement string, links ...map[string]any) map[string]any {
+	items := make([]any, len(links))
+	for i, l := range links {
+		items[i] = l
+	}
+	return map[string]any{readmeNS: map[string]any{
+		"collection": map[string]any{
+			"placement": placement,
+			"links":     items,
+		},
+	}}
+}
+
+// collectionLink builds one collection-link fixture map. keyLabel/keyURL centralize
+// the map keys so goconst sees one home per repeated string.
+func collectionLink(label, url string) map[string]any {
+	return map[string]any{keyLabel: label, keyURL: url}
+}
+
+// TestCollectionBarRendersAfterBadgesByDefault: a collection with no placement
+// renders its sibling links as a pipe-separated bar right after the badges
+// block — the navigational-header position, before the project's own content.
+func TestCollectionBarRendersAfterBadgesByDefault(t *testing.T) {
+	pf := minimalDoc(t)
+	pf.Extensions = collectionExt("",
+		collectionLink("F5M/I2P", "https://kiota.ch/f5m/i2p"),
+		collectionLink("F5M/Tor", "https://kiota.ch/f5m/tor"),
+	)
+	out := renderDoc(t, t.TempDir(), pf)
+	assert.Contains(t, out, "[F5M/I2P](https://kiota.ch/f5m/i2p) | [F5M/Tor](https://kiota.ch/f5m/tor)")
+	// The bar lands before the license section (the navigational-header slot).
+	barIdx := index(out, "[F5M/I2P]")
+	licenseIdx := index(out, "## License")
+	assert.Less(t, barIdx, licenseIdx, "collection bar renders above the license section")
+}
+
+// TestCollectionBarPlacementAfterLinks: placement `after-links` parks the bar
+// after the links block instead of under the badges.
+func TestCollectionBarPlacementAfterLinks(t *testing.T) {
+	pf := minimalDoc(t)
+	pf.Links = []projectfile.Link{{Type: linkTypeSourceCode, URL: urlExampleRepo}}
+	pf.Extensions = collectionExt("after-links",
+		collectionLink("F5M/I2P", "https://kiota.ch/f5m/i2p"),
+	)
+	out := renderDoc(t, t.TempDir(), pf)
+	linksIdx := index(out, "[Source Code]")
+	barIdx := index(out, "[F5M/I2P]")
+	assert.Greater(t, barIdx, linksIdx, "after-links placement renders the bar after the links block")
+}
+
+// TestCollectionBarSkippedWhenNoLinks: a project that declares no collection
+// renders no bar — the block is dropped, not an empty line.
+func TestCollectionBarSkippedWhenNoLinks(t *testing.T) {
+	out := renderDoc(t, t.TempDir(), minimalDoc(t))
+	assert.NotContains(t, out, "F5M/I2P")
+}
+
+// TestWithCollectionInjectsAtAnchor pins the block-list injection: the
+// collection block lands immediately after its anchor and is not duplicated.
+func TestWithCollectionInjectsAtAnchor(t *testing.T) {
+	ext := &pfmodel.ReadmeExtension{Collection: pfmodel.Collection{
+		Links: []pfmodel.CollectionLink{{Label: "X", URL: urlExampleX}},
+	}}
+	got := withCollection([]string{blockBasics, blockBadges, blockLinks, blockLicense}, ext)
+	// Inserted after badges (the default anchor), exactly once.
+	assert.Equal(t, []string{blockBasics, blockBadges, blockCollection, blockLinks, blockLicense}, got)
+}
+
+// TestWithCollectionOmittedWhenEmpty: no collection links means no injection.
+func TestWithCollectionOmittedWhenEmpty(t *testing.T) {
+	ext := &pfmodel.ReadmeExtension{}
+	got := withCollection([]string{blockBasics, blockLicense}, ext)
+	assert.Equal(t, []string{blockBasics, blockLicense}, got)
 }
 
 // Generic interpolation: any field address resolves, anything that is not one
@@ -357,6 +662,41 @@ func TestArtifactsBlockLists(t *testing.T) {
 func TestArtifactsBlockSkippedWhenNoneDeclared(t *testing.T) {
 	out := renderDoc(t, t.TempDir(), minimalDoc(t))
 	assert.NotContains(t, out, "## What this provides")
+}
+
+// TestPlatformsBlockRendersCartesianProduct: operating-system × architecture
+// (spec §4.8a) renders as the OCI platform set, sorted. A reader scanning a b19
+// image README sees `linux/amd64`, `linux/arm64` … exactly what `docker pull
+// --platform` takes.
+func TestPlatformsBlockRendersCartesianProduct(t *testing.T) {
+	pf := minimalDoc(t)
+	pf.Extensions = map[string]any{
+		osExtensionNS:   []any{"linux"},
+		archExtensionNS: []any{"arm64", archAMD64},
+	}
+	out := renderDoc(t, t.TempDir(), pf)
+	assert.Contains(t, out, "## Supported platforms")
+	assert.Contains(t, out, "`linux/amd64`, `linux/arm64`")
+}
+
+// TestPlatformsBlockDefaultsOSForArchesOnly: a project that declares only
+// architectures (the common b19 case) still ships — the OS defaults to linux,
+// the spec's stated assumption for container builds.
+func TestPlatformsBlockDefaultsOSForArchesOnly(t *testing.T) {
+	pf := minimalDoc(t)
+	pf.Extensions = map[string]any{
+		archExtensionNS: []any{archAMD64},
+	}
+	out := renderDoc(t, t.TempDir(), pf)
+	assert.Contains(t, out, "`linux/amd64`")
+}
+
+// TestPlatformsBlockSkippedWhenNeitherDeclared: a project that targets nothing
+// publishable drops the block — the platforms section is a build-target
+// statement, not a property every project has.
+func TestPlatformsBlockSkippedWhenNeitherDeclared(t *testing.T) {
+	out := renderDoc(t, t.TempDir(), minimalDoc(t))
+	assert.NotContains(t, out, "## Supported platforms")
 }
 
 // TestArtifactAddressPicksByKind pins the per-kind address chain: the ONE string

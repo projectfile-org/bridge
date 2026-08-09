@@ -5,8 +5,10 @@
 package readme
 
 import (
+	"fmt"
 	"maps"
 	"slices"
+	"strconv"
 	"strings"
 
 	"kiota.ch/projectfile/core/v2/pkg/genlog"
@@ -23,11 +25,18 @@ const ciExtensionNS = "org.projectfile.ci"
 // sectionGroupView is the render-ready shape of one command group handed to the
 // installation/quick-start/usage/building templates: prose already localized and
 // interpolated, commands already expanded and fanned out.
+//
+// Variants is a humanised summary of the matrix axes that fanned the commands out
+// (e.g. "SAPI: cli, fpm · series: 8.5, 8.4, 8.3"). Empty for a single-image
+// project — no matrix, no variant note. The template uses it to introduce the
+// fan-out block so a reader can see every cell the project publishes without
+// scanning the command lines themselves.
 type sectionGroupView struct {
 	Name     string
 	Prefix   string
 	Commands []string
 	Postfix  string
+	Variants string
 	Syntax   string
 }
 
@@ -112,8 +121,28 @@ func buildSectionGroup(doc *projectfile.Document, group pfmodel.ReadmeSectionGro
 		Prefix:   expandProse(doc, sectionText(group.Prefix, group.PrefixByLang, lang), label),
 		Commands: commands,
 		Postfix:  expandProse(doc, sectionText(group.Postfix, group.PostfixByLang, lang), label),
+		Variants: matrixSummary(axes),
 		Syntax:   syntax,
 	}, true
+}
+
+// matrixSummary renders a project's matrix axes as one humanised line, in sorted
+// axis order so a two-axis image reads deterministically. Empty when there is no
+// matrix or the matrix carries no values — the caller treats empty as "no variant
+// note", so a single-image project renders no fan-out block at all.
+func matrixSummary(axes map[string][]string) string {
+	if len(axes) == 0 {
+		return ""
+	}
+	var parts []string
+	for _, axis := range slices.Sorted(maps.Keys(axes)) {
+		values := axes[axis]
+		if len(values) == 0 {
+			continue
+		}
+		parts = append(parts, axis+": "+strings.Join(values, ", "))
+	}
+	return strings.Join(parts, " · ")
 }
 
 // groupUnnamed labels a group that declares no name, for the decision trace only.
@@ -189,6 +218,12 @@ func expandAxes(lines []string, axes map[string][]string) []string {
 // ciMatrixAxes reads org.projectfile.ci.matrix.axes as axis name → declared
 // values. Nil when the project has no matrix, which makes expandAxes a no-op for
 // the ~130 single-image projects.
+//
+// YAML scalar values are coerced to their STRING form: a matrix declared as
+// `B19_LLVM_SERIES: [22, 21]` carries INTEGER items, and ci-resolver/m6e
+// substitute them as plain tokens — so the README must do the same to fill the
+// matching `{B19_LLVM_SERIES}` placeholder. Without this the integer axes were
+// silently dropped and the placeholder survived into the published README.
 func ciMatrixAxes(doc *projectfile.Document) map[string][]string {
 	matrix, ok := ciSubtree(doc)["matrix"].(map[string]any)
 	if !ok {
@@ -205,7 +240,7 @@ func ciMatrixAxes(doc *projectfile.Document) map[string][]string {
 			continue
 		}
 		for _, item := range items {
-			if value, ok := item.(string); ok {
+			if value := scalarToString(item); value != "" {
 				axes[axis] = append(axes[axis], value)
 			}
 		}
@@ -222,4 +257,107 @@ func ciSubtree(doc *projectfile.Document) map[string]any {
 	}
 	m, _ := raw.(map[string]any)
 	return m
+}
+
+// scalarToString renders a YAML scalar (the shape an untyped decoder yields) as
+// the plain token m6e/ci-resolver substitute per matrix cell. Strings pass
+// through; numbers and bools take their natural form (22, 8.5, true); anything
+// composite or nil is not a matrix value and returns "" so the caller drops it.
+func scalarToString(v any) string {
+	switch x := v.(type) {
+	case nil:
+		return ""
+	case string:
+		return x
+	case bool:
+		return fmt.Sprintf("%v", x)
+	case int, int8, int16, int32, int64, uint, uint8, uint16, uint32, uint64, float32, float64:
+		return fmt.Sprintf("%v", x)
+	default:
+		return ""
+	}
+}
+
+// goalTag is the advisory tags[] value that opts a CI goal into the README's
+// "Pipeline entry points" list. A goal tagged with it is highlighted; goals
+// without it are shown only when NO goal carries the tag (the fallback), so a
+// project that does not opt in keeps the full list it always had.
+const goalTag = "readme"
+
+// goalView is one pipeline entry point handed to the building template: the
+// `make <name>` target plus its advisory description.
+type goalView struct {
+	Name        string
+	Description string
+}
+
+// buildReadmeGoals lists the CI goals the building block should highlight. A
+// goal is a node flagged `goal: true`; the README prefers goals tagged
+// `readme` (the advisory tags[] value), falling back to ALL goals when none are
+// tagged — so a project that never opts in keeps the full goal list, and one
+// that tags a subset narrows to exactly that subset.
+//
+// Iteration is over sorted node names so the rendered list is stable regardless
+// of map iteration order. A NULL node (the shape a bare `ci:` override leaves)
+// is skipped, as is a goal with no description (the template would otherwise
+// print a literal <no value>).
+func buildReadmeGoals(doc *projectfile.Document) []goalView {
+	nodes, ok := ciSubtree(doc)["nodes"].(map[string]any)
+	if !ok {
+		return nil
+	}
+	var tagged, all []goalView
+	for _, name := range slices.Sorted(maps.Keys(nodes)) {
+		node, ok := nodes[name].(map[string]any)
+		if !ok || node == nil {
+			continue
+		}
+		if isTrue, _ := node["goal"].(bool); !isTrue {
+			continue
+		}
+		description, _ := node["description"].(string)
+		if description == "" {
+			continue
+		}
+		entry := goalView{Name: name, Description: description}
+		all = append(all, entry)
+		if hasTag(node["tags"], goalTag) {
+			tagged = append(tagged, entry)
+		}
+	}
+	if len(tagged) > 0 {
+		genlog.Decision("readme_goals", "tagged", "filtered to readme-tagged goals", strconv.Itoa(len(tagged)))
+		return tagged
+	}
+	genlog.Decision("readme_goals", "all", "no readme tag; falling back to every goal", strconv.Itoa(len(all)))
+	return all
+}
+
+// hasTag reports whether the advisory tags[] list contains tag. Tolerates the
+// list being absent, the wrong type, or holding non-string items.
+func hasTag(tags any, tag string) bool {
+	items, ok := tags.([]any)
+	if !ok {
+		return false
+	}
+	for _, item := range items {
+		if s, ok := item.(string); ok && s == tag {
+			return true
+		}
+	}
+	return false
+}
+
+// hasDevContainer reports whether the CI DAG declares a dev-container node,
+// which the building block advertises as the local dev loop. A dev-container is
+// a selectable (non-goal) node contributed by the container plane
+// (m6e/container/goals/publish.yaml); its presence is the signal a project
+// supports `make ci-dag M6E_CI_TARGETS=dev`.
+func hasDevContainer(doc *projectfile.Document) bool {
+	nodes, ok := ciSubtree(doc)["nodes"].(map[string]any)
+	if !ok {
+		return false
+	}
+	_, present := nodes["dev-container"]
+	return present
 }

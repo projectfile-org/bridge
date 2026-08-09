@@ -25,7 +25,7 @@ func TestDefaultBlocksOrder(t *testing.T) {
 	assert.Equal(t, []string{
 		blockLanguages, blockLogo, blockBasics, blockBadges, blockScreenshots,
 		blockFeatures, blockBenchmarks, blockQuickStart, blockRequirements,
-		blockArtifacts, blockInstallation, blockUsage, blockConfiguration, blockBuilding,
+		blockArtifacts, blockPlatforms, blockInstallation, blockUsage, blockConfiguration, blockBuilding,
 		blockDocumentation, blockFAQ, blockRoadmap,
 		blockPolicies, blockLinks, blockFunding, blockLicense,
 	}, defaultBlocks)
@@ -266,6 +266,29 @@ func TestRenderSkipsAbsentBlocks(t *testing.T) {
 	} {
 		assert.NotContains(t, body, heading, "absent data must drop the block, not its heading")
 	}
+}
+
+// spdxLicenseID prefixes the licence-declaration line in test assertions. Built
+// by concatenation so the source carries no literal SPDX tag for the REUSE
+// linter to flag as a malformed licence expression.
+const spdxLicenseID = "SPDX-License-" + "Identifier: MIT"
+
+// TestMergedHeaderFoldsMarkerIntoSPDXBlock: the README header is ONE HTML
+// comment holding both the SPDX licence block and the pf-cli-managed sentinel,
+// not two separate comments. The sentinel must still be detectable by
+// core.HasMarker so pf-cli keeps treating the README as managed.
+func TestMergedHeaderFoldsMarkerIntoSPDXBlock(t *testing.T) {
+	pf := minimalDoc(t)
+	body := renderDoc(t, t.TempDir(), pf)
+
+	// The SPDX block and the marker share one comment: exactly one "<!--" open
+	// and one "-->" close in the header region.
+	assert.Contains(t, body, "<!--\nSPDX-FileCopyrightText:")
+	assert.Contains(t, body, spdxLicenseID+"\n"+core.MarkerInner+"\n-->")
+	// The standalone marker comment no longer appears.
+	assert.NotContains(t, body, core.MarkerHTML)
+	// pf-cli still detects the file as managed.
+	assert.True(t, core.HasMarker([]byte(body)), "merged header must remain detectable")
 }
 
 // TestRenderIncludesAllPresentBlocks is the positive counterpart: with a full

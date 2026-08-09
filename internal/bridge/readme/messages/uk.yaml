@@ -19,10 +19,14 @@ requirements.title: Вимоги
 requirements.body: Див. [Вимоги](%s), щоб дізнатися про передумови.
 installation.title: Встановлення
 installation.body: Див. [Встановлення](%s), щоб переглянути кроки встановлення.
+installation.variants: "Доступні варіанти:"
 usage.title: Використання
 usage.body: Див. [Використання](%s), щоб переглянути приклади.
+usage.variants: "Доступні варіанти:"
 building.title: Збирання
 building.goals: "Точки входу конвеєра:"
+building.intro.make: "Виконайте `make` без аргументів для типової цілі; виконайте `make help`, щоб переглянути всі цілі."
+building.intro.dev: "Для локального циклу розробки `make ci-dag M6E_CI_TARGETS=dev` піднімає dev-container."
 documentation.title: Документація
 faq.title: Поширені запитання
 faq.body: Див. [Поширені запитання](%s), щоб знайти відповіді на типові питання.
@@ -41,6 +45,7 @@ license.body: Цей проєкт ліцензовано на умовах %s �
 # оголошеного `kind`.
 artifacts.title: Що надає цей проєкт
 artifacts.ports: слухає на
+platforms.title: Підтримувані платформи
 artifact.kind.image: Образ контейнера
 artifact.kind.binary: Виконуваний файл
 artifact.kind.package: Пакет

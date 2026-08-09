@@ -1,8 +1,15 @@
 {{- with linkGroups}}
 ## {{t "links.title"}}
 
+{{- if eq (len .) 1}}
+{{- range (index . 0).Links}}
+- [{{.Label}}]({{.URL}})
+{{- end}}
+{{- else}}
 {{range .}}### {{.Heading}}
 
 {{range .Links}}- [{{.Label}}]({{.URL}})
 {{end}}
-{{end}}{{end}}
+{{end}}
+{{- end}}
+{{- end}}

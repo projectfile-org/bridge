@@ -25,6 +25,12 @@ const Marker = "# pf-cli-managed: yes"
 // an H1 heading in Markdown, so renderers emit the HTML-comment form there.
 const MarkerHTML = "<!-- pf-cli-managed: yes -->"
 
+// MarkerInner is the sentinel text without its comment wrapper. The README
+// bridge folds this line into the SPDX block so its header is one comment
+// rather than two; HasMarker recognizes it so the merged README still reads as
+// managed. No other bridge uses this form.
+const MarkerInner = "pf-cli-managed: yes"
+
 // YAMLDocStart is the YAML document-start marker emitted at the very top of
 // every pf-cli-written YAML file. yamllint's default config (rule
 // document-start: {present: true}) rejects a YAML document missing one.
@@ -40,12 +46,13 @@ const YAMLDocStart = "---\n"
 const markerScanLines = 20
 
 // HasMarker reports whether the first markerScanLines of data contain
-// Marker or MarkerHTML (after whitespace trimming).
+// Marker, MarkerHTML, or the bare sentinel folded into a merged SPDX block
+// (after whitespace trimming).
 func HasMarker(data []byte) bool {
 	scanner := bufio.NewScanner(bytes.NewReader(data))
 	for i := 0; i < markerScanLines && scanner.Scan(); i++ {
 		line := strings.TrimSpace(scanner.Text())
-		if line == Marker || line == MarkerHTML {
+		if line == Marker || line == MarkerHTML || line == MarkerInner {
 			return true
 		}
 	}

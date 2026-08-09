@@ -19,10 +19,14 @@ requirements.title: Requisitos
 requirements.body: Consulta [Requisitos](%s) para conocer los prerrequisitos.
 installation.title: Instalación
 installation.body: Consulta [Instalación](%s) para ver los pasos de instalación.
+installation.variants: "Variantes disponibles:"
 usage.title: Uso
 usage.body: Consulta [Uso](%s) para ver ejemplos.
+usage.variants: "Variantes disponibles:"
 building.title: Compilación
 building.goals: "Puntos de entrada de la canalización:"
+building.intro.make: "Ejecuta `make` sin argumentos para el destino predeterminado; ejecuta `make help` para listar todos los destinos."
+building.intro.dev: "Para el bucle de desarrollo local, `make ci-dag M6E_CI_TARGETS=dev` levanta el dev-container."
 documentation.title: Documentación
 faq.title: Preguntas frecuentes
 faq.body: Consulta [Preguntas frecuentes](%s) para las dudas más habituales.
@@ -41,6 +45,7 @@ license.body: Este proyecto se publica bajo la licencia %s — consulta el archi
 # deriva del `kind` declarado.
 artifacts.title: Qué entrega este proyecto
 artifacts.ports: escucha en
+platforms.title: Plataformas admitidas
 artifact.kind.image: Imagen de contenedor
 artifact.kind.binary: Ejecutable
 artifact.kind.package: Paquete

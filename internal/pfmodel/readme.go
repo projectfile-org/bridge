@@ -57,7 +57,32 @@ func GetReadmeExtension(doc *projectfile.Document) (*ReadmeExtension, error) {
 			})
 		}
 	}
+	if cm, ok := m["collection"].(map[string]any); ok {
+		ext.Collection = parseCollection(cm)
+	}
 	return ext, nil
+}
+
+// parseCollection reads the collection.{links[],placement} mapping. Returns a
+// zero-value Collection (no links) when the mapping carries no resolvable
+// links, which is what lets the bar drop silently for a project that declares
+// none.
+func parseCollection(cm map[string]any) Collection {
+	out := Collection{Placement: strVal(cm, "placement")}
+	if items, ok := cm["links"].([]any); ok {
+		for _, item := range items {
+			lm, ok := item.(map[string]any)
+			if !ok {
+				continue
+			}
+			label, url := strVal(lm, "label"), strVal(lm, "url")
+			if label == "" || url == "" {
+				continue
+			}
+			out.Links = append(out.Links, CollectionLink{Label: label, URL: url})
+		}
+	}
+	return out
 }
 
 // CommandSectionKeys are the block names that accept a structured command

@@ -105,7 +105,7 @@ func TestRenderLocalizedSections(t *testing.T) {
 	writeFile(t, dir, "INSTALL.md", "# i\n")
 
 	pf := minimalDoc(t)
-	pf.Links = []projectfile.Link{{Type: "source-code", URL: "https://example.com/repo"}}
+	pf.Links = []projectfile.Link{{Type: linkTypeSourceCode, URL: urlExampleRepo}}
 	pf.Extensions = map[string]any{
 		pfmodel.I18NExtensionNS: map[string]any{keyLanguages: []any{langES, langUK}},
 	}
@@ -119,7 +119,9 @@ func TestRenderLocalizedSections(t *testing.T) {
 	assert.Contains(t, es, "Consulta [Instalación](INSTALL.md)")
 	assert.Contains(t, es, "## Políticas")
 	assert.Contains(t, es, "[Cómo contribuir](CONTRIBUTING.md)")
-	assert.Contains(t, es, "### Proyecto")
+	// A single-group links section renders no ### subheading — the heading
+	// would only repeat "## Enlaces". The localized link still renders.
+	assert.NotContains(t, es, "### Proyecto")
 	assert.Contains(t, es, "[Código fuente](https://example.com/repo)")
 	assert.NotContains(t, es, "## Installation")
 
@@ -130,7 +132,7 @@ func TestRenderLocalizedSections(t *testing.T) {
 
 	en := string(out.Files[filenameReadme])
 	assert.Contains(t, en, "## Installation")
-	assert.Contains(t, en, "### Project")
+	assert.NotContains(t, en, "### Project", "single-group links render no subheading")
 }
 
 // TestRenderPrefersLanguageTemplate covers the per-language template tier: a
