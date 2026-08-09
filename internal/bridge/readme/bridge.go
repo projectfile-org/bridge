@@ -136,13 +136,20 @@ func (Bridge) renderLang(pf *projectfile.Document, ext *pfmodel.ReadmeExtension,
 		}
 	}
 
-	out := []byte(mergedHTMLHeader(pf))
+	// Assemble the body first, then bracket it for the terminology rule when
+	// the content language is not English. data.StrLang is Lang resolved to the
+	// default language, so a Spanish-default project's Spanish root README is
+	// wrapped while its docs/en/ variant is not. The header is prepended after,
+	// so the disable directive lands directly under the REUSE/marker block.
+	var body []byte
 	for i, p := range parts {
-		out = append(out, p...)
+		body = append(body, p...)
 		if i < len(parts)-1 {
-			out = append(out, '\n')
+			body = append(body, '\n')
 		}
 	}
+	body = core.WrapLocalizedTextlint(body, data.StrLang)
+	out := append([]byte(mergedHTMLHeader(pf)), body...)
 	return core.CollapseBlankLines(out), nil
 }
 

@@ -285,6 +285,11 @@ func RenderLocalized(pf *projectfile.Document, spec LocalizedSpec, opts Options)
 		}
 		genlog.Decision("rendered", LocalizedFilename(spec.Filename, lang), tmpl, "lang="+langLabel(lang, defLang))
 		body = InsertLanguageBar(body, spec.Filename, lang, defLang, translated)
+		// ResolveLang maps the canonical render sentinel ("" ) to the default
+		// language, so a Spanish-default project's Spanish root file is wrapped
+		// while its docs/en/ variant is not. Wraps after the language bar so the
+		// endonym labels (Español, Українська) are protected too.
+		body = WrapLocalizedTextlint(body, ResolveLang(lang, pf))
 		out.Files[LocalizedFilename(spec.Filename, lang)] = append(append([]byte{}, header...), CollapseBlankLines(body)...)
 	}
 	return out, nil

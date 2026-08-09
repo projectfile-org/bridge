@@ -405,6 +405,14 @@ func TestMultiLangCrossLinks(t *testing.T) {
 	assert.Contains(t, uk, "[English](README.md)")
 	assert.Contains(t, uk, "[Español](docs/es/README.md)")
 	assert.NotContains(t, uk, "](docs/uk/README.md)", "uk variant must not link to itself")
+
+	// Translated prose would trip the English-only terminology rule, so each
+	// non-English variant is bracketed with a disable/enable pair while the
+	// canonical English README is not.
+	assert.Contains(t, es, "<!-- textlint-disable terminology -->")
+	assert.Contains(t, es, "<!-- textlint-enable -->")
+	assert.Contains(t, uk, "<!-- textlint-disable terminology -->")
+	assert.NotContains(t, en, "textlint-disable", "English README must not be wrapped")
 }
 
 // TestSingleLangHasNoLanguagesBlock verifies that without a languages config,
