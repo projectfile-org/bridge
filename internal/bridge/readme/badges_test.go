@@ -86,10 +86,13 @@ func TestBuildBadgesDropsUnresolvedAndDedupes(t *testing.T) {
 // value and the expected grouping key, plus the one badge name that recurs
 // across them.
 const (
-	rowStatic    = "static"
-	rowDynamic   = "dynamic"
-	rowEcosystem = "ecosystem"
-	nameStatus   = "status"
+	rowStatic      = "static"
+	rowDynamic     = "dynamic"
+	rowEcosystem   = "ecosystem"
+	nameStatus     = "status"
+	nameReuse      = "reuse"
+	nameNpm        = "npm"
+	nameSupportUkr = "support-ukraine"
 )
 
 // Badges group into rendered LINES by `row`, and the row order is the order
@@ -102,8 +105,8 @@ func TestBuildBadgeRowsGroupsByFirstAppearance(t *testing.T) {
 		Shields: []pfmodel.Shield{
 			{Name: blockLicense, Img: "i1", Row: rowStatic},
 			{Name: nameStatus, Img: "i2", Row: rowDynamic},
-			{Name: "reuse", Img: "i3", Row: rowStatic},
-			{Name: "npm", Img: "i4", Row: rowEcosystem},
+			{Name: nameReuse, Img: "i3", Row: rowStatic},
+			{Name: nameNpm, Img: "i4", Row: rowEcosystem},
 		},
 	}
 
@@ -172,4 +175,83 @@ func TestBadgesTemplateSeparatesRowsWithBlankLine(t *testing.T) {
 func TestBadgesTemplateEmptyWhenNoShields(t *testing.T) {
 	out := execBadgesTemplate(t, nil)
 	assert.Empty(t, strings.TrimSpace(out))
+}
+
+// Priority orders badges WITHIN a row: higher renders first. This is the
+// support-ukraine case — a fleet-wide badge pinned to the head of the static
+// row from one entry, without reordering the rows themselves.
+func TestBuildBadgeRowsPriorityOrdersWithinRow(t *testing.T) {
+	ext := &pfmodel.ReadmeExtension{
+		Shields: []pfmodel.Shield{
+			{Name: blockLicense, Img: "i1", Row: rowStatic},
+			{Name: nameSupportUkr, Img: "i2", Row: rowStatic, Priority: 300},
+			{Name: nameReuse, Img: "i3", Row: rowStatic},
+		},
+	}
+
+	rows := buildBadgeRows(nil, ext)
+
+	require.Len(t, rows, 1)
+	got := []string{rows[0].Badges[0].Alt, rows[0].Badges[1].Alt, rows[0].Badges[2].Alt}
+	assert.Equal(t, []string{nameSupportUkr, blockLicense, nameReuse}, got,
+		"priority 300 rises to the head; the two default-50 badges keep declaration order")
+}
+
+// Priority is stable: equal priorities (including every unset one at
+// PriorityDefault) keep declaration order, so a project that never sets
+// priority renders byte-identical to the pre-priority layout.
+func TestBuildBadgeRowsPriorityStableForTies(t *testing.T) {
+	ext := &pfmodel.ReadmeExtension{
+		Shields: []pfmodel.Shield{
+			{Name: "first", Img: "i1", Row: rowStatic},
+			{Name: "second", Img: "i2", Row: rowStatic},
+			{Name: "third", Img: "i3", Row: rowStatic},
+		},
+	}
+
+	rows := buildBadgeRows(nil, ext)
+
+	require.Len(t, rows, 1)
+	got := []string{rows[0].Badges[0].Alt, rows[0].Badges[1].Alt, rows[0].Badges[2].Alt}
+	assert.Equal(t, []string{"first", "second", "third"}, got,
+		"all-default badges keep declaration order")
+}
+
+// Priority only reorders peers INSIDE a row; row order and first-appearance
+// grouping are untouched. A pinned badge in the ecosystem row does not leap
+// into the static row.
+func TestBuildBadgeRowsPriorityStaysWithinRow(t *testing.T) {
+	ext := &pfmodel.ReadmeExtension{
+		Shields: []pfmodel.Shield{
+			{Name: blockLicense, Img: "i1", Row: rowStatic},
+			{Name: nameNpm, Img: "i2", Row: rowEcosystem, Priority: 999},
+		},
+	}
+
+	rows := buildBadgeRows(nil, ext)
+
+	require.Len(t, rows, 2)
+	assert.Equal(t, []string{rowStatic, rowEcosystem}, []string{rows[0].Name, rows[1].Name},
+		"row order unchanged even when a later row holds the highest priority")
+}
+
+// A redeclared shield name MOVES to the row the redeclaration names AND adopts
+// the redeclaration's priority — consistent with the existing last-wins dedup.
+func TestBuildBadgeRowsRedeclarationAdoptsPriority(t *testing.T) {
+	ext := &pfmodel.ReadmeExtension{
+		Shields: []pfmodel.Shield{
+			{Name: blockLicense, Img: "i1", Row: rowStatic},
+			{Name: nameStatus, Img: "i2", Row: rowDynamic, Priority: 10},
+			{Name: blockLicense, Img: "i1b", Row: rowStatic, Priority: 400},
+		},
+	}
+
+	rows := buildBadgeRows(nil, ext)
+
+	require.Len(t, rows, 2)
+	assert.Equal(t, rowStatic, rows[0].Name)
+	require.Len(t, rows[0].Badges, 1, "license is deduped last-wins; the static row holds only the redeclaration")
+	assert.Equal(t, blockLicense, rows[0].Badges[0].Alt)
+	assert.Equal(t, "i1b", rows[0].Badges[0].Img, "last-wins value preserved")
+	assert.Equal(t, 400, rows[0].Badges[0].Priority, "redeclared priority adopted")
 }

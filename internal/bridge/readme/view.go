@@ -74,6 +74,10 @@ type badge struct {
 	Img  string
 	Href string
 	Row  string
+	// Priority orders this badge within its row; resolved from the shield's
+	// Priority with the unset→PriorityDefault promotion, so the sort sees one
+	// consistent value.
+	Priority int
 }
 
 // badgeRow is one rendered line of badges. Name is the declared row identity,
@@ -518,6 +522,17 @@ func extraContentForLang(extra pfmodel.ReadmeExtra, lang string) string {
 //     delete. The first position is kept so overriding never reorders the row.
 //
 // Alt defaults to Name so a missing alt-text never yields an empty `![ ](...)`.
+// shieldPriority promotes an unset (zero) shield priority to PriorityDefault
+// so the sort has one consistent value. pfmodel parses priority as 0 when the
+// key is absent; the render layer owns the "unset = default" promotion so the
+// model stays an honest mirror of the source.
+func shieldPriority(p int) int {
+	if p == 0 {
+		return pfmodel.PriorityDefault
+	}
+	return p
+}
+
 func buildBadges(doc *projectfile.Document, ext *pfmodel.ReadmeExtension) []badge {
 	if ext == nil || len(ext.Shields) == 0 {
 		return nil
@@ -534,7 +549,7 @@ func buildBadges(doc *projectfile.Document, ext *pfmodel.ReadmeExtension) []badg
 		if alt == "" {
 			alt = s.Name
 		}
-		b := badge{Alt: alt, Img: img, Href: href, Row: s.Row}
+		b := badge{Alt: alt, Img: img, Href: href, Row: s.Row, Priority: shieldPriority(s.Priority)}
 		if at, seen := position[s.Name]; seen {
 			genlog.Decision("badge", s.Name, "redeclared (last wins)", out[at].Img)
 			out[at] = b
@@ -578,6 +593,16 @@ func buildBadgeRows(doc *projectfile.Document, ext *pfmodel.ReadmeExtension) []b
 		}
 		rows[i].Badges = append(rows[i].Badges, b)
 	}
+	// Priority orders badges WITHIN a row (higher first), stable so equal
+	// priorities — including every unset one at PriorityDefault — keep the
+	// declaration order buildBadges produced. Row order and first-appearance
+	// grouping are untouched: priority reorders peers inside a line, never the
+	// lines themselves.
+	for i := range rows {
+		slices.SortStableFunc(rows[i].Badges, func(a, b badge) int {
+			return pfmodel.ByPriorityDesc(a.Priority, b.Priority)
+		})
+	}
 	return rows
 }
 
@@ -594,7 +619,15 @@ func buildLinkGroups(pf *projectfile.Document, lang string) []linkGroup {
 		return nil
 	}
 
-	groups := map[string][]linkEntry{}
+	// Bucket raw links by category so priority can order the entries WITHIN a
+	// bucket before the label is resolved — the same rule badges run inside a
+	// row. Category order (project → community → security → other) is fixed and
+	// priority never reorders it.
+	type bucket struct {
+		link     projectfile.Link
+		priority int
+	}
+	groups := map[string][]bucket{}
 	for _, l := range pf.Links {
 		// A link tagged `related` shows in the related-projects bar under the
 		// badges, not also here — surfacing a sibling twice is pure noise.
@@ -605,22 +638,32 @@ func buildLinkGroups(pf *projectfile.Document, lang string) []linkGroup {
 		if !ok {
 			cat = groupOther
 		}
-		label := extractLSForLang(l.Label, lang)
-		if label == "" {
-			label, _ = lookupMessage(lang, keyPrefixLinkType+l.Type)
-		}
-		if label == "" {
-			genlog.Decision("link_label", l.Type, "no label and no catalog entry", "links[].label")
-			label = l.Type
-		}
-		groups[cat] = append(groups[cat], linkEntry{Label: label, URL: l.URL})
+		groups[cat] = append(groups[cat], bucket{link: l, priority: pfmodel.LinkPriority(l)})
 	}
 
 	var out []linkGroup
 	for _, key := range categoryOrder {
-		entries, ok := groups[key]
-		if !ok || len(entries) == 0 {
+		members, ok := groups[key]
+		if !ok || len(members) == 0 {
 			continue
+		}
+		// Stable: equal priorities (and every unset one at PriorityDefault)
+		// keep document order, so a project that never sets priority renders
+		// the same list it always did.
+		slices.SortStableFunc(members, func(a, b bucket) int {
+			return pfmodel.ByPriorityDesc(a.priority, b.priority)
+		})
+		entries := make([]linkEntry, 0, len(members))
+		for _, m := range members {
+			label := extractLSForLang(m.link.Label, lang)
+			if label == "" {
+				label, _ = lookupMessage(lang, keyPrefixLinkType+m.link.Type)
+			}
+			if label == "" {
+				genlog.Decision("link_label", m.link.Type, "no label and no catalog entry", "links[].label")
+				label = m.link.Type
+			}
+			entries = append(entries, linkEntry{Label: label, URL: m.link.URL})
 		}
 		out = append(out, linkGroup{
 			Key:     key,
@@ -646,20 +689,27 @@ func isRelatedLink(l projectfile.Link) bool {
 }
 
 // relatedLinks is the "Related projects" bar: top-level links tagged `related`,
-// in document order. Each entry's label resolves through the SAME chain
-// buildLinkGroups uses (link.label localized → link.type.<type> catalog → raw
-// type), so a sibling reads identically in the bar and in the Links section it
-// is excluded from. Returns nil when no link carries the tag, which is what
-// lets the block self-suppress like every other probe-driven block.
+// ordered by priority (higher first) with document order as the stable
+// tiebreak. Each entry's label resolves through the SAME chain buildLinkGroups
+// uses (link.label localized → link.type.<type> catalog → raw type), so a
+// sibling reads identically in the bar and in the Links section it is excluded
+// from. Returns nil when no link carries the tag, which is what lets the block
+// self-suppress like every other probe-driven block.
 func relatedLinks(doc *projectfile.Document, lang string) []linkEntry {
 	if len(doc.Links) == 0 {
 		return nil
 	}
-	var out []linkEntry
+	var related []projectfile.Link
 	for _, l := range doc.Links {
-		if !isRelatedLink(l) {
-			continue
+		if isRelatedLink(l) {
+			related = append(related, l)
 		}
+	}
+	slices.SortStableFunc(related, func(a, b projectfile.Link) int {
+		return pfmodel.ByPriorityDesc(pfmodel.LinkPriority(a), pfmodel.LinkPriority(b))
+	})
+	var out []linkEntry
+	for _, l := range related {
 		label := extractLSForLang(l.Label, lang)
 		if label == "" {
 			label, _ = lookupMessage(lang, keyPrefixLinkType+l.Type)

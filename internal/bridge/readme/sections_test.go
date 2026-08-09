@@ -33,6 +33,8 @@ const (
 	nodeAnalyze      = "analyze"
 	nodeDevContainer = "dev-container"
 	keyTags          = "tags"
+	// keyPriority is the §139 advisory priority key a link carries via Extra.
+	keyPriority = "priority"
 	// pathCLI stands in for a build output in the address-chain cases.
 	pathCLI     = "dist/pf-cli"
 	artifactsNS = "org.projectfile.artifacts"
@@ -197,7 +199,8 @@ func TestSeriesImageFansOutFromAxisList(t *testing.T) {
 			}},
 		},
 		artifactsNS: imageArtifact(
-			"kiota.ch/b19/ubuntu/${org.projectfile.ci.matrix.axes.B19_UBUNTU_SERIES[]}:latest"),
+			"kiota.ch/b19/ubuntu/${org.projectfile.ci.matrix.axes.B19_UBUNTU_SERIES[]}:latest",
+		),
 		readmeNS: map[string]any{
 			blockInstallation: []any{group(keyImage, "Pull one:", refImage)},
 		},
@@ -533,6 +536,53 @@ func TestRelatedLabelFromLinkLabel(t *testing.T) {
 	out := renderDoc(t, t.TempDir(), pf)
 	assert.Contains(t, out, "[Projectfile CLI]("+urlExampleX+")")
 	assert.NotContains(t, out, "[Source Code]("+urlExampleX+")", "bar uses link.label, not the type label")
+}
+
+// relatedLinkPRIORITY builds a related-tagged link carrying a §139 `priority`
+// key, the shape a YAML-decoded `priority: 300` entry takes after round-trip
+// stashes it into Link.Extra. label/url identify the fixture; pri is the
+// advisory priority.
+func relatedLinkPriority(label, url string, pri int) projectfile.Link {
+	l := relatedLink(label, url)
+	l.Extra[keyPriority] = pri
+	return l
+}
+
+// TestRelatedLinksPriorityOrdersBar: priority orders the related-projects bar
+// (higher first), stable so equal priorities keep document order. A pinned
+// sibling rises to the head of the bar.
+func TestRelatedLinksPriorityOrdersBar(t *testing.T) {
+	pf := minimalDoc(t)
+	pf.Links = []projectfile.Link{
+		relatedLink("First", "https://example.test/first"),
+		relatedLinkPriority("Pinned", "https://example.test/pinned", 300),
+		relatedLink("Third", "https://example.test/third"),
+	}
+	out := renderDoc(t, t.TempDir(), pf)
+	barIdx := index(out, "[Pinned]")
+	firstIdx := index(out, "[First]")
+	thirdIdx := index(out, "[Third]")
+	assert.Less(t, barIdx, firstIdx, "pinned sibling renders before the default-priority ones")
+	assert.Less(t, firstIdx, thirdIdx, "equal-priority siblings keep declaration order")
+}
+
+// TestLinkGroupsPriorityOrdersWithinBucket: priority orders links WITHIN a
+// category bucket (higher first); the category order itself is unchanged.
+func TestLinkGroupsPriorityOrdersWithinBucket(t *testing.T) {
+	pf := minimalDoc(t)
+	pf.Links = []projectfile.Link{
+		{Type: "homepage", URL: "https://example.test/home", Label: &projectfile.LocalizedString{Bare: "Home"}},
+		{
+			Type: linkTypeSourceCode, URL: "https://example.test/repo",
+			Label: &projectfile.LocalizedString{Bare: "Source"}, Extra: map[string]any{keyPriority: 300},
+		},
+	}
+	groups := buildLinkGroups(pf, "")
+	require.Len(t, groups, 1, "both links fall in the project bucket")
+	require.Len(t, groups[0].Links, 2)
+	assert.Equal(t, "https://example.test/repo", groups[0].Links[0].URL,
+		"higher-priority source-code link renders first within the project bucket")
+	assert.Equal(t, "https://example.test/home", groups[0].Links[1].URL)
 }
 
 // Generic interpolation: any field address resolves, anything that is not one
