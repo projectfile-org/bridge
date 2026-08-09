@@ -426,7 +426,9 @@ Call a function with no arguments by name (`{{projectName}}`,
 `links[]` entries are bucketed into the groups `project`, `community`,
 `security`, then `other` (in that order). `.Key` is that stable identity;
 `.Heading` is the same key resolved through the message catalog, which is what
-the template prints. The category comes from the link’s `type`:
+the template prints. The category comes from the link’s `type`. Within a
+category, links order by [priority](#priority) (higher first) and fall back to
+declaration order:
 
 - **Project** — `homepage`, `source-code`, `documentation`, `changelog`,
     `wiki`, `faq`, `package-registry`
@@ -494,6 +496,7 @@ org:
           href: LICENSE          # OPTIONAL — omit for an unlinked indicator
           alt: License           # OPTIONAL — alt text; defaults to name
           row: static            # OPTIONAL — the line this badge joins
+          priority: 300          # OPTIONAL — render order within the row (higher first)
 ```
 
 Every field is [interpolated](#interpolation), which is what makes a badge pure
@@ -510,7 +513,9 @@ data — the cost of a new badge, for a whole fleet, is one YAML entry and no co
     position. Include entries merge before the base document (spec §4.9a), so
     redeclaring a name in your own projectfile replaces the inherited badge —
     the only override available, since includes union sequences and cannot
-    delete.
+    delete. A redeclaration also adopts the new `priority` and the new `row`.
+- `priority` orders a badge **within its row** ([see Priority](#priority)):
+    higher renders first, default `50`, ties keep declaration order.
 - With no `shields` entries, the `badges` block renders empty and is skipped
   automatically.
 
@@ -522,7 +527,8 @@ data — the cost of a new badge, for a whole fleet, is one YAML entry and no co
 ### Rows
 
 `row` groups badges into rendered lines, each its own Markdown paragraph.
-Badges sharing a row name render on one line in declaration order, and the
+Badges sharing a row name render on one line ordered by
+[priority](#priority) (higher first, declaration order as the tiebreak), and the
 **rows themselves appear in the order each name is first seen** — no second key
 declares that order, because include order already is it: a fragment merged
 earlier opens its row higher up.
@@ -548,6 +554,53 @@ names — the only way to move an inherited badge.
 
 [![npm version](…)](…) [![Dependency freshness](…)](…)
 ```
+
+### Priority
+
+A `priority` field orders peers **within** a list: badges inside a row, links
+inside a category, related links inside the bar, the forge-star and support
+rows inside a kind. **Higher renders first; the default is `50`.** The sort is
+stable, so equal priorities — and every entry that declares none — keep the
+order they were declared in. A project that never sets `priority` renders
+byte-identical to one with no priority support at all.
+
+It applies uniformly to badges and to links, so one field pins the support
+badge to the head of the static row and one field surfaces a sibling first in
+the related bar:
+
+```yaml
+org:
+  projectfile:
+    readme:
+      shields:
+        - name: support-ukraine
+          img: https://img.shields.io/badge/Support-Ukraine-0057B7
+          priority: 300          # head of the static row
+        - name: license
+          img: https://img.shields.io/static/v1?label=license&message=MIT
+          # no priority — stays at the default 50, after support-ukraine
+```
+
+```yaml
+links:
+  - type: source-code
+    url: https://codeberg.org/projectfile/cli
+    label: Projectfile CLI
+    priority: 100            # first in its category / first forge star
+  - type: source-code
+    url: https://github.com/projectfile/cli
+    label: GitHub mirror
+```
+
+`priority` on a link rides the spec’s §139 additional-key channel (`tags` uses
+the same path), so it crosses the document unchanged with no schema change and
+propagates to every document that consumes `links[]` — the readme links and
+related bar, the SUPPORT “Before You Ask” and “Where to Ask” lists, and the
+CONTRIBUTING forge-star and project-socials lines.
+
+Priority never reorders the **semantic groupings** themselves — the badge rows,
+the link categories (`project → community → security → other`), the where-to-ask
+kind ladder. It only reorders peers inside one.
 
 ### Forge coordinates
 
@@ -581,7 +634,9 @@ The `related` block renders a headingless bar of sibling-project links right
 after the badges — the navigational slot where a reader looks for neighbours.
 It is driven entirely by the spec’s top-level `links[]`: any entry that carries
 the advisory `tags: [related]` joins the bar. There is no separate list and no
-config block under `org.projectfile.readme`.
+config block under `org.projectfile.readme`. Entries order by
+[priority](#priority) within the bar (higher first), falling back to document
+order.
 
 ```yaml
 links:

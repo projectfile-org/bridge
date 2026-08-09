@@ -79,6 +79,14 @@ interpolation/fan-out rules. Two contracts there are easy to break by accident:
   recipe per ecosystem unconditionally and the drop rule selects. Never add a
   Go-side table of package managers or an `if kind == …` in a lowering — `kind`
   stays advisory for lowering by spec.
+- **`priority` orders peers within a list** (shields within a row; `links[]`
+  within a category/kind, propagating to readme, SUPPORT and CONTRIBUTING).
+  Higher renders first; default `50`; the sort is stable so unset items keep
+  declaration order. The ONE direction lives in `pfmodel.ByPriorityDesc` — every
+  priority sort calls it, never an inline comparator. Link priority rides the
+  §139 `Extra` channel (`pfmodel.LinkPriority`), the same path `tags` uses, so
+  no schema change. It reorders peers only, never the semantic groupings
+  (rows, link categories, the where-to-ask ladder).
 
 ```text
 bridge/
