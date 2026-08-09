@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"net/url"
 	"os"
+	"slices"
 	"sort"
 	"strings"
 
@@ -509,10 +510,19 @@ func resolveProjectSocials(pf *projectfile.Document) []followLink {
 	projectName := pfmodel.DisplayName(pf)
 	seen := map[string]bool{}
 	for _, platform := range projectSocialHandleOrder {
+		// Collect this platform's links, then order by priority (higher first)
+		// so a pinned social account surfaces first. The platform ladder stays
+		// the outer ordering — priority only reorders peers within a platform.
+		var matches []projectfile.Link
 		for _, l := range pf.Links {
-			if l.Type != platform {
-				continue
+			if l.Type == platform {
+				matches = append(matches, l)
 			}
+		}
+		slices.SortStableFunc(matches, func(a, b projectfile.Link) int {
+			return pfmodel.ByPriorityDesc(pfmodel.LinkPriority(a), pfmodel.LinkPriority(b))
+		})
+		for _, l := range matches {
 			if seen[l.URL] {
 				continue
 			}
@@ -586,6 +596,12 @@ func resolveForgeStars(pf *projectfile.Document) []followLink {
 	if len(links) == 0 {
 		return nil
 	}
+	// Priority orders the mirrors (higher first), stable so the keep-first URL
+	// dedup below is deterministic: a higher-priority entry wins the slot for a
+	// duplicate URL, and ties keep document order.
+	slices.SortStableFunc(links, func(a, b projectfile.Link) int {
+		return pfmodel.ByPriorityDesc(pfmodel.LinkPriority(a), pfmodel.LinkPriority(b))
+	})
 	out := make([]followLink, 0, len(links))
 	seen := map[string]bool{}
 	for _, l := range links {

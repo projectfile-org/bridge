@@ -23,12 +23,13 @@ const (
 	testMastodonURL     = "https://m.to/@a"
 	testGitHub          = "github"
 	testAuthor          = "testauthor"
+	testSourceCode      = "source-code"
 )
 
 func docWithSourceCodeLinks(urls ...string) *projectfile.Document {
 	links := make([]projectfile.Link, 0, len(urls))
 	for _, u := range urls {
-		links = append(links, projectfile.Link{Type: "source-code", URL: u})
+		links = append(links, projectfile.Link{Type: testSourceCode, URL: u})
 	}
 	return &projectfile.Document{
 		Identity: projectfile.Identity{Name: "multi-forge-proj"},
@@ -98,6 +99,34 @@ func TestRenderStarLineDedup(t *testing.T) {
 		"duplicate source-code URLs must collapse to one star line")
 }
 
+// TestRenderStarLinePriorityOrdersForges: a §139 `priority` on a source-code
+// link reorders the "Star the project" lines (higher first). The pinned forge
+// rises to the head of the list.
+func TestRenderStarLinePriorityOrdersForges(t *testing.T) {
+	b := contributing.Bridge{}
+	pf := withContributing(&projectfile.Document{
+		Identity: projectfile.Identity{Name: "multi-forge-proj"},
+		Links: []projectfile.Link{
+			{Type: testSourceCode, URL: "https://codeberg.org/projectfile/cli"},
+			{
+				Type: testSourceCode, URL: "https://kiota.ch/projectfile/cli",
+				Extra: map[string]any{"priority": 300},
+			},
+			{Type: testSourceCode, URL: "https://github.com/damian-buho/projectfile-cli"},
+		},
+	}, map[string]any{testRecommendToStar: true})
+	out, err := b.Render(pf, core.Options{Offline: true})
+	require.NoError(t, err)
+	body := string(out.Files["CONTRIBUTING.md"])
+
+	kiotaIdx := strings.Index(body, "Star the project on [kiota.ch]")
+	codebergIdx := strings.Index(body, "Star the project on [codeberg.org]")
+	require.NotEqual(t, -1, kiotaIdx)
+	require.NotEqual(t, -1, codebergIdx)
+	assert.Less(t, kiotaIdx, codebergIdx,
+		"higher-priority kiota.ch forge renders before the default-priority codeberg one")
+}
+
 // ── Bridge identity ─────────────────────────────────────────────────────────
 
 func TestBridgeFilename(t *testing.T) {
@@ -152,7 +181,8 @@ func TestStarToggleUnsetHidesAll(t *testing.T) {
 func TestStarToggleBoolTrueShowsAll(t *testing.T) {
 	b := contributing.Bridge{}
 	pf := withContributing(docWithSourceCodeLinks(
-		"https://codeberg.org/o/r", "https://github.com/o/r"),
+		"https://codeberg.org/o/r", "https://github.com/o/r",
+	),
 		map[string]any{testRecommendToStar: true})
 	out, err := b.Render(pf, core.Options{Offline: true})
 	require.NoError(t, err)
@@ -164,7 +194,8 @@ func TestStarToggleBoolTrueShowsAll(t *testing.T) {
 func TestStarToggleBoolFalseHidesAll(t *testing.T) {
 	b := contributing.Bridge{}
 	pf := withContributing(docWithSourceCodeLinks(
-		"https://codeberg.org/o/r", "https://github.com/o/r"),
+		"https://codeberg.org/o/r", "https://github.com/o/r",
+	),
 		map[string]any{testRecommendToStar: false})
 	out, err := b.Render(pf, core.Options{Offline: true})
 	require.NoError(t, err)
@@ -177,7 +208,8 @@ func TestStarToggleMapAllowlist(t *testing.T) {
 	pf := withContributing(docWithSourceCodeLinks(
 		"https://codeberg.org/o/r",
 		"https://github.com/o/r",
-		"https://kiota.ch/o/r"),
+		"https://kiota.ch/o/r",
+	),
 		map[string]any{"recommend-to-star": map[string]any{
 			"github.com":   true,
 			"kiota.ch":     false,
