@@ -5,6 +5,8 @@ SPDX-License-Identifier: MIT
 
 <!-- pf-cli-managed: yes -->
 
+[Español](docs/es/SUPPORT.md) · [Українська](docs/uk/SUPPORT.md)
+
 # Getting Support
 
 Thanks for using **projectfile/bridge**!

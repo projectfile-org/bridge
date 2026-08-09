@@ -5,6 +5,8 @@ SPDX-License-Identifier: MIT
 
 <!-- pf-cli-managed: yes -->
 
+[Español](docs/es/CODE_OF_CONDUCT.md) · [Українська](docs/uk/CODE_OF_CONDUCT.md)
+
 # Contributor Covenant Code of Conduct
 
 ## Our Pledge

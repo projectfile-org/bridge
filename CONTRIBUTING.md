@@ -3,6 +3,8 @@ SPDX-FileCopyrightText: 2026 Damián Búho <damian.buho@proton.me>
 SPDX-License-Identifier: MIT
 -->
 
+[Español](docs/es/CONTRIBUTING.md) · [Українська](docs/uk/CONTRIBUTING.md)
+
 # Contributing to projectfile/bridge
 
 First off, thanks for taking the time to contribute! ❤️
