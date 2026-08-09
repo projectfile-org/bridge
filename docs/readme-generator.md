@@ -24,7 +24,7 @@ org:
       shields:
         - name: license
           alt: license MIT
-          img: https://img.shields.io/badge/license-MIT-blue
+          img: https://img.shields.io/static/v1?label=license&message=MIT&color=blue
           href: https://example.com/repo/src/branch/main/LICENSE
 ```
 
@@ -198,7 +198,7 @@ commands:
   - uv add ${identity.name}
   - curl ${links[type=source-code].url}/releases
   - docker pull kiota.ch/${image.basename}:latest
-img: https://img.shields.io/badge/license-${license.spdx}-4c1
+img: https://img.shields.io/static/v1?label=license&message=${license.spdx}&color=4c1
 ```
 
 Anything that is **not** a resolvable field address is left **verbatim**: a make
@@ -485,7 +485,7 @@ org:
     readme:
       shields:
         - name: license          # REQUIRED — identity, and the alt-text fallback
-          img: https://img.shields.io/badge/license-${license.spdx}-4c1  # REQUIRED
+          img: https://img.shields.io/static/v1?label=license&message=${license.spdx}&color=4c1  # REQUIRED
           href: LICENSE          # OPTIONAL — omit for an unlinked indicator
           alt: License           # OPTIONAL — alt text; defaults to name
           row: static            # OPTIONAL — the line this badge joins
@@ -507,7 +507,12 @@ data — the cost of a new badge, for a whole fleet, is one YAML entry and no co
     the only override available, since includes union sequences and cannot
     delete.
 - With no `shields` entries, the `badges` block renders empty and is skipped
-    automatically.
+  automatically.
+
+> **Prefer shields.io’s `/static/v1?label=…&message=…&color=…` query form over
+> the `/badge/LABEL-VALUE-COLOR` path form.** The path form splits label and
+> value on `-`, so any value containing a dash (`git-flow`, `Apache-2.0`, …)
+> parses as extra segments and 404s. Query params carry the value verbatim.
 
 ### Rows
 
@@ -562,7 +567,7 @@ img: https://api.reuse.software/badge/${org.projectfile.forge.remotes.codeberg.h
 Example render:
 
 ```markdown
-[![license MIT](https://img.shields.io/badge/license-MIT-blue)](https://example.com/LICENSE)
+[![license MIT](https://img.shields.io/static/v1?label=license&message=MIT&color=blue)](https://example.com/LICENSE)
 ```
 
 ## Multi-language readmes
