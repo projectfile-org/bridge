@@ -70,7 +70,7 @@ rich project fills every section.
 | `faq`           | `FAQ.md` probe                                                                             | yes            |
 | `roadmap`       | `ROADMAP.md` probe                                                                         | yes            |
 | `policies`      | CONTRIBUTING / SECURITY / SUPPORT / CODE_OF_CONDUCT `.md` probe (human-readable labels)    | yes            |
-| `collection`    | `readme.collection.links` — manual sibling-projects bar (injected at `placement`)          | yes            |
+| `related`       | `links[]` tagged `tags: [related]` — “Related projects” bar (fixed after `badges`)         | yes            |
 | `links`         | top-level `links[]`, categorized                                                           | yes            |
 | `funding`       | `FUNDING.md` probe                                                                         | yes            |
 | `license`       | `license.spdx`                                                                             | yes            |
@@ -410,6 +410,7 @@ a block to the list never pays for probes it does not use.
 | `badges`                              | `[]{.Alt .Img .Href}`         | `readme.shields[]` (alt falls back to name)             |
 | `readmeSection "name"`                | {.Title …} or nil             | `readme.<name>` section, `${…}` expanded in commands    |
 | `linkGroups`                          | `[]{.Key .Heading .Links}`    | top-level `links[]`, bucketed by category               |
+| `relatedLinks`                        | `[]{.Label .URL}`             | `links[]` tagged `tags: [related]` — the related bar    |
 | `staticLinks`                         | `[]{.Filename .Label}`        | health-file probe; label is human-readable              |
 | `docLink "FILE" "Label"`              | `{.Filename .Label}` or nil   | single companion-file probe; `{{with}}` drops on nil    |
 | `logo`                                | `[]string`                    | `docs/logo.<ext>` then `assets/logo.<ext>`              |
@@ -441,6 +442,10 @@ since they then carry information the title does not.
 
 Each link’s label falls back from `link.label` to the catalog entry for its
 `type` (`link.type.source-code` → “Source Code”), then to the raw `type`.
+
+A link tagged `tags: [related]` is shown in the [Related projects](#related-projects)
+bar under the badges, not in this section — a sibling appears once, where a
+reader looks for neighbours.
 
 ## Custom projectfile fields
 
@@ -569,6 +574,44 @@ Example render:
 ```markdown
 [![license MIT](https://img.shields.io/static/v1?label=license&message=MIT&color=blue)](https://example.com/LICENSE)
 ```
+
+## Related projects
+
+The `related` block renders a headingless bar of sibling-project links right
+after the badges — the navigational slot where a reader looks for neighbours.
+It is driven entirely by the spec’s top-level `links[]`: any entry that carries
+the advisory `tags: [related]` joins the bar. There is no separate list and no
+config block under `org.projectfile.readme`.
+
+```yaml
+links:
+  - type: source-code                 # keeps its real type
+    url: https://codeberg.org/projectfile/cli
+    label: Projectfile CLI
+    tags: [related]                   # opts into the bar
+  - type: source-code
+    url: https://codeberg.org/projectfile/core
+    label: Projectfile Core
+    tags: [related]
+```
+
+renders, immediately after the badges:
+
+```markdown
+[Projectfile CLI](https://codeberg.org/projectfile/cli) | [Projectfile Core](https://codeberg.org/projectfile/core)
+```
+
+- A tagged link keeps its real `type` — `tags` is an additional key the spec
+    preserves on round-trip (§139), so the link stays discoverable by type
+    elsewhere (a forge bridge, CITATION) while also surfacing as a sibling.
+- A tagged link is **excluded** from the regular Links section, so a sibling
+    appears once, not twice. An untagged `source-code` mirror still lists under
+    Links as usual.
+- Each entry’s label falls back from `link.label` to the catalog entry for its
+    `type`, then to the raw `type` — the same chain the Links section uses, so a
+    sibling reads identically in both places.
+- With no tagged link the block renders empty and is silently dropped, like
+    every probe-driven block.
 
 ## Multi-language readmes
 

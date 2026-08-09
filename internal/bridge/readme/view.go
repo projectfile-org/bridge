@@ -596,6 +596,11 @@ func buildLinkGroups(pf *projectfile.Document, lang string) []linkGroup {
 
 	groups := map[string][]linkEntry{}
 	for _, l := range pf.Links {
+		// A link tagged `related` shows in the related-projects bar under the
+		// badges, not also here — surfacing a sibling twice is pure noise.
+		if isRelatedLink(l) {
+			continue
+		}
 		cat, ok := linkCategories[l.Type]
 		if !ok {
 			cat = groupOther
@@ -626,63 +631,44 @@ func buildLinkGroups(pf *projectfile.Document, lang string) []linkGroup {
 	return out
 }
 
-// collectionPlacementDefault is the placement assumed when a project declares a
-// collection but no placement: the bar reads as a navigational header, right
-// under the badges where a reader's eye lands first.
-const collectionPlacementDefault = "after-badges"
+// relatedTag is the advisory links[].tags value that opts a link into the
+// "Related projects" bar after the badges. Mirrors the `readme` goal tag
+// (vars.go): a link keeps its real `type` AND carries the tag, so it stays
+// discoverable by type elsewhere while also surfacing as a sibling. `tags`
+// round-trips through Link.Extra per spec §139 — no core change.
+const relatedTag = "related"
 
-// collectionAnchors maps a placement tag to the well-known block the collection
-// bar is inserted AFTER. A placement not named here falls back to the default,
-// so an unknown tag still renders the bar rather than silently dropping it.
-var collectionAnchors = map[string]string{
-	collectionPlacementDefault: blockBadges,
-	"after-links":              blockLinks,
+// isRelatedLink reports whether a top-level link carries the related tag. The
+// tag lives in Link.Extra (§139 additional key), tolerant of a missing or
+// mistyped tags list — hasTag already handles the wrong-type cases.
+func isRelatedLink(l projectfile.Link) bool {
+	return hasTag(l.Extra["tags"], relatedTag)
 }
 
-// withCollection inserts the collection block into the block list at the
-// placement the project requests. The block is omitted entirely when the
-// project declares no collection links — the template would render nothing, so
-// holding a slot would only clutter a project's block list.
-//
-// The insertion runs AFTER an explicit `blocks:` override too, so a project
-// that redeclares its block list still gets its siblings bar — the collection
-// is a navigational concern, not content a project should have to re-slot.
-func withCollection(blocks []string, ext *pfmodel.ReadmeExtension) []string {
-	if ext == nil || len(ext.Collection.Links) == 0 {
-		return blocks
+// relatedLinks is the "Related projects" bar: top-level links tagged `related`,
+// in document order. Each entry's label resolves through the SAME chain
+// buildLinkGroups uses (link.label localized → link.type.<type> catalog → raw
+// type), so a sibling reads identically in the bar and in the Links section it
+// is excluded from. Returns nil when no link carries the tag, which is what
+// lets the block self-suppress like every other probe-driven block.
+func relatedLinks(doc *projectfile.Document, lang string) []linkEntry {
+	if len(doc.Links) == 0 {
+		return nil
 	}
-	placement := ext.Collection.Placement
-	if placement == "" {
-		placement = collectionPlacementDefault
-	}
-	anchor, ok := collectionAnchors[placement]
-	if !ok {
-		anchor = collectionAnchors[collectionPlacementDefault]
-	}
-	genlog.Decision("collection", placement, "siblings bar", "anchor="+anchor)
-	return insertAfter(blocks, blockCollection, anchor)
-}
-
-// insertAfter returns dst with ins inserted immediately after the first
-// occurrence of anchor. When anchor is absent ins is appended at the end, and
-// an ins already present is not duplicated.
-func insertAfter(blocks []string, ins, anchor string) []string {
-	for _, b := range blocks {
-		if b == ins {
-			return blocks // already slotted
+	var out []linkEntry
+	for _, l := range doc.Links {
+		if !isRelatedLink(l) {
+			continue
 		}
-	}
-	out := make([]string, 0, len(blocks)+1)
-	inserted := false
-	for _, b := range blocks {
-		out = append(out, b)
-		if !inserted && b == anchor {
-			out = append(out, ins)
-			inserted = true
+		label := extractLSForLang(l.Label, lang)
+		if label == "" {
+			label, _ = lookupMessage(lang, keyPrefixLinkType+l.Type)
 		}
-	}
-	if !inserted {
-		out = append(out, ins)
+		if label == "" {
+			genlog.Decision("related_label", l.Type, "no label and no catalog entry", "links[].label")
+			label = l.Type
+		}
+		out = append(out, linkEntry{Label: label, URL: l.URL})
 	}
 	return out
 }
@@ -943,6 +929,9 @@ func formatDecisionTrace(dir, lang string, v readmeView, ext *pfmodel.ReadmeExte
 				"",
 			)
 		}
+	}
+	for _, l := range relatedLinks(v.Doc, v.Lang) {
+		genlog.Decision("related", l.Label+" → "+l.URL, "links[] tagged related", "")
 	}
 	for _, s := range probeHealthFiles(dir, lang, lang) {
 		genlog.Decision("static_link", s.Label+" → "+s.Filename, "policies probe", "")

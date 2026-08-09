@@ -23,7 +23,7 @@ import (
 // the docs/readme-generator.md table stays in sync.
 func TestDefaultBlocksOrder(t *testing.T) {
 	assert.Equal(t, []string{
-		blockLanguages, blockLogo, blockBasics, blockBadges, blockScreenshots,
+		blockLanguages, blockLogo, blockBasics, blockBadges, blockRelated, blockScreenshots,
 		blockFeatures, blockBenchmarks, blockQuickStart, blockRequirements,
 		blockArtifacts, blockPlatforms, blockInstallation, blockUsage, blockConfiguration, blockBuilding,
 		blockDocumentation, blockFAQ, blockRoadmap,

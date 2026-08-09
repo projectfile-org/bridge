@@ -319,31 +319,10 @@ type FragmentParent struct {
 // `docker pull foo` in one fenced block invites a reader to run both. One group
 // per artifact keeps each with its own lead-in sentence and its own fence.
 type ReadmeExtension struct {
-	Blocks     []string
-	Extras     []ReadmeExtra
-	Shields    []Shield
-	Sections   map[string][]ReadmeSectionGroup
-	Collection Collection
-}
-
-// Collection is the manual "other projects" bar: a flat list of sibling links
-// plus where in the README the bar appears. There is no discovery — the list is
-// authored once in a shared namespace fragment (e.g. f5m/metadata) so every
-// project in a collection inherits the same siblings, and a project overrides
-// locally.
-//
-// Placement names a well-known block the bar follows; it defaults to
-// `after-badges` so the siblings read as a navigational header.
-type Collection struct {
-	Links     []CollectionLink
-	Placement string
-}
-
-// CollectionLink is one sibling-project entry in the collection bar: a label
-// and the URL it points at. Rendered as a plain link, not a badge.
-type CollectionLink struct {
-	Label string
-	URL   string
+	Blocks   []string
+	Extras   []ReadmeExtra
+	Shields  []Shield
+	Sections map[string][]ReadmeSectionGroup
 }
 
 // ReadmeExtra is an inline content block referenced by name in Blocks.

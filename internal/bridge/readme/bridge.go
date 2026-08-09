@@ -61,7 +61,7 @@ const (
 	blockFAQ           = "faq"
 	blockRoadmap       = "roadmap"
 	blockPolicies      = "policies"
-	blockCollection    = "collection"
+	blockRelated       = "related"
 	blockLinks         = "links"
 	blockFunding       = "funding"
 	blockLicense       = "license"
@@ -74,7 +74,7 @@ const (
 // answers "what IS this" (an image, a binary, an npm package) and those two then
 // answer "how do I get it" and "how do I call it" for the very same things.
 var defaultBlocks = []string{
-	blockLanguages, blockLogo, blockBasics, blockBadges, blockScreenshots,
+	blockLanguages, blockLogo, blockBasics, blockBadges, blockRelated, blockScreenshots,
 	blockFeatures, blockBenchmarks, blockQuickStart, blockRequirements,
 	blockArtifacts, blockPlatforms, blockInstallation, blockUsage, blockConfiguration, blockBuilding,
 	blockDocumentation, blockFAQ, blockRoadmap,
@@ -90,11 +90,6 @@ func (b Bridge) Render(pf *projectfile.Document, opts core.Options) (core.Output
 	if ext != nil && len(ext.Blocks) > 0 {
 		blocks = ext.Blocks
 	}
-	// The collection bar is injected at the project's chosen placement rather
-	// than holding a fixed slot, so a namespace can park its siblings under the
-	// badges (a navigational header) or after the links (a "see also" footer).
-	// No-op when the project declares no collection links.
-	blocks = withCollection(blocks, ext)
 
 	// configuredLangs is the document-wide list from org.projectfile.i18n
 	// (e.g. [es, uk]) — the same list every community health file honours.
@@ -331,15 +326,12 @@ func execBlockTemplate(name string, body []byte, data readmeView, dir string, ex
 			"platforms": func() []string { return buildPlatforms(data.Doc) },
 			// linkGroups buckets Doc.Links by category in render order.
 			"linkGroups": func() []linkGroup { return buildLinkGroups(data.Doc, data.StrLang) },
-			// collectionLinks is the manual "other projects" bar (siblings in
-			// the same namespace), declared under readme.collection. Returns nil
-			// when the project declares none, so the block drops silently.
-			"collectionLinks": func() []pfmodel.CollectionLink {
-				if ext == nil {
-					return nil
-				}
-				return ext.Collection.Links
-			},
+			// relatedLinks is the "Related projects" bar: top-level links[]
+			// entries tagged `related` (spec §139 — tags round-trips via
+			// Link.Extra). Rendered as a headingless bar after the badges.
+			// Returns nil when no link carries the tag, so the block drops
+			// silently — same self-suppress rule every probe-driven block runs.
+			"relatedLinks": func() []linkEntry { return relatedLinks(data.Doc, data.StrLang) },
 			// readmeGoals lists the CI goals the building block highlights,
 			// preferring goals tagged `readme` and falling back to every goal
 			// when none are tagged. Returns nil for a project with no CI DAG.

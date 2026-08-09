@@ -466,82 +466,73 @@ func TestLinksMultipleGroupsKeepSubheadings(t *testing.T) {
 	assert.Contains(t, out, "### Community")
 }
 
-// collectionExt builds a readme collection extension map for the link-bar tests.
-// links is []any (each a map[string]any) to mirror how a YAML decoder yields a
-// list, so the production parser's .([]any) assertion holds.
-func collectionExt(placement string, links ...map[string]any) map[string]any {
-	items := make([]any, len(links))
-	for i, l := range links {
-		items[i] = l
+// relatedLink builds one top-level link fixture tagged `related` — the form a
+// YAML-decoded `tags: [related]` entry takes after the spec §139 round-trip
+// stashes tags into Link.Extra. links... lets a caller stack several siblings.
+func relatedLink(label, url string) projectfile.Link {
+	return projectfile.Link{
+		Type:  linkTypeSourceCode,
+		URL:   url,
+		Label: &projectfile.LocalizedString{Bare: label},
+		Extra: map[string]any{keyTags: []any{relatedTag}},
 	}
-	return map[string]any{readmeNS: map[string]any{
-		"collection": map[string]any{
-			"placement": placement,
-			"links":     items,
-		},
-	}}
 }
 
-// collectionLink builds one collection-link fixture map. keyLabel/keyURL centralize
-// the map keys so goconst sees one home per repeated string.
-func collectionLink(label, url string) map[string]any {
-	return map[string]any{keyLabel: label, keyURL: url}
-}
-
-// TestCollectionBarRendersAfterBadgesByDefault: a collection with no placement
-// renders its sibling links as a pipe-separated bar right after the badges
-// block — the navigational-header position, before the project's own content.
-func TestCollectionBarRendersAfterBadgesByDefault(t *testing.T) {
+// TestRelatedBarRendersAfterBadges: a link tagged `related` renders as a
+// pipe-separated bar immediately after the badges block — the navigational
+// position, before the project's own content. The bar is headingless.
+func TestRelatedBarRendersAfterBadges(t *testing.T) {
 	pf := minimalDoc(t)
-	pf.Extensions = collectionExt("",
-		collectionLink("F5M/I2P", "https://kiota.ch/f5m/i2p"),
-		collectionLink("F5M/Tor", "https://kiota.ch/f5m/tor"),
-	)
+	pf.Links = []projectfile.Link{
+		relatedLink("F5M/I2P", "https://kiota.ch/f5m/i2p"),
+		relatedLink("F5M/Tor", "https://kiota.ch/f5m/tor"),
+	}
 	out := renderDoc(t, t.TempDir(), pf)
 	assert.Contains(t, out, "[F5M/I2P](https://kiota.ch/f5m/i2p) | [F5M/Tor](https://kiota.ch/f5m/tor)")
-	// The bar lands before the license section (the navigational-header slot).
+	// The bar lands before the license section (the navigational slot).
 	barIdx := index(out, "[F5M/I2P]")
 	licenseIdx := index(out, "## License")
-	assert.Less(t, barIdx, licenseIdx, "collection bar renders above the license section")
+	assert.Less(t, barIdx, licenseIdx, "related bar renders above the license section")
 }
 
-// TestCollectionBarPlacementAfterLinks: placement `after-links` parks the bar
-// after the links block instead of under the badges.
-func TestCollectionBarPlacementAfterLinks(t *testing.T) {
+// TestRelatedBarSkippedWhenNoTaggedLinks: a project whose links carry no
+// `related` tag renders no bar — the block self-suppresses, not an empty line.
+func TestRelatedBarSkippedWhenNoTaggedLinks(t *testing.T) {
 	pf := minimalDoc(t)
 	pf.Links = []projectfile.Link{{Type: linkTypeSourceCode, URL: urlExampleRepo}}
-	pf.Extensions = collectionExt("after-links",
-		collectionLink("F5M/I2P", "https://kiota.ch/f5m/i2p"),
-	)
 	out := renderDoc(t, t.TempDir(), pf)
-	linksIdx := index(out, "[Source Code]")
-	barIdx := index(out, "[F5M/I2P]")
-	assert.Greater(t, barIdx, linksIdx, "after-links placement renders the bar after the links block")
-}
-
-// TestCollectionBarSkippedWhenNoLinks: a project that declares no collection
-// renders no bar — the block is dropped, not an empty line.
-func TestCollectionBarSkippedWhenNoLinks(t *testing.T) {
-	out := renderDoc(t, t.TempDir(), minimalDoc(t))
 	assert.NotContains(t, out, "F5M/I2P")
 }
 
-// TestWithCollectionInjectsAtAnchor pins the block-list injection: the
-// collection block lands immediately after its anchor and is not duplicated.
-func TestWithCollectionInjectsAtAnchor(t *testing.T) {
-	ext := &pfmodel.ReadmeExtension{Collection: pfmodel.Collection{
-		Links: []pfmodel.CollectionLink{{Label: "X", URL: urlExampleX}},
-	}}
-	got := withCollection([]string{blockBasics, blockBadges, blockLinks, blockLicense}, ext)
-	// Inserted after badges (the default anchor), exactly once.
-	assert.Equal(t, []string{blockBasics, blockBadges, blockCollection, blockLinks, blockLicense}, got)
+// TestRelatedLinkExcludedFromLinksBlock: a link tagged `related` renders in the
+// bar and NOT also in the regular Links section — surfacing a sibling twice is
+// pure noise. An untagged source-code link still appears under Links.
+func TestRelatedLinkExcludedFromLinksBlock(t *testing.T) {
+	pf := minimalDoc(t)
+	pf.Links = []projectfile.Link{
+		relatedLink("Sibling", urlExampleX),
+		{Type: linkTypeSourceCode, URL: urlExampleRepo},
+	}
+	out := renderDoc(t, t.TempDir(), pf)
+	// The tagged sibling is in the bar …
+	assert.Contains(t, out, "[Sibling]("+urlExampleX+")")
+	// … and not duplicated under the Links section.
+	assert.NotContains(t, out, "[Sibling](https://example.com/repo)")
+	// The untagged link still renders under Links.
+	assert.Contains(t, out, "[Source Code]("+urlExampleRepo+")")
 }
 
-// TestWithCollectionOmittedWhenEmpty: no collection links means no injection.
-func TestWithCollectionOmittedWhenEmpty(t *testing.T) {
-	ext := &pfmodel.ReadmeExtension{}
-	got := withCollection([]string{blockBasics, blockLicense}, ext)
-	assert.Equal(t, []string{blockBasics, blockLicense}, got)
+// TestRelatedLabelFromLinkLabel: the bar text comes from the link's own label,
+// not its `type`. A sibling tagged `related` keeps its real type (source-code)
+// yet reads by its human label in the bar.
+func TestRelatedLabelFromLinkLabel(t *testing.T) {
+	pf := minimalDoc(t)
+	pf.Links = []projectfile.Link{
+		relatedLink("Projectfile CLI", urlExampleX),
+	}
+	out := renderDoc(t, t.TempDir(), pf)
+	assert.Contains(t, out, "[Projectfile CLI]("+urlExampleX+")")
+	assert.NotContains(t, out, "[Source Code]("+urlExampleX+")", "bar uses link.label, not the type label")
 }
 
 // Generic interpolation: any field address resolves, anything that is not one
