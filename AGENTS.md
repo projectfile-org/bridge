@@ -106,7 +106,7 @@ bridge/
     ├── scanners/           stack + git scanners (core registry)
     ├── source/             `init` ecosystem auto-detection (reuses bridge parsers)
     ├── scaffold/           interactive `init` TUI (runs scanners)
-    ├── derive/             inference engine (repo URL → forge links, stack → registries)
+    ├── derive/             inference engine (repo URL → forge links, stack → package registries, registry entries → pull refs)
     └── warn/               warning ledger + end-of-run summary (+ fan-out handoff)
 ```
 
@@ -142,6 +142,37 @@ name a **shields.io route family**, which is NOT the forge kind — Codeberg is
 kind `forgejo` and shields calls its route `gitea`. A fragment declares one
 badge per route and lets the drop rule render the one whose mirror exists.
 That is how a badge branches in a grammar with no conditional.
+
+### Container registries (`internal/derive/ociregistries`)
+
+`org.projectfile.registries` is the OCI plane: where a project’s IMAGES land. A
+peer of the forge plane, never derived from it — ECR has no repositories, and
+Codeberg has an issue tracker but no build minutes. Do not confuse the package
+with its sibling `derive/registries`, which infers PACKAGE index pages (npm,
+PyPI, crates.io) from the detected stack.
+
+`Refs()` composes each entry’s `ref` template and feeds **`AddVirtual`, not
+`Apply`**. That split is load-bearing: `Apply` proposes changes the caller
+PERSISTS, and the fleet’s registry entries arrive through an include, so a
+derive write would copy include data into every base document. `AddVirtual`
+computes into the in-memory merged document only, where `forge.remotes` lives.
+
+Only `${registry.host}` and `${registry.owner}` are substituted there. They are
+ENTRY-scoped — “the entry this template is written on” — and the `${…}` grammar
+starts at the document root with no notion of a current entry. Everything else
+(`${image.…}`, `{AXIS}`) is left verbatim for the layers that already resolve
+it; `interp.walk` recurses into a resolved value, so a composed ref carrying
+`${image.flatname}` is expanded by machinery that was already there. Keep that
+boundary, or this package becomes a second template engine.
+
+Every composed entry carries a `role`, defaulting to `primary`, because **a bare
+`{}` projection admits no trailing field** — core allows only `keys`/`values`
+after one, so `.ref` is reachable across a mapping ONLY through a `{k=v}`
+selector. An entry with no role would be addressable by nothing.
+
+A document declaring no registries namespace gets one primary entry synthesized
+from the legacy `org.projectfile.readme.registry` scalar, so the ~130 projects
+that predate the namespace render an identical pull line with no edit.
 
 `pfmodel.SetLinkTags` is the sole writer. It treats an absent `tags` key as the
 gap, so a declared list — `tags: []` included — wins. `scan --force` overrides
