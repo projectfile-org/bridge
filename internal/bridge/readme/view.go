@@ -502,19 +502,6 @@ func extraContentForLang(extra pfmodel.ReadmeExtra, lang string) string {
 	return extra.Content
 }
 
-// declaredPriority maps "unset" to the default rank. Zero is the reader here
-// rather than a presence flag because an author who means "sort me last" writes
-// a low number, not a missing key — and every priority-aware sort in the readme
-// (badges within a row, groups within a section) has to agree on that reading.
-// pfmodel parses an absent key as 0, so the promotion lives here and the model
-// stays an honest mirror of the source.
-func declaredPriority(p int) int {
-	if p == 0 {
-		return pfmodel.PriorityDefault
-	}
-	return p
-}
-
 // buildBadges maps declared shields to the template's badge view model, with
 // every `${…}` reference resolved against the document (spec §3.8). This is
 // what lets ONE badge row in a shared m6e fragment serve the whole fleet: the
@@ -552,7 +539,7 @@ func buildBadges(doc *projectfile.Document, ext *pfmodel.ReadmeExtension) []badg
 		if alt == "" {
 			alt = s.Name
 		}
-		b := badge{Alt: alt, Img: img, Href: href, Row: s.Row, Priority: declaredPriority(s.Priority)}
+		b := badge{Alt: alt, Img: img, Href: href, Row: s.Row, Priority: pfmodel.RankOf(s.Priority)}
 		if at, seen := position[s.Name]; seen {
 			genlog.Decision("badge", s.Name, "redeclared (last wins)", out[at].Img)
 			out[at] = b

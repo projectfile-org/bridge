@@ -18,6 +18,7 @@ import (
 	"cmp"
 	"fmt"
 
+	"kiota.ch/projectfile/core/v2/pkg/fieldpath"
 	"kiota.ch/projectfile/core/v2/pkg/projectfile"
 )
 
@@ -47,6 +48,7 @@ const (
 	I18NExtensionNS            = "org.projectfile.i18n"
 	FragmentsExtensionNS       = "org.projectfile.fragments"
 	ArtifactsExtensionNS       = "org.projectfile.artifacts"
+	RegistriesExtensionNS      = "org.projectfile.registries"
 )
 
 // PriorityDefault is the priority an item carries when it declares none. A
@@ -55,7 +57,23 @@ const (
 // layout. The value sits above the typical "pin to first" values (10, 0) and
 // below "pin after the defaults" values (100, 200) so either end of the scale
 // has room without colliding with the default.
-const PriorityDefault = 50
+//
+// Read from core rather than restated: core applies the same number when it
+// orders a `{}` fan-out, and a second copy here would let a Go-side list and the
+// resolver disagree about where an unranked entry sits in the same document.
+const PriorityDefault = fieldpath.PriorityDefault
+
+// RankOf maps "unset" to the default rank. Zero is the reader here rather than a
+// presence flag because an author who means "sort me last" writes a low number,
+// not a missing key — and every priority-aware sort (badges within a row, groups
+// within a section, registries within a fan-out) has to agree on that reading,
+// or a Go-side list and the resolver's `{}` order disagree on the same document.
+func RankOf(p int) int {
+	if p == 0 {
+		return PriorityDefault
+	}
+	return p
+}
 
 // ByPriorityDesc is the single comparator every priority-aware sort uses, so
 // the direction lives in exactly one place. Higher number renders FIRST. A

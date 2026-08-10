@@ -82,7 +82,7 @@ func buildSection(doc *projectfile.Document, ext *pfmodel.ReadmeExtension, name,
 	// state of every document that sets no priority — keep that merge order.
 	declared = slices.Clone(declared)
 	slices.SortStableFunc(declared, func(a, b pfmodel.ReadmeSectionGroup) int {
-		return pfmodel.ByPriorityDesc(declaredPriority(a.Priority), declaredPriority(b.Priority))
+		return pfmodel.ByPriorityDesc(pfmodel.RankOf(a.Priority), pfmodel.RankOf(b.Priority))
 	})
 	var groups []sectionGroupView
 	for _, group := range declared {

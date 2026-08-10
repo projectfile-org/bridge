@@ -393,6 +393,96 @@ identified only by its ports still has a label. The kind’s display text comes
 from the message catalog under `artifact.kind.<kind>`, so a project inventing a
 kind gets a correct line immediately and only its label needs a catalog entry.
 
+## Registries
+
+`org.projectfile.registries` lists the places a project’s container images land.
+It is a **peer** of the forge plane, never derived from it: AWS ECR has no
+repositories at all, and Codeberg has an issue tracker but no build minutes, so
+“where the source lives” and “where the images live” cannot be read off one
+another.
+
+```yaml
+org:
+  projectfile:
+    registries:
+      ghcr:
+        host: ghcr.io
+        owner: damian-buho
+        ref: ${registry.host}/${registry.owner}/${image.flatname}:${image.tag}
+        priority: 90
+      kiota:
+        host: kiota.ch
+        role: fallback
+        priority: 10
+```
+
+| Key        | Meaning                                              |
+| ---------- | ---------------------------------------------------- |
+| `host`     | the registry authority. **Required**                 |
+| `owner`    | the account every image nests under                  |
+| `ref`      | the path template; unset means the default applies   |
+| `role`     | `primary` (the default) or `fallback`                |
+| `priority` | render order, higher first                           |
+
+An entry without a `host` is **skipped**: a registry with no authority addresses
+nothing, and composing from it prints a pull line beginning with a slash.
+Declare an `owner` only where the registry forces one account on the whole fleet
+(GHCR, ECR); see [Priority](#priority) for how `priority` is read.
+
+### The `ref` template
+
+A template uses the two grammars that already exist — `${…}` field addresses and
+`{AXIS}` matrix placeholders — plus two **entry-scoped** variables,
+`${registry.host}` and `${registry.owner}`, which mean “the entry this template
+is written on”. Those two are substituted when the document is read; everything
+else is left for the layers that already resolve it.
+
+The default, applied when an entry declares no `ref`:
+
+```text
+${registry.host}/[${registry.owner}/]${image.basename}:${image.tag}
+```
+
+The owner segment appears only for an entry that declares an owner, and that
+asymmetry is the point: `image.basename` **already** carries the project’s
+namespace, so adding `${image.namespace}` would publish
+`kiota.ch/b19/b19/ubuntu`.
+
+A template only recomposes the parts; it never **relocates** an axis. Where the
+series sits — a path segment, a tag suffix, a hyphen — is the project’s decision,
+taken once in `ci.image` and inherited by every registry:
+
+| Wanted             | `ci.image`                       | registry `ref` tail                                  |
+| ------------------ | -------------------------------- | ---------------------------------------------------- |
+| Series as a path   | `b19/ubuntu/{B19_UBUNTU_SERIES}` | `${image.basename}:${image.tag}`                     |
+| Series in the tag  | `b19/ubuntu`                     | `${image.basename}:${image.tag}-{B19_UBUNTU_SERIES}` |
+| Flattened          | any of the above                 | `${registry.owner}/${image.flatname}:${image.tag}`   |
+
+The last row is what a registry with no nesting needs: GHCR and ECR put every
+image of an account side by side, so `b19/ubuntu/resolute` has to travel as
+`b19-ubuntu-resolute`.
+
+### Why every entry carries a `role`
+
+A bare `{}` projection admits no trailing field — core allows only `keys` and
+`values` after one — so `.ref` is reachable across a mapping **only** through the
+selector form `{k=v}`. A set every entry belongs to therefore needs a key every
+entry carries, which is why an entry that declares no role is composed as
+`primary`. A fragment then writes:
+
+```yaml
+commands:
+  - docker pull ${org.projectfile.registries{role=primary}.ref}
+```
+
+### Projects that declare no registries
+
+A document with no `registries` namespace gets **one** primary entry synthesized
+from the legacy `org.projectfile.readme.registry` scalar. That is what lets the
+projects which never heard of this namespace render the exact pull line they
+rendered before it existed, with no edit and no `when:` clause in the shared
+fragment. A project with neither declares no image and renders no pull line.
+
 ## Template data & functions
 
 Every template (tiers 1 and 2) executes against a tiny view model with Go

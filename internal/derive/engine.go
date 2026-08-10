@@ -12,6 +12,10 @@
 //     page (npmjs.com, pypi.org, packagist.org, crates.io). Output
 //     lands as [[links]] entries with type = "package-registry".
 //
+// A third package, ociregistries/, feeds AddVirtual rather than Apply: it
+// composes container-image pull references, which are read at render time and
+// never written to disk.
+//
 // The engine is invoked from internal/bridge/core/runsync.go after
 // person-conflict emission and before the Write call, so every sync run keeps
 // the derived fields in line with the spec's principle of least astonishment.
@@ -28,6 +32,7 @@ import (
 	"kiota.ch/projectfile/core/v2/pkg/genlog"
 	"kiota.ch/projectfile/core/v2/pkg/projectfile"
 	"projectfile.org/projectfile/bridge/internal/derive/forges"
+	"projectfile.org/projectfile/bridge/internal/derive/ociregistries"
 	"projectfile.org/projectfile/bridge/internal/derive/registries"
 	"projectfile.org/projectfile/bridge/internal/pfmodel"
 )
@@ -161,17 +166,30 @@ const remotesKey = "remotes"
 // is a pure function of fields already in the document, so persisting it would
 // duplicate data and invite drift the moment a mirror URL changes.
 //
-// Today one pass: org.projectfile.forge.remotes, the host/owner/repo/kind
-// coordinates of every source-code mirror. Callers run it right after reading
-// the merged document, so both the templates (via `pf`) and the ${…}
-// interpolator (via the address grammar) see the coordinates as ordinary
-// document data — which is what lets a badge be a line of YAML.
+// Two passes today, each independent of the other so a project missing the
+// inputs of one still gets the other:
 //
-// Idempotent: re-running overwrites the same subtree with the same values.
+//   - org.projectfile.forge.remotes — the host/owner/repo/kind coordinates of
+//     every source-code mirror.
+//   - org.projectfile.registries.<slug>.ref — the composed pull reference of
+//     every container registry the project publishes to.
+//
+// Callers run it right after reading the merged document, so both the templates
+// (via `pf`) and the ${…} interpolator (via the address grammar) see the derived
+// values as ordinary document data — which is what lets a badge, and a pull
+// command, be a line of YAML.
+//
+// Idempotent: re-running overwrites the same subtrees with the same values.
 func AddVirtual(pf *projectfile.Document) {
 	if pf == nil {
 		return
 	}
+	addForgeRemotes(pf)
+	addRegistryRefs(pf)
+}
+
+// addForgeRemotes parks the mirror coordinates under the forge namespace.
+func addForgeRemotes(pf *projectfile.Document) {
 	ext, err := pfmodel.GetForgeExtension(pf)
 	if err != nil {
 		genlog.Warn("derive: forge namespace unreadable — remotes not derived", "error", err.Error())
@@ -192,6 +210,19 @@ func AddVirtual(pf *projectfile.Document) {
 	}
 	merged[remotesKey] = remotes
 	projectfile.SetExtension(pf, pfmodel.ForgeExtensionNS, merged)
+}
+
+// addRegistryRefs replaces the registries namespace with the composed view: the
+// same entries, each carrying a concrete `ref` instead of a template. It REPLACES
+// rather than merges because every key it writes it also computed — a template
+// left beside its own composition is a second spelling of one reference, and the
+// two would drift the moment a registry moved.
+func addRegistryRefs(pf *projectfile.Document) {
+	refs := ociregistries.Refs(pf)
+	if len(refs) == 0 {
+		return
+	}
+	projectfile.SetExtension(pf, pfmodel.RegistriesExtensionNS, refs)
 }
 
 // stringSet builds a quick lookup map from a string slice. Used for
