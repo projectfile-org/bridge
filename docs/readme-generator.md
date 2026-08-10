@@ -622,6 +622,55 @@ values are a function of links already in it.
 img: https://api.reuse.software/badge/${org.projectfile.forge.remotes.codeberg.host}/${org.projectfile.forge.remotes.codeberg.owner}/${org.projectfile.forge.remotes.codeberg.repo}
 ```
 
+#### Capability aliases
+
+A slug names a forge, so a fragment written against one **decides the topology
+of every project that includes it**. `remotes.codeberg` in a shared badge is a
+Codeberg mirror the consumer never chose, and it renders nothing at all for a
+consumer who does not have one.
+
+So each mirror is also reachable by what it **affords**. A source-code link
+declares its capabilities through the advisory `tags` list — the same §139
+channel `related` and `priority` ride, so there is no schema change:
+
+```yaml
+links:
+  - type: source-code
+    url: https://codeberg.org/b19/ubuntu
+    tags: [public, badges]     # a third-party badge service can crawl this one
+  - type: source-code
+    url: https://github.com/damian-buho/b19-ubuntu
+    tags: [public, ci]
+  - type: source-code
+    url: https://kiota.ch/b19/ubuntu
+    preferred: true
+    tags: [ci]
+```
+
+Every tag becomes an alias of that mirror’s coordinate map, alongside its slug:
+
+```yaml
+img: https://api.reuse.software/badge/${org.projectfile.forge.remotes.badges.host}/…
+```
+
+The vocabulary is **open** — the deriver aliases whatever tag it finds, so a
+fragment and a project agree on a word without either registering it. Two
+aliases need no tag at all: `preferred` comes from `links[].preferred`, and
+`issues` from `repositories[issues=true]` (spec §4.3a) matched to the link
+naming the same repository, so the bug tracker stays declared exactly once even
+though the repository entry holds an SSH clone URL a badge cannot use.
+
+Two rules keep the namespace honest, and both keep the slug:
+
+- **An alias never shadows a slug.** A project that tags a mirror `gitea` keeps
+    `remotes.gitea` meaning gitea.com. The claim is refused with a warning.
+- **The first claimant wins**, in document order — the rule slug collisions
+    already use. Later claimants are traced, not dropped silently.
+
+An alias no mirror claims stays unresolved, so the badge referencing it is
+dropped rather than published broken. That is what lets one fragment serve a
+fleet whose projects each sit on a different set of mirrors.
+
 Example render:
 
 ```markdown

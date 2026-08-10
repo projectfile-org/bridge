@@ -18,6 +18,43 @@ const LinkSourceCode = projectfile.LinkSourceCode
 // parser so the literal lives in one place (goconst).
 const keyPriority = "priority"
 
+// keyTags is the §139 additional-key name a link carries its advisory
+// capability list under — the same channel keyPriority rides, so a tag costs
+// no schema change.
+const keyTags = "tags"
+
+// LinkTags returns the capabilities a link declares through the spec's §139
+// additional-key channel (l.Extra). A tag says what the mirror AFFORDS —
+// `public`, `badges`, `ci` — which is what lets a shared fragment address a
+// forge by capability instead of by hostname, and so serve a fleet whose
+// projects each sit on a different set of mirrors.
+func LinkTags(l projectfile.Link) []string {
+	return TagsFrom(l.Extra[keyTags])
+}
+
+// TagsFrom extracts a tag list from an untyped §139 value. Exported because the
+// readme's goal filter reads the same shape off a CI node map: the tolerance
+// rules (absent key, wrong type, mixed items, empty strings) must not diverge
+// between two readers of one convention. Decoders disagree on the element type
+// — YAML hands back []any, a typed path []string — so both are accepted;
+// anything else yields nothing, which drops the capability rather than
+// inventing one.
+func TagsFrom(v any) []string {
+	switch items := v.(type) {
+	case []string:
+		return items
+	case []any:
+		out := make([]string, 0, len(items))
+		for _, item := range items {
+			if s, ok := item.(string); ok && s != "" {
+				out = append(out, s)
+			}
+		}
+		return out
+	}
+	return nil
+}
+
 // LinkByType returns the canonical entry for a given link type from doc.Links,
 // applying the §5.11 selection rule: the entry with Preferred=true if any,
 // else the sole entry of that type, else the first entry of that type in

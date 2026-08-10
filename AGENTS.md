@@ -110,6 +110,32 @@ bridge/
     └── warn/               warning ledger + end-of-run summary (+ fan-out handoff)
 ```
 
+### Forge capability aliases (`internal/derive/forges`)
+
+`Remotes()` files each `links[type=source-code]` mirror under its slug (first
+domain label) **and** under every capability it claims, both addresses sharing
+one coordinate map. A shared fragment therefore writes
+`${org.projectfile.forge.remotes.badges.host}` instead of naming a forge, and
+each project answers with its own mirror.
+
+Claims come from three places: the advisory `tags` list on the link (§139
+`Extra`, the channel `priority` uses), `links[].preferred` → `preferred`, and
+`repositories[issues=true]` → `issues`, matched to the link naming the same
+repository so the tracker is declared once even though the repository entry
+holds an unusable SSH URL. `hostOwnerRepo` is what reads that triple out of any
+transport, including the scp-style `git@host:o/r.git` that carries no scheme.
+
+An alias never shadows a slug (a slug is an identity; the claim is refused and
+warned), and the first claimant wins in document order. The vocabulary is
+deliberately open — registering words would put the fleet’s topology back in
+this repository, which is the thing the aliases exist to remove.
+
+**Do not point a shared m6e fragment at an alias until the fleet declares it.**
+Slugs are unchanged and keep working, so the mechanism is purely additive; but a
+fragment flipped to `remotes.badges` renders NOTHING for every project that has
+not tagged its links, and the drop rule makes that silent. See
+[the rollout plan](../../.agents/FORGES-REGISTRIES.md).
+
 ### The drift gate (`--check`)
 
 `--check` renders, compares, and writes nothing; a content mismatch AND a

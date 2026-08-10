@@ -120,13 +120,22 @@ repositories:
     url: ssh://git@kiota.ch/projectfile/bridge.git
 links:
   - label: Projectfile Bridges on Codeberg
+    tags:
+      - public
+      - badges
+      - releases
     type: source-code
     url: https://codeberg.org/projectfile/bridge
   - label: Projectfile Bridges on GitHub
+    tags:
+      - public
+      - ci
     type: source-code
     url: https://github.com/damian-buho/projectfile-bridge
   - label: Projectfile Bridges on kiota.ch
     preferred: true
+    tags:
+      - ci
     type: source-code
     url: https://kiota.ch/projectfile/bridge
   - derived: true

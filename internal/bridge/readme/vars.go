@@ -333,15 +333,12 @@ func buildReadmeGoals(doc *projectfile.Document) []goalView {
 	return all
 }
 
-// hasTag reports whether the advisory tags[] list contains tag. Tolerates the
-// list being absent, the wrong type, or holding non-string items.
+// hasTag reports whether the advisory tags[] list contains tag. Extraction is
+// pfmodel.TagsFrom so this reader and the forge-alias deriver cannot disagree
+// on what a malformed tag list means.
 func hasTag(tags any, tag string) bool {
-	items, ok := tags.([]any)
-	if !ok {
-		return false
-	}
-	for _, item := range items {
-		if s, ok := item.(string); ok && s == tag {
+	for _, s := range pfmodel.TagsFrom(tags) {
+		if s == tag {
 			return true
 		}
 	}

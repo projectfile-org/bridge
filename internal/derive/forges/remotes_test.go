@@ -18,6 +18,12 @@ import (
 const (
 	owner = "b19"
 	repo  = "ubuntu"
+	// codebergURL is the web page every fixture mirror resolves to, and the
+	// value the issues alias must reach from an ssh clone URL.
+	codebergURL = "https://codeberg.org/b19/ubuntu"
+	kindForgejo = "forgejo"
+	slugGit     = "git"
+	keyTags     = "tags"
 )
 
 func sourceCode(urls ...string) *projectfile.Document {
@@ -32,23 +38,23 @@ func sourceCode(urls ...string) *projectfile.Document {
 // bare hostname that only org.projectfile.forge.kinds can classify.
 func TestRemotesAcrossMirrors(t *testing.T) {
 	doc := sourceCode(
-		"https://codeberg.org/b19/ubuntu",
+		codebergURL,
 		"https://github.com/damian-buho/b19-ubuntu",
 		"https://kiota.ch/b19/ubuntu",
 	)
 
-	got := forges.Remotes(doc, map[string]string{"kiota.ch": "forgejo"})
+	got := forges.Remotes(doc, map[string]string{"kiota.ch": kindForgejo})
 
 	require.Len(t, got, 3)
 	assert.Equal(t, map[string]any{
 		forges.KeyHost: "codeberg.org", forges.KeyOwner: owner, forges.KeyRepo: repo,
-		forges.KeyURL: "https://codeberg.org/b19/ubuntu", forges.KeyKind: "forgejo",
+		forges.KeyURL: codebergURL, forges.KeyKind: kindForgejo,
 	}, got["codeberg"])
 	assert.Equal(t, map[string]any{
 		forges.KeyHost: "github.com", forges.KeyOwner: "damian-buho", forges.KeyRepo: "b19-ubuntu",
 		forges.KeyURL: "https://github.com/damian-buho/b19-ubuntu", forges.KeyKind: "github",
 	}, got["github"])
-	assert.Equal(t, "forgejo", got["kiota"].(map[string]any)[forges.KeyKind],
+	assert.Equal(t, kindForgejo, got["kiota"].(map[string]any)[forges.KeyKind],
 		"a bare-hostname instance is classified only by the user's kinds map")
 }
 
@@ -59,7 +65,7 @@ func TestRemotesShapes(t *testing.T) {
 		{"trailing .git", "https://codeberg.org/b19/ubuntu.git", "codeberg", owner, repo},
 		{"trailing slash", "https://codeberg.org/b19/ubuntu/", "codeberg", owner, repo},
 		{"gitlab subgroup", "https://gitlab.com/group/sub/proj", "gitlab", "group/sub", "proj"},
-		{"sourcehut tilde", "https://git.sr.ht/~user/repo", "git", "~user", "repo"},
+		{"sourcehut tilde", "https://git.sr.ht/~user/repo", slugGit, "~user", "repo"},
 		{"self-hosted", "https://gitlab.example.com/team/app", "gitlab", "team", "app"},
 	}
 	for _, tc := range cases {
@@ -93,4 +99,107 @@ func TestRemotesFirstMirrorWinsTheSlug(t *testing.T) {
 
 	require.Len(t, got, 1)
 	assert.Equal(t, "one", got["github"].(map[string]any)[forges.KeyOwner])
+}
+
+// tagged builds a source-code link carrying capability tags on the §139
+// additional-key channel, the shape a YAML decoder produces.
+func tagged(url string, preferred bool, tags ...string) projectfile.Link {
+	l := projectfile.Link{Type: projectfile.LinkSourceCode, URL: url, Preferred: preferred}
+	if len(tags) > 0 {
+		items := make([]any, 0, len(tags))
+		for _, t := range tags {
+			items = append(items, t)
+		}
+		l.Extra = map[string]any{keyTags: items}
+	}
+	return l
+}
+
+// The whole point of the pass: a fragment addresses `remotes.badges` and gets
+// whichever mirror THIS project tagged, with the slug still reachable.
+func TestRemotesAliasesByCapability(t *testing.T) {
+	doc := &projectfile.Document{Links: []projectfile.Link{
+		tagged(codebergURL, false, "public", "badges"),
+		tagged("https://github.com/damian-buho/b19-ubuntu", false, "public", "ci"),
+		tagged("https://kiota.ch/b19/ubuntu", true, "ci"),
+	}}
+
+	got := forges.Remotes(doc, map[string]string{"kiota.ch": kindForgejo})
+
+	assert.Equal(t, got["codeberg"], got["badges"], "an alias IS the remote, not a copy")
+	assert.Equal(t, got["codeberg"], got["public"], "first in document order wins the alias")
+	assert.Equal(t, got["github"], got["ci"], "github is the first ci-tagged mirror")
+	assert.Equal(t, got["kiota"], got[forges.AliasPreferred],
+		"links[].preferred yields its alias with no tag declared")
+}
+
+// A capability must never steal an identity: a project that tags a mirror
+// `gitea` keeps remotes.gitea meaning gitea.com.
+func TestRemotesAliasNeverShadowsASlug(t *testing.T) {
+	doc := &projectfile.Document{Links: []projectfile.Link{
+		tagged("https://gitea.com/real/project", false),
+		tagged(codebergURL, false, "gitea"),
+	}}
+
+	got := forges.Remotes(doc, nil)
+
+	assert.Equal(t, "gitea.com", got["gitea"].(map[string]any)[forges.KeyHost],
+		"the slug keeps its name; the tag is refused")
+	assert.Len(t, got, 2, "the refused alias adds no entry")
+}
+
+// repositories[issues=true] carries an ssh clone URL. It must still resolve to
+// the web coordinates of the same repository, so `issues` is declared once.
+func TestRemotesIssuesAliasFromRepositories(t *testing.T) {
+	cases := []struct{ name, repoURL string }{
+		{"ssh scheme", "ssh://git@codeberg.org/b19/ubuntu.git"},
+		{"scp style", "git@codeberg.org:b19/ubuntu.git"},
+		{"already http", codebergURL},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			doc := sourceCode(codebergURL, "https://github.com/o/r")
+			doc.Repositories = []projectfile.Repository{
+				{URL: tc.repoURL, Issues: true, Type: "git"},
+			}
+
+			got := forges.Remotes(doc, nil)
+
+			assert.Equal(t, got["codeberg"], got[forges.AliasIssues])
+		})
+	}
+}
+
+// No matching source-code link means no alias — better an unresolved reference
+// the drop rule removes than a badge pointing at the wrong tracker.
+func TestRemotesIssuesAliasUnmatched(t *testing.T) {
+	doc := sourceCode(codebergURL)
+	doc.Repositories = []projectfile.Repository{
+		{URL: "ssh://git@kiota.ch/b19/ubuntu.git", Issues: true, Type: "git"},
+	}
+
+	got := forges.Remotes(doc, nil)
+
+	assert.NotContains(t, got, forges.AliasIssues)
+}
+
+// A malformed or absent tag list drops the capability instead of inventing one.
+func TestRemotesTolerateBadTags(t *testing.T) {
+	bare := projectfile.Link{
+		Type:  projectfile.LinkSourceCode,
+		URL:   codebergURL,
+		Extra: map[string]any{keyTags: "badges"},
+	}
+	mixed := projectfile.Link{
+		Type:  projectfile.LinkSourceCode,
+		URL:   "https://github.com/o/r",
+		Extra: map[string]any{keyTags: []any{42, "", "ci"}},
+	}
+	doc := &projectfile.Document{Links: []projectfile.Link{bare, mixed}}
+
+	got := forges.Remotes(doc, nil)
+
+	assert.NotContains(t, got, "badges", "a bare string is not a tag list")
+	assert.Equal(t, got["github"], got["ci"], "the usable item still counts")
+	assert.Len(t, got, 3, "codeberg, github, ci")
 }
