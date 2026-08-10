@@ -30,10 +30,11 @@ const (
 	keyDescription = "description"
 	keyGoal        = "goal"
 	// CI node-name and field fixtures shared across the goal-filter tests.
-	nodePublished    = "published"
-	nodeAnalyze      = "analyze"
-	nodeDevContainer = "dev-container"
-	keyTags          = "tags"
+	nodePublished       = "published"
+	nodeAnalyze         = "analyze"
+	nodeDevContainer    = "dev-container"
+	nodeReadyToPublish  = "ready-to-publish"
+	keyTags             = "tags"
 	// devLoopCmd is the command the dev-loop line advertises — the node launcher
 	// m6e derives for the dev-container node (core/ci/010-select.mk), so the line
 	// stays in sync with the catalog (messages/<lang>.yaml building.intro.dev).
@@ -405,16 +406,32 @@ func TestReadmeGoalsFallbackAllWhenNoneTagged(t *testing.T) {
 	require.Len(t, got, 2)
 }
 
-// TestReadmeGoalsSkipsNonGoalsAndDescriptionless: only goal nodes WITH a
-// description survive — a non-goal (dev-container) and a goal lacking a
-// description are dropped, so the list never prints a literal <no value>.
+// TestReadmeGoalsSkipsNonGoalsAndDescriptionless: a non-goal WITHOUT the tag
+// (dev-container) and a goal lacking a description are dropped, so the list
+// never prints a literal <no value>.
 func TestReadmeGoalsSkipsNonGoalsAndDescriptionless(t *testing.T) {
 	pf := minimalDoc(t)
 	pf.Extensions = ciNodes(
-		map[string]any{keyName: nodeDevContainer, keyDescription: "Dev loop"}, // not a goal
+		map[string]any{keyName: nodeDevContainer, keyDescription: "Dev loop"}, // not a goal, not tagged
 		map[string]any{keyName: "tagless", keyGoal: true},                     // no description
 	)
 	assert.Empty(t, buildReadmeGoals(pf))
+}
+
+// TestReadmeGoalsAdmitsTaggedNonGoal: a node that is NOT a forge goal but opts
+// in via `tags: [readme]` joins the highlighted list — the path for
+// ready-to-publish, a local pseudo-CI target that emits no forge workflow yet
+// still headlines the README's entry points. No-tag goals fall away because a
+// tagged node exists (the prefer-tagged rule).
+func TestReadmeGoalsAdmitsTaggedNonGoal(t *testing.T) {
+	pf := minimalDoc(t)
+	pf.Extensions = ciNodes(
+		map[string]any{keyName: nodeReadyToPublish, keyDescription: "Run the pseudo-CI pipeline", keyTags: []any{goalTag}}, // not goal:true
+		map[string]any{keyName: nodeAnalyze, keyGoal: true, keyDescription: "Analyze"},                                      // goal, no tag
+	)
+	got := buildReadmeGoals(pf)
+	require.Len(t, got, 1)
+	assert.Equal(t, nodeReadyToPublish, got[0].Name)
 }
 
 // TestBuildingBlockAdvertisesDevContainer: when the DAG declares a

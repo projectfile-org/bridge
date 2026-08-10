@@ -296,11 +296,13 @@ When the `building` block derives its entry points from the CI DAG (no
 `goal: true` node. Two refinements narrow that list and fill in the local-dev
 story:
 
-- **`tags: [readme]`** on a goal node opts it into the highlighted set. The
-    block prefers tagged goals and falls back to **every** goal when none are
-    tagged, so a project that never opts in keeps the full list it always had.
-    `m6e/core/goals/publish.yaml` tags `ready-to-publish` by default (the local
-    pseudo-CI entry point); a project tags further goals to surface them.
+- **`tags: [readme]`** opts a node into the highlighted set — on a goal OR on a
+    non-goal. A non-goal carries no forge workflow, so the tag is the only path
+    for a purely-local entry point such as `ready-to-publish` (the pseudo-CI run
+    a workstation `make` performs). The block prefers tagged nodes and falls back
+    to **every** goal when none are tagged, so a project that never opts in keeps
+    the full list it always had. `m6e/core/goals/publish.yaml` tags
+    `ready-to-publish` by default; a project tags further nodes to surface them.
 - **The intro explains `make` and the dev loop.** A line notes that bare `make`
     runs the default target (`make help` lists them all); when the DAG declares
     a `dev-container` node (the container plane’s selectable dev node), a second
@@ -314,7 +316,8 @@ org:
     ci:
       nodes:
         ready-to-publish:
-          goal: true
+          # NOT goal:true — a goal would emit a per-goal forge workflow.
+          # The tag alone opts this local pseudo-CI target into the README.
           description: Run the pseudo-CI pipeline locally — build, test and scan, without publishing
           tags: [readme]   # highlighted in the README
 ```

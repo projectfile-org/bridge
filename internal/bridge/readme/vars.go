@@ -287,9 +287,9 @@ func scalarToString(v any) string {
 	}
 }
 
-// goalTag is the advisory tags[] value that opts a CI goal into the README's
-// "Pipeline entry points" list. A goal tagged with it is highlighted; goals
-// without it are shown only when NO goal carries the tag (the fallback), so a
+// goalTag is the advisory tags[] value that opts a CI node into the README's
+// "Pipeline entry points" list. A node tagged with it is highlighted; nodes
+// without it are shown only when NO node carries the tag (the fallback), so a
 // project that does not opt in keeps the full list it always had.
 const goalTag = "readme"
 
@@ -300,16 +300,18 @@ type goalView struct {
 	Description string
 }
 
-// buildReadmeGoals lists the CI goals the building block should highlight. A
-// goal is a node flagged `goal: true`; the README prefers goals tagged
-// `readme` (the advisory tags[] value), falling back to ALL goals when none are
-// tagged — so a project that never opts in keeps the full goal list, and one
-// that tags a subset narrows to exactly that subset.
+// buildReadmeGoals lists the CI entry points the building block should
+// highlight. A node joins the list when it is a forge goal (flagged `goal:
+// true`) OR it opts in via the `readme` tag — the tag is the ONLY path for a
+// non-goal such as ready-to-publish, a local pseudo-CI target that emits no
+// forge workflow. The README prefers tagged nodes, falling back to ALL goals
+// when none are tagged — so a project that never opts in keeps the full goal
+// list, and one that tags a subset narrows to exactly that subset.
 //
 // Iteration is over sorted node names so the rendered list is stable regardless
 // of map iteration order. A NULL node (the shape a bare `ci:` override leaves)
-// is skipped, as is a goal with no description (the template would otherwise
-// print a literal <no value>).
+// is skipped, as is an entry point with no description (the template would
+// otherwise print a literal <no value>).
 func buildReadmeGoals(doc *projectfile.Document) []goalView {
 	nodes, ok := ciSubtree(doc)["nodes"].(map[string]any)
 	if !ok {
@@ -321,7 +323,11 @@ func buildReadmeGoals(doc *projectfile.Document) []goalView {
 		if !ok || node == nil {
 			continue
 		}
-		if isTrue, _ := node["goal"].(bool); !isTrue {
+		isGoal, _ := node["goal"].(bool)
+		taggedNode := hasTag(node["tags"], goalTag)
+		// A non-goal without the tag (e.g. dev-container) is surfaced by its own
+		// dev-loop line, not here.
+		if !isGoal && !taggedNode {
 			continue
 		}
 		description, _ := node["description"].(string)
@@ -330,12 +336,12 @@ func buildReadmeGoals(doc *projectfile.Document) []goalView {
 		}
 		entry := goalView{Name: name, Description: description}
 		all = append(all, entry)
-		if hasTag(node["tags"], goalTag) {
+		if taggedNode {
 			tagged = append(tagged, entry)
 		}
 	}
 	if len(tagged) > 0 {
-		genlog.Decision("readme_goals", "tagged", "filtered to readme-tagged goals", strconv.Itoa(len(tagged)))
+		genlog.Decision("readme_goals", "tagged", "filtered to readme-tagged nodes", strconv.Itoa(len(tagged)))
 		return tagged
 	}
 	genlog.Decision("readme_goals", "all", "no readme tag; falling back to every goal", strconv.Itoa(len(all)))
