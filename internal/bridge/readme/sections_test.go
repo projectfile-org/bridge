@@ -33,6 +33,10 @@ const (
 	nodeAnalyze      = "analyze"
 	nodeDevContainer = "dev-container"
 	keyTags          = "tags"
+	// devLoopCmd is the command the dev-loop line advertises — the node launcher
+	// m6e derives for the dev-container node (core/ci/010-select.mk), so the line
+	// stays in sync with the catalog (messages/<lang>.yaml building.intro.dev).
+	devLoopCmd = "make " + nodeDevContainer
 	// keyPriority is the §139 advisory priority key a link carries via Extra.
 	keyPriority = "priority"
 	// pathCLI stands in for a build output in the address-chain cases.
@@ -422,7 +426,7 @@ func TestBuildingBlockAdvertisesDevContainer(t *testing.T) {
 		map[string]any{keyName: nodeDevContainer, keyDescription: "Dev loop"},
 	)
 	out := renderDoc(t, t.TempDir(), pf)
-	assert.Contains(t, out, "M6E_CI_TARGETS=dev")
+	assert.Contains(t, out, devLoopCmd)
 	assert.Contains(t, out, "make` with no arguments")
 }
 
@@ -435,7 +439,7 @@ func TestBuildingBlockOmitsDevLoopWhenNoDevContainer(t *testing.T) {
 	)
 	out := renderDoc(t, t.TempDir(), pf)
 	assert.Contains(t, out, "make` with no arguments")
-	assert.NotContains(t, out, "M6E_CI_TARGETS=dev")
+	assert.NotContains(t, out, devLoopCmd)
 }
 
 // TestLinksSingleGroupDropsSubheading: a project whose links all fall in one

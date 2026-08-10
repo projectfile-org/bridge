@@ -31,7 +31,7 @@ usage.variants: "Available variants:"
 building.title: Building
 building.goals: "Pipeline entry points:"
 building.intro.make: "Run `make` with no arguments for the default target; run `make help` to list every target."
-building.intro.dev: "For the local dev loop, `make ci-dag M6E_CI_TARGETS=dev` brings up the dev-container."
+building.intro.dev: "For the local dev loop, `make dev-container` brings up the dev-container."
 documentation.title: Documentation
 faq.title: FAQ
 faq.body: See [FAQ](%s) for common questions.

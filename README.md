@@ -53,11 +53,14 @@ pf-bridge all
 
 Pipeline entry points:
 
-- `make published` — Build, test, scan and publish the release artifacts
+- `make analyze` — Run the heavy analysis sweep (mutation testing, benchmarks)
+- `make audited` — Re-scan the pinned dependencies and published artifacts for new vulnerabilities
+- `make check-outdated` — Report every pinned dependency that lags upstream
+- `make ready-to-publish` — Run the pseudo-CI pipeline locally — build, test and scan, without publishing
 
 Run `make` with no arguments for the default target; run `make help` to list every target.
 
-For the local dev loop, `make ci-dag M6E_CI_TARGETS=dev` brings up the dev-container.
+For the local dev loop, `make dev-container` brings up the dev-container.
 
 ## Policies
 
@@ -68,6 +71,7 @@ For the local dev loop, `make ci-dag M6E_CI_TARGETS=dev` brings up the dev-conta
 
 ## Links
 
+- [projectfile specification](https://projectfile.org)
 - [Projectfile Bridges on Codeberg](https://codeberg.org/projectfile/bridge)
 - [Projectfile Bridges on GitHub](https://github.com/damian-buho/projectfile-bridge)
 - [Projectfile Bridges on kiota.ch](https://kiota.ch/projectfile/bridge)

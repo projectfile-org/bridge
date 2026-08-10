@@ -55,11 +55,14 @@ pf-bridge all
 
 Puntos de entrada de la canalización:
 
-- `make published` — Build, test, scan and publish the release artifacts
+- `make analyze` — Run the heavy analysis sweep (mutation testing, benchmarks)
+- `make audited` — Re-scan the pinned dependencies and published artifacts for new vulnerabilities
+- `make check-outdated` — Report every pinned dependency that lags upstream
+- `make ready-to-publish` — Run the pseudo-CI pipeline locally — build, test and scan, without publishing
 
 Ejecuta `make` sin argumentos para el destino predeterminado; ejecuta `make help` para listar todos los destinos.
 
-Para el bucle de desarrollo local, `make ci-dag M6E_CI_TARGETS=dev` levanta el dev-container.
+Para el bucle de desarrollo local, `make dev-container` levanta el dev-container.
 
 ## Políticas
 
@@ -70,6 +73,7 @@ Para el bucle de desarrollo local, `make ci-dag M6E_CI_TARGETS=dev` levanta el d
 
 ## Enlaces
 
+- [especificación de projectfile](https://projectfile.org)
 - [Projectfile Bridges on Codeberg](https://codeberg.org/projectfile/bridge)
 - [Projectfile Bridges on GitHub](https://github.com/damian-buho/projectfile-bridge)
 - [Projectfile Bridges on kiota.ch](https://kiota.ch/projectfile/bridge)
