@@ -123,12 +123,15 @@ links:
     tags:
       - public
       - badges
+      - badges-gitea
       - releases
     type: source-code
     url: https://codeberg.org/projectfile/bridge
   - label: Projectfile Bridges on GitHub
     tags:
       - public
+      - badges
+      - badges-github
       - ci
     type: source-code
     url: https://github.com/damian-buho/projectfile-bridge
@@ -138,7 +141,6 @@ links:
       - ci
     type: source-code
     url: https://kiota.ch/projectfile/bridge
-  - derived: true
-    label: Issues on Codeberg
+  - label: Issues on Codeberg
     type: bugs
     url: https://codeberg.org/projectfile/bridge/issues

@@ -31,7 +31,7 @@ Toda forma de contribución se agradece y se valora. Consulta la [Tabla de conte
 - [Cómo informar de fallos](#cómo-informar-de-fallos)
 - [Cómo sugerir mejoras](#cómo-sugerir-mejoras)
 - [Convenciones](#convenciones)
-- [Unirse al equipo del proyecto](#unirse-al-equipo-del-proyecto)
+- [Mejorar la documentación](#mejorar-la-documentación)
 
 ## Tengo una pregunta
 
@@ -49,7 +49,7 @@ Antes de preguntar, revisa [docs/es/SUPPORT.md](docs/es/SUPPORT.md): explica dó
 Un buen informe de fallo evita que otras personas tengan que perseguirte para obtener más información. Por eso te pedimos que investigues con cuidado, reúnas información y describas el problema con detalle. Completa estos pasos por adelantado para ayudarnos a corregir cualquier posible fallo lo antes posible.
 
 - Asegúrate de estar usando la última versión.
-- Comprueba que se trata realmente de un fallo y no de un error por tu parte, por ejemplo, componentes o versiones incompatibles del entorno (asegúrate de haber leído la documentación. Si lo que buscas es ayuda, consulta [docs/es/SUPPORT.md](docs/es/SUPPORT.md)).
+- Comprueba que se trata realmente de un fallo y no de un error por tu parte, por ejemplo, componentes o versiones incompatibles del entorno (asegúrate de haber leído la [documentación](https://projectfile.org). Si lo que buscas es ayuda, consulta [docs/es/SUPPORT.md](docs/es/SUPPORT.md)).
 - Para ver si otras personas han tenido (y quizá ya resuelto) el mismo problema, comprueba que no exista ya un informe de tu fallo o error en el [gestor de incidencias](https://codeberg.org/projectfile/bridge/issues?q=label%3Abug).
 - Busca también en internet (incluido Stack Overflow) por si el problema ya se ha comentado fuera de la comunidad.
 - Reúne información sobre el fallo:
@@ -85,7 +85,7 @@ Esta sección te guía para enviar una propuesta de mejora para Projectfile Brid
 ### Antes de enviar una propuesta de mejora
 
 - Asegúrate de estar usando la última versión.
-- Lee con atención la documentación y averigua si la funcionalidad ya existe, quizá mediante alguna configuración concreta.
+- Lee con atención la [documentación](https://projectfile.org) y averigua si la funcionalidad ya existe, quizá mediante alguna configuración concreta.
 - Haz una [búsqueda](https://codeberg.org/projectfile/bridge/issues) para ver si ya se ha propuesto. Si es así, comenta en la incidencia existente en lugar de abrir una nueva.
 - Valora si tu idea encaja con el alcance y los objetivos del proyecto. Te corresponde a ti argumentar de forma convincente el valor de esta funcionalidad. Ten en cuenta que buscamos funcionalidades útiles para la mayoría de quienes usan el proyecto, no solo para un grupo reducido. Si tu propuesta se dirige a una minoría, plantéate escribir una extensión o biblioteca complementaria.
 
@@ -105,8 +105,8 @@ Las propuestas de mejora se gestionan como [incidencias](https://codeberg.org/pr
 - **Commits:** [Conventional Commits](https://www.conventionalcommits.org/)
 - **Versioning:** [Semantic Versioning](https://semver.org/)
 
-## Unirse al equipo del proyecto
+## Mejorar la documentación
 
-¿Te interesa formar parte del equipo? Escríbenos a <https://dbuho.me>.
+La documentación está en [https://projectfile.org](https://projectfile.org). Correcciones, mejoras y secciones nuevas son bienvenidas: abre una solicitud de incorporación contra las fuentes de la documentación.
 
 <!-- textlint-enable -->

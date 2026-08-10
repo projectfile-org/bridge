@@ -17,6 +17,7 @@ SPDX-License-Identifier: MIT
 
 Перегляньте це спершу — можливо, відповідь уже є:
 
+- [специфікація projectfile](https://projectfile.org)
 - [Issues on Codeberg](https://codeberg.org/projectfile/bridge/issues)
 
 ## Куди звертатися
