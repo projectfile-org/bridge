@@ -11,6 +11,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"kiota.ch/projectfile/core/v2/pkg/projectfile"
+	"projectfile.org/projectfile/bridge/internal/pfmodel"
 )
 
 // remotesRepo builds an empty git repo with two remotes (origin + a mirror).
@@ -103,4 +104,45 @@ func TestRemotesScannerSoleRemotePreferred(t *testing.T) {
 	require.Len(t, p.Links, 1)
 	assert.Equal(t, projectfile.LinkSourceCode, p.Links[0].Type)
 	assert.True(t, p.Links[0].Preferred, "sole origin link must be Preferred")
+}
+
+// TestRemotesScannerProposesCapabilityTags guards the end-to-end proposal: a
+// remote on a host the rule table classifies arrives carrying links[].tags, so
+// a shared fragment can address it as `remotes.badges` instead of naming the
+// hostname. A remote on an unclassified host arrives untagged rather than
+// guessed at.
+func TestRemotesScannerProposesCapabilityTags(t *testing.T) {
+	if _, err := exec.LookPath("git"); err != nil {
+		t.Skip("git not available")
+	}
+	dir := t.TempDir()
+	require.NoError(t, exec.Command("git", "-C", dir, "init", "--quiet").Run())
+	require.NoError(t, exec.Command("git", "-C", dir, "remote", "add", "origin",
+		"https://codeberg.org/acme/proj.git").Run())
+	require.NoError(t, exec.Command("git", "-C", dir, "remote", "add", "internal",
+		"https://gitlab.example.com/acme/proj.git").Run())
+
+	p, hits, err := remotesScanner{}.Scan(dir)
+	require.NoError(t, err)
+
+	tagsFor := func(url string) []string {
+		for _, l := range p.Links {
+			if l.URL == url {
+				return pfmodel.LinkTags(l)
+			}
+		}
+		t.Fatalf("no source-code link for %q", url)
+		return nil
+	}
+	assert.Equal(t, []string{"public", "badges"}, tagsFor("https://codeberg.org/acme/proj"))
+	assert.Empty(t, tagsFor("https://gitlab.example.com/acme/proj"),
+		"a self-hosted instance must not be guessed public")
+
+	var tagHit bool
+	for _, h := range hits {
+		if h.Field == "links[type=source-code].tags:origin" {
+			tagHit = true
+		}
+	}
+	assert.True(t, tagHit, "the proposal must be visible in --dry-run output")
 }

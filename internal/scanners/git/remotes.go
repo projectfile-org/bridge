@@ -73,6 +73,14 @@ func (remotesScanner) Scan(root string) (*source.Partial, []core.Hit, error) {
 			if forge != "" {
 				link.Label = &projectfile.LocalizedString{Bare: "Source Code on " + forge}
 			}
+			// Turn what the host table already knows into a declaration the
+			// user can read and edit. Without it a shared fragment has to
+			// name a hostname literally and impose one topology on every
+			// project that includes it.
+			if tags := hostmatch.Capabilities(page); pfmodel.SetLinkTags(&link, tags) {
+				genlog.Info("git scanner: proposing capability tags", "url", page, "tags", tags)
+				hits = append(hits, core.Hit{Source: scannerGitRemotes, Field: "links[type=source-code].tags:" + name})
+			}
 			p.Links = append(p.Links, link)
 			hits = append(hits, core.Hit{Source: scannerGitRemotes, Field: "links[type=source-code]:" + name})
 		}

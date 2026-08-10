@@ -130,6 +130,15 @@ warned), and the first claimant wins in document order. The vocabulary is
 deliberately open — registering words would put the fleet’s topology back in
 this repository, which is the thing the aliases exist to remove.
 
+`hostmatch.Rule.Capabilities` holds the only tags a hostname settles, and
+`pf-bridge scan git-remotes` proposes them. Host knowledge lives in the rule
+table and nowhere else. Two limits are deliberate: only `public` and `badges`
+are host facts (`ci` and `releases` are per-project choices), and every
+self-hosted prefix rule proposes nothing, since `gitlab.` also matches an
+internal instance. `pfmodel.SetLinkTags` is the sole writer, and it treats an
+absent `tags` key as the gap — a declared list, `tags: []` included, always
+wins.
+
 **Do not point a shared m6e fragment at an alias until the fleet declares it.**
 Slugs are unchanged and keep working, so the mechanism is purely additive; but a
 fragment flipped to `remotes.badges` renders NOTHING for every project that has

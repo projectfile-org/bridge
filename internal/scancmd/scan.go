@@ -19,6 +19,7 @@ import (
 	"kiota.ch/projectfile/core/v2/pkg/projectfile"
 	"kiota.ch/projectfile/core/v2/pkg/selector"
 	"projectfile.org/projectfile/bridge/internal/buildinfo"
+	"projectfile.org/projectfile/bridge/internal/pfmodel"
 	"projectfile.org/projectfile/bridge/internal/rootflags"
 	"projectfile.org/projectfile/bridge/internal/scanners/core"
 	stackscan "projectfile.org/projectfile/bridge/internal/scanners/stack"
@@ -419,8 +420,9 @@ func applyRepository(doc *projectfile.Document, repo projectfile.Repository) {
 // dedup key is (type, url) so multiple links of the same type with distinct
 // URLs (e.g. two source-code links for origin + mirror) coexist; an identical
 // pair from a second source is a no-op. When the existing link lacks a field
-// the incoming one carries (label, preferred), it is gap-filled — existing
-// values win, so a manually set preferred:true is never downgraded.
+// the incoming one carries (label, preferred, tags), it is gap-filled —
+// existing values win, so a manually set preferred:true is never downgraded
+// and a curated capability list is never overruled.
 func applyLink(doc *projectfile.Document, link projectfile.Link) {
 	for i := range doc.Links {
 		existing := &doc.Links[i]
@@ -430,6 +432,9 @@ func applyLink(doc *projectfile.Document, link projectfile.Link) {
 			}
 			if !existing.Preferred && link.Preferred {
 				existing.Preferred = link.Preferred
+			}
+			if tags := pfmodel.LinkTags(link); pfmodel.SetLinkTags(existing, tags) {
+				genlog.Info("scan: capability tags proposed", "url", existing.URL, "tags", tags)
 			}
 			return
 		}

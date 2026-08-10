@@ -672,6 +672,19 @@ An alias no mirror claims stays unresolved, so the badge referencing it is
 dropped rather than published broken. That is what lets one fragment serve a
 fleet whose projects each sit on a different set of mirrors.
 
+`pf-bridge scan git-remotes` **proposes** the two tags a hostname settles:
+`public` and `badges`, from the same rule table that already classifies a forge
+kind. It proposes nothing else — `ci` and `releases` say what a project decided
+to run where, which no hostname reveals — and it proposes nothing at all for a
+self-hosted instance (`gitlab.example.com`) or an unknown host, because a wrong
+`public` tag persists in the projectfile and renders a broken badge forever,
+while a missing one only drops a badge and stays visible for the user to fix.
+
+The proposal is a **gap-fill on key presence**: a link with no `tags` key gets
+one, and a link that already declares `tags` keeps exactly what it declares —
+including `tags: []`, which states that this mirror affords nothing. So a
+rescan never argues with a curated list, and repeated scans are byte-identical.
+
 Example render:
 
 ```markdown

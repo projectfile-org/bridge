@@ -15,8 +15,16 @@ package hostmatch
 
 import (
 	"net/url"
+	"slices"
 	"strings"
+
+	"projectfile.org/projectfile/bridge/internal/pfmodel"
 )
+
+// crawlable is the capability set of a public forge whose API a badge service
+// reaches: readable by anyone, and countable by shields.io and
+// api.reuse.software. Shared by the four exact-host rules that qualify.
+var crawlable = []string{pfmodel.TagPublic, pfmodel.TagBadges}
 
 // Kind enumerates the forge families pf-cli knows how to talk to. Multiple
 // rules can resolve to the same Kind — both "github.com" and a hypothetical
@@ -48,6 +56,10 @@ type Rule struct {
 	// Source is the decision-trace identifier emitted by the bugs-URL
 	// deriver. Kept here so callers don't have to re-derive it from Kind.
 	Source string
+	// Capabilities lists what a mirror on this host affords, in the
+	// vocabulary of links[].tags. Only host FACTS belong here, and a rule
+	// leaves it empty when the hostname does not settle the question.
+	Capabilities []string
 	// Tracker maps a repo URL to its issue-tracker URL. Used only by the
 	// derive layer; the push command ignores it.
 	Tracker func(repoURL string) string
@@ -72,12 +84,16 @@ const (
 // multiple rules: list specific exact-host rules before the self-hosted
 // prefix rules so "github.com" doesn't accidentally fall through.
 var Rules = []Rule{
-	{Host: HostGitHub, Kind: KindGitHub, Label: "GitHub", Source: "forge:github", Tracker: appendPath("/issues")},
-	{Host: HostGitLab, Kind: KindGitLab, Label: "GitLab", Source: "forge:gitlab", Tracker: appendPath("/-/issues")},
-	{Host: HostCodeberg, Kind: KindForgejo, Label: "Codeberg", Source: "forge:codeberg", Tracker: appendPath("/issues")},
-	{Host: HostGitea, Kind: KindForgejo, Label: "Gitea", Source: "forge:gitea", Tracker: appendPath("/issues")},
-	{Host: HostSourcehut, Kind: KindSourcehut, Label: "sourcehut", Source: "forge:sourcehut", Tracker: sourcehutTracker},
+	{Host: HostGitHub, Kind: KindGitHub, Label: "GitHub", Source: "forge:github", Capabilities: crawlable, Tracker: appendPath("/issues")},
+	{Host: HostGitLab, Kind: KindGitLab, Label: "GitLab", Source: "forge:gitlab", Capabilities: crawlable, Tracker: appendPath("/-/issues")},
+	{Host: HostCodeberg, Kind: KindForgejo, Label: "Codeberg", Source: "forge:codeberg", Capabilities: crawlable, Tracker: appendPath("/issues")},
+	{Host: HostGitea, Kind: KindForgejo, Label: "Gitea", Source: "forge:gitea", Capabilities: crawlable, Tracker: appendPath("/issues")},
+	// Public, but no badge endpoint addresses it: shields.io carries no
+	// sourcehut route, so `badges` here would render a broken image.
+	{Host: HostSourcehut, Kind: KindSourcehut, Label: "sourcehut", Source: "forge:sourcehut", Capabilities: []string{pfmodel.TagPublic}, Tracker: sourcehutTracker},
 	// Self-hosted GitLab — any host whose name starts with "gitlab.".
+	// No capabilities: gitlab.acme.internal matches this rule too, and a
+	// hostname never says whether an instance faces the public.
 	{Host: HostGitLabPrefix, Kind: KindGitLab, Label: "GitLab", Source: "forge:gitlab-self-hosted", Tracker: appendPath("/-/issues")},
 	// Self-hosted Gitea / Forgejo. Best-effort: catches the common
 	// "gitea." / "forgejo." subdomain convention. A bare-hostname instance
@@ -127,6 +143,20 @@ func ResolveKindWithKinds(repoURL string, kinds map[string]string) Kind {
 		}
 	}
 	return ResolveKind(repoURL)
+}
+
+// Capabilities returns the capability tags the host of repoURL affords, ready
+// for links[].tags. It is empty for an unknown host and for every self-hosted
+// prefix rule, which is the whole point: a guess that a private instance is
+// `public` puts a permanently broken badge in a README, while a missing tag
+// only drops one badge and stays visible in the projectfile for the user to
+// correct. Returns a copy — the rule table is package state.
+func Capabilities(repoURL string) []string {
+	r, _ := Resolve(repoURL)
+	if r == nil {
+		return nil
+	}
+	return slices.Clone(r.Capabilities)
 }
 
 // ResolveLabel returns the human-readable display name for the forge hosting

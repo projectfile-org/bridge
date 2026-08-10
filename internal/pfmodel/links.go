@@ -23,6 +23,17 @@ const keyPriority = "priority"
 // no schema change.
 const keyTags = "tags"
 
+// The two capability tags that are HOST facts, and so are the only ones a
+// scanner may propose: `public` says anyone can read the repository there,
+// `badges` says a badge service can crawl it. `ci` and `releases` are equally
+// valid tags, but they state what a PROJECT decided to run where, which no
+// hostname reveals. Named so the host table, the scanner and its tests spell
+// them once.
+const (
+	TagPublic = "public"
+	TagBadges = "badges"
+)
+
 // LinkTags returns the capabilities a link declares through the spec's §139
 // additional-key channel (l.Extra). A tag says what the mirror AFFORDS —
 // `public`, `badges`, `ci` — which is what lets a shared fragment address a
@@ -30,6 +41,28 @@ const keyTags = "tags"
 // projects each sit on a different set of mirrors.
 func LinkTags(l projectfile.Link) []string {
 	return TagsFrom(l.Extra[keyTags])
+}
+
+// SetLinkTags writes a proposed capability list onto a link that declares
+// none, and reports whether it wrote. It is the only writer of the tags key,
+// which is why it lives beside LinkTags rather than in the scanner.
+//
+// The gap test is KEY PRESENCE, not parsed length. `tags: []` is a curated
+// statement that this mirror affords nothing, and a scanner that re-proposed
+// over it would overrule the user on every run — the same "existing values
+// win" rule applyLink applies to label and preferred.
+func SetLinkTags(l *projectfile.Link, tags []string) bool {
+	if l == nil || len(tags) == 0 {
+		return false
+	}
+	if _, declared := l.Extra[keyTags]; declared {
+		return false
+	}
+	if l.Extra == nil {
+		l.Extra = map[string]any{}
+	}
+	l.Extra[keyTags] = tags
+	return true
 }
 
 // TagsFrom extracts a tag list from an untyped §139 value. Exported because the

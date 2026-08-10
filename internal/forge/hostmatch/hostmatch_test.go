@@ -4,7 +4,20 @@
 
 package hostmatch
 
-import "testing"
+import (
+	"testing"
+
+	"projectfile.org/projectfile/bridge/internal/pfmodel"
+)
+
+// Repository URLs reused across the case tables, one per rule under test.
+const (
+	urlGitHub     = "https://github.com/me/proj"
+	urlGitLab     = "https://gitlab.com/me/proj"
+	urlGitLabSelf = "https://gitlab.example.com/me/proj"
+	urlCodeberg   = "https://codeberg.org/me/proj"
+	urlSourcehut  = "https://git.sr.ht/~user/repo"
+)
 
 func TestResolve(t *testing.T) {
 	cases := []struct {
@@ -12,16 +25,16 @@ func TestResolve(t *testing.T) {
 		url      string
 		wantKind Kind
 	}{
-		{"github.com", "https://github.com/me/proj", KindGitHub},
+		{"github.com", urlGitHub, KindGitHub},
 		{"github trailing slash", "https://github.com/me/proj/", KindGitHub},
-		{"gitlab.com", "https://gitlab.com/me/proj", KindGitLab},
+		{"gitlab.com", urlGitLab, KindGitLab},
 		{"gitlab nested group", "https://gitlab.com/grp/sub/proj", KindGitLab},
-		{"gitlab self-hosted", "https://gitlab.example.com/me/proj", KindGitLab},
-		{"codeberg.org", "https://codeberg.org/me/proj", KindForgejo},
+		{"gitlab self-hosted", urlGitLabSelf, KindGitLab},
+		{"codeberg.org", urlCodeberg, KindForgejo},
 		{"gitea.com", "https://gitea.com/me/proj", KindForgejo},
 		{"forgejo self-hosted", "https://forgejo.example.com/me/proj", KindForgejo},
 		{"gitea self-hosted", "https://gitea.example.com/me/proj", KindForgejo},
-		{"sourcehut", "https://git.sr.ht/~user/repo", KindSourcehut},
+		{"sourcehut", urlSourcehut, KindSourcehut},
 		{"unknown host", "https://example.com/me/proj", KindUnknown},
 		{"empty url", "", KindUnknown},
 		{"bad url", "://not-a-url", KindUnknown},
@@ -41,12 +54,12 @@ func TestResolveTracker(t *testing.T) {
 		url  string
 		want string
 	}{
-		{"https://github.com/me/proj", "https://github.com/me/proj/issues"},
+		{urlGitHub, "https://github.com/me/proj/issues"},
 		{"https://github.com/me/proj/", "https://github.com/me/proj/issues"},
-		{"https://gitlab.com/me/proj", "https://gitlab.com/me/proj/-/issues"},
-		{"https://gitlab.example.com/me/proj", "https://gitlab.example.com/me/proj/-/issues"},
-		{"https://codeberg.org/me/proj", "https://codeberg.org/me/proj/issues"},
-		{"https://git.sr.ht/~user/repo", "https://todo.sr.ht/~user/repo"},
+		{urlGitLab, "https://gitlab.com/me/proj/-/issues"},
+		{urlGitLabSelf, "https://gitlab.example.com/me/proj/-/issues"},
+		{urlCodeberg, "https://codeberg.org/me/proj/issues"},
+		{urlSourcehut, "https://todo.sr.ht/~user/repo"},
 	}
 	for _, c := range cases {
 		rule, _ := Resolve(c.url)
@@ -77,5 +90,51 @@ func TestMatchesHost(t *testing.T) {
 		if got != c.want {
 			t.Errorf("MatchesHost(%q, %q) = %v, want %v", c.host, c.pattern, got, c.want)
 		}
+	}
+}
+
+// TestCapabilities pins the host→capability proposal the scanner writes into
+// links[].tags. The interesting rows are the empty ones: a self-hosted
+// instance and an unknown host must yield nothing, because a wrong `public`
+// tag survives in the projectfile and renders a broken badge forever.
+func TestCapabilities(t *testing.T) {
+	cases := []struct {
+		name string
+		url  string
+		want []string
+	}{
+		{"github.com", urlGitHub, crawlable},
+		{"gitlab.com", urlGitLab, crawlable},
+		{"codeberg.org", urlCodeberg, crawlable},
+		{"gitea.com", "https://gitea.com/me/proj", crawlable},
+		{"sourcehut is public but uncrawlable", urlSourcehut, []string{"public"}},
+		{"gitlab self-hosted proposes nothing", urlGitLabSelf, nil},
+		{"gitea self-hosted proposes nothing", "https://gitea.example.com/me/proj", nil},
+		{"forgejo self-hosted proposes nothing", "https://forgejo.example.com/me/proj", nil},
+		{"unknown host proposes nothing", "https://kiota.ch/me/proj", nil},
+		{"empty url", "", nil},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			got := Capabilities(c.url)
+			if len(got) != len(c.want) {
+				t.Fatalf("Capabilities(%q) = %v, want %v", c.url, got, c.want)
+			}
+			for i := range c.want {
+				if got[i] != c.want[i] {
+					t.Fatalf("Capabilities(%q) = %v, want %v", c.url, got, c.want)
+				}
+			}
+		})
+	}
+}
+
+// TestCapabilitiesReturnsCopy guards the rule table against a caller that
+// appends to what it got back. Rules is package state read by every scan.
+func TestCapabilitiesReturnsCopy(t *testing.T) {
+	got := Capabilities(urlGitHub)
+	got[0] = "mutated"
+	if again := Capabilities(urlGitHub); again[0] != pfmodel.TagPublic {
+		t.Fatalf("rule table was mutated through a returned slice: %v", again)
 	}
 }
