@@ -282,12 +282,13 @@ story:
 - **`tags: [readme]`** on a goal node opts it into the highlighted set. The
     block prefers tagged goals and falls back to **every** goal when none are
     tagged, so a project that never opts in keeps the full list it always had.
-    `m6e/core/goals/publish.yaml` tags `published` by default; a project tags
-    further goals to surface them.
+    `m6e/core/goals/publish.yaml` tags `ready-to-publish` by default (the local
+    pseudo-CI entry point); a project tags further goals to surface them.
 - **The intro explains `make` and the dev loop.** A line notes that bare `make`
     runs the default target (`make help` lists them all); when the DAG declares
     a `dev-container` node (the container plane’s selectable dev node), a second
-    line advertises `make ci-dag M6E_CI_TARGETS=dev` as the local dev loop.
+    line advertises `make dev-container` as the local dev loop — the node
+    launcher m6e derives for that node.
 
 ```yaml
 # m6e/core/goals/publish.yaml
@@ -295,9 +296,9 @@ org:
   projectfile:
     ci:
       nodes:
-        published:
+        ready-to-publish:
           goal: true
-          description: Build, test, scan and publish the release artifacts
+          description: Run the pseudo-CI pipeline locally — build, test and scan, without publishing
           tags: [readme]   # highlighted in the README
 ```
 

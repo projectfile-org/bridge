@@ -55,11 +55,14 @@ pf-bridge all
 
 Точки входу конвеєра:
 
-- `make published` — Build, test, scan and publish the release artifacts
+- `make analyze` — Run the heavy analysis sweep (mutation testing, benchmarks)
+- `make audited` — Re-scan the pinned dependencies and published artifacts for new vulnerabilities
+- `make check-outdated` — Report every pinned dependency that lags upstream
+- `make ready-to-publish` — Run the pseudo-CI pipeline locally — build, test and scan, without publishing
 
 Виконайте `make` без аргументів для типової цілі; виконайте `make help`, щоб переглянути всі цілі.
 
-Для локального циклу розробки `make ci-dag M6E_CI_TARGETS=dev` піднімає dev-container.
+Для локального циклу розробки `make dev-container` піднімає dev-container.
 
 ## Політики
 
@@ -70,6 +73,7 @@ pf-bridge all
 
 ## Посилання
 
+- [специфікація projectfile](https://projectfile.org)
 - [Projectfile Bridges on Codeberg](https://codeberg.org/projectfile/bridge)
 - [Projectfile Bridges on GitHub](https://github.com/damian-buho/projectfile-bridge)
 - [Projectfile Bridges on kiota.ch](https://kiota.ch/projectfile/bridge)

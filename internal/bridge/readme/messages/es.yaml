@@ -26,7 +26,7 @@ usage.variants: "Variantes disponibles:"
 building.title: Compilación
 building.goals: "Puntos de entrada de la canalización:"
 building.intro.make: "Ejecuta `make` sin argumentos para el destino predeterminado; ejecuta `make help` para listar todos los destinos."
-building.intro.dev: "Para el bucle de desarrollo local, `make ci-dag M6E_CI_TARGETS=dev` levanta el dev-container."
+building.intro.dev: "Para el bucle de desarrollo local, `make dev-container` levanta el dev-container."
 documentation.title: Documentación
 faq.title: Preguntas frecuentes
 faq.body: Consulta [Preguntas frecuentes](%s) para las dudas más habituales.
