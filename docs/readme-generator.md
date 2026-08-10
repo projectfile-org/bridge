@@ -143,6 +143,11 @@ org:
 - The heading comes from the message catalog (`installation.title`, …), so it
     localizes with the rest of the readme.
 - `name` is the group’s identity for override, never display text.
+- `priority` orders the groups within a section, higher first, defaulting to 50.
+    Declaration order cannot serve: includes concatenate **loser-first**, so
+    every group a shared fragment carries arrives above the project’s own, and a
+    fallback recipe would lead the section it should close. A project cannot
+    delete an inherited group, so `priority` is the only way to sink one.
 - A group with no `commands`, `prefix`, or `postfix` is dropped; a section left
     with no group falls back to its file probe — declaring the key never
     produces an empty section.
@@ -223,8 +228,20 @@ they yield:
 
 The map filter uses **curly** braces because `artifacts` is a mapping of named
 keys — `artifacts[kind=image]` is a malformed address and `pf-cli` refuses it
-loudly. It yields every match rather than the first because a mapping has no
-order in which "first" would mean anything.
+loudly. It yields every match rather than the first because a mapping carries no
+order of its own.
+
+#### Ordering a map fan-out
+
+Matches come back ordered by each entry’s `priority`, **descending**, with the
+entry key as the tiebreak. Sorting by key alone is deterministic but arbitrary:
+it ranks `kiota` above `ghcr` on spelling, so a readme would recommend the
+last-resort registry before the preferred one. `priority` is the one channel
+through which a mapping states a preference it cannot express positionally.
+
+An entry that declares no `priority` sorts at 50, and the key tiebreak keeps
+equal ranks from swapping between runs. So a document that never sets the key
+renders exactly as it did before the rule existed.
 
 ### Fan-out
 

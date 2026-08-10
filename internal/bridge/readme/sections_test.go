@@ -5,6 +5,7 @@
 package readme
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -651,6 +652,59 @@ func TestProseOnlyGroupSurvives(t *testing.T) {
 
 	assert.Contains(t, out, "## Usage")
 	assert.Contains(t, out, "This library has no CLI; import it instead.")
+}
+
+// TestSectionGroupPriorityOutranksMergeOrder is the ordering primitive the
+// multi-registry recipes rest on. The slice below arrives in the order a MERGE
+// produces: includes concatenate loser-first, so the shared fragment's fallback
+// group sits FIRST even though it must render last. Only a declared priority can
+// invert that — a project cannot delete an inherited group, and reordering by
+// declaration would need the fragment to know what consumes it.
+func TestSectionGroupPriorityOutranksMergeOrder(t *testing.T) {
+	pf := minimalDoc(t)
+	pf.Extensions = map[string]any{
+		readmeNS: map[string]any{
+			blockInstallation: []any{
+				map[string]any{ // as if contributed by an include
+					keyName:     "fallback",
+					keyPrefix:   "Last resort:",
+					keyCommands: []any{"docker pull kiota.ch/x:latest"},
+					keyPriority: 10,
+				},
+				map[string]any{ // the project's own
+					keyName:     "preferred",
+					keyPrefix:   "Recommended:",
+					keyCommands: []any{"docker pull ghcr.io/o/x:latest"},
+					keyPriority: 90,
+				},
+			},
+		},
+	}
+
+	out := renderDoc(t, t.TempDir(), pf)
+
+	assert.Less(t, strings.Index(out, "Recommended:"), strings.Index(out, "Last resort:"),
+		"a higher priority must render above a group the merge placed first")
+}
+
+// TestSectionGroupOrderStableWithoutPriority pins the compatibility half: a
+// document that declares no priority renders in the order it always did, so the
+// ~130 projectfiles carrying no priority key produce a byte-identical README.
+func TestSectionGroupOrderStableWithoutPriority(t *testing.T) {
+	pf := minimalDoc(t)
+	pf.Extensions = map[string]any{
+		readmeNS: map[string]any{
+			blockInstallation: []any{
+				map[string]any{keyName: "alpha", keyPrefix: "Alpha:", keyCommands: []any{"echo a"}},
+				map[string]any{keyName: "beta", keyPrefix: "Beta:", keyCommands: []any{"echo b"}},
+			},
+		},
+	}
+
+	out := renderDoc(t, t.TempDir(), pf)
+
+	assert.Less(t, strings.Index(out, "Alpha:"), strings.Index(out, "Beta:"),
+		"equal (unset) priorities keep declaration order")
 }
 
 // TestUnresolvedProseIsDropped: a lead-in whose reference nothing answers is

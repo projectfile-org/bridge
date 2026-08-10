@@ -75,6 +75,15 @@ func buildSection(doc *projectfile.Document, ext *pfmodel.ReadmeExtension, name,
 	}
 	axes := ciMatrixAxes(doc)
 	source := pfmodel.ReadmeExtensionNS + "." + name
+	// Rank the groups before rendering. The slice arrives in MERGE order, which
+	// puts every include-provided group ahead of the project's own (includes
+	// concatenate loser-first), so declaration order would make a shared
+	// fragment's fallback recipe lead the section. Stable, so equal ranks — the
+	// state of every document that sets no priority — keep that merge order.
+	declared = slices.Clone(declared)
+	slices.SortStableFunc(declared, func(a, b pfmodel.ReadmeSectionGroup) int {
+		return pfmodel.ByPriorityDesc(declaredPriority(a.Priority), declaredPriority(b.Priority))
+	})
 	var groups []sectionGroupView
 	for _, group := range declared {
 		view, ok := buildSectionGroup(doc, group, axes, source, lang)

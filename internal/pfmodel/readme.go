@@ -99,6 +99,7 @@ func parseReadmeSection(m map[string]any, key string) []ReadmeSectionGroup {
 			Postfix:       extractLocalizedVal(sm, "postfix"),
 			PostfixByLang: extractLocalizedMap(sm, "postfix"),
 			Syntax:        strVal(sm, "syntax"),
+			Priority:      intVal(sm, keyPriority),
 		}
 		if len(group.Commands) == 0 && group.Prefix == "" && group.Postfix == "" {
 			continue

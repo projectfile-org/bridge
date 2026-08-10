@@ -360,6 +360,13 @@ type ReadmeSectionGroup struct {
 	// library's is source code, so the fence cannot be hardcoded without
 	// mislabelling every non-shell shape.
 	Syntax string
+	// Priority orders the groups within a section, higher first. Declaration
+	// order cannot serve here: includes concatenate LOSER-FIRST (spec §4.9a),
+	// so every group a shared fragment carries would otherwise render above the
+	// project's own, and a fallback recipe would lead the section it should
+	// close. PriorityDefault keeps declaration order for every group that sets
+	// nothing, so a document that ignores the key renders as it always did.
+	Priority int
 }
 
 // Shield is a badge image rendered as markdown: [![alt](img)](href). Row is
