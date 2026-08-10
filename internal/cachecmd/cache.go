@@ -34,9 +34,12 @@ var cacheCmd = &cobra.Command{
 		"connection once warmed.\n" +
 		"\n" +
 		"The cache lives at:\n" +
-		"  ${XDG_CACHE_HOME:-~/.cache}/projectfile/bridge/\n" +
+		"  ${XDG_CACHE_HOME:-~/.cache}/pf/\n" +
 		"    spdx/      license boilerplate texts (warmed here, read by the license bridge)\n" +
-		"    includes/  HTTP includes pf-bridge resolves while reading a projectfile",
+		"    includes/  HTTP includes pf-bridge resolves while reading a projectfile\n" +
+		"\n" +
+		"This slot is shared with pf-cli and pf-ci — a purge here clears the cache\n" +
+		"they all read.",
 }
 
 var cacheStatusCmd = &cobra.Command{

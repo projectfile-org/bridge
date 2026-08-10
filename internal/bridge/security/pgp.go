@@ -238,11 +238,11 @@ func formatFingerprint(fp []byte) string {
 
 // --- fingerprint cache ---
 //
-// One small file per source under $XDG_CACHE_HOME/projectfile/bridge/pgp/, keyed
-// by SHA-256 of the URL (or "keyid:<id>"). The value is the formatted
-// fingerprint string. This mirrors the includes-cache shape: plain files, raw
-// read/write, content-addressed names. A stale entry is harmless — a key roll
-// changes the key ID, so the new key resolves under a new cache key.
+// One small file per source under $XDG_CACHE_HOME/pf/pgp/, keyed by SHA-256 of
+// the URL (or "keyid:<id>"). The value is the formatted fingerprint string.
+// This mirrors the includes-cache shape: plain files, raw read/write,
+// content-addressed names. A stale entry is harmless — a key roll changes the
+// key ID, so the new key resolves under a new cache key.
 
 func cacheKeyURL(rawURL string) string {
 	return hashKey("url:" + rawURL)
@@ -262,7 +262,7 @@ func pgpCacheDir() string {
 		}
 		base = filepath.Join(home, ".cache")
 	}
-	return filepath.Join(base, "projectfile", "bridge", "pgp")
+	return filepath.Join(base, "pf", "pgp")
 }
 
 func loadCachedFingerprint(key string) string {

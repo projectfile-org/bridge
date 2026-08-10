@@ -18,7 +18,6 @@ import (
 
 	"kiota.ch/projectfile/core/v2/pkg/genlog"
 	"kiota.ch/projectfile/core/v2/pkg/projectfile"
-	"kiota.ch/projectfile/core/v2/pkg/spdx"
 	"kiota.ch/projectfile/core/v2/pkg/userconfig"
 )
 
@@ -53,12 +52,6 @@ func Bind(root *cobra.Command) {
 		genlog.SetVerbose(verboseFlag)
 		userconfig.SetIgnored(ignoreUserConfigFlag)
 		projectfile.SetYAMLOutputSorted(sortedFlag)
-		// Claim the "bridge" cache slot so pf-bridge reads/writes its own
-		// SPDX + includes cache ($XDG_CACHE_HOME/projectfile/bridge/) and never
-		// collides with pf-cli or ci-resolver. Both the spdx and the include
-		// resolvers route through this slot.
-		projectfile.SetCacheApp("bridge")
-		spdx.SetCacheApp("bridge")
 		if offlineFlag {
 			genlog.Info("offline mode", "message", "network fetches disabled")
 		}
