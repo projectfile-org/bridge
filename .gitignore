@@ -12,6 +12,7 @@
 *.test
 .container/*/locale/*.mo
 .fetch
+.makefile/bootstrap
 /bin/
 /dist/
 coverage.html
