@@ -23,15 +23,27 @@ const keyPriority = "priority"
 // no schema change.
 const keyTags = "tags"
 
-// The two capability tags that are HOST facts, and so are the only ones a
-// scanner may propose: `public` says anyone can read the repository there,
-// `badges` says a badge service can crawl it. `ci` and `releases` are equally
-// valid tags, but they state what a PROJECT decided to run where, which no
-// hostname reveals. Named so the host table, the scanner and its tests spell
-// them once.
+// The capability tags that are HOST facts, and so are the only ones a scanner
+// may propose. `ci` and `releases` are equally valid tags, but they state what
+// a PROJECT decided to run where, which no hostname reveals. Named so the host
+// table, the scanner and its tests spell them once.
+//
+// `badges` is the host-agnostic one: api.reuse.software takes any host it can
+// clone from. The three that follow name a shields.io ROUTE FAMILY, because
+// /github/last-commit, /gitlab/last-commit and /gitea/last-commit are three
+// endpoints and no template can choose between them. A fragment declares one
+// badge per route and lets the drop rule pick: the two routes no mirror claims
+// do not resolve, so they render nothing. That is the conditional this
+// grammar does not otherwise have.
+//
+// The route family is NOT the forge kind — Codeberg is Kind forgejo and
+// shields calls its route gitea — so each rule states its own tags.
 const (
-	TagPublic = "public"
-	TagBadges = "badges"
+	TagPublic       = "public"
+	TagBadges       = "badges"
+	TagBadgesGitHub = "badges-github"
+	TagBadgesGitLab = "badges-gitlab"
+	TagBadgesGitea  = "badges-gitea"
 )
 
 // LinkTags returns the capabilities a link declares through the spec's §139
@@ -43,19 +55,25 @@ func LinkTags(l projectfile.Link) []string {
 	return TagsFrom(l.Extra[keyTags])
 }
 
-// SetLinkTags writes a proposed capability list onto a link that declares
-// none, and reports whether it wrote. It is the only writer of the tags key,
-// which is why it lives beside LinkTags rather than in the scanner.
+// SetLinkTags writes a proposed capability list onto a link, and reports
+// whether it wrote. It is the only writer of the tags key, which is why it
+// lives beside LinkTags rather than in the scanner.
 //
-// The gap test is KEY PRESENCE, not parsed length. `tags: []` is a curated
-// statement that this mirror affords nothing, and a scanner that re-proposed
-// over it would overrule the user on every run — the same "existing values
-// win" rule applyLink applies to label and preferred.
-func SetLinkTags(l *projectfile.Link, tags []string) bool {
+// force=true overwrites a declared list; force=false gap-fills, and the gap
+// test is KEY PRESENCE, not parsed length. `tags: []` is a curated statement
+// that this mirror affords nothing, and a scanner that re-proposed over it
+// would overrule the user on every run — the same "existing values win" rule
+// applyLink applies to label and preferred, and the same signature SetLink
+// above already uses.
+//
+// force exists because gap-fill alone makes the first fleet-wide scan
+// irreversible: no later run can correct a vocabulary the fleet has already
+// written.
+func SetLinkTags(l *projectfile.Link, tags []string, force bool) bool {
 	if l == nil || len(tags) == 0 {
 		return false
 	}
-	if _, declared := l.Extra[keyTags]; declared {
+	if _, declared := l.Extra[keyTags]; declared && !force {
 		return false
 	}
 	if l.Extra == nil {

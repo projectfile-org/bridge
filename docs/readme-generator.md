@@ -672,18 +672,47 @@ An alias no mirror claims stays unresolved, so the badge referencing it is
 dropped rather than published broken. That is what lets one fragment serve a
 fleet whose projects each sit on a different set of mirrors.
 
-`pf-bridge scan git-remotes` **proposes** the two tags a hostname settles:
-`public` and `badges`, from the same rule table that already classifies a forge
-kind. It proposes nothing else — `ci` and `releases` say what a project decided
-to run where, which no hostname reveals — and it proposes nothing at all for a
-self-hosted instance (`gitlab.example.com`) or an unknown host, because a wrong
-`public` tag persists in the projectfile and renders a broken badge forever,
-while a missing one only drops a badge and stays visible for the user to fix.
+`pf-bridge scan git-remotes` **proposes** the tags a hostname settles, from the
+same rule table that already classifies a forge kind:
+
+| Host                        | Proposed                              |
+| --------------------------- | ------------------------------------- |
+| `github.com`                | `public`, `badges`, `badges-github`   |
+| `gitlab.com`                | `public`, `badges`, `badges-gitlab`   |
+| `codeberg.org`, `gitea.com` | `public`, `badges`, `badges-gitea`    |
+| `git.sr.ht`                 | `public`                              |
+| self-hosted, unknown        | nothing                               |
+
+It proposes nothing else — `ci` and `releases` say what a project decided to
+run where, which no hostname reveals — and nothing at all for a self-hosted
+instance (`gitlab.example.com`) or an unknown host, because a wrong `public`
+tag persists in the projectfile and renders a broken badge forever, while a
+missing one only drops a badge and stays visible for the user to fix.
+
+`badges` is host-agnostic: `api.reuse.software` takes any host it can clone
+from. The `badges-*` three name a **shields.io route family**, because
+`/github/last-commit`, `/gitlab/last-commit` and `/gitea/last-commit` are three
+endpoints and no template chooses between them. A fragment declares one badge
+per route, and the drop rule picks: the routes no mirror claims do not resolve,
+so they render nothing. That is the conditional this grammar does not otherwise
+have. Note the route family is **not** the forge kind — Codeberg is kind
+`forgejo` and shields calls its route `gitea`.
+
+Most projects have both a Codeberg and a GitHub mirror, so both claim `badges`
+and document order decides which one `remotes.badges` resolves to. That is fine
+for a host-agnostic badge and wrong for a route-specific one, which is exactly
+why the route tags exist.
 
 The proposal is a **gap-fill on key presence**: a link with no `tags` key gets
 one, and a link that already declares `tags` keeps exactly what it declares —
 including `tags: []`, which states that this mirror affords nothing. So a
 rescan never argues with a curated list, and repeated scans are byte-identical.
+
+`--force` (`-f`) overwrites a declared list with the proposal. Without it the
+first fleet-wide scan is irreversible: every projectfile would hold whatever
+vocabulary shipped first and no later run could correct it. `--force` applies
+to `tags` only; `label` and `preferred` stay gap-fill, because nothing
+generates a better label than the user.
 
 Example render:
 

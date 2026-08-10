@@ -23,7 +23,7 @@ func TestSetLinkTagsGapFill(t *testing.T) {
 
 	t.Run("writes_when_no_tags_key", func(t *testing.T) {
 		l := projectfile.Link{Type: LinkSourceCode, URL: testTagLinkURL}
-		require.True(t, SetLinkTags(&l, proposal))
+		require.True(t, SetLinkTags(&l, proposal, false))
 		assert.Equal(t, proposal, LinkTags(l))
 	})
 
@@ -33,7 +33,7 @@ func TestSetLinkTagsGapFill(t *testing.T) {
 			URL:   testTagLinkURL,
 			Extra: map[string]any{keyTags: []any{"ci"}},
 		}
-		assert.False(t, SetLinkTags(&l, proposal))
+		assert.False(t, SetLinkTags(&l, proposal, false))
 		assert.Equal(t, []string{"ci"}, LinkTags(l), "a declared list must never be widened")
 	})
 
@@ -43,7 +43,7 @@ func TestSetLinkTagsGapFill(t *testing.T) {
 			URL:   "https://gitlab.internal/acme/proj",
 			Extra: map[string]any{keyTags: []any{}},
 		}
-		assert.False(t, SetLinkTags(&l, proposal),
+		assert.False(t, SetLinkTags(&l, proposal, false),
 			"tags: [] states this mirror affords nothing — a rescan must not overrule it")
 		assert.Empty(t, LinkTags(l))
 	})
@@ -54,17 +54,17 @@ func TestSetLinkTagsGapFill(t *testing.T) {
 			URL:   testTagLinkURL,
 			Extra: map[string]any{keyTags: "public"},
 		}
-		assert.False(t, SetLinkTags(&l, proposal),
+		assert.False(t, SetLinkTags(&l, proposal, false),
 			"a malformed value is still the user's, and overwriting it would hide the mistake")
 	})
 
 	t.Run("no_op_on_empty_proposal", func(t *testing.T) {
 		l := projectfile.Link{Type: LinkSourceCode, URL: "https://kiota.ch/acme/proj"}
-		assert.False(t, SetLinkTags(&l, nil))
+		assert.False(t, SetLinkTags(&l, nil, false))
 		assert.Nil(t, l.Extra, "an unknown host must not even create the Extra map")
 	})
 
 	t.Run("nil_link", func(t *testing.T) {
-		assert.False(t, SetLinkTags(nil, proposal))
+		assert.False(t, SetLinkTags(nil, proposal, false))
 	})
 }

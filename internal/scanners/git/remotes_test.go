@@ -106,11 +106,11 @@ func TestRemotesScannerSoleRemotePreferred(t *testing.T) {
 	assert.True(t, p.Links[0].Preferred, "sole origin link must be Preferred")
 }
 
-// TestRemotesScannerProposesCapabilityTags guards the end-to-end proposal: a
-// remote on a host the rule table classifies arrives carrying links[].tags, so
-// a shared fragment can address it as `remotes.badges` instead of naming the
-// hostname. A remote on an unclassified host arrives untagged rather than
-// guessed at.
+// TestRemotesScannerProposesCapabilityTags guards the end-to-end proposal on
+// the shape 132 of the 152 fleet projectfiles actually have: a Codeberg mirror
+// and a GitHub mirror side by side. Both are crawlable, so both claim `badges`
+// and document order decides — but each must carry its OWN shields route, or
+// the `last-commit` badge queries a Gitea endpoint against a GitHub host.
 func TestRemotesScannerProposesCapabilityTags(t *testing.T) {
 	if _, err := exec.LookPath("git"); err != nil {
 		t.Skip("git not available")
@@ -119,6 +119,8 @@ func TestRemotesScannerProposesCapabilityTags(t *testing.T) {
 	require.NoError(t, exec.Command("git", "-C", dir, "init", "--quiet").Run())
 	require.NoError(t, exec.Command("git", "-C", dir, "remote", "add", "origin",
 		"https://codeberg.org/acme/proj.git").Run())
+	require.NoError(t, exec.Command("git", "-C", dir, "remote", "add", "gh",
+		"https://github.com/acme/proj.git").Run())
 	require.NoError(t, exec.Command("git", "-C", dir, "remote", "add", "internal",
 		"https://gitlab.example.com/acme/proj.git").Run())
 
@@ -134,7 +136,10 @@ func TestRemotesScannerProposesCapabilityTags(t *testing.T) {
 		t.Fatalf("no source-code link for %q", url)
 		return nil
 	}
-	assert.Equal(t, []string{"public", "badges"}, tagsFor("https://codeberg.org/acme/proj"))
+	assert.Equal(t, []string{pfmodel.TagPublic, pfmodel.TagBadges, pfmodel.TagBadgesGitea},
+		tagsFor("https://codeberg.org/acme/proj"))
+	assert.Equal(t, []string{pfmodel.TagPublic, pfmodel.TagBadges, pfmodel.TagBadgesGitHub},
+		tagsFor("https://github.com/acme/proj"))
 	assert.Empty(t, tagsFor("https://gitlab.example.com/acme/proj"),
 		"a self-hosted instance must not be guessed public")
 

@@ -77,7 +77,10 @@ func (remotesScanner) Scan(root string) (*source.Partial, []core.Hit, error) {
 			// user can read and edit. Without it a shared fragment has to
 			// name a hostname literally and impose one topology on every
 			// project that includes it.
-			if tags := hostmatch.Capabilities(page); pfmodel.SetLinkTags(&link, tags) {
+			// force=false is not the user's --force: this link is freshly
+			// built and has no tags to overwrite. applyLink is where the
+			// document's own list is weighed.
+			if tags := hostmatch.Capabilities(page); pfmodel.SetLinkTags(&link, tags, false) {
 				genlog.Info("git scanner: proposing capability tags", "url", page, "tags", tags)
 				hits = append(hits, core.Hit{Source: scannerGitRemotes, Field: "links[type=source-code].tags:" + name})
 			}

@@ -21,10 +21,16 @@ import (
 	"projectfile.org/projectfile/bridge/internal/pfmodel"
 )
 
-// crawlable is the capability set of a public forge whose API a badge service
-// reaches: readable by anyone, and countable by shields.io and
-// api.reuse.software. Shared by the four exact-host rules that qualify.
-var crawlable = []string{pfmodel.TagPublic, pfmodel.TagBadges}
+// The capability sets of a public forge whose API a badge service reaches:
+// readable by anyone, countable by api.reuse.software, and countable by ONE
+// shields.io route family. Each set names its own route, because a project
+// with a Codeberg and a GitHub mirror affords both and a fragment has to be
+// able to address them apart.
+var (
+	crawlableGitHub = []string{pfmodel.TagPublic, pfmodel.TagBadges, pfmodel.TagBadgesGitHub}
+	crawlableGitLab = []string{pfmodel.TagPublic, pfmodel.TagBadges, pfmodel.TagBadgesGitLab}
+	crawlableGitea  = []string{pfmodel.TagPublic, pfmodel.TagBadges, pfmodel.TagBadgesGitea}
+)
 
 // Kind enumerates the forge families pf-cli knows how to talk to. Multiple
 // rules can resolve to the same Kind — both "github.com" and a hypothetical
@@ -84,10 +90,10 @@ const (
 // multiple rules: list specific exact-host rules before the self-hosted
 // prefix rules so "github.com" doesn't accidentally fall through.
 var Rules = []Rule{
-	{Host: HostGitHub, Kind: KindGitHub, Label: "GitHub", Source: "forge:github", Capabilities: crawlable, Tracker: appendPath("/issues")},
-	{Host: HostGitLab, Kind: KindGitLab, Label: "GitLab", Source: "forge:gitlab", Capabilities: crawlable, Tracker: appendPath("/-/issues")},
-	{Host: HostCodeberg, Kind: KindForgejo, Label: "Codeberg", Source: "forge:codeberg", Capabilities: crawlable, Tracker: appendPath("/issues")},
-	{Host: HostGitea, Kind: KindForgejo, Label: "Gitea", Source: "forge:gitea", Capabilities: crawlable, Tracker: appendPath("/issues")},
+	{Host: HostGitHub, Kind: KindGitHub, Label: "GitHub", Source: "forge:github", Capabilities: crawlableGitHub, Tracker: appendPath("/issues")},
+	{Host: HostGitLab, Kind: KindGitLab, Label: "GitLab", Source: "forge:gitlab", Capabilities: crawlableGitLab, Tracker: appendPath("/-/issues")},
+	{Host: HostCodeberg, Kind: KindForgejo, Label: "Codeberg", Source: "forge:codeberg", Capabilities: crawlableGitea, Tracker: appendPath("/issues")},
+	{Host: HostGitea, Kind: KindForgejo, Label: "Gitea", Source: "forge:gitea", Capabilities: crawlableGitea, Tracker: appendPath("/issues")},
 	// Public, but no badge endpoint addresses it: shields.io carries no
 	// sourcehut route, so `badges` here would render a broken image.
 	{Host: HostSourcehut, Kind: KindSourcehut, Label: "sourcehut", Source: "forge:sourcehut", Capabilities: []string{pfmodel.TagPublic}, Tracker: sourcehutTracker},

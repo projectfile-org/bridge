@@ -16,6 +16,7 @@ const (
 	urlGitLab     = "https://gitlab.com/me/proj"
 	urlGitLabSelf = "https://gitlab.example.com/me/proj"
 	urlCodeberg   = "https://codeberg.org/me/proj"
+	urlGitea      = "https://gitea.com/me/proj"
 	urlSourcehut  = "https://git.sr.ht/~user/repo"
 )
 
@@ -31,7 +32,7 @@ func TestResolve(t *testing.T) {
 		{"gitlab nested group", "https://gitlab.com/grp/sub/proj", KindGitLab},
 		{"gitlab self-hosted", urlGitLabSelf, KindGitLab},
 		{"codeberg.org", urlCodeberg, KindForgejo},
-		{"gitea.com", "https://gitea.com/me/proj", KindForgejo},
+		{"gitea.com", urlGitea, KindForgejo},
 		{"forgejo self-hosted", "https://forgejo.example.com/me/proj", KindForgejo},
 		{"gitea self-hosted", "https://gitea.example.com/me/proj", KindForgejo},
 		{"sourcehut", urlSourcehut, KindSourcehut},
@@ -94,24 +95,28 @@ func TestMatchesHost(t *testing.T) {
 }
 
 // TestCapabilities pins the host→capability proposal the scanner writes into
-// links[].tags. The interesting rows are the empty ones: a self-hosted
-// instance and an unknown host must yield nothing, because a wrong `public`
-// tag survives in the projectfile and renders a broken badge forever.
+// links[].tags. Two kinds of row matter. The route rows must differ per forge
+// family, or the `last-commit` badge picks the wrong shields endpoint. The
+// empty rows must stay empty: a wrong `public` tag survives in the projectfile
+// and renders a broken badge forever, while a missing one only drops a badge.
 func TestCapabilities(t *testing.T) {
 	cases := []struct {
 		name string
 		url  string
 		want []string
 	}{
-		{"github.com", urlGitHub, crawlable},
-		{"gitlab.com", urlGitLab, crawlable},
-		{"codeberg.org", urlCodeberg, crawlable},
-		{"gitea.com", "https://gitea.com/me/proj", crawlable},
-		{"sourcehut is public but uncrawlable", urlSourcehut, []string{"public"}},
+		{"github.com", urlGitHub, []string{pfmodel.TagPublic, pfmodel.TagBadges, pfmodel.TagBadgesGitHub}},
+		{"gitlab.com", urlGitLab, []string{pfmodel.TagPublic, pfmodel.TagBadges, pfmodel.TagBadgesGitLab}},
+		{
+			"codeberg is forgejo but shields calls the route gitea", urlCodeberg,
+			[]string{pfmodel.TagPublic, pfmodel.TagBadges, pfmodel.TagBadgesGitea},
+		},
+		{"gitea.com", urlGitea, []string{pfmodel.TagPublic, pfmodel.TagBadges, pfmodel.TagBadgesGitea}},
+		{"sourcehut is public but has no shields route", urlSourcehut, []string{pfmodel.TagPublic}},
 		{"gitlab self-hosted proposes nothing", urlGitLabSelf, nil},
 		{"gitea self-hosted proposes nothing", "https://gitea.example.com/me/proj", nil},
 		{"forgejo self-hosted proposes nothing", "https://forgejo.example.com/me/proj", nil},
-		{"unknown host proposes nothing", "https://kiota.ch/me/proj", nil},
+		{"kiota.ch affords nothing even though kinds classifies it", "https://kiota.ch/me/proj", nil},
 		{"empty url", "", nil},
 	}
 	for _, c := range cases {

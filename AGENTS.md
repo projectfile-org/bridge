@@ -132,12 +132,21 @@ this repository, which is the thing the aliases exist to remove.
 
 `hostmatch.Rule.Capabilities` holds the only tags a hostname settles, and
 `pf-bridge scan git-remotes` proposes them. Host knowledge lives in the rule
-table and nowhere else. Two limits are deliberate: only `public` and `badges`
-are host facts (`ci` and `releases` are per-project choices), and every
-self-hosted prefix rule proposes nothing, since `gitlab.` also matches an
-internal instance. `pfmodel.SetLinkTags` is the sole writer, and it treats an
-absent `tags` key as the gap — a declared list, `tags: []` included, always
-wins.
+table and nowhere else. Two limits are deliberate: only `public` and the
+`badges*` family are host facts (`ci` and `releases` are per-project choices),
+and every self-hosted prefix rule proposes nothing, since `gitlab.` also
+matches an internal instance.
+
+`badges` is host-agnostic; `badges-github` / `badges-gitlab` / `badges-gitea`
+name a **shields.io route family**, which is NOT the forge kind — Codeberg is
+kind `forgejo` and shields calls its route `gitea`. A fragment declares one
+badge per route and lets the drop rule render the one whose mirror exists.
+That is how a badge branches in a grammar with no conditional.
+
+`pfmodel.SetLinkTags` is the sole writer. It treats an absent `tags` key as the
+gap, so a declared list — `tags: []` included — wins. `scan --force` overrides
+that, and exists because gap-fill alone would make the first fleet-wide scan
+irreversible. It applies to `tags` only.
 
 **Do not point a shared m6e fragment at an alias until the fleet declares it.**
 Slugs are unchanged and keep working, so the mechanism is purely additive; but a

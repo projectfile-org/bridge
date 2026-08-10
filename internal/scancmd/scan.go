@@ -360,7 +360,7 @@ func applyPartialToDoc(doc *projectfile.Document, effectivePeople []projectfile.
 		ensurePrimaryRepository(doc.Repositories)
 	}
 	for _, l := range p.Links {
-		applyLink(doc, l)
+		applyLink(doc, l, scanForce)
 	}
 	// Rewrite scanner-generated source-code labels from "Source Code on X"
 	// to "{title} on X" so the label carries the project identity rather than
@@ -423,7 +423,11 @@ func applyRepository(doc *projectfile.Document, repo projectfile.Repository) {
 // the incoming one carries (label, preferred, tags), it is gap-filled —
 // existing values win, so a manually set preferred:true is never downgraded
 // and a curated capability list is never overruled.
-func applyLink(doc *projectfile.Document, link projectfile.Link) {
+//
+// force applies to the capability tags ONLY. It is how a fleet that already
+// wrote one tag vocabulary can be moved to the next one; label and preferred
+// stay gap-fill, because nothing generates a better label than the user.
+func applyLink(doc *projectfile.Document, link projectfile.Link, force bool) {
 	for i := range doc.Links {
 		existing := &doc.Links[i]
 		if existing.Type == link.Type && existing.URL == link.URL {
@@ -433,8 +437,9 @@ func applyLink(doc *projectfile.Document, link projectfile.Link) {
 			if !existing.Preferred && link.Preferred {
 				existing.Preferred = link.Preferred
 			}
-			if tags := pfmodel.LinkTags(link); pfmodel.SetLinkTags(existing, tags) {
-				genlog.Info("scan: capability tags proposed", "url", existing.URL, "tags", tags)
+			if tags := pfmodel.LinkTags(link); pfmodel.SetLinkTags(existing, tags, force) {
+				genlog.Info("scan: capability tags written", "url", existing.URL,
+					"tags", tags, "force", force)
 			}
 			return
 		}
@@ -487,6 +492,7 @@ var (
 	scanCheck  bool
 	scanStrict bool
 	scanPrune  bool
+	scanForce  bool
 )
 
 // Main is the pf-bridge-scan entry point.
@@ -500,6 +506,8 @@ func Main(binName string) {
 		"--check, but stale tags exit non-zero (stacks only)")
 	scanCmd.Flags().BoolVar(&scanPrune, "prune", false,
 		"remove stale tags from pf in place (mutually exclusive with --strict, stacks only)")
+	scanCmd.Flags().BoolVarP(&scanForce, "force", "f", false,
+		"overwrite a declared links[].tags with the host proposal (links only; label and preferred stay gap-fill)")
 	rootflags.Bind(scanCmd)
 
 	if err := scanCmd.Execute(); err != nil {
