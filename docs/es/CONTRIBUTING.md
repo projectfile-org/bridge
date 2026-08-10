@@ -6,7 +6,7 @@ SPDX-License-Identifier: MIT
 <!-- textlint-disable terminology -->
 [English](CONTRIBUTING.md) · [Українська](docs/uk/CONTRIBUTING.md)
 
-# Cómo contribuir a projectfile/bridge
+# Cómo contribuir a Projectfile Bridges
 
 Ante todo, ¡gracias por dedicar tu tiempo a contribuir! ❤️
 
@@ -31,6 +31,7 @@ Toda forma de contribución se agradece y se valora. Consulta la [Tabla de conte
 - [Cómo informar de fallos](#cómo-informar-de-fallos)
 - [Cómo sugerir mejoras](#cómo-sugerir-mejoras)
 - [Convenciones](#convenciones)
+- [Unirse al equipo del proyecto](#unirse-al-equipo-del-proyecto)
 
 ## Tengo una pregunta
 
@@ -78,7 +79,7 @@ Una vez enviada:
 
 ## Cómo sugerir mejoras
 
-Esta sección te guía para enviar una propuesta de mejora para projectfile/bridge, **tanto funcionalidades completamente nuevas como pequeñas mejoras de lo existente**. Seguir estas indicaciones ayudará a quienes mantienen el proyecto y a la comunidad a entender tu propuesta y a encontrar sugerencias relacionadas.
+Esta sección te guía para enviar una propuesta de mejora para Projectfile Bridges, **tanto funcionalidades completamente nuevas como pequeñas mejoras de lo existente**. Seguir estas indicaciones ayudará a quienes mantienen el proyecto y a la comunidad a entender tu propuesta y a encontrar sugerencias relacionadas.
 
 <!-- omit in toc -->
 ### Antes de enviar una propuesta de mejora
@@ -96,12 +97,16 @@ Las propuestas de mejora se gestionan como [incidencias](https://codeberg.org/pr
 - Usa un **título claro y descriptivo** que identifique la propuesta.
 - Describe la mejora sugerida **paso a paso** y con el mayor detalle posible.
 - **Describe el comportamiento actual** y **explica qué comportamiento esperabas** y por qué. Aquí también puedes indicar qué alternativas no te sirven.
-- **Explica por qué esta mejora sería útil** para la mayoría de quienes usan projectfile/bridge. También puedes señalar otros proyectos que lo hayan resuelto mejor y que sirvan de inspiración.
+- **Explica por qué esta mejora sería útil** para la mayoría de quienes usan Projectfile Bridges. También puedes señalar otros proyectos que lo hayan resuelto mejor y que sirvan de inspiración.
 
 ## Convenciones
 
 - **Workflow:** Git Flow — feature branches from `develop`, release branches from `develop`, hotfix branches from `main`.
 - **Commits:** [Conventional Commits](https://www.conventionalcommits.org/)
 - **Versioning:** [Semantic Versioning](https://semver.org/)
+
+## Unirse al equipo del proyecto
+
+¿Te interesa formar parte del equipo? Escríbenos a <https://dbuho.me>.
 
 <!-- textlint-enable -->

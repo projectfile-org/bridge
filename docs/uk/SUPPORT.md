@@ -10,7 +10,7 @@ SPDX-License-Identifier: MIT
 
 # Як отримати підтримку
 
-Дякуємо, що користуєтеся **projectfile/bridge**!
+Дякуємо, що користуєтеся **Projectfile Bridges**!
 Цей документ пояснює, де шукати допомогу та як ставити зрозумілі запитання.
 
 ## Перш ніж питати
@@ -18,12 +18,10 @@ SPDX-License-Identifier: MIT
 Перегляньте це спершу — можливо, відповідь уже є:
 
 - [Issues on Codeberg](https://codeberg.org/projectfile/bridge/issues)
-- [Issues on GitHub](https://github.com/damian-buho/projectfile-bridge/issues)
 
 ## Куди звертатися
 
 - **Повідомити про відтворювану ваду** — [Issues on Codeberg](https://codeberg.org/projectfile/bridge/issues)
-- **Повідомити про відтворювану ваду** — [Issues on GitHub](https://github.com/damian-buho/projectfile-bridge/issues)
 - **Повідомити про вразливість безпеки** — [docs/uk/SECURITY.md](docs/uk/SECURITY.md)
 - **Зробити внесок у проєкт** — [docs/uk/CONTRIBUTING.md](docs/uk/CONTRIBUTING.md)
 
@@ -34,7 +32,7 @@ SPDX-License-Identifier: MIT
 1. **Що ви намагаєтеся зробити** — саму мету, а не лише помилку.
 2. **Що ви вже спробували** — код, команди, конфігурацію.
 3. **Що сталося** порівняно з тим, чого ви очікували.
-4. **Середовище** — операційна система, версія projectfile/bridge, версія середовища виконання.
+4. **Середовище** — операційна система, версія Projectfile Bridges, версія середовища виконання.
 5. **Мінімальний відтворюваний приклад**, якщо це можливо.
 
 Див. [посібник MCVE на Stack Overflow](https://stackoverflow.com/help/minimal-reproducible-example)

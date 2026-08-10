@@ -12,7 +12,7 @@ SPDX-License-Identifier: MIT
 
 ## Nuestro compromiso
 
-Nos comprometemos a que la participación en projectfile/bridge sea acogedora,
+Nos comprometemos a que la participación en Projectfile Bridges sea acogedora,
 segura y equitativa para todas las personas. Asumimos el compromiso de
 fomentar un entorno que respete y promueva la dignidad, los derechos y las
 aportaciones de todas las personas, con independencia de características como
@@ -82,7 +82,7 @@ Conducta:
 Este Código de Conducta se aplica en todos los espacios de la comunidad —
 incidencias, solicitudes de incorporación de cambios, canales de chat, listas
 de correo y eventos presenciales — y también cuando una persona
-representa oficialmente a projectfile/bridge en espacios públicos.
+representa oficialmente a Projectfile Bridges en espacios públicos.
 
 ## Atribución
 

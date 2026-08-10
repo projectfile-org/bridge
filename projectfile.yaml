@@ -9,7 +9,7 @@ identity:
   created: "2026-07-07"
   name: bridge
   summary: pf-bridge projects the projectfile onto files, forges, and the repository
-  title: projectfile/bridge
+  title: Projectfile Bridges
 includes:
   - .makefile/b19/ci.yaml
   - .makefile/b19/images/go.yaml
@@ -18,22 +18,6 @@ includes:
   - https://kiota.ch/damian-buho/metadata/raw/branch/main/include.yaml
   - https://kiota.ch/projectfile/metadata/raw/branch/main/include.yaml
 kind: SoftwareSourceCode
-links:
-  - label: Source Code on Codeberg
-    type: source-code
-    url: https://codeberg.org/projectfile/bridge
-  - label: Source Code on GitHub
-    type: source-code
-    url: https://github.com/damian-buho/projectfile-bridge
-  - label: Source Code on kiota.ch
-    type: source-code
-    url: https://kiota.ch/projectfile/bridge
-  - label: Issues on Codeberg
-    type: bugs
-    url: https://codeberg.org/projectfile/bridge/issues
-  - label: Issues on GitHub
-    type: bugs
-    url: https://github.com/damian-buho/projectfile-bridge/issues
 org:
   projectfile:
     artifacts:
@@ -115,12 +99,12 @@ org:
           run: .scripts/install-binary.sh
     readme:
       usage:
-        - name: binary
-          prefix: "Project the projectfile onto the files a forge expects:"
-          commands:
+        - commands:
             - pf-bridge --list
             - pf-bridge readme --force
             - pf-bridge all
+          name: binary
+          prefix: 'Project the projectfile onto the files a forge expects:'
     status: maintained
 repositories:
   - issues: true
@@ -130,6 +114,22 @@ repositories:
   - role: mirror
     type: git
     url: git@github.com:damian-buho/projectfile-bridge.git
-  - role: origin
+  - branch: main
+    role: origin
     type: git
     url: ssh://git@kiota.ch/projectfile/bridge.git
+links:
+  - label: Projectfile Bridges on Codeberg
+    type: source-code
+    url: https://codeberg.org/projectfile/bridge
+  - label: Projectfile Bridges on GitHub
+    type: source-code
+    url: https://github.com/damian-buho/projectfile-bridge
+  - label: Projectfile Bridges on kiota.ch
+    preferred: true
+    type: source-code
+    url: https://kiota.ch/projectfile/bridge
+  - derived: true
+    label: Issues on Codeberg
+    type: bugs
+    url: https://codeberg.org/projectfile/bridge/issues

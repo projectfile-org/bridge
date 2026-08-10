@@ -11,7 +11,7 @@ SPDX-License-Identifier: MIT
 
 ## Our Pledge
 
-We pledge to make participation in projectfile/bridge welcoming, safe, and
+We pledge to make participation in Projectfile Bridges welcoming, safe, and
 equitable for all. We are committed to fostering an environment that respects
 and promotes the dignity, rights, and contributions of all individuals,
 regardless of characteristics including race, ethnicity, caste, color, age,
@@ -70,7 +70,7 @@ consequences for any action they deem in violation of this Code of Conduct:
 
 This Code of Conduct applies within all community spaces — issues, pull
 requests, chat channels, mailing lists, in-person events — and also applies
-when an individual is officially representing projectfile/bridge in public
+when an individual is officially representing Projectfile Bridges in public
 spaces.
 
 ## Attribution

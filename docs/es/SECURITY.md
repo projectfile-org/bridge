@@ -61,7 +61,7 @@ gpg --encrypt --armor --recipient B64C122EE16C3746 message.txt
 
 ## Programa de recompensas
 
-projectfile/bridge no ofrece actualmente un programa de recompensas. Aun así
+Projectfile Bridges no ofrece actualmente un programa de recompensas. Aun así
 agradecemos los informes divulgados de forma responsable — consulta el canal de
 contacto anterior.
 <!-- textlint-enable -->

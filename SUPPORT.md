@@ -9,7 +9,7 @@ SPDX-License-Identifier: MIT
 
 # Getting Support
 
-Thanks for using **projectfile/bridge**!
+Thanks for using **Projectfile Bridges**!
 This document explains where to get help and how to ask effective questions.
 
 ## Before You Ask
@@ -17,12 +17,10 @@ This document explains where to get help and how to ask effective questions.
 Please check these first — your question may already be answered:
 
 - [Issues on Codeberg](https://codeberg.org/projectfile/bridge/issues)
-- [Issues on GitHub](https://github.com/damian-buho/projectfile-bridge/issues)
 
 ## Where to Ask
 
 - **Report a reproducible bug** — [Issues on Codeberg](https://codeberg.org/projectfile/bridge/issues)
-- **Report a reproducible bug** — [Issues on GitHub](https://github.com/damian-buho/projectfile-bridge/issues)
 - **Report a security vulnerability** — [SECURITY.md](SECURITY.md)
 - **Contribute to the project** — [CONTRIBUTING.md](CONTRIBUTING.md)
 
@@ -33,7 +31,7 @@ To help us help you, please include:
 1. **What you’re trying to do** — the goal, not just the error.
 2. **What you tried** — code, commands, config.
 3. **What happened** vs. what you expected.
-4. **Environment** — OS, version of projectfile/bridge, runtime version.
+4. **Environment** — OS, version of Projectfile Bridges, runtime version.
 5. **A minimal reproducible example**, if possible.
 
 See [Stack Overflow’s MCVE guide](https://stackoverflow.com/help/minimal-reproducible-example)

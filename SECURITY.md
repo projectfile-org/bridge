@@ -60,5 +60,5 @@ gpg --encrypt --armor --recipient B64C122EE16C3746 message.txt
 
 ## Bug Bounty
 
-projectfile/bridge does not currently run a bug bounty programme. We still welcome
+Projectfile Bridges does not currently run a bug bounty programme. We still welcome
 responsibly disclosed reports — see the contact channel above.

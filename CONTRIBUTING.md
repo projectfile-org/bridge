@@ -5,7 +5,7 @@ SPDX-License-Identifier: MIT
 
 [Español](docs/es/CONTRIBUTING.md) · [Українська](docs/uk/CONTRIBUTING.md)
 
-# Contributing to projectfile/bridge
+# Contributing to Projectfile Bridges
 
 First off, thanks for taking the time to contribute! ❤️
 
@@ -30,6 +30,7 @@ All types of contributions are encouraged and valued. See the [Table of Contents
 - [Reporting Bugs](#reporting-bugs)
 - [Suggesting Enhancements](#suggesting-enhancements)
 - [Conventions](#conventions)
+- [Join The Project Team](#join-the-project-team)
 
 ## I Have a Question
 
@@ -77,7 +78,7 @@ Once it’s filed:
 
 ## Suggesting Enhancements
 
-This section guides you through submitting an enhancement suggestion for projectfile/bridge, **including completely new features and minor improvements to existing functionality**. Following these guidelines will help maintainers and the community to understand your suggestion and find related suggestions.
+This section guides you through submitting an enhancement suggestion for Projectfile Bridges, **including completely new features and minor improvements to existing functionality**. Following these guidelines will help maintainers and the community to understand your suggestion and find related suggestions.
 
 <!-- omit in toc -->
 ### Before Submitting an Enhancement
@@ -95,10 +96,14 @@ Enhancement suggestions are tracked as [issues](https://codeberg.org/projectfile
 - Use a **clear and descriptive title** for the issue to identify the suggestion.
 - Provide a **step-by-step description of the suggested enhancement** in as much detail as possible.
 - **Describe the current behavior** and **explain which behavior you expected to see instead** and why. At this point you can also tell which alternatives do not work for you.
-- **Explain why this enhancement would be useful** to most projectfile/bridge users. You may also want to point out the other projects that solved it better and which could serve as inspiration.
+- **Explain why this enhancement would be useful** to most Projectfile Bridges users. You may also want to point out the other projects that solved it better and which could serve as inspiration.
 
 ## Conventions
 
 - **Workflow:** Git Flow — feature branches from `develop`, release branches from `develop`, hotfix branches from `main`.
 - **Commits:** [Conventional Commits](https://www.conventionalcommits.org/)
 - **Versioning:** [Semantic Versioning](https://semver.org/)
+
+## Join The Project Team
+
+Interested in joining? Reach out at <https://dbuho.me>.
