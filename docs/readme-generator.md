@@ -714,6 +714,12 @@ vocabulary shipped first and no later run could correct it. `--force` applies
 to `tags` only; `label` and `preferred` stay gap-fill, because nothing
 generates a better label than the user.
 
+**`--force` replaces the list, it does not merge it.** A host proposes only
+host facts, so a link that also declares a project decision — `ci`, `releases`,
+`related` — loses it. Use `--force` to repair a vocabulary the scanner itself
+wrote; edit by hand where a human added a tag the host table has never heard
+of.
+
 Example render:
 
 ```markdown

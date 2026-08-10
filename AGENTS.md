@@ -146,7 +146,9 @@ That is how a badge branches in a grammar with no conditional.
 `pfmodel.SetLinkTags` is the sole writer. It treats an absent `tags` key as the
 gap, so a declared list — `tags: []` included — wins. `scan --force` overrides
 that, and exists because gap-fill alone would make the first fleet-wide scan
-irreversible. It applies to `tags` only.
+irreversible. It applies to `tags` only, and it REPLACES rather than merges: a
+link that also declares `ci` or `releases` loses them, because no host proposes
+a project decision. Force what the scanner wrote; hand-edit what a human added.
 
 **Do not point a shared m6e fragment at an alias until the fleet declares it.**
 Slugs are unchanged and keep working, so the mechanism is purely additive; but a
