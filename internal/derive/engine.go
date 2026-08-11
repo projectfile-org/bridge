@@ -12,9 +12,9 @@
 //     page (npmjs.com, pypi.org, packagist.org, crates.io). Output
 //     lands as [[links]] entries with type = "package-registry".
 //
-// A third package, ociregistries/, feeds AddVirtual rather than Apply: it
-// composes container-image pull references, which are read at render time and
-// never written to disk.
+// A third package, ocisinks/, feeds AddVirtual rather than Apply: it composes
+// container-image pull references, which are read at render time and never
+// written to disk.
 //
 // The engine is invoked from internal/bridge/core/runsync.go after
 // person-conflict emission and before the Write call, so every sync run keeps
@@ -31,8 +31,9 @@ package derive
 import (
 	"kiota.ch/projectfile/core/v2/pkg/genlog"
 	"kiota.ch/projectfile/core/v2/pkg/projectfile"
+	"kiota.ch/projectfile/core/v2/pkg/sink"
 	"projectfile.org/projectfile/bridge/internal/derive/forges"
-	"projectfile.org/projectfile/bridge/internal/derive/ociregistries"
+	"projectfile.org/projectfile/bridge/internal/derive/ocisinks"
 	"projectfile.org/projectfile/bridge/internal/derive/registries"
 	"projectfile.org/projectfile/bridge/internal/pfmodel"
 )
@@ -171,8 +172,8 @@ const remotesKey = "remotes"
 //
 //   - org.projectfile.forge.remotes — the host/owner/repo/kind coordinates of
 //     every source-code mirror.
-//   - org.projectfile.registries.<slug>.ref — the composed pull reference of
-//     every container registry the project publishes to.
+//   - org.projectfile.sinks.<name>.ref — the composed pull reference of every
+//     destination the project publishes its images to.
 //
 // Callers run it right after reading the merged document, so both the templates
 // (via `pf`) and the ${…} interpolator (via the address grammar) see the derived
@@ -185,7 +186,7 @@ func AddVirtual(pf *projectfile.Document) {
 		return
 	}
 	addForgeRemotes(pf)
-	addRegistryRefs(pf)
+	addSinkRefs(pf)
 }
 
 // addForgeRemotes parks the mirror coordinates under the forge namespace.
@@ -212,17 +213,17 @@ func addForgeRemotes(pf *projectfile.Document) {
 	projectfile.SetExtension(pf, pfmodel.ForgeExtensionNS, merged)
 }
 
-// addRegistryRefs replaces the registries namespace with the composed view: the
-// same entries, each carrying a concrete `ref` instead of a template. It REPLACES
+// addSinkRefs replaces the sinks namespace with the composed view: the same
+// entries, each carrying a concrete `ref` instead of a template. It REPLACES
 // rather than merges because every key it writes it also computed — a template
 // left beside its own composition is a second spelling of one reference, and the
-// two would drift the moment a registry moved.
-func addRegistryRefs(pf *projectfile.Document) {
-	refs := ociregistries.Refs(pf)
+// two would drift the moment a sink moved.
+func addSinkRefs(pf *projectfile.Document) {
+	refs := ocisinks.Refs(pf)
 	if len(refs) == 0 {
 		return
 	}
-	projectfile.SetExtension(pf, pfmodel.RegistriesExtensionNS, refs)
+	projectfile.SetExtension(pf, sink.ExtensionNS, refs)
 }
 
 // stringSet builds a quick lookup map from a string slice. Used for

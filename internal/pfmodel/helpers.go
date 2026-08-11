@@ -48,7 +48,6 @@ const (
 	I18NExtensionNS            = "org.projectfile.i18n"
 	FragmentsExtensionNS       = "org.projectfile.fragments"
 	ArtifactsExtensionNS       = "org.projectfile.artifacts"
-	RegistriesExtensionNS      = "org.projectfile.registries"
 )
 
 // PriorityDefault is the priority an item carries when it declares none. A

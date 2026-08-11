@@ -106,7 +106,7 @@ bridge/
     ├── scanners/           stack + git scanners (core registry)
     ├── source/             `init` ecosystem auto-detection (reuses bridge parsers)
     ├── scaffold/           interactive `init` TUI (runs scanners)
-    ├── derive/             inference engine (repo URL → forge links, stack → package registries, registry entries → pull refs)
+    ├── derive/             inference engine (repo URL → forge links, stack → package registries, sink entries → pull refs)
     └── warn/               warning ledger + end-of-run summary (+ fan-out handoff)
 ```
 
@@ -143,36 +143,47 @@ kind `forgejo` and shields calls its route `gitea`. A fragment declares one
 badge per route and lets the drop rule render the one whose mirror exists.
 That is how a badge branches in a grammar with no conditional.
 
-### Container registries (`internal/derive/ociregistries`)
+### Publish sinks (`internal/derive/ocisinks`)
 
-`org.projectfile.registries` is the OCI plane: where a project’s IMAGES land. A
-peer of the forge plane, never derived from it — ECR has no repositories, and
-Codeberg has an issue tracker but no build minutes. Do not confuse the package
-with its sibling `derive/registries`, which infers PACKAGE index pages (npm,
-PyPI, crates.io) from the detected stack.
+`org.projectfile.sinks` is the OCI plane: where a project’s IMAGES land. A
+**sink** is a named destination whose name is a LABEL — nothing reads meaning
+into it, so two sinks may address one host under two accounts, and credentials
+therefore key on the sink name rather than the host. A peer of the forge plane,
+never derived from it: ECR has no repositories, and Codeberg has an issue
+tracker but no build minutes. Do not confuse the package with its sibling
+`derive/registries`, which infers PACKAGE index pages (npm, PyPI, crates.io)
+from the detected stack.
 
-`Refs()` composes each entry’s `ref` template and feeds **`AddVirtual`, not
-`Apply`**. That split is load-bearing: `Apply` proposes changes the caller
-PERSISTS, and the fleet’s registry entries arrive through an include, so a
-derive write would copy include data into every base document. `AddVirtual`
-computes into the in-memory merged document only, where `forge.remotes` lives.
+**The composition is not here.** `core/pkg/sink` owns it, and this package binds
+only the COORDINATES — this project’s `image.basename` and `image.tag`. That
+split is what lets the same composer answer “where do I push this project” here
+and “where does this project’s BASE image live” in `pf-cli sink ref`, where the
+coordinates name a foreign project. The reader lives in core for the same
+reason: cli, bridge and ci-resolver must not each own a list of the destinations.
 
-Only `${registry.host}` and `${registry.owner}` are substituted there. They are
-ENTRY-scoped — “the entry this template is written on” — and the `${…}` grammar
-starts at the document root with no notion of a current entry. Everything else
-(`${image.…}`, `{AXIS}`) is left verbatim for the layers that already resolve
-it; `interp.walk` recurses into a resolved value, so a composed ref carrying
-`${image.flatname}` is expanded by machinery that was already there. Keep that
-boundary, or this package becomes a second template engine.
+`Refs()` feeds **`AddVirtual`, not `Apply`**. That split is load-bearing: `Apply`
+proposes changes the caller PERSISTS, and the fleet’s sink entries arrive through
+an include, so a derive write would copy include data into every base document.
+`AddVirtual` computes into the in-memory merged document only, where
+`forge.remotes` lives.
+
+A composed ref is COMPLETE — every `${…}` resolved — or it is DROPPED. A `{AXIS}`
+placeholder survives because it carries no `$`, and the readme’s `expandAxes`
+runs after interpolation, so one composed ref still fans out into one pull line
+per matrix cell. Refusing a half-resolved ref is the load-bearing half: a
+reference that silently lost a segment is a push to the wrong repository.
 
 Every composed entry carries a `role`, defaulting to `primary`, because **a bare
 `{}` projection admits no trailing field** — core allows only `keys`/`values`
 after one, so `.ref` is reachable across a mapping ONLY through a `{k=v}`
 selector. An entry with no role would be addressable by nothing.
 
-A document declaring no registries namespace gets one primary entry synthesized
-from the legacy `org.projectfile.readme.registry` scalar, so the ~130 projects
-that predate the namespace render an identical pull line with no edit.
+A document declaring no sinks namespace gets one primary entry synthesized from
+the legacy `org.projectfile.readme.registry` scalar, so the ~130 projects that
+predate the namespace render an identical pull line with no edit. That fallback
+is a readme concern and lives HERE, not in core: `pf-cli sink` reports the
+absence instead, because the build plane must refuse an unrecognised destination
+rather than guess one.
 
 `pfmodel.SetLinkTags` is the sole writer. It treats an absent `tags` key as the
 gap, so a declared list — `tags: []` included — wins. `scan --force` overrides

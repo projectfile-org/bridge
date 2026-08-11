@@ -396,22 +396,24 @@ identified only by its ports still has a label. The kind’s display text comes
 from the message catalog under `artifact.kind.<kind>`, so a project inventing a
 kind gets a correct line immediately and only its label needs a catalog entry.
 
-## Registries
+## Sinks
 
-`org.projectfile.registries` lists the places a project’s container images land.
-It is a **peer** of the forge plane, never derived from it: AWS ECR has no
-repositories at all, and Codeberg has an issue tracker but no build minutes, so
-“where the source lives” and “where the images live” cannot be read off one
-another.
+`org.projectfile.sinks` lists the places a project’s container images land. A
+**sink** is a named destination, and the name is a **label**: nothing reads
+meaning into it, so two sinks may address one host under two accounts. It is a
+**peer** of the forge plane, never derived from it: AWS ECR has no repositories
+at all, and Codeberg has an issue tracker but no build minutes, so “where the
+source lives” and “where the images live” cannot be read off one another.
 
 ```yaml
 org:
   projectfile:
-    registries:
+    sinks:
+      hub-main: { ref: "docker.io/damianbuho/${image.flatname}:${image.tag}", priority: 70 }
+      hub-oss: { ref: "docker.io/buho-oss/${image.flatname}:${image.tag}", priority: 65 }
       ghcr:
         host: ghcr.io
         owner: damian-buho
-        ref: ${registry.host}/${registry.owner}/${image.flatname}:${image.tag}
         priority: 90
       kiota:
         host: kiota.ch
@@ -419,51 +421,76 @@ org:
         priority: 10
 ```
 
-| Key        | Meaning                                              |
-| ---------- | ---------------------------------------------------- |
-| `host`     | the registry authority. **Required**                 |
-| `owner`    | the account every image nests under                  |
-| `ref`      | the path template; unset means the default applies   |
-| `role`     | `primary` (the default) or `fallback`                |
-| `priority` | render order, higher first                           |
+| Key        | Meaning                                                  |
+| ---------- | -------------------------------------------------------- |
+| `ref`      | the reference template; unset means the default applies  |
+| `host`     | the authority the default template addresses             |
+| `owner`    | the account the default template nests every image under |
+| `role`     | `primary` (the default) or `fallback`                    |
+| `priority` | render order, higher first                               |
 
-An entry without a `host` is **skipped**: a registry with no authority addresses
-nothing, and composing from it prints a pull line beginning with a slash.
-Declare an `owner` only where the registry forces one account on the whole fleet
-(GHCR, ECR); see [Priority](#priority) for how `priority` is read.
+Every **other** key is opaque data the entry’s own template may address as
+`${sink.<key>}`, and that value may itself interpolate — which is what keeps the
+vocabulary open: an unusual destination costs a template, never a schema change.
+
+An entry declaring neither a `ref` nor a `host` is **skipped**: it addresses no
+authority, and composing from it prints a pull line beginning with a slash.
+Declare an `owner` only where the destination forces one account on the whole
+fleet (GHCR, ECR); see [Priority](#priority) for how `priority` is read.
 
 ### The `ref` template
 
 A template uses the two grammars that already exist — `${…}` field addresses and
-`{AXIS}` matrix placeholders — plus two **entry-scoped** variables,
-`${registry.host}` and `${registry.owner}`, which mean “the entry this template
-is written on”. Those two are substituted when the document is read; everything
-else is left for the layers that already resolve it.
+`{AXIS}` matrix placeholders. It is expanded by the same spec §3.8 engine
+everything else uses, against a scratch document carrying the sink’s own keys
+under `sink` and the image coordinates under `image`. There is no second
+template engine and no entry-scoped special case.
 
 The default, applied when an entry declares no `ref`:
 
 ```text
-${registry.host}/[${registry.owner}/]${image.basename}:${image.tag}
+${sink.host}/[${sink.owner}/]${image.basename}:${image.tag}
 ```
 
 The owner segment appears only for an entry that declares an owner, and that
 asymmetry is the point: `image.basename` **already** carries the project’s
 namespace, so adding `${image.namespace}` would publish
-`kiota.ch/b19/b19/ubuntu`.
+`kiota.ch/b19/b19/ubuntu`. A template that names `${sink.owner}` on an entry
+declaring none still resolves — the variable falls back to `${image.namespace}`.
+
+The image coordinates are total over the basename, so any path grammar is a
+template rather than a code change. `b19/ubuntu/resolute` decomposes both ways:
+
+| Address              | Value                 | Split                       |
+| -------------------- | --------------------- | --------------------------- |
+| `${image.basename}`  | `b19/ubuntu/resolute` | the whole path              |
+| `${image.flatname}`  | `b19-ubuntu-resolute` | the whole path, flattened   |
+| `${image.namespace}` | `b19/ubuntu`          | before the last label       |
+| `${image.name}`      | `resolute`            | the last label              |
+| `${image.root}`      | `b19`                 | the first label             |
+| `${image.path}`      | `ubuntu/resolute`     | after the first label       |
+| `${image.flatpath}`  | `ubuntu-resolute`     | after the first, flattened  |
+| `${image.tag}`       | `latest`              | `ci.tag`, `:tag`, or latest |
 
 A template only recomposes the parts; it never **relocates** an axis. Where the
 series sits — a path segment, a tag suffix, a hyphen — is the project’s decision,
-taken once in `ci.image` and inherited by every registry:
+taken once in `ci.image` and inherited by every sink:
 
-| Wanted             | `ci.image`                       | registry `ref` tail                                  |
+| Wanted             | `ci.image`                       | sink `ref` tail                                      |
 | ------------------ | -------------------------------- | ---------------------------------------------------- |
 | Series as a path   | `b19/ubuntu/{B19_UBUNTU_SERIES}` | `${image.basename}:${image.tag}`                     |
 | Series in the tag  | `b19/ubuntu`                     | `${image.basename}:${image.tag}-{B19_UBUNTU_SERIES}` |
-| Flattened          | any of the above                 | `${registry.owner}/${image.flatname}:${image.tag}`   |
+| Flattened          | any of the above                 | `${sink.owner}/${image.flatname}:${image.tag}`       |
 
-The last row is what a registry with no nesting needs: GHCR and ECR put every
-image of an account side by side, so `b19/ubuntu/resolute` has to travel as
+The last row is what a destination with no nesting needs: Docker Hub holds
+exactly `namespace/name`, so `b19/ubuntu/resolute` has to travel as
 `b19-ubuntu-resolute`.
+
+A composed reference is **complete** — every `${…}` resolved — or it is dropped.
+A half-resolved reference is never rendered: one that silently lost a segment is
+a push to the wrong repository. A `{AXIS}` placeholder is not unresolved; it
+carries no `$` and is left for the matrix layer, which is what lets one composed
+reference still fan out into one pull line per published cell.
 
 ### Why every entry carries a `role`
 
@@ -475,13 +502,13 @@ entry carries, which is why an entry that declares no role is composed as
 
 ```yaml
 commands:
-  - docker pull ${org.projectfile.registries{role=primary}.ref}
+  - docker pull ${org.projectfile.sinks{role=primary}.ref}
 ```
 
-### Projects that declare no registries
+### Projects that declare no sinks
 
-A document with no `registries` namespace gets **one** primary entry synthesized
-from the legacy `org.projectfile.readme.registry` scalar. That is what lets the
+A document with no `sinks` namespace gets **one** primary entry synthesized from
+the legacy `org.projectfile.readme.registry` scalar. That is what lets the
 projects which never heard of this namespace render the exact pull line they
 rendered before it existed, with no edit and no `when:` clause in the shared
 fragment. A project with neither declares no image and renders no pull line.

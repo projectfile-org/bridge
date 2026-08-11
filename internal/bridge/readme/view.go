@@ -13,9 +13,9 @@ import (
 	"strings"
 
 	"kiota.ch/projectfile/core/v2/pkg/genlog"
+	"kiota.ch/projectfile/core/v2/pkg/interp"
 	"kiota.ch/projectfile/core/v2/pkg/projectfile"
 	"projectfile.org/projectfile/bridge/internal/bridge/core"
-	"projectfile.org/projectfile/bridge/internal/interp"
 	"projectfile.org/projectfile/bridge/internal/pfmodel"
 )
 
@@ -317,7 +317,8 @@ var healthFiles = []string{
 // or unknown — file falls back to its bare name, never to an empty link.
 func healthFileLabel(file, lang string) string {
 	key := keyPrefixPolicy + strings.ReplaceAll(
-		strings.ToLower(strings.TrimSuffix(file, filepath.Ext(file))), "_", "-")
+		strings.ToLower(strings.TrimSuffix(file, filepath.Ext(file))), "_", "-",
+	)
 	if label, ok := lookupMessage(lang, key); ok {
 		return label
 	}
