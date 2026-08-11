@@ -111,7 +111,7 @@ func Main(binName string) {
 		RunE:          runBridge,
 	}
 	root.Flags().BoolVarP(&bridgeForce, "force", "f", false,
-		"overwrite even if the file lacks the pf-cli marker or is scaffold-once")
+		"overwrite even if the file lacks the pf-cli marker or is scaffold-once; on a two-way bridge, rewrite the file even when every field already agrees")
 	root.Flags().BoolVarP(&bridgeDryRun, "dry-run", "n", false,
 		"show what would change without writing")
 	root.Flags().BoolVar(&bridgeNoCreate, "no-create", false,

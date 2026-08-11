@@ -105,7 +105,11 @@ func RunSync(syn Syncer, pf *projectfile.Document, opts Options) (*Result, error
 	}
 
 	if !opts.DryRun {
-		if res.ExtChanged {
+		// Force rewrites the external file even when no mapped field moved.
+		// The writer also owns the generated header (REUSE block, pedigree
+		// banner), and a header-only fix reaches no repository otherwise —
+		// every field agrees, so the write the fix needs never fires.
+		if res.ExtChanged || opts.Force {
 			if err := syn.Write(opts.Dir, workExt); err != nil {
 				return nil, fmt.Errorf("write %s: %w", syn.Filename(), err)
 			}
