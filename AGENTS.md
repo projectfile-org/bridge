@@ -323,17 +323,17 @@ Every generated artefact opens with the same two-part header, composed in
   The bare separator is what `reuse annotate` writes for every line-comment
   dialect — without it a generated file and a hand-annotated source file
   disagree on their own header.
-- **Markdown files** get `REUSEHeader(pf, StyleHTML)` — ONE comment, no blank
-  line between the tags — or `ManagedREUSEHeader(pf)`, the same comment with
-  `pf-cli-managed: yes` folded in as its last line.
+- **Markdown files** get `ManagedREUSEHeader(pf)`: ONE comment, no empty line
+  between the tags, `pf-cli-managed: yes` folded in as its last line.
 
-**The sentinel follows the policy, never the template.** `RenderLocalized` folds
-it in exactly when `LocalizedSpec.Policy.Marker` is set, and every bridge passes
-its own `Policy()` through, so a header cannot claim an ownership `writeOutput`
-does not enforce. A template that emits its own marker line is the bug this
-replaced: `SUPPORT.md` shipped the sentinel while its policy refused to
-overwrite the file at all. `core.MarkerHTML` survives for `HasMarker` only —
-files generated before the fold still read as managed.
+**Every generated file carries the sentinel, whatever its policy.** The line
+warns a human not to edit what the next run overwrites; that warning is needed
+even where the write gate is `ScaffoldOnce` rather than `Marker`, so
+`RenderLocalized` folds it into every file it writes and no bridge decides.
+A template that emitted its own marker line is the bug this replaced —
+`SUPPORT.md` carried one and `CONTRIBUTING.md` did not, on identical policies.
+`core.MarkerHTML` survives for `HasMarker` only: files generated before the
+fold still read as managed.
 
 ## Localized community health files
 

@@ -64,7 +64,7 @@ func (Bridge) RequiredFields(pf *projectfile.Document) []core.Missing {
 	}}
 }
 
-func (b Bridge) Render(pf *projectfile.Document, opts core.Options) (core.Output, error) {
+func (Bridge) Render(pf *projectfile.Document, opts core.Options) (core.Output, error) {
 	ext, err := pfmodel.GetSecurityExtension(pf)
 	if err != nil {
 		return core.Output{}, err
@@ -107,7 +107,6 @@ func (b Bridge) Render(pf *projectfile.Document, opts core.Options) (core.Output
 
 	return core.RenderLocalized(pf, core.LocalizedSpec{
 		Filename: filenameSecurity,
-		Policy:   b.Policy(),
 		Langs:    pfmodel.Languages(pf),
 		View: func(lang string) any {
 			strLang := core.ResolveLang(lang, pf)

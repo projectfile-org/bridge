@@ -34,7 +34,7 @@ func (Bridge) FullPath(dir string, _ *projectfile.Document) string {
 	return core.PathOrDefault(dir, filenameSupport, filenameSupport)
 }
 
-func (b Bridge) Render(pf *projectfile.Document, opts core.Options) (core.Output, error) {
+func (Bridge) Render(pf *projectfile.Document, opts core.Options) (core.Output, error) {
 	ext, err := pfmodel.GetSupportExtension(pf)
 	if err != nil {
 		return core.Output{}, err
@@ -74,7 +74,6 @@ func (b Bridge) Render(pf *projectfile.Document, opts core.Options) (core.Output
 
 	return core.RenderLocalized(pf, core.LocalizedSpec{
 		Filename: filenameSupport,
-		Policy:   b.Policy(),
 		Langs:    pfmodel.Languages(pf),
 		View: func(lang string) any {
 			// strLang is the concrete tag for string resolution: the render

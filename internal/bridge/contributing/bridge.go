@@ -24,9 +24,10 @@ const (
 	socialMastodon       = "mastodon"
 )
 
-// Bridge renders CONTRIBUTING.md as a scaffold-once artefact. Per spec the
-// file is the user's after creation — no pf-cli-managed marker, no
-// re-overwrite without --force.
+// Bridge renders CONTRIBUTING.md as a scaffold-once artefact: the file is the
+// user's after creation, so no run overwrites it without --force. It still
+// carries the pf-cli-managed sentinel every generated file carries — that line
+// warns a reader before they edit, which --force is exactly what defeats.
 type Bridge struct{}
 
 func (Bridge) Name() string             { return "contributing" }
@@ -51,7 +52,7 @@ func (Bridge) FullPath(dir string, _ *projectfile.Document) string {
 	return core.PathOrDefault(dir, filenameContributing, filenameContributing)
 }
 
-func (b Bridge) Render(pf *projectfile.Document, opts core.Options) (core.Output, error) {
+func (Bridge) Render(pf *projectfile.Document, opts core.Options) (core.Output, error) {
 	ext, err := pfmodel.GetContributingExtension(pf)
 	if err != nil {
 		return core.Output{}, err
@@ -142,7 +143,6 @@ func (b Bridge) Render(pf *projectfile.Document, opts core.Options) (core.Output
 	// independent and resolved once above.
 	return core.RenderLocalized(pf, core.LocalizedSpec{
 		Filename: filenameContributing,
-		Policy:   b.Policy(),
 		Langs:    pfmodel.Languages(pf),
 		View: func(lang string) any {
 			// strLang resolves the render sentinel to the default language for

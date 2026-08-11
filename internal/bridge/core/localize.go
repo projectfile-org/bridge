@@ -248,11 +248,6 @@ func h1Offset(body []byte) int {
 type LocalizedSpec struct {
 	// Filename is the canonical on-disk name, e.g. "CONTRIBUTING.md".
 	Filename string
-	// Policy is the owning bridge's Policy — pass Policy() straight through.
-	// RenderLocalized folds the pf-cli-managed sentinel into the header
-	// exactly when Marker is set, so the header can never claim an ownership
-	// the write gate does not enforce.
-	Policy Policy
 	// Langs are the extra languages from org.projectfile.i18n.languages.
 	Langs []string
 	// View returns the template data for one language, called once per
@@ -275,10 +270,10 @@ func RenderLocalized(pf *projectfile.Document, spec LocalizedSpec, opts Options)
 	translated := translatableLangs(spec.Filename, spec.Langs, opts.Dir)
 	defLang := pfmodel.DefaultLanguage(pf)
 
-	header := []byte(REUSEHeader(pf, StyleHTML))
-	if spec.Policy.Marker {
-		header = []byte(ManagedREUSEHeader(pf))
-	}
+	// Every file here is generated, so every file says so. The sentinel tells a
+	// human not to edit what the next run overwrites — that warning is needed
+	// whatever the write policy is, and the policy gate is a separate concern.
+	header := []byte(ManagedREUSEHeader(pf))
 	out := Output{Files: map[string][]byte{}}
 	for _, lang := range append([]string{""}, translated...) {
 		tmpl := LocalizedTemplateName(spec.Filename, lang)

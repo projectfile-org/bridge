@@ -44,7 +44,7 @@ func (Bridge) FullPath(dir string, _ *projectfile.Document) string {
 // fail, a DEI file with an unfilled reporting slot is still a usable draft).
 func (Bridge) RequiredFields(_ *projectfile.Document) []core.Missing { return nil }
 
-func (b Bridge) Render(pf *projectfile.Document, opts core.Options) (core.Output, error) {
+func (Bridge) Render(pf *projectfile.Document, opts core.Options) (core.Output, error) {
 	ext, err := pfmodel.GetDEIExtension(pf)
 	if err != nil {
 		return core.Output{}, err
@@ -63,7 +63,6 @@ func (b Bridge) Render(pf *projectfile.Document, opts core.Options) (core.Output
 
 	return core.RenderLocalized(pf, core.LocalizedSpec{
 		Filename: filenameDEI,
-		Policy:   b.Policy(),
 		Langs:    pfmodel.Languages(pf),
 		View: func(lang string) any {
 			strLang := core.ResolveLang(lang, pf)

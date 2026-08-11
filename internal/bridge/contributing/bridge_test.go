@@ -138,6 +138,18 @@ func TestBridgePolicyScaffoldOnce(t *testing.T) {
 		"CONTRIBUTING.md must use ScaffoldOnce policy")
 }
 
+// TestRenderCarriesTheSentinel pins the rule for a file the write gate never
+// overwrites on its own: the sentinel is a warning to the human reader, so a
+// scaffold-once artefact carries it exactly like a marker-policy one.
+func TestRenderCarriesTheSentinel(t *testing.T) {
+	out, err := contributing.Bridge{}.Render(docWithSourceCodeLinks(), core.Options{Offline: true})
+	require.NoError(t, err)
+	body := out.Files["CONTRIBUTING.md"]
+	assert.Contains(t, string(body), core.MarkerInner+"\n-->",
+		"the sentinel must be folded into the SPDX header")
+	assert.True(t, core.HasMarker(body), "the header must read as managed")
+}
+
 // withContributing attaches an org.projectfile.contributing extension to pf.
 func withContributing(pf *projectfile.Document, ext map[string]any) *projectfile.Document {
 	if len(ext) > 0 {
