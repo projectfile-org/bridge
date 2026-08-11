@@ -30,11 +30,11 @@ const (
 	keyDescription = "description"
 	keyGoal        = "goal"
 	// CI node-name and field fixtures shared across the goal-filter tests.
-	nodePublished       = "published"
-	nodeAnalyze         = "analyze"
-	nodeDevContainer    = "dev-container"
-	nodeReadyToPublish  = "ready-to-publish"
-	keyTags             = "tags"
+	nodePublished      = "published"
+	nodeAnalyze        = "analyze"
+	nodeDevContainer   = "dev-container"
+	nodeReadyToPublish = "ready-to-publish"
+	keyTags            = "tags"
 	// devLoopCmd is the command the dev-loop line advertises — the node launcher
 	// m6e derives for the dev-container node (core/ci/010-select.mk), so the line
 	// stays in sync with the catalog (messages/<lang>.yaml building.intro.dev).
@@ -49,6 +49,7 @@ const (
 	refImage = "docker pull ${org.projectfile.artifacts{kind=image}.ref}"
 	// Fixture strings shared across the matrix, goal and link tests.
 	descPublish    = "Publish"
+	descAnalyze    = "Analyze"
 	urlExampleRepo = "https://example.com/repo"
 	urlExampleX    = "https://x"
 )
@@ -386,7 +387,7 @@ func TestReadmeGoalsPrefersTagged(t *testing.T) {
 	pf := minimalDoc(t)
 	pf.Extensions = ciNodes(
 		map[string]any{keyName: nodePublished, keyGoal: true, keyDescription: descPublish, keyTags: []any{goalTag}},
-		map[string]any{keyName: nodeAnalyze, keyGoal: true, keyDescription: "Analyze"},
+		map[string]any{keyName: nodeAnalyze, keyGoal: true, keyDescription: descAnalyze},
 	)
 	got := buildReadmeGoals(pf)
 	require.Len(t, got, 1)
@@ -400,7 +401,7 @@ func TestReadmeGoalsFallbackAllWhenNoneTagged(t *testing.T) {
 	pf := minimalDoc(t)
 	pf.Extensions = ciNodes(
 		map[string]any{keyName: nodePublished, keyGoal: true, keyDescription: descPublish},
-		map[string]any{keyName: nodeAnalyze, keyGoal: true, keyDescription: "Analyze"},
+		map[string]any{keyName: nodeAnalyze, keyGoal: true, keyDescription: descAnalyze},
 	)
 	got := buildReadmeGoals(pf)
 	require.Len(t, got, 2)
@@ -427,7 +428,7 @@ func TestReadmeGoalsAdmitsTaggedNonGoal(t *testing.T) {
 	pf := minimalDoc(t)
 	pf.Extensions = ciNodes(
 		map[string]any{keyName: nodeReadyToPublish, keyDescription: "Run the pseudo-CI pipeline", keyTags: []any{goalTag}}, // not goal:true
-		map[string]any{keyName: nodeAnalyze, keyGoal: true, keyDescription: "Analyze"},                                      // goal, no tag
+		map[string]any{keyName: nodeAnalyze, keyGoal: true, keyDescription: descAnalyze},                                   // goal, no tag
 	)
 	got := buildReadmeGoals(pf)
 	require.Len(t, got, 1)
