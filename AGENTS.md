@@ -312,6 +312,29 @@ The deep subsystem docs (bridge interfaces, sync/render algorithms, per-bridge
 notes, how-to-add-a-bridge, forge/scanner/derive detail) currently live in
 [../core/AGENTS.md](../core/AGENTS.md) and are being migrated here.
 
+## Generated file headers
+
+Every generated artefact opens with the same two-part header, composed in
+`internal/bridge/core/reuse.go` and nowhere else:
+
+- **Line-comment files** get `REUSEHeader(pf, StyleHash)`: copyright lines, a
+  bare `#`, the licence line. That is the `.gitignore` family, `FUNDING.yml`,
+  `.releaserc.yaml`, `.yamllint`, `.gitattributes`, `CODEOWNERS`, `CITATION.cff`.
+  The bare separator is what `reuse annotate` writes for every line-comment
+  dialect — without it a generated file and a hand-annotated source file
+  disagree on their own header.
+- **Markdown files** get `REUSEHeader(pf, StyleHTML)` — ONE comment, no blank
+  line between the tags — or `ManagedREUSEHeader(pf)`, the same comment with
+  `pf-cli-managed: yes` folded in as its last line.
+
+**The sentinel follows the policy, never the template.** `RenderLocalized` folds
+it in exactly when `LocalizedSpec.Policy.Marker` is set, and every bridge passes
+its own `Policy()` through, so a header cannot claim an ownership `writeOutput`
+does not enforce. A template that emits its own marker line is the bug this
+replaced: `SUPPORT.md` shipped the sentinel while its policy refused to
+overwrite the file at all. `core.MarkerHTML` survives for `HasMarker` only —
+files generated before the fold still read as managed.
+
 ## Localized community health files
 
 `org.projectfile.i18n` is the **document-level** localization declaration. Two

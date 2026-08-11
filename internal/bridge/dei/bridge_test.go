@@ -194,11 +194,15 @@ func TestBridgeRenderIsMarkerDoc(t *testing.T) {
 	out, err := b.Render(pf, core.Options{Offline: true})
 	require.NoError(t, err)
 	require.Contains(t, out.Files, "DEI.md")
-	// RenderLocalized prepends the REUSE header (an SPDX HTML comment) before
-	// the body, so the pf-cli marker is the second comment in the file — it
-	// must be present, but not necessarily at offset 0.
-	assert.Contains(t, string(out.Files["DEI.md"]), core.MarkerHTML,
-		"DEI.md must carry the pf-cli marker comment")
+	// RenderLocalized folds the sentinel into the SPDX header comment for a
+	// Marker-policy bridge, so the file opens with one comment carrying both.
+	body := string(out.Files["DEI.md"])
+	assert.Contains(t, body, core.MarkerInner+"\n-->",
+		"DEI.md must carry the sentinel folded into the SPDX header")
+	assert.NotContains(t, body, core.MarkerHTML,
+		"the standalone marker comment must not survive the fold")
+	assert.True(t, core.HasMarker([]byte(body)),
+		"the folded header must stay detectable as managed")
 }
 
 // withDEI attaches an org.projectfile.dei extension to pf.

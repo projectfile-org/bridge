@@ -5,7 +5,6 @@
 package security
 
 type securityView struct {
-	Marker            string
 	ProjectName       string
 	Contact           string
 	ReportURL         string

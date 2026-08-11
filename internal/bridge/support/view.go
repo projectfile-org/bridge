@@ -12,7 +12,6 @@ import (
 )
 
 type supportView struct {
-	Marker       string
 	ProjectName  string
 	BeforeLinks  []beforeLink
 	Rows         []tableRow

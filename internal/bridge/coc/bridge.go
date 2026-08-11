@@ -65,7 +65,7 @@ func (Bridge) RequiredFields(pf *projectfile.Document) []core.Missing {
 	}}
 }
 
-func (Bridge) Render(pf *projectfile.Document, opts core.Options) (core.Output, error) {
+func (b Bridge) Render(pf *projectfile.Document, opts core.Options) (core.Output, error) {
 	email, emailSrc := contactEmail(pf)
 	if email == "" {
 		return core.Output{}, fmt.Errorf("CODE_OF_CONDUCT.md: no contact email available — add a [[people]] entry with role 'community' (or 'maintainer') and email, or set [org.projectfile.security].contact")
@@ -93,11 +93,11 @@ func (Bridge) Render(pf *projectfile.Document, opts core.Options) (core.Output, 
 	genlog.Decision("scope", scope, "[org.projectfile.code-of-conduct].scope", "default")
 	return core.RenderLocalized(pf, core.LocalizedSpec{
 		Filename: filenameCOC,
+		Policy:   b.Policy(),
 		Langs:    pfmodel.Languages(pf),
 		View: func(lang string) any {
 			strLang := core.ResolveLang(lang, pf)
 			return cocView{
-				Marker:       core.MarkerHTML,
 				ProjectName:  pfmodel.DisplayNameForLang(pf, strLang),
 				ContactEmail: email,
 				Covenant:     covenant,

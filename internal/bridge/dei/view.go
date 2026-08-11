@@ -10,7 +10,6 @@ package dei
 // renders only when the project declared an `other` metric — unlike the four
 // CHAOSS metrics it is optional and omitted entirely when absent.
 type deiView struct {
-	Marker       string
 	ProjectName  string
 	Scope        string
 	LastReviewed string

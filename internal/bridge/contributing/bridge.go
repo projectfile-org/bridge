@@ -51,7 +51,7 @@ func (Bridge) FullPath(dir string, _ *projectfile.Document) string {
 	return core.PathOrDefault(dir, filenameContributing, filenameContributing)
 }
 
-func (Bridge) Render(pf *projectfile.Document, opts core.Options) (core.Output, error) {
+func (b Bridge) Render(pf *projectfile.Document, opts core.Options) (core.Output, error) {
 	ext, err := pfmodel.GetContributingExtension(pf)
 	if err != nil {
 		return core.Output{}, err
@@ -142,6 +142,7 @@ func (Bridge) Render(pf *projectfile.Document, opts core.Options) (core.Output, 
 	// independent and resolved once above.
 	return core.RenderLocalized(pf, core.LocalizedSpec{
 		Filename: filenameContributing,
+		Policy:   b.Policy(),
 		Langs:    pfmodel.Languages(pf),
 		View: func(lang string) any {
 			// strLang resolves the render sentinel to the default language for

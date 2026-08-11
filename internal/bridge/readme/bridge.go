@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"strings"
 	"text/template"
 
 	"kiota.ch/projectfile/core/v2/pkg/genlog"
@@ -144,7 +143,7 @@ func (Bridge) renderLang(pf *projectfile.Document, ext *pfmodel.ReadmeExtension,
 		}
 	}
 	body = core.WrapLocalizedTextlint(body, data.StrLang)
-	out := append([]byte(mergedHTMLHeader(pf)), body...)
+	out := append([]byte(core.ManagedREUSEHeader(pf)), body...)
 	return core.CollapseBlankLines(out), nil
 }
 
@@ -222,27 +221,6 @@ func renderBlock(dir, blockName string, data readmeView, ext *pfmodel.ReadmeExte
 
 	genlog.Decision("block", blockName, "no match (skipped)", "lang="+lang)
 	return nil, nil
-}
-
-// mergedHTMLHeader builds the README header as a single HTML comment holding
-// both the REUSE SPDX block and the pf-cli-managed sentinel. The two lived as
-// separate comments before; folding them cuts the header to one block without
-// losing the licence declaration or the overwrite-marker HasMarker scans for.
-//
-// REUSE-compliant: the marker line carries no SPDX-* tag, so it neither
-// declares a licence nor trips the REUSE-Ignore rules. The marker text stays on
-// its own line inside the comment, which core.HasMarker recognises via
-// MarkerInner.
-func mergedHTMLHeader(pf *projectfile.Document) string {
-	header := core.REUSEHeader(pf, core.StyleHTML) // <!--\n…SPDX…\n-->\n\n
-	// Insert the marker line immediately before the closing "-->".
-	closeIdx := strings.Index(header, "-->")
-	if closeIdx < 0 {
-		// Defensive: a header without a closing comment is malformed; fall back
-		// to the two-block form rather than publishing a broken header.
-		return header + core.MarkerHTML + "\n"
-	}
-	return header[:closeIdx] + core.MarkerInner + "\n" + header[closeIdx:]
 }
 
 // execTracedBlock executes one resolved block template and traces which tier

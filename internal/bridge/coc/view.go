@@ -8,7 +8,6 @@ package coc
 // covenant applies (only Contributor Covenant 2.1 ships a template today);
 // Scope narrows where it applies (project-and-spaces vs project).
 type cocView struct {
-	Marker       string
 	ProjectName  string
 	ContactEmail string
 	Covenant     string

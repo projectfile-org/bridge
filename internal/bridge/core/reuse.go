@@ -52,6 +52,10 @@ func REUSEHeader(pf *projectfile.Document, style CommentStyle) string {
 		for _, c := range copyrights {
 			fmt.Fprintf(&b, "# SPDX-FileCopyrightText: %s\n", c)
 		}
+		// Bare comment leader between the two tag groups — `reuse annotate`
+		// writes this separator for every line-comment dialect, so a generated
+		// file and a hand-annotated source file carry the identical header.
+		b.WriteString("#\n")
 		fmt.Fprintf(&b, "# SPDX-License-Identifier: %s\n", spdx)
 	}
 	b.WriteString("\n")
@@ -59,6 +63,25 @@ func REUSEHeader(pf *projectfile.Document, style CommentStyle) string {
 }
 
 // REUSE-IgnoreEnd
+
+// ManagedREUSEHeader is the Markdown header for a marker-managed artefact: the
+// StyleHTML REUSE block with the pf-cli-managed sentinel folded in as its last
+// line, so the file opens with ONE comment instead of a licence comment and a
+// marker comment separated by a blank line.
+//
+// REUSE-compliant: the marker line carries no SPDX-* tag, so it neither
+// declares a licence nor trips the REUSE-Ignore rules. The sentinel keeps its
+// own line inside the comment, which HasMarker recognises via MarkerInner.
+func ManagedREUSEHeader(pf *projectfile.Document) string {
+	header := REUSEHeader(pf, StyleHTML) // <!--\n…SPDX…\n-->\n\n
+	closeIdx := strings.Index(header, "-->")
+	if closeIdx < 0 {
+		// Defensive: a header without a closing comment is malformed; fall back
+		// to the two-block form rather than emitting a broken header.
+		return header + MarkerHTML + "\n"
+	}
+	return header[:closeIdx] + MarkerInner + "\n" + header[closeIdx:]
+}
 
 // ReuseCopyrightLines resolves the copyright lines every REUSE-compliant
 // artefact must carry, in priority order: explicit `copyright`-role holders →
