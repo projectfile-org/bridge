@@ -20,10 +20,16 @@ func Bytes(doc *Document) []byte {
 		return nil
 	}
 	var buf bytes.Buffer
+	lines := doc.Lines
 	if doc.ReuseHeader != "" {
+		// Read keeps the header it found as ordinary comment lines, so writing
+		// the current one on top of them stacks a second copy on every write.
+		// Drop the old one first: the header is a Write-time output, never an
+		// inherited document value.
+		lines = stripLeadingREUSE(lines)
 		buf.WriteString(doc.ReuseHeader)
 	}
-	for _, l := range doc.Lines {
+	for _, l := range lines {
 		switch l.Kind {
 		case KindEntry:
 			buf.WriteString(l.Pattern)
@@ -48,6 +54,37 @@ func Bytes(doc *Document) []byte {
 		}
 	}
 	return buf.Bytes()
+}
+
+// spdxTagPrefix opens every REUSE tag line. Matching the prefix (rather than
+// each tag) keeps the check true whatever tags a header carries.
+const spdxTagPrefix = "SPDX-"
+
+// stripLeadingREUSE removes a previously written REUSE header from the head of
+// lines. The region runs to the LAST tag comment in the opening comment/blank
+// run, plus the blank lines after it — so a comment a human wrote below the
+// header survives, while the header itself never accumulates.
+func stripLeadingREUSE(lines []Line) []Line {
+	last := -1
+	for i, l := range lines {
+		if l.Kind == KindBlank {
+			continue
+		}
+		if l.Kind != KindComment {
+			break
+		}
+		if strings.HasPrefix(strings.TrimSpace(l.Text), spdxTagPrefix) {
+			last = i
+		}
+	}
+	if last < 0 {
+		return lines
+	}
+	cut := last + 1
+	for cut < len(lines) && lines[cut].Kind == KindBlank {
+		cut++
+	}
+	return lines[cut:]
 }
 
 // Write serialises doc to the first existing CODEOWNERS probe path under dir.
