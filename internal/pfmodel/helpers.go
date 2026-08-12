@@ -48,6 +48,28 @@ const (
 	I18NExtensionNS            = "org.projectfile.i18n"
 	FragmentsExtensionNS       = "org.projectfile.fragments"
 	ArtifactsExtensionNS       = "org.projectfile.artifacts"
+
+	// SinksExtensionNS holds the named destinations a project publishes its
+	// container images to. ImageExtensionNS holds the PARTS those destinations
+	// compose from, and is the scope a sink `ref` template resolves under — so a
+	// template says `${path}` where it would otherwise spell the whole address.
+	SinksExtensionNS = "org.projectfile.sinks"
+	ImageExtensionNS = "org.projectfile.image"
+)
+
+// Keys a sink entry carries. Only these two are read anywhere: `ref` is the
+// template, and `role` is what makes an entry ADDRESSABLE, because a bare `{}`
+// projection admits no trailing field and `.ref` is reachable only through the
+// selector form `{role=…}`. Every other key an author writes is theirs — a
+// template may name it and nothing here interprets it.
+const (
+	SinkRefKey  = "ref"
+	SinkRoleKey = "role"
+
+	// SinkRolePrimary is the role an entry carries when it declares none: the
+	// ordinary destination, as opposed to the fallback a reader is told to try
+	// only when the others are unreachable.
+	SinkRolePrimary = "primary"
 )
 
 // PriorityDefault is the priority an item carries when it declares none. A

@@ -9,47 +9,51 @@
 // index pages (npm, PyPI, crates.io) from the detected stack. This package is
 // about the OCI plane: where a project's IMAGES land.
 //
-// What we are trying to do: let one project declare one image path and reach
-// several destinations with it. GHCR nests freely, Docker Hub holds exactly
-// `namespace/name`, and the same build feeds both — so the path grammar is a
-// property of the SINK, the image path is a property of the PROJECT, neither can
-// be computed from the other, and neither should ever be typed twice.
+// What we are trying to do: let one project declare its image PARTS once and
+// reach several destinations with them. GHCR nests freely, Docker Hub holds
+// exactly `namespace/name`, and the same build feeds both — so the path grammar
+// is a property of the SINK, the parts are a property of the PROJECT, neither
+// can be computed from the other, and neither should ever be typed twice.
 //
 // # Where the composition happens
 //
-// Not here. `core/pkg/sink` owns it, expanding each template against a scratch
-// document that carries the sink's own keys under `sink` and the image
-// coordinates under `image`. This package's whole job is to bind the COORDINATES
-// — this project's basename and tag — and to write the result back as document
-// data. That split is what lets the same composer answer "where do I push this
-// project" here and "where does this project's BASE image live" in pf-cli, where
-// the coordinates name a foreign project.
+// In the document. A sink's `ref` is a spec §3.8 template naming the parts the
+// project declares under `org.projectfile.image`, and this package expands it
+// with that address as a SCOPE — so `${path}` and `${tag}` are short names in
+// the template rather than full addresses. Adding a part, a destination or a
+// whole new path grammar is an edit to a projectfile: nothing here knows what a
+// registry is, what a host is, or how a repository path is spelled.
 package ocisinks
 
 import (
 	"strings"
 
 	"kiota.ch/projectfile/core/v2/pkg/genlog"
+	"kiota.ch/projectfile/core/v2/pkg/interp"
 	"kiota.ch/projectfile/core/v2/pkg/projectfile"
-	"kiota.ch/projectfile/core/v2/pkg/sink"
 	"projectfile.org/projectfile/bridge/internal/pfmodel"
 )
 
 // legacyRegistryKey is the single-registry scalar the container fragment has
-// always set, and the only input the ~130 projects that never heard of the sinks
-// namespace carry.
+// always set, and the only input a project that never heard of the sinks
+// namespace carries.
 const legacyRegistryKey = "registry"
 
+// legacyRefTemplate composes the one destination such a project publishes to.
+// It is a template like any other and resolves through the same scope, so the
+// legacy path and the declared path cannot disagree about where an image lands.
+const legacyRefTemplate = "/${path}:${tag}"
+
 // Refs returns the sinks subtree with every entry's `ref` composed into a
-// CONCRETE reference, keyed by sink name. Returns nil when the project publishes
-// no image at all, which is the signal for the caller to write nothing.
+// CONCRETE reference, keyed by sink name. Returns nil when the project declares
+// no destination at all, which is the signal for the caller to write nothing.
 //
 // The map is the merged view: the sinks the document declares, or — when it
 // declares none — ONE sink synthesized from the legacy
-// `org.projectfile.readme.registry` scalar. That synthesis is what lets the
-// projects which never heard of this namespace keep rendering the exact pull line
-// they rendered before it existed, with no edit and no `when:` clause in the
-// shared fragment.
+// `org.projectfile.readme.registry` scalar. That synthesis is what lets a project
+// which never heard of this namespace keep rendering the exact pull line it
+// rendered before the namespace existed, with no edit and no `when:` clause in
+// the shared fragment.
 //
 // A sink whose template survives composition only half-resolved is DROPPED, not
 // written: a reference that silently lost a segment is a push to the wrong
@@ -58,35 +62,31 @@ func Refs(pf *projectfile.Document) map[string]any {
 	if pf == nil {
 		return nil
 	}
-	basename, ok := projectfile.ImageBasename(pf)
-	if !ok {
-		genlog.Decision("sink_ref", "", "no image basename", "project publishes no image")
-		return nil
-	}
-	tag, _ := projectfile.ImageTag(pf)
-	coords := sink.Coords{Basename: basename, Tag: tag}
-
-	declared, err := sink.Declared(pf)
-	if err != nil {
-		genlog.Warn("derive: sinks namespace unreadable — refs not composed", "error", err.Error())
-		return nil
-	}
+	declared := declaredSinks(pf)
 	if len(declared) == 0 {
 		declared = legacySink(pf)
 	}
 	if len(declared) == 0 {
+		genlog.Decision("sink_ref", "", pfmodel.SinksExtensionNS, "no sink declared")
 		return nil
 	}
 	out := make(map[string]any, len(declared))
-	for _, s := range declared {
-		ref, composed := s.Compose(coords)
-		if !composed {
-			genlog.Warn("derive: sink ref left unresolved — entry dropped", "sink", s.Name,
-				"template", s.Template(), "basename", basename)
+	for name, entry := range declared {
+		tmpl, ok := entry[pfmodel.SinkRefKey].(string)
+		if !ok || tmpl == "" {
+			genlog.Warn("derive: sink declares no ref template — entry dropped", "sink", name,
+				"remedy", "declare "+pfmodel.SinkRefKey+" on the entry")
 			continue
 		}
-		genlog.Decision("sink_ref", ref, s.Name, "role="+s.Role())
-		out[s.Name] = entry(s, ref)
+		ref, resolved := interp.ExpandIn(pf, tmpl, pfmodel.ImageExtensionNS)
+		if !resolved {
+			genlog.Warn("derive: sink ref left unresolved — entry dropped", "sink", name,
+				"template", tmpl, "composed", ref,
+				"remedy", "declare the missing part under "+pfmodel.ImageExtensionNS)
+			continue
+		}
+		genlog.Decision("sink_ref", ref, name, "template="+tmpl)
+		out[name] = composed(entry, ref)
 	}
 	if len(out) == 0 {
 		return nil
@@ -94,22 +94,53 @@ func Refs(pf *projectfile.Document) map[string]any {
 	return out
 }
 
-// entry renders one sink back as document data: the keys the author declared,
-// with the two COMPUTED ones written over them.
+// declaredSinks reads the sinks namespace as the author wrote it. An entry that
+// is not a map is skipped rather than fatal — one malformed sink must not cost a
+// project every other pull line it publishes.
+func declaredSinks(pf *projectfile.Document) map[string]map[string]any {
+	raw, ok := projectfile.LookupExtension(pf, pfmodel.SinksExtensionNS)
+	if !ok {
+		return nil
+	}
+	m, ok := raw.(map[string]any)
+	if !ok {
+		genlog.Warn("derive: sinks namespace is not a map — refs not composed",
+			"namespace", pfmodel.SinksExtensionNS)
+		return nil
+	}
+	out := make(map[string]map[string]any, len(m))
+	for name, v := range m {
+		entry, ok := v.(map[string]any)
+		if !ok {
+			genlog.Warn("derive: sink entry is not a map — entry dropped", "sink", name)
+			continue
+		}
+		out[name] = entry
+	}
+	return out
+}
+
+// composed renders one sink back as document data: the keys the author declared,
+// with the composed reference written over the template.
 //
 // `ref` replaces the template rather than sitting beside it — two spellings of
-// one reference would drift the moment a sink moved. `role` is always written,
-// defaulting to primary, because a bare `{}` projection admits no trailing field:
-// a fragment reaches `.ref` across the map only through the selector form
-// `{role=…}`, so an entry with no role would be addressable by nothing and its
-// pull line would never render.
-func entry(s sink.Sink, ref string) map[string]any {
-	m := make(map[string]any, len(s.Entry)+2)
-	for k, v := range s.Entry {
+// one reference would drift the moment a sink moved.
+//
+// `role` is the one key this package still supplies, and it is addressability
+// rather than shape: a bare `{}` projection admits no trailing field, so a
+// fragment reaches `.ref` across the map only through the selector form
+// `{role=…}`. An entry with no role would be addressable by nothing and its pull
+// line would never render — a silent drop, where every other drop here is
+// logged.
+func composed(entry map[string]any, ref string) map[string]any {
+	m := make(map[string]any, len(entry)+1)
+	for k, v := range entry {
 		m[k] = v
 	}
-	m[sink.KeyRef] = ref
-	m[sink.KeyRole] = s.Role()
+	m[pfmodel.SinkRefKey] = ref
+	if role, ok := m[pfmodel.SinkRoleKey].(string); !ok || role == "" {
+		m[pfmodel.SinkRoleKey] = pfmodel.SinkRolePrimary
+	}
 	return m
 }
 
@@ -125,7 +156,7 @@ func entry(s sink.Sink, ref string) map[string]any {
 //
 // The name is the host's first domain label, the same rule the forge remotes use,
 // so `${…sinks.kiota.ref}` addresses it by the name a reader would guess.
-func legacySink(pf *projectfile.Document) []sink.Sink {
+func legacySink(pf *projectfile.Document) map[string]map[string]any {
 	readme, ok := projectfile.LookupExtension(pf, pfmodel.ReadmeExtensionNS)
 	if !ok {
 		return nil
@@ -140,7 +171,9 @@ func legacySink(pf *projectfile.Document) []sink.Sink {
 	}
 	genlog.Decision("sink_ref", host, pfmodel.ReadmeExtensionNS+"."+legacyRegistryKey,
 		"no sinks namespace declared")
-	return []sink.Sink{{Name: nameOf(host), Entry: map[string]any{sink.KeyHost: host}}}
+	return map[string]map[string]any{
+		nameOf(host): {pfmodel.SinkRefKey: host + legacyRefTemplate},
+	}
 }
 
 // nameOf is the host's first domain label — `ghcr.io` → `ghcr`, `kiota.ch` →

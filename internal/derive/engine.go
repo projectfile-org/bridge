@@ -31,7 +31,6 @@ package derive
 import (
 	"kiota.ch/projectfile/core/v2/pkg/genlog"
 	"kiota.ch/projectfile/core/v2/pkg/projectfile"
-	"kiota.ch/projectfile/core/v2/pkg/sink"
 	"projectfile.org/projectfile/bridge/internal/derive/forges"
 	"projectfile.org/projectfile/bridge/internal/derive/ocisinks"
 	"projectfile.org/projectfile/bridge/internal/derive/registries"
@@ -223,7 +222,7 @@ func addSinkRefs(pf *projectfile.Document) {
 	if len(refs) == 0 {
 		return
 	}
-	projectfile.SetExtension(pf, sink.ExtensionNS, refs)
+	projectfile.SetExtension(pf, pfmodel.SinksExtensionNS, refs)
 }
 
 // stringSet builds a quick lookup map from a string slice. Used for
