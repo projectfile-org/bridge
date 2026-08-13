@@ -32,11 +32,16 @@ To help us help you, please include:
 4. **Environment** — OS, version of Projectfile Bridges, runtime version.
 5. **A minimal reproducible example**, if possible.
 
-See [Stack Overflow’s MCVE guide](https://stackoverflow.com/help/minimal-reproducible-example)
-for tips.
+See an MCVE guide for tips.
 
 ## Response Times
 
 This is a community-maintained project. Maintainers respond when they can — typically within a few days, but there are no guarantees. Please be patient and respectful.
+
+## Paid Support
+
+Paid support for Projectfile Bridges is available:
+
+- [From author](https://dbuho.me)
 
 *Generated from projectfile ([learn how](https://projectfile.org/how-to/support))*
