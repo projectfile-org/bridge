@@ -16,7 +16,7 @@ pf-cli-managed: yes
 
 Перегляньте це спершу — можливо, відповідь уже є:
 
-- [Issues on Codeberg](https://codeberg.org/projectfile/bridge/issues)
+- [Issues на Codeberg](https://codeberg.org/projectfile/bridge/issues)
 
 ## Куди звертатися
 

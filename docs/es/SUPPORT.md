@@ -16,7 +16,7 @@ Este documento explica dónde conseguir ayuda y cómo formular buenas preguntas.
 
 Revisa esto primero — puede que tu pregunta ya tenga respuesta:
 
-- [Issues on Codeberg](https://codeberg.org/projectfile/bridge/issues)
+- [Incidencias en Codeberg](https://codeberg.org/projectfile/bridge/issues)
 
 ## Dónde preguntar
 

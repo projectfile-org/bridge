@@ -30,6 +30,7 @@ import (
 	"strings"
 
 	"kiota.ch/projectfile/core/v2/pkg/projectfile"
+	"projectfile.org/projectfile/bridge/internal/pfmodel"
 )
 
 const tagNPM = "npm"
@@ -40,7 +41,7 @@ type Change struct {
 	FieldPath string
 	NewValue  string
 	Source    string
-	Label     string
+	Label     *projectfile.LocalizedString
 }
 
 // builder returns the registry URL for the given identity, or "" when the
@@ -95,7 +96,9 @@ func Derive(pf *projectfile.Document) []Change {
 				FieldPath: "links[type=package-registry]",
 				NewValue:  value,
 				Source:    r.source,
-				Label:     "Packages on " + r.label,
+				// Localized "Packages on {registry}": Bare for a single-language
+				// project, a Langs map when i18n.languages is declared.
+				Label: pfmodel.ComposeOnLabel(pf, pfmodel.NounLabel(pf, pfmodel.NounPackages), r.label),
 			})
 		}
 	}

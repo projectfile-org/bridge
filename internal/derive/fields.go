@@ -52,9 +52,9 @@ func readField(pf *projectfile.Document, path string) string {
 
 // writeField applies a derived value back into pf. Mirrors the dispatch in
 // readField; together they form the read-modify-write contract the engine
-// operates against. When label is non-empty, it is written into the link's
-// label field as a bare LocalizedString.
-func writeField(pf *projectfile.Document, path, value, label string) error {
+// operates against. When label is non-nil, it is written into the link's label
+// field via pfmodel.SetLinkLabel (gap-fill: an existing label wins).
+func writeField(pf *projectfile.Document, path, value string, label *projectfile.LocalizedString) error {
 	if pf == nil {
 		return fmt.Errorf("derive: cannot write to nil document")
 	}
@@ -77,8 +77,8 @@ func writeField(pf *projectfile.Document, path, value, label string) error {
 			pfmodel.AddLink(pf, typeVal, value)
 		}
 		markLinkDerived(pf, typeVal, value)
-		if label != "" {
-			setLinkLabel(pf, typeVal, value, label)
+		if label != nil {
+			pfmodel.SetLinkLabel(pf, typeVal, value, label, false)
 		}
 		return nil
 	}
@@ -87,12 +87,8 @@ func writeField(pf *projectfile.Document, path, value, label string) error {
 	if l := pfmodel.LinkByType(pf, typeVal); l != nil {
 		l.Derived = true
 	}
-	if label != "" {
-		if l := pfmodel.LinkByType(pf, typeVal); l != nil {
-			if l.Label == nil || l.Label.Bare == "" {
-				l.Label = &projectfile.LocalizedString{Bare: label}
-			}
-		}
+	if label != nil {
+		pfmodel.SetLinkLabel(pf, typeVal, value, label, false)
 	}
 	return nil
 }
@@ -141,9 +137,6 @@ func linkExists(pf *projectfile.Document, linkType, url string) bool {
 	return false
 }
 
-// setLinkLabel writes label into the link entry matching (linkType, url).
-// Only writes when the entry currently has no label — gap-fill semantics so
-// a hand-written label survives re-derivation.
 // markLinkDerived sets Derived=true on the link matching (linkType, url).
 // Called after writeField creates or confirms a link entry so the serialiser
 // emits derived:true on that link rather than in [org.projectfile.cli].
@@ -152,18 +145,6 @@ func markLinkDerived(pf *projectfile.Document, linkType, url string) {
 		l := &pf.Links[i]
 		if l.Type == linkType && l.URL == url {
 			l.Derived = true
-			return
-		}
-	}
-}
-
-func setLinkLabel(pf *projectfile.Document, linkType, url, label string) {
-	for i := range pf.Links {
-		l := &pf.Links[i]
-		if l.Type == linkType && l.URL == url {
-			if l.Label == nil || l.Label.Bare == "" {
-				l.Label = &projectfile.LocalizedString{Bare: label}
-			}
 			return
 		}
 	}

@@ -119,7 +119,10 @@ repositories:
     type: git
     url: ssh://git@kiota.ch/projectfile/bridge.git
 links:
-  - label: Projectfile Bridges on Codeberg
+  - label:
+      en: Projectfile Bridges on Codeberg
+      es: Projectfile Bridges en Codeberg
+      uk: Projectfile Bridges на Codeberg
     tags:
       - public
       - badges
@@ -127,7 +130,10 @@ links:
       - releases
     type: source-code
     url: https://codeberg.org/projectfile/bridge
-  - label: Projectfile Bridges on GitHub
+  - label:
+      en: Projectfile Bridges on GitHub
+      es: Projectfile Bridges en GitHub
+      uk: Projectfile Bridges на GitHub
     tags:
       - public
       - badges
@@ -135,13 +141,19 @@ links:
       - ci
     type: source-code
     url: https://github.com/damian-buho/projectfile-bridge
-  - label: Projectfile Bridges on kiota.ch
+  - label:
+      en: Projectfile Bridges on kiota.ch
+      es: Projectfile Bridges en kiota.ch
+      uk: Projectfile Bridges на kiota.ch
     preferred: true
     tags:
       - ci
     type: source-code
     url: https://kiota.ch/projectfile/bridge
-  - label: Issues on Codeberg
+  - label:
+      en: Issues on Codeberg
+      es: Incidencias en Codeberg
+      uk: Issues на Codeberg
     tags:
       - support
     type: bugs

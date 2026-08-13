@@ -31,7 +31,12 @@ func (remotesScanner) Scan(root string) (*source.Partial, []core.Hit, error) {
 	var hits []core.Hit
 
 	var forgeKinds map[string]string
+	// langDoc carries the merged i18n declaration so the source-code label is
+	// composed per declared language. Offline resolves cached includes, so a
+	// multi-language project is detected without a network fetch.
+	var langDoc *projectfile.Document
 	if doc, _, err := projectfile.ReadWithOptions(root, projectfile.ReadOptions{Offline: true}); err == nil {
+		langDoc = doc
 		if ext, err := pfmodel.GetForgeExtension(doc); err == nil && ext != nil {
 			forgeKinds = ext.Kinds
 		}
@@ -71,7 +76,11 @@ func (remotesScanner) Scan(root string) (*source.Partial, []core.Hit, error) {
 				forge = hostFromURL(page)
 			}
 			if forge != "" {
-				link.Label = &projectfile.LocalizedString{Bare: "Source Code on " + forge}
+				// Placeholder subject "Source Code" — the scan title-rewrite
+				// (scancmd) promotes it to the project title once the merged
+				// doc is available. Bare for single-language projects, a Langs
+				// map when i18n.languages is declared.
+				link.Label = pfmodel.ComposeOnLabel(langDoc, pfmodel.NounLabel(langDoc, pfmodel.NounSourceCode), forge)
 			}
 			// Turn what the host table already knows into a declaration the
 			// user can read and edit. Without it a shared fragment has to

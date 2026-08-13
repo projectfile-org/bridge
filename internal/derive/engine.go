@@ -42,14 +42,15 @@ import (
 // "links[type=bugs]", "links[type=package-registry]". OldValue
 // is "" for new fields. Source identifies the inference rule that produced
 // the value (e.g. "forge:github", "registry:npm"). Label is an optional
-// human-readable string the engine writes into the link's label field
-// (e.g. "Issues on GitHub").
+// localized label the engine writes into the link's label field (Bare for a
+// single-language project, a Langs map when org.projectfile.i18n.languages is
+// declared — e.g. {en:"Issues on GitHub", es:"Incidencias en GitHub"}).
 type Change struct {
 	FieldPath string
 	OldValue  string
 	NewValue  string
 	Source    string
-	Label     string
+	Label     *projectfile.LocalizedString
 }
 
 // Options threads runtime knobs through Apply. Today: a single toggle the

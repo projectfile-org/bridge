@@ -82,10 +82,10 @@ Para el bucle de desarrollo local, `make dev-container` levanta el dev-container
 ## Enlaces
 
 - [Especificación de Projectfile](https://projectfile.org)
-- [Projectfile Bridges on Codeberg](https://codeberg.org/projectfile/bridge)
-- [Projectfile Bridges on GitHub](https://github.com/damian-buho/projectfile-bridge)
-- [Projectfile Bridges on kiota.ch](https://kiota.ch/projectfile/bridge)
-- [Issues on Codeberg](https://codeberg.org/projectfile/bridge/issues)
+- [Projectfile Bridges en Codeberg](https://codeberg.org/projectfile/bridge)
+- [Projectfile Bridges en GitHub](https://github.com/damian-buho/projectfile-bridge)
+- [Projectfile Bridges en kiota.ch](https://kiota.ch/projectfile/bridge)
+- [Incidencias en Codeberg](https://codeberg.org/projectfile/bridge/issues)
 
 ## Licencia
 

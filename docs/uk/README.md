@@ -82,10 +82,10 @@ pf-bridge all
 ## Посилання
 
 - [Специфікація Projectfile](https://projectfile.org)
-- [Projectfile Bridges on Codeberg](https://codeberg.org/projectfile/bridge)
-- [Projectfile Bridges on GitHub](https://github.com/damian-buho/projectfile-bridge)
-- [Projectfile Bridges on kiota.ch](https://kiota.ch/projectfile/bridge)
-- [Issues on Codeberg](https://codeberg.org/projectfile/bridge/issues)
+- [Projectfile Bridges на Codeberg](https://codeberg.org/projectfile/bridge)
+- [Projectfile Bridges на GitHub](https://github.com/damian-buho/projectfile-bridge)
+- [Projectfile Bridges на kiota.ch](https://kiota.ch/projectfile/bridge)
+- [Issues на Codeberg](https://codeberg.org/projectfile/bridge/issues)
 
 ## Ліцензія
 

@@ -171,7 +171,9 @@ func TestApplyDeriveLabel(t *testing.T) {
 	require.NoError(t, err)
 	require.NotEmpty(t, changes)
 
-	assert.Equal(t, "Issues on GitHub", changes[0].Label)
+	// Single-language doc → Bare label.
+	require.NotNil(t, changes[0].Label)
+	assert.Equal(t, "Issues on GitHub", changes[0].Label.Bare)
 
 	var label string
 	for _, l := range pf.Links {
@@ -190,7 +192,42 @@ func TestApplyDeriveLabelGitLab(t *testing.T) {
 	changes, err := derive.Apply(pf, derive.Options{})
 	require.NoError(t, err)
 	require.NotEmpty(t, changes)
-	assert.Equal(t, "Issues on GitLab", changes[0].Label)
+	require.NotNil(t, changes[0].Label)
+	assert.Equal(t, "Issues on GitLab", changes[0].Label.Bare)
+}
+
+// TestApplyDeriveLabelLocalized verifies a multi-language project gets a Langs
+// map (Bare cleared) so each locale renders its own noun + connector, and that
+// it lands on the written link.
+func TestApplyDeriveLabelLocalized(t *testing.T) {
+	pf := docWithSourceLink("https://github.com/acme/my-tool")
+	pf.Extensions = map[string]any{
+		"org.projectfile.i18n": map[string]any{
+			"default-language": "en",
+			"languages":        []any{"es", "uk"},
+		},
+	}
+	changes, err := derive.Apply(pf, derive.Options{})
+	require.NoError(t, err)
+	require.NotEmpty(t, changes)
+	label := changes[0].Label
+	require.NotNil(t, label)
+	assert.Empty(t, label.Bare, "Bare must be cleared or it masks the Langs map")
+	assert.Equal(t, map[string]string{
+		"en": "Issues on GitHub",
+		"es": "Incidencias en GitHub",
+		"uk": "Issues на GitHub",
+	}, label.Langs)
+
+	var written *projectfile.LocalizedString
+	for _, l := range pf.Links {
+		if l.Type == projectfile.LinkBugs {
+			written = l.Label
+			break
+		}
+	}
+	require.NotNil(t, written)
+	assert.Equal(t, label.Langs, written.Langs)
 }
 
 func TestApplyNoIssuesKeyDerivesAllSourceCodeLinks(t *testing.T) {

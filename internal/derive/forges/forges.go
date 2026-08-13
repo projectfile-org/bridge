@@ -24,7 +24,7 @@ type Change struct {
 	FieldPath string
 	NewValue  string
 	Source    string
-	Label     string
+	Label     *projectfile.LocalizedString
 }
 
 // Derive returns one issue-tracker URL per source-code mirror the engine can
@@ -67,7 +67,10 @@ func Derive(pf *projectfile.Document) []Change {
 			FieldPath: "links[type=bugs,url=" + value + "]",
 			NewValue:  value,
 			Source:    rule.Source,
-			Label:     "Issues on " + rule.Label,
+			// Localized "Issues on {forge}": Bare for a single-language
+			// project, a Langs map when i18n.languages is declared so each
+			// locale gets its own noun + connector.
+			Label: pfmodel.ComposeOnLabel(pf, pfmodel.NounLabel(pf, pfmodel.NounIssues), rule.Label),
 		})
 	}
 	return out

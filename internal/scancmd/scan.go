@@ -10,7 +10,6 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"strings"
 
 	"github.com/spf13/cobra"
 
@@ -193,7 +192,7 @@ func runGenericPhase(dir, pfPath string, names []string) error {
 		genlog.Warn("scanner failures", "err", scanErr.Error())
 	}
 	logHits(hits)
-	applyPartialToDoc(pf, effectivePF.People, effectivePF.Organizations, partial, effectivePF.Identity.Title)
+	applyPartialToDoc(pf, effectivePF, partial)
 	if scanDryRun {
 		genlog.Plain("DRY RUN — projectfile not modified")
 		return nil
@@ -324,14 +323,17 @@ func logHits(hits []core.Hit) {
 // shape don't share a single type). Only the fields scanners populate today
 // are handled — stack, people, repository, created.
 //
-// effectivePeople is the full resolved set (base + includes). It is used as
-// the dedup gate for people: a scanner hit is only added to the base doc when
-// it has no match in the effective set, so include-inherited people are never
-// re-materialised into the base file.
-func applyPartialToDoc(doc *projectfile.Document, effectivePeople []projectfile.Person, effectiveOrgs []projectfile.Organization, p *source.Partial, effectiveTitle *projectfile.LocalizedString) {
+// effectivePF is the full resolved document (base + includes): its people set
+// gates the people dedup so include-inherited people are never re-materialised
+// into the base file, its title drives the source-code label rewrite, and its
+// i18n declaration decides whether rewritten labels are Bare or a Langs map.
+func applyPartialToDoc(doc *projectfile.Document, effectivePF *projectfile.Document, p *source.Partial) {
 	if p == nil {
 		return
 	}
+	effectivePeople := effectivePF.People
+	effectiveOrgs := effectivePF.Organizations
+	effectiveTitle := effectivePF.Identity.Title
 	if len(p.Stack) > 0 {
 		doc.Stack = stackscan.Union(doc.Stack, p.Stack)
 	}
@@ -362,16 +364,20 @@ func applyPartialToDoc(doc *projectfile.Document, effectivePeople []projectfile.
 	for _, l := range p.Links {
 		applyLink(doc, l, scanForce)
 	}
-	// Rewrite scanner-generated source-code labels from "Source Code on X"
-	// to "{title} on X" so the label carries the project identity rather than
-	// a generic description. Only applies when identity.title is set.
-	if effectiveTitle != nil && effectiveTitle.Bare != "" {
+	// Promote scanner-generated source-code labels from the "Source Code on X"
+	// noun placeholder to "{title} on X", so the label carries the project
+	// identity rather than a generic description. Localized: the placeholder
+	// and the promotion both follow the declared languages. Only links still
+	// carrying the placeholder are touched — a curated or already-promoted
+	// label is left alone (PromoteSourceCodeLabel returns nil).
+	if effectiveTitle != nil {
 		for i := range doc.Links {
 			l := &doc.Links[i]
-			if l.Type == projectfile.LinkSourceCode && l.Label != nil &&
-				strings.HasPrefix(l.Label.Bare, "Source Code on ") {
-				forge := strings.TrimPrefix(l.Label.Bare, "Source Code on ")
-				l.Label = &projectfile.LocalizedString{Bare: effectiveTitle.Bare + " on " + forge}
+			if l.Type != projectfile.LinkSourceCode {
+				continue
+			}
+			if promoted := pfmodel.PromoteSourceCodeLabel(effectivePF, l.Label, effectiveTitle); promoted != nil {
+				l.Label = promoted
 			}
 		}
 	}
