@@ -53,8 +53,8 @@ func TestLanguageLinksExcludesActive(t *testing.T) {
 
 	es := core.LanguageLinks(core.FileSupport, "es", "en", langs)
 	assert.Equal(t, []core.LangLink{
-		{Code: "", Label: "English", Filename: "SUPPORT.md"},
-		{Code: "uk", Label: labelUkrainian, Filename: supportVariantUK},
+		{Code: "", Label: "English", Filename: "../../SUPPORT.md"},
+		{Code: "uk", Label: labelUkrainian, Filename: "../uk/SUPPORT.md"},
 	}, es, "a translation links back to the canonical file and the siblings")
 }
 
@@ -65,8 +65,8 @@ func TestLanguageLinksDefaultLanguageLabel(t *testing.T) {
 	langs := []string{"en", "uk"}
 	en := core.LanguageLinks(core.FileSupport, "en", "es", langs)
 	assert.Equal(t, []core.LangLink{
-		{Code: "", Label: "Español", Filename: "SUPPORT.md"},
-		{Code: "uk", Label: labelUkrainian, Filename: supportVariantUK},
+		{Code: "", Label: "Español", Filename: "../../SUPPORT.md"},
+		{Code: "uk", Label: labelUkrainian, Filename: "../uk/SUPPORT.md"},
 	}, en, "canonical entry uses the default-language endonym")
 }
 
@@ -95,10 +95,12 @@ func TestInsertLanguageBarNoLanguagesIsNoop(t *testing.T) {
 }
 
 // TestInsertLanguageBarNoHeading covers the degenerate body with no H1: the
-// bar still renders, at the top, rather than being silently dropped.
+// bar still renders, at the top, rather than being silently dropped. The
+// active variant is docs/es/SUPPORT.md, so the canonical entry is rebased to
+// ../../SUPPORT.md.
 func TestInsertLanguageBarNoHeading(t *testing.T) {
 	out := string(core.InsertLanguageBar([]byte("no heading here\n"), core.FileSupport, "es", "en", []string{"es"}))
-	assert.Equal(t, "[English](SUPPORT.md)\n\nno heading here\n", out)
+	assert.Equal(t, "[English](../../SUPPORT.md)\n\nno heading here\n", out)
 }
 
 // TestLocalizedSiblingStaysInLanguage verifies a cross-reference from a

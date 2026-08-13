@@ -1,6 +1,7 @@
 <!--
 SPDX-FileCopyrightText: 2026 Damián Búho <damian.buho@proton.me>
 SPDX-License-Identifier: MIT
+pf-cli-managed: yes
 -->
 
 [Español](docs/es/CONTRIBUTING.md) · [Українська](docs/uk/CONTRIBUTING.md)
@@ -107,3 +108,5 @@ Enhancement suggestions are tracked as [issues](https://codeberg.org/projectfile
 ## Improving The Documentation
 
 Documentation lives at [https://projectfile.org](https://projectfile.org). Fixes, improvements, and new sections are all welcome — open a pull request against the documentation source.
+
+*Generated from projectfile ([learn how](https://projectfile.org/how-to/contributing))*

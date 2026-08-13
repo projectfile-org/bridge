@@ -1,9 +1,8 @@
 <!--
 SPDX-FileCopyrightText: 2026 Damián Búho <damian.buho@proton.me>
 SPDX-License-Identifier: MIT
+pf-cli-managed: yes
 -->
-
-<!-- pf-cli-managed: yes -->
 
 [Español](docs/es/SUPPORT.md) · [Українська](docs/uk/SUPPORT.md)
 
@@ -16,12 +15,10 @@ This document explains where to get help and how to ask effective questions.
 
 Please check these first — your question may already be answered:
 
-- [projectfile specification](https://projectfile.org)
 - [Issues on Codeberg](https://codeberg.org/projectfile/bridge/issues)
 
 ## Where to Ask
 
-- **Report a reproducible bug** — [Issues on Codeberg](https://codeberg.org/projectfile/bridge/issues)
 - **Report a security vulnerability** — [SECURITY.md](SECURITY.md)
 - **Contribute to the project** — [CONTRIBUTING.md](CONTRIBUTING.md)
 
@@ -41,3 +38,5 @@ for tips.
 ## Response Times
 
 This is a community-maintained project. Maintainers respond when they can — typically within a few days, but there are no guarantees. Please be patient and respectful.
+
+*Generated from projectfile ([learn how](https://projectfile.org/how-to/support))*

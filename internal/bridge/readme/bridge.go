@@ -19,6 +19,11 @@ import (
 
 const filenameReadme = core.FileReadme
 
+// readmeDocPath is this readme's own repo-relative path for one render
+// language ("" -> root README.md, "es" -> docs/es/README.md), used to rebase
+// emitted cross-file links so they resolve from the document's directory.
+func readmeDocPath(lang string) string { return core.LocalizedFilename(filenameReadme, lang) }
+
 type Bridge struct{}
 
 func (Bridge) Name() string             { return "readme" }
@@ -142,6 +147,7 @@ func (Bridge) renderLang(pf *projectfile.Document, ext *pfmodel.ReadmeExtension,
 			body = append(body, '\n')
 		}
 	}
+	body = append(body, []byte("\n\n"+core.GeneratedFooter(filenameReadme, data.StrLang)+"\n")...)
 	body = core.WrapLocalizedTextlint(body, data.StrLang)
 	out := append([]byte(core.ManagedREUSEHeader(pf)), body...)
 	return core.CollapseBlankLines(out), nil
@@ -320,19 +326,23 @@ func execBlockTemplate(name string, body []byte, data readmeView, dir string, ex
 			// staticLinks probes the community-health files. Path probing uses
 			// the render sentinel (Lang) so the default language probes the
 			// root; labels resolve in StrLang so a non-English-default project
-			// labels them in its own language.
-			"staticLinks": func() []staticLink { return probeHealthFiles(dir, data.Lang, data.StrLang) },
+			// labels them in its own language. docPath rebases every emitted
+			// link against this document's own path so a docs/<lang>/ readme
+			// links co-located siblings correctly.
+			"staticLinks": func() []staticLink {
+				return probeHealthFiles(dir, readmeDocPath(data.Lang), data.Lang, data.StrLang)
+			},
 			// docLink probes one companion file; nil when absent so
 			// {{with docLink "FILE" "Label"}} drops the block cleanly.
 			"docLink": func(filename, label string) *staticLink {
-				return docLink(dir, filename, label)
+				return docLink(dir, readmeDocPath(data.Lang), filename, label)
 			},
 			// logo / screenshots / docLinks / buildLinks probe the filesystem;
 			// each returns nil/empty when its directory is absent.
 			"logo":        func() []string { return probeLogo(dir) },
 			"screenshots": func() []screenshot { return probeScreenshots(dir) },
-			"docLinks":    func() []staticLink { return listDocsMarkdown(dir) },
-			"buildLinks":  func() []staticLink { return probeBuildLinks(dir, data.StrLang) },
+			"docLinks":    func() []staticLink { return listDocsMarkdown(dir, readmeDocPath(data.Lang)) },
+			"buildLinks":  func() []staticLink { return probeBuildLinks(dir, readmeDocPath(data.Lang), data.StrLang) },
 			// featureHeadings reads FEATURES.md's H3 feature titles for the
 			// features block bullet list; nil when the file is absent.
 			"featureHeadings": func() []string { return featureHeadings(dir) },

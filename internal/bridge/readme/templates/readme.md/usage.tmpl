@@ -33,6 +33,6 @@
 {{- with docLink "USAGE.md" (t "usage.title")}}
 ## {{.Label}}
 
-{{printf (t "usage.body") .Filename}}
+{{printf (t "usage.body") .Name .Filename}}
 {{- end}}
 {{- end}}

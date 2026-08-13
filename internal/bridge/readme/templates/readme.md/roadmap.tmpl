@@ -1,5 +1,5 @@
 {{- with docLink "ROADMAP.md" (t "roadmap.title")}}
 ## {{.Label}}
 
-{{printf (t "roadmap.body") .Filename}}
+{{printf (t "roadmap.body") .Name .Filename}}
 {{end -}}

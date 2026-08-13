@@ -21,6 +21,6 @@
 {{- with docLink "QUICKSTART.md" (t "quick-start.title")}}
 ## {{.Label}}
 
-{{printf (t "quick-start.body") .Filename}}
+{{printf (t "quick-start.body") .Name .Filename}}
 {{- end}}
 {{- end}}

@@ -1,9 +1,8 @@
 <!--
 SPDX-FileCopyrightText: 2026 Damián Búho <damian.buho@proton.me>
 SPDX-License-Identifier: MIT
+pf-cli-managed: yes
 -->
-
-<!-- pf-cli-managed: yes -->
 
 [Español](docs/es/SECURITY.md) · [Українська](docs/uk/SECURITY.md)
 
@@ -62,3 +61,5 @@ gpg --encrypt --armor --recipient B64C122EE16C3746 message.txt
 
 Projectfile Bridges does not currently run a bug bounty programme. We still welcome
 responsibly disclosed reports — see the contact channel above.
+
+*Generated from projectfile ([learn how](https://projectfile.org/how-to/security))*

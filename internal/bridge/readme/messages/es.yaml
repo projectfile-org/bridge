@@ -10,18 +10,18 @@
 logo.alt: logotipo
 screenshots.title: Capturas de pantalla
 features.title: Características
-features.body: Consulta [Características](%s) para ver la lista completa.
+features.body: Consulta [%[1]s](%[2]s) para ver la lista completa.
 benchmarks.title: Pruebas de rendimiento
-benchmarks.body: Consulta [Pruebas de rendimiento](%s) para ver las cifras.
+benchmarks.body: Consulta [%[1]s](%[2]s) para ver las cifras.
 quick-start.title: Inicio rápido
-quick-start.body: Consulta [Inicio rápido](%s) para empezar en cinco minutos.
+quick-start.body: Consulta [%[1]s](%[2]s) para empezar en cinco minutos.
 requirements.title: Requisitos
-requirements.body: Consulta [Requisitos](%s) para conocer los prerrequisitos.
+requirements.body: Consulta [%[1]s](%[2]s) para conocer los prerrequisitos.
 installation.title: Instalación
-installation.body: Consulta [Instalación](%s) para ver los pasos de instalación.
+installation.body: Consulta [%[1]s](%[2]s) para ver los pasos de instalación.
 installation.variants: "Variantes disponibles:"
 usage.title: Uso
-usage.body: Consulta [Uso](%s) para ver ejemplos.
+usage.body: Consulta [%[1]s](%[2]s) para ver ejemplos.
 usage.variants: "Variantes disponibles:"
 building.title: Compilación
 building.goals: "Puntos de entrada de la canalización:"
@@ -29,15 +29,15 @@ building.intro.make: "Ejecuta `make` sin argumentos para el destino predetermina
 building.intro.dev: "Para el bucle de desarrollo local, `make dev-container` levanta el dev-container."
 documentation.title: Documentación
 faq.title: Preguntas frecuentes
-faq.body: Consulta [Preguntas frecuentes](%s) para las dudas más habituales.
+faq.body: Consulta [%[1]s](%[2]s) para las dudas más habituales.
 roadmap.title: Hoja de ruta
-roadmap.body: Consulta la [Hoja de ruta](%s) para ver lo que viene.
+roadmap.body: Consulta la [%[1]s](%[2]s) para ver lo que viene.
 configuration.title: Configuración
-configuration.body: Consulta [Configuración](%s) para ver todos los ajustes.
+configuration.body: Consulta [%[1]s](%[2]s) para ver todos los ajustes.
 policies.title: Políticas
 links.title: Enlaces
 funding.title: Financiación
-funding.body: Consulta [Financiación](%s) si quieres apoyar este proyecto.
+funding.body: Consulta [%[1]s](%[2]s) si quieres apoyar este proyecto.
 license.title: Licencia
 license.body: Este proyecto se publica bajo la licencia %s — consulta el archivo [LICENSE](LICENSE) para más detalles.
 

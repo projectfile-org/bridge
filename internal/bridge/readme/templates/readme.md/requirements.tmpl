@@ -1,5 +1,5 @@
 {{- with docLink "REQUIREMENTS.md" (t "requirements.title")}}
 ## {{.Label}}
 
-{{printf (t "requirements.body") .Filename}}
+{{printf (t "requirements.body") .Name .Filename}}
 {{end -}}

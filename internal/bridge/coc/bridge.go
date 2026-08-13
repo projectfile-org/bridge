@@ -98,6 +98,7 @@ func (Bridge) Render(pf *projectfile.Document, opts core.Options) (core.Output, 
 			strLang := core.ResolveLang(lang, pf)
 			return cocView{
 				ProjectName:  pfmodel.DisplayNameForLang(pf, strLang),
+				ReadmeFile:   core.RelLinkSibling(core.FileReadme, lang, filenameCOC),
 				ContactEmail: email,
 				Covenant:     covenant,
 				Scope:        scope,

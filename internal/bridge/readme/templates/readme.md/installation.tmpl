@@ -33,6 +33,6 @@
 {{- with docLink "INSTALL.md" (t "installation.title")}}
 ## {{.Label}}
 
-{{printf (t "installation.body") .Filename}}
+{{printf (t "installation.body") .Name .Filename}}
 {{- end}}
 {{- end}}

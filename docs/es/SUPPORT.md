@@ -1,12 +1,11 @@
 <!--
 SPDX-FileCopyrightText: 2026 Damián Búho <damian.buho@proton.me>
 SPDX-License-Identifier: MIT
+pf-cli-managed: yes
 -->
 
 <!-- textlint-disable terminology -->
-<!-- pf-cli-managed: yes -->
-
-[English](SUPPORT.md) · [Українська](docs/uk/SUPPORT.md)
+[English](../../SUPPORT.md) · [Українська](../uk/SUPPORT.md)
 
 # Cómo obtener ayuda
 
@@ -17,14 +16,12 @@ Este documento explica dónde conseguir ayuda y cómo formular buenas preguntas.
 
 Revisa esto primero — puede que tu pregunta ya tenga respuesta:
 
-- [especificación de projectfile](https://projectfile.org)
 - [Issues on Codeberg](https://codeberg.org/projectfile/bridge/issues)
 
 ## Dónde preguntar
 
-- **Informar de un fallo reproducible** — [Issues on Codeberg](https://codeberg.org/projectfile/bridge/issues)
-- **Informar de una vulnerabilidad de seguridad** — [docs/es/SECURITY.md](docs/es/SECURITY.md)
-- **Contribuir al proyecto** — [docs/es/CONTRIBUTING.md](docs/es/CONTRIBUTING.md)
+- **Informar de una vulnerabilidad de seguridad** — [SECURITY.md](SECURITY.md)
+- **Contribuir al proyecto** — [CONTRIBUTING.md](CONTRIBUTING.md)
 
 ## Cómo formular una buena pregunta
 
@@ -42,4 +39,6 @@ para más consejos.
 ## Tiempos de respuesta
 
 Este es un proyecto mantenido por la comunidad. Quienes lo mantienen responden cuando pueden — normalmente en unos pocos días, pero sin garantías. Te pedimos paciencia y respeto.
+
+*Generado desde projectfile ([saber cómo](https://projectfile.org/how-to/support))*
 <!-- textlint-enable -->

@@ -6,7 +6,7 @@ pf-cli-managed: yes
 
 <!-- textlint-disable terminology -->
 
-[English](README.md) · [Español](docs/es/README.md)
+[English](../../README.md) · [Español](../es/README.md)
 
 # Projectfile Bridges
 
@@ -24,16 +24,24 @@ pf-bridge projects the projectfile onto files, forges, and the repository
 - Feature and roadmap fragment assembly
 - Projectfile-to-file projection
 
-Див. [Можливості](FEATURES.md), щоб переглянути повний перелік.
+Див. [FEATURES.md](../../FEATURES.md), щоб переглянути повний перелік.
 
 ## Що надає цей проєкт
 
 - **Виконуваний файл** `pf-bridge`
-- **Образ контейнера** `kiota.ch/projectfile/bridge:latest`
+- **Образ контейнера** `ghcr.io/damian-buho/projectfile/bridge:latest`
+- **Образ контейнера** `docker.io/damianbuho/projectfile-bridge:latest`
 
 ## Встановлення
 
-Pull the published container image:
+Завантажте опублікований образ контейнера:
+
+```sh
+docker pull ghcr.io/damian-buho/projectfile/bridge:latest
+docker pull docker.io/damianbuho/projectfile-bridge:latest
+```
+
+Якщо наведені вище реєстри недоступні, завантажте з джерела:
 
 ```sh
 docker pull kiota.ch/projectfile/bridge:latest
@@ -51,13 +59,14 @@ pf-bridge all
 
 ## Збирання
 
-- [Довідник із Makefile](docs/MAKEFILE.md)
+- [Довідник із Makefile](../MAKEFILE.md)
 
 Точки входу конвеєра:
 
 - `make analyze` — Run the heavy analysis sweep (mutation testing, benchmarks)
 - `make audited` — Re-scan the pinned dependencies and published artifacts for new vulnerabilities
 - `make check-outdated` — Report every pinned dependency that lags upstream
+- `make ready-to-publish` — Run the pseudo-CI pipeline locally — build, test and scan, without publishing
 
 Виконайте `make` без аргументів для типової цілі; виконайте `make help`, щоб переглянути всі цілі.
 
@@ -65,14 +74,14 @@ pf-bridge all
 
 ## Політики
 
-- [Як зробити внесок](docs/uk/CONTRIBUTING.md)
-- [Політика безпеки](docs/uk/SECURITY.md)
-- [Як отримати підтримку](docs/uk/SUPPORT.md)
-- [Кодекс поведінки](docs/uk/CODE_OF_CONDUCT.md)
+- [Як зробити внесок](CONTRIBUTING.md)
+- [Політика безпеки](SECURITY.md)
+- [Як отримати підтримку](SUPPORT.md)
+- [Кодекс поведінки](CODE_OF_CONDUCT.md)
 
 ## Посилання
 
-- [специфікація projectfile](https://projectfile.org)
+- [Специфікація Projectfile](https://projectfile.org)
 - [Projectfile Bridges on Codeberg](https://codeberg.org/projectfile/bridge)
 - [Projectfile Bridges on GitHub](https://github.com/damian-buho/projectfile-bridge)
 - [Projectfile Bridges on kiota.ch](https://kiota.ch/projectfile/bridge)
@@ -82,4 +91,5 @@ pf-bridge all
 
 Цей проєкт ліцензовано на умовах MIT — див. файл [LICENSE](LICENSE) для подробиць.
 
+*Згенеровано з projectfile ([дізнатися як](https://projectfile.org/how-to/readme))*
 <!-- textlint-enable -->

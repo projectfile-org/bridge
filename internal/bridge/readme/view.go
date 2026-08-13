@@ -256,11 +256,15 @@ type linkEntry struct {
 }
 
 // staticLink is a relative in-repo link. Label is the human-readable text;
-// Filename is the link target. Zero-value (Filename=="") signals "absent" and
-// the block template guards with {{if .Field.Filename}}.
+// Filename is the link target, rebased relative to the document's own path;
+// Name is the bare repo-relative filename before rebasing, used as the link
+// text where the visible name should be the file itself. Zero-value
+// (Filename=="") signals "absent" and the block template guards with
+// {{if .Field.Filename}}.
 type staticLink struct {
 	Filename string
 	Label    string
+	Name     string
 }
 
 // linkCategories buckets a link `type` into a group. An unlisted type falls
@@ -718,12 +722,14 @@ func relatedLinks(doc *projectfile.Document, lang string) []linkEntry {
 // populated *staticLink when filename exists at the repo root, or nil
 // otherwise. Nil (not a zero-value struct) is what lets a template write
 // {{with docLink "FEATURES.md" "Features"}}…{{end}} and have the block drop
-// cleanly when the file is absent.
-func docLink(dir, filename, label string) *staticLink {
+// cleanly when the file is absent. docPath is the document's own repo-relative
+// path so the emitted link is rebased relative to it (a docs/<lang>/ readme
+// links ../../FEATURES.md, not the bare root path).
+func docLink(dir, docPath, filename, label string) *staticLink {
 	if !fileExists(dir, filename) {
 		return nil
 	}
-	return &staticLink{Filename: filename, Label: label}
+	return &staticLink{Name: filename, Filename: core.RelLink(filename, docPath), Label: label}
 }
 
 // probeHealthFiles walks healthFiles and returns a staticLink per existing
@@ -734,8 +740,9 @@ func docLink(dir, filename, label string) *staticLink {
 // language probes the root, others probe docs/<lang>/); strLang resolves the
 // label's catalog text. They differ only for the canonical render of a non-
 // English-default project, whose root file still probes root paths but wants
-// labels in the default language.
-func probeHealthFiles(dir, pathLang, strLang string) []staticLink {
+// labels in the default language. docPath rebases each emitted link relative
+// to the document's own path.
+func probeHealthFiles(dir, docPath, pathLang, strLang string) []staticLink {
 	var out []staticLink
 	for _, f := range healthFiles {
 		target := f
@@ -744,7 +751,7 @@ func probeHealthFiles(dir, pathLang, strLang string) []staticLink {
 		} else if !fileExists(dir, f) {
 			continue
 		}
-		out = append(out, staticLink{Filename: target, Label: healthFileLabel(f, strLang)})
+		out = append(out, staticLink{Name: target, Filename: core.RelLink(target, docPath), Label: healthFileLabel(f, strLang)})
 	}
 	return out
 }
@@ -755,7 +762,7 @@ func probeHealthFiles(dir, pathLang, strLang string) []staticLink {
 // are surfaced through the policies block's language bar instead). Label is the
 // file's first Markdown heading, falling back to the humanized filename when
 // the file has no heading. Returns nil when docs/ is absent or empty.
-func listDocsMarkdown(dir string) []staticLink {
+func listDocsMarkdown(dir, docPath string) []staticLink {
 	entries := readDir(dir, docsDir)
 	var out []staticLink
 	for _, e := range entries {
@@ -777,20 +784,20 @@ func listDocsMarkdown(dir string) []staticLink {
 		if label == "" {
 			label = humanizeFilename(name)
 		}
-		out = append(out, staticLink{Filename: rel, Label: label})
+		out = append(out, staticLink{Name: rel, Filename: core.RelLink(rel, docPath), Label: label})
 	}
 	return out
 }
 
 // probeBuildLinks builds the multi-link building block: BUILD.md at the root
 // plus the generated Makefile reference at docs/MAKEFILE.md if either exists.
-func probeBuildLinks(dir, lang string) []staticLink {
+func probeBuildLinks(dir, docPath, lang string) []staticLink {
 	var out []staticLink
-	if link := docLink(dir, buildDocFile, translate(lang, buildDocKey)); link != nil {
+	if link := docLink(dir, docPath, buildDocFile, translate(lang, buildDocKey)); link != nil {
 		out = append(out, *link)
 	}
 	if fileExists(dir, makefileDocPath) {
-		out = append(out, staticLink{Filename: makefileDocPath, Label: translate(lang, makefileDocKey)})
+		out = append(out, staticLink{Name: makefileDocPath, Filename: core.RelLink(makefileDocPath, docPath), Label: translate(lang, makefileDocKey)})
 	}
 	return out
 }
@@ -974,7 +981,7 @@ func formatDecisionTrace(dir, lang string, v readmeView, ext *pfmodel.ReadmeExte
 	for _, l := range relatedLinks(v.Doc, v.Lang) {
 		genlog.Decision("related", l.Label+" → "+l.URL, "links[] tagged related", "")
 	}
-	for _, s := range probeHealthFiles(dir, lang, lang) {
+	for _, s := range probeHealthFiles(dir, readmeDocPath(lang), lang, lang) {
 		genlog.Decision("static_link", s.Label+" → "+s.Filename, "policies probe", "")
 	}
 	for _, r := range buildBadgeRows(v.Doc, ext) {
@@ -988,14 +995,14 @@ func formatDecisionTrace(dir, lang string, v readmeView, ext *pfmodel.ReadmeExte
 	for _, s := range probeScreenshots(dir) {
 		genlog.Decision("screenshot", s.Path, "docs/screenshots probe", "")
 	}
-	for _, d := range listDocsMarkdown(dir) {
+	for _, d := range listDocsMarkdown(dir, readmeDocPath(lang)) {
 		genlog.Decision("doc_link", d.Label+" → "+d.Filename, "docs/*.md probe", "")
 	}
-	for _, b := range probeBuildLinks(dir, lang) {
+	for _, b := range probeBuildLinks(dir, readmeDocPath(lang), lang) {
 		genlog.Decision("build_link", b.Label+" → "+b.Filename, "BUILD/MAKEFILE probe", "")
 	}
 	for _, spec := range docLinkSpecs {
-		if link := docLink(dir, spec.File, translate(lang, spec.Key)); link != nil {
+		if link := docLink(dir, readmeDocPath(lang), spec.File, translate(lang, spec.Key)); link != nil {
 			genlog.Decision("doc_link", link.Label+" → "+link.Filename, spec.File+" probe", "")
 		}
 	}

@@ -48,10 +48,11 @@ func TestCatalogsCoverDefaultKeys(t *testing.T) {
 	}
 }
 
-// TestCatalogBodyPlaceholders pins the substitution contract: every *.body
-// message takes exactly one %s (the link target the block interpolates), in
-// every language. A translation that drops or doubles it renders "%!s(MISSING)"
-// into a published readme.
+// TestCatalogBodyPlaceholders pins the substitution contract for every *.body
+// message in every language. license.body interpolates the SPDX id once (%s);
+// every other body carries %[1]s (the bare filename, link text) and %[2]s
+// (its rebased target) exactly once each. A translation that drops, doubles,
+// or swaps the forms renders "%!s(MISSING)" into a published readme.
 func TestCatalogBodyPlaceholders(t *testing.T) {
 	catalogsOnce.Do(loadCatalogs)
 	for lang, m := range catalogs {
@@ -59,8 +60,17 @@ func TestCatalogBodyPlaceholders(t *testing.T) {
 			if !strings.HasSuffix(key, ".body") {
 				continue
 			}
-			assert.Equalf(t, 1, strings.Count(msg, "%s"),
-				"messages/%s.yaml: %q must carry exactly one %%s", lang, key)
+			if key == "license.body" {
+				assert.Equalf(t, 1, strings.Count(msg, "%s"),
+					"messages/%s.yaml: %q must carry exactly one %%s", lang, key)
+				continue
+			}
+			assert.Equalf(t, 1, strings.Count(msg, "%[1]s"),
+				"messages/%s.yaml: %q must carry exactly one %%[1]s", lang, key)
+			assert.Equalf(t, 1, strings.Count(msg, "%[2]s"),
+				"messages/%s.yaml: %q must carry exactly one %%[2]s", lang, key)
+			assert.NotContainsf(t, msg, "%s",
+				"messages/%s.yaml: %q must use %%[1]s/%%[2]s, not a bare %%s", lang, key)
 		}
 	}
 }
@@ -116,9 +126,11 @@ func TestRenderLocalizedSections(t *testing.T) {
 
 	es := string(out.Files["docs/es/README.md"])
 	assert.Contains(t, es, "## Instalación")
-	assert.Contains(t, es, "Consulta [Instalación](INSTALL.md)")
+	// Body doc-link uses the filename as text, rebased from docs/es/.
+	assert.Contains(t, es, "Consulta [INSTALL.md](../../INSTALL.md)")
 	assert.Contains(t, es, "## Políticas")
-	assert.Contains(t, es, "[Cómo contribuir](CONTRIBUTING.md)")
+	// Health-file link keeps its localized label, rebased from docs/es/.
+	assert.Contains(t, es, "[Cómo contribuir](../../CONTRIBUTING.md)")
 	// A single-group links section renders no ### subheading — the heading
 	// would only repeat "## Enlaces". The localized link still renders.
 	assert.NotContains(t, es, "### Proyecto")

@@ -1,5 +1,5 @@
 {{- with docLink "BENCHMARKS.md" (t "benchmarks.title")}}
 ## {{.Label}}
 
-{{printf (t "benchmarks.body") .Filename}}
+{{printf (t "benchmarks.body") .Name .Filename}}
 {{end -}}

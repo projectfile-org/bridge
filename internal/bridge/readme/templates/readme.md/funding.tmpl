@@ -1,5 +1,5 @@
 {{- with docLink "FUNDING.md" (t "funding.title")}}
 ## {{.Label}}
 
-{{printf (t "funding.body") .Filename}}
+{{printf (t "funding.body") .Name .Filename}}
 {{end -}}

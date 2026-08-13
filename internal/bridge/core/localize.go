@@ -160,10 +160,16 @@ func LocalizedSibling(base, lang string) string {
 // included. defLang is the project's default language; it labels the canonical
 // entry with its endonym. Returns nil when no extra languages are configured,
 // so a single-language project never grows a bar pointing at itself.
+//
+// Each entry's target is rebased relative to the active document's own path
+// (docs/es/X.md links ../../X.md for the root file and ../uk/X.md for a
+// sibling variant), so the bar resolves from whichever directory the reader
+// arrived in.
 func LanguageLinks(base, active, defLang string, langs []string) []LangLink {
 	if len(langs) == 0 {
 		return nil
 	}
+	docPath := LocalizedFilename(base, active)
 	all := append([]string{""}, langs...)
 	out := make([]LangLink, 0, len(all))
 	for _, lang := range all {
@@ -173,7 +179,7 @@ func LanguageLinks(base, active, defLang string, langs []string) []LangLink {
 		out = append(out, LangLink{
 			Code:     lang,
 			Label:    langLabel(lang, defLang),
-			Filename: LocalizedFilename(base, lang),
+			Filename: RelLink(LocalizedFilename(base, lang), docPath),
 		})
 	}
 	return out
@@ -288,6 +294,11 @@ func RenderLocalized(pf *projectfile.Document, spec LocalizedSpec, opts Options)
 		}
 		genlog.Decision("rendered", LocalizedFilename(spec.Filename, lang), tmpl, "lang="+langLabel(lang, defLang))
 		body = InsertLanguageBar(body, spec.Filename, lang, defLang, translated)
+		// The footer is appended before the textlint wrap so its localized
+		// copy sits inside the terminology-disable block for non-English. The
+		// trailing \n keeps the single-newline contract (MD047) for the
+		// English root render, which skips the wrap that would otherwise add it.
+		body = append(body, []byte("\n\n"+GeneratedFooter(spec.Filename, ResolveLang(lang, pf))+"\n")...)
 		// ResolveLang maps the canonical render sentinel ("" ) to the default
 		// language, so a Spanish-default project's Spanish root file is wrapped
 		// while its docs/en/ variant is not. Wraps after the language bar so the

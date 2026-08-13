@@ -22,16 +22,24 @@ pf-bridge projects the projectfile onto files, forges, and the repository
 - Feature and roadmap fragment assembly
 - Projectfile-to-file projection
 
-See [Features](FEATURES.md) for the full list.
+See [FEATURES.md](FEATURES.md) for the full list.
 
 ## What this provides
 
 - **Executable** `pf-bridge`
-- **Container image** `kiota.ch/projectfile/bridge:latest`
+- **Container image** `ghcr.io/damian-buho/projectfile/bridge:latest`
+- **Container image** `docker.io/damianbuho/projectfile-bridge:latest`
 
 ## Installation
 
 Pull the published container image:
+
+```sh
+docker pull ghcr.io/damian-buho/projectfile/bridge:latest
+docker pull docker.io/damianbuho/projectfile-bridge:latest
+```
+
+If the registries above are unreachable, pull from the origin instead:
 
 ```sh
 docker pull kiota.ch/projectfile/bridge:latest
@@ -56,6 +64,7 @@ Pipeline entry points:
 - `make analyze` — Run the heavy analysis sweep (mutation testing, benchmarks)
 - `make audited` — Re-scan the pinned dependencies and published artifacts for new vulnerabilities
 - `make check-outdated` — Report every pinned dependency that lags upstream
+- `make ready-to-publish` — Run the pseudo-CI pipeline locally — build, test and scan, without publishing
 
 Run `make` with no arguments for the default target; run `make help` to list every target.
 
@@ -70,7 +79,7 @@ For the local dev loop, `make dev-container` brings up the dev-container.
 
 ## Links
 
-- [projectfile specification](https://projectfile.org)
+- [Projectfile Specification](https://projectfile.org)
 - [Projectfile Bridges on Codeberg](https://codeberg.org/projectfile/bridge)
 - [Projectfile Bridges on GitHub](https://github.com/damian-buho/projectfile-bridge)
 - [Projectfile Bridges on kiota.ch](https://kiota.ch/projectfile/bridge)
@@ -79,3 +88,5 @@ For the local dev loop, `make dev-container` brings up the dev-container.
 ## License
 
 This project is licensed under MIT — see the [LICENSE](LICENSE) file for details.
+
+*Generated from projectfile ([learn how](https://projectfile.org/how-to/readme))*

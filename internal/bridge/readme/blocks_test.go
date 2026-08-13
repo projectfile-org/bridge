@@ -81,7 +81,7 @@ func TestProbeFeaturesLinkPresent(t *testing.T) {
 	pf := minimalDoc(t)
 	body := renderDoc(t, dir, pf)
 	assert.Contains(t, body, "## Features")
-	assert.Contains(t, body, "[Features](FEATURES.md)")
+	assert.Contains(t, body, "[FEATURES.md](FEATURES.md)")
 }
 
 // TestProbeFeaturesLinkAbsent verifies the block is silently omitted when
@@ -106,7 +106,7 @@ func TestFeaturesBlockListsHeadings(t *testing.T) {
 	assert.Contains(t, body, "## Features")
 	assert.Contains(t, body, "- Persistent APT cache")
 	assert.Contains(t, body, "- Non-root by default")
-	assert.Contains(t, body, "[Features](FEATURES.md)")
+	assert.Contains(t, body, "[FEATURES.md](FEATURES.md)")
 	assert.NotContains(t, body, "- Features\n",
 		"the H1 document title must not appear as a bullet")
 	assert.NotContains(t, body, "- Project features",
@@ -397,13 +397,14 @@ func TestMultiLangCrossLinks(t *testing.T) {
 	assert.NotContains(t, en, "](README.md)", "default variant must not link to itself")
 
 	// es variant links to the canonical (English) root + uk, never to itself.
-	assert.Contains(t, es, "[English](README.md)")
-	assert.Contains(t, es, "[Українська](docs/uk/README.md)")
+	// Links are rebased relative to docs/es/README.md.
+	assert.Contains(t, es, "[English](../../README.md)")
+	assert.Contains(t, es, "[Українська](../uk/README.md)")
 	assert.NotContains(t, es, "](docs/es/README.md)", "es variant must not link to itself")
 
 	// uk variant links to the canonical (English) root + es, never to itself.
-	assert.Contains(t, uk, "[English](README.md)")
-	assert.Contains(t, uk, "[Español](docs/es/README.md)")
+	assert.Contains(t, uk, "[English](../../README.md)")
+	assert.Contains(t, uk, "[Español](../es/README.md)")
 	assert.NotContains(t, uk, "](docs/uk/README.md)", "uk variant must not link to itself")
 
 	// Translated prose would trip the English-only terminology rule, so each
@@ -483,7 +484,7 @@ func TestDefaultLanguageReanchorsRootRender(t *testing.T) {
 	// back to the Spanish root.
 	en := string(out.Files["docs/en/README.md"])
 	assert.Contains(t, en, summaryEN)
-	assert.Contains(t, en, "[Español](README.md)", "English variant links the Spanish root")
+	assert.Contains(t, en, "[Español](../../README.md)", "English variant links the Spanish root")
 }
 
 // TestReadmeLanguagesAbsentReturnsNil verifies the absence path so a single

@@ -88,8 +88,10 @@ func TestRenderTranslatesRowVocabulary(t *testing.T) {
 func TestRenderCrossLinksStayInLanguage(t *testing.T) {
 	out, err := support.Bridge{}.Render(localizedDoc("es"), core.Options{Offline: true})
 	require.NoError(t, err)
+	// The sibling is a co-located file: basename text, same-directory URL —
+	// identical from the root and from docs/es/.
 	assert.Contains(t, string(out.Files["SUPPORT.md"]), "[SECURITY.md](SECURITY.md)")
-	assert.Contains(t, string(out.Files["docs/es/SUPPORT.md"]), "[docs/es/SECURITY.md](docs/es/SECURITY.md)")
+	assert.Contains(t, string(out.Files["docs/es/SUPPORT.md"]), "[SECURITY.md](SECURITY.md)")
 }
 
 // TestRenderSkipsUntranslatedLanguage is the missing-translation policy: a
@@ -115,25 +117,25 @@ func TestRenderCrossLanguageBar(t *testing.T) {
 	assert.Contains(t, en, "[Українська](docs/uk/SUPPORT.md)")
 
 	es := string(out.Files["docs/es/SUPPORT.md"])
-	assert.Contains(t, es, "[English](SUPPORT.md)")
+	assert.Contains(t, es, "[English](../../SUPPORT.md)")
 	assert.NotContains(t, es, "[Español](docs/es/SUPPORT.md)", "a variant must not link to itself")
 }
 
 // TestRenderBeforeLinksPriorityOrdersWithinType: a §139 `priority` on a
-// links[] entry reorders the "Before You Ask" list within its type (higher
-// first). resolveLabeledLinks is the chokepoint both Before-You-Ask and
-// Where-to-Ask read through, so this also covers the table rows.
+// support-tagged links[] entry reorders the "Before You Ask" list (higher
+// first). Before You Ask is tag-driven, so the entries carry the `support` tag.
 func TestRenderBeforeLinksPriorityOrdersWithinType(t *testing.T) {
 	pf := localizedDoc()
 	pf.Links = []projectfile.Link{
 		{
 			Type: projectfile.LinkDocumentation, URL: "https://example.test/docs",
 			Label: &projectfile.LocalizedString{Bare: "Docs"},
+			Extra: map[string]any{"tags": []any{"support"}},
 		},
 		{
 			Type: projectfile.LinkDocumentation, URL: "https://example.test/guide",
 			Label: &projectfile.LocalizedString{Bare: "Pinned Guide"},
-			Extra: map[string]any{"priority": 300},
+			Extra: map[string]any{"priority": 300, "tags": []any{"support"}},
 		},
 	}
 

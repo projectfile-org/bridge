@@ -46,6 +46,13 @@ const (
 	TagBadgesGitea  = "badges-gitea"
 )
 
+// TagSupport marks a link as a "read this first" support resource — what
+// SUPPORT.md lists under "Before You Ask". Unlike the host-fact tags above, it
+// is a PROJECT decision the scanner applies as a gap-fill default to the
+// issues tracker (remove the tag to drop Issues from that list), so it sits
+// apart from the host-capability vocabulary a hostname settles.
+const TagSupport = "support"
+
 // LinkTags returns the capabilities a link declares through the spec's §139
 // additional-key channel (l.Extra). A tag says what the mirror AFFORDS —
 // `public`, `badges`, `ci` — which is what lets a shared fragment address a
@@ -185,6 +192,35 @@ func LinksByType(doc *projectfile.Document, linkType string) []projectfile.Link 
 		}
 	}
 	return out
+}
+
+// LinksByTag returns every link carrying the given §139 tag, in document order.
+// Use this for tag-driven selection such as SUPPORT.md's "Before You Ask"
+// (TagSupport). Returns nil when no link carries the tag.
+func LinksByTag(doc *projectfile.Document, tag string) []projectfile.Link {
+	if doc == nil || tag == "" {
+		return nil
+	}
+	var out []projectfile.Link
+	for _, l := range doc.Links {
+		for _, t := range LinkTags(l) {
+			if t == tag {
+				out = append(out, l)
+				break
+			}
+		}
+	}
+	return out
+}
+
+// LinkHasTag reports whether a link carries the given §139 tag.
+func LinkHasTag(l projectfile.Link, tag string) bool {
+	for _, t := range LinkTags(l) {
+		if t == tag {
+			return true
+		}
+	}
+	return false
 }
 
 // SetLink writes url into the canonical links[type=linkType] entry: updates

@@ -142,5 +142,7 @@ links:
     type: source-code
     url: https://kiota.ch/projectfile/bridge
   - label: Issues on Codeberg
+    tags:
+      - support
     type: bugs
     url: https://codeberg.org/projectfile/bridge/issues

@@ -95,37 +95,26 @@ func (Bridge) Render(pf *projectfile.Document, opts core.Options) (core.Output, 
 	}, opts)
 }
 
-// buildBeforeLinks collects the "Before You Ask" bullet list from links[].
-// Each link type can produce multiple entries when multiple links of that type
-// exist. Only non-empty URLs are included.
+// buildBeforeLinks collects the "Before You Ask" bullet list: every link
+// tagged `support` (the issues tracker is tagged so by scan, gap-fill). A
+// project with no support-tagged link gets no "Before You Ask" section.
 func buildBeforeLinks(pf *projectfile.Document, lang string) []beforeLink {
-	type mapping struct {
-		linkType     string
-		defaultLabel string
-	}
-	mappings := []mapping{
-		{projectfile.LinkDocumentation, "Documentation"},
-		{projectfile.LinkWiki, "Wiki"},
-		{projectfile.LinkFAQ, "FAQ"},
-		{projectfile.LinkBugs, "Existing issues"},
-		{projectfile.LinkForum, "Past discussions"},
-	}
-
-	var out []beforeLink
-	for _, m := range mappings {
-		for _, ll := range resolveLabeledLinks(pf, m.linkType, m.defaultLabel, lang) {
-			out = append(out, beforeLink(ll))
-		}
+	out := make([]beforeLink, 0, 4)
+	for _, ll := range resolveSupportTaggedLinks(pf, lang) {
+		out = append(out, beforeLink(ll))
 	}
 	return out
 }
 
 // buildTableRows produces the "Where to Ask" table rows. Community health
 // files (SECURITY.md, CONTRIBUTING.md) are always referenced as local
-// relative links since they live alongside SUPPORT.md — resolved to the
-// same-language variant when one will be rendered. Network links come from
-// links[] and can produce multiple rows when multiple entries of the same
-// type exist (e.g., two paid-support providers, two chat channels).
+// relative links rebased from SUPPORT's own path, resolved to the same-language
+// variant when one will be rendered. Network links come from links[] and can
+// produce multiple rows when multiple entries of the same type exist.
+//
+// The issues tracker appears HERE only when it is NOT tagged `support` — a
+// tagged one lives in "Before You Ask" — so it is never listed twice. An
+// untagged project (one that never scanned) still gets its bug-report row.
 //
 // pathLang is the render sentinel used for sibling-file paths (the default
 // language renders at root); strLang is the concrete tag used for link-label
@@ -138,11 +127,11 @@ func buildBeforeLinks(pf *projectfile.Document, lang string) []beforeLink {
 func buildTableRows(pf *projectfile.Document, pathLang, strLang string) []tableRow {
 	var rows []tableRow
 
-	for _, ll := range resolveLabeledLinks(pf, projectfile.LinkForum, "Discussions", strLang) {
+	for _, ll := range resolveLabeledLinks(pf, projectfile.LinkForum, "", "Discussions", strLang) {
 		rows = append(rows, tableRow{Kind: kindUsageQuestion, GoTo: mdLink(ll)})
 	}
 
-	for _, ll := range resolveLabeledLinks(pf, projectfile.LinkBugs, "Issues", strLang) {
+	for _, ll := range resolveLabeledLinks(pf, projectfile.LinkBugs, pfmodel.TagSupport, "Issues", strLang) {
 		rows = append(rows, tableRow{Kind: kindBug, GoTo: mdLink(ll)})
 	}
 
@@ -151,17 +140,17 @@ func buildTableRows(pf *projectfile.Document, pathLang, strLang string) []tableR
 	// since the spec doesn't distinguish Q&A vs Ideas forum links; the user
 	// can add a second `links[type=forum]` entry with a distinguishing label.
 
-	for _, ll := range resolveLabeledLinks(pf, projectfile.LinkChat, "Chat", strLang) {
+	for _, ll := range resolveLabeledLinks(pf, projectfile.LinkChat, "", "Chat", strLang) {
 		rows = append(rows, tableRow{Kind: kindChat, GoTo: mdLink(ll)})
 	}
 
-	security := core.LocalizedSibling(core.FileSecurity, pathLang)
-	rows = append(rows, tableRow{Kind: kindSecurity, GoTo: "[" + security + "](" + security + ")"})
+	security := core.RelLinkSibling(core.FileSecurity, pathLang, filenameSupport)
+	rows = append(rows, tableRow{Kind: kindSecurity, GoTo: "[" + core.FileSecurity + "](" + security + ")"})
 
-	contributing := core.LocalizedSibling(core.FileContributing, pathLang)
-	rows = append(rows, tableRow{Kind: kindContributing, GoTo: "[" + contributing + "](" + contributing + ")"})
+	contributing := core.RelLinkSibling(core.FileContributing, pathLang, filenameSupport)
+	rows = append(rows, tableRow{Kind: kindContributing, GoTo: "[" + core.FileContributing + "](" + contributing + ")"})
 
-	for _, ll := range resolveLabeledLinks(pf, "paid-support", "Commercial Support", strLang) {
+	for _, ll := range resolveLabeledLinks(pf, "paid-support", "", "Commercial Support", strLang) {
 		rows = append(rows, tableRow{Kind: kindPaidSupport, GoTo: mdLink(ll)})
 	}
 

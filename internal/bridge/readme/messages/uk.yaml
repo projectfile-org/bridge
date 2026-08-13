@@ -10,18 +10,18 @@
 logo.alt: логотип
 screenshots.title: Знімки екрана
 features.title: Можливості
-features.body: Див. [Можливості](%s), щоб переглянути повний перелік.
+features.body: Див. [%[1]s](%[2]s), щоб переглянути повний перелік.
 benchmarks.title: Продуктивність
-benchmarks.body: Див. [Продуктивність](%s), щоб переглянути результати вимірювань.
+benchmarks.body: Див. [%[1]s](%[2]s), щоб переглянути результати вимірювань.
 quick-start.title: Швидкий старт
-quick-start.body: Див. [Швидкий старт](%s), щоб почати за п’ять хвилин.
+quick-start.body: Див. [%[1]s](%[2]s), щоб почати за п’ять хвилин.
 requirements.title: Вимоги
-requirements.body: Див. [Вимоги](%s), щоб дізнатися про передумови.
+requirements.body: Див. [%[1]s](%[2]s), щоб дізнатися про передумови.
 installation.title: Встановлення
-installation.body: Див. [Встановлення](%s), щоб переглянути кроки встановлення.
+installation.body: Див. [%[1]s](%[2]s), щоб переглянути кроки встановлення.
 installation.variants: "Доступні варіанти:"
 usage.title: Використання
-usage.body: Див. [Використання](%s), щоб переглянути приклади.
+usage.body: Див. [%[1]s](%[2]s), щоб переглянути приклади.
 usage.variants: "Доступні варіанти:"
 building.title: Збирання
 building.goals: "Точки входу конвеєра:"
@@ -29,15 +29,15 @@ building.intro.make: "Виконайте `make` без аргументів дл
 building.intro.dev: "Для локального циклу розробки `make dev-container` піднімає dev-container."
 documentation.title: Документація
 faq.title: Поширені запитання
-faq.body: Див. [Поширені запитання](%s), щоб знайти відповіді на типові питання.
+faq.body: Див. [%[1]s](%[2]s), щоб знайти відповіді на типові питання.
 roadmap.title: Дорожня карта
-roadmap.body: Див. [Дорожню карту](%s), щоб дізнатися про заплановане.
+roadmap.body: Див. [%[1]s](%[2]s), щоб дізнатися про заплановане.
 configuration.title: Налаштування
-configuration.body: Див. [Налаштування](%s), щоб переглянути всі параметри.
+configuration.body: Див. [%[1]s](%[2]s), щоб переглянути всі параметри.
 policies.title: Політики
 links.title: Посилання
 funding.title: Фінансування
-funding.body: Див. [Фінансування](%s), якщо ви хочете підтримати цей проєкт.
+funding.body: Див. [%[1]s](%[2]s), якщо ви хочете підтримати цей проєкт.
 license.title: Ліцензія
 license.body: Цей проєкт ліцензовано на умовах %s — див. файл [LICENSE](LICENSE) для подробиць.
 

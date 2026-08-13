@@ -1,10 +1,11 @@
 <!--
 SPDX-FileCopyrightText: 2026 Damián Búho <damian.buho@proton.me>
 SPDX-License-Identifier: MIT
+pf-cli-managed: yes
 -->
 
 <!-- textlint-disable terminology -->
-[English](CONTRIBUTING.md) · [Українська](docs/uk/CONTRIBUTING.md)
+[English](../../CONTRIBUTING.md) · [Українська](../uk/CONTRIBUTING.md)
 
 # Cómo contribuir a Projectfile Bridges
 
@@ -35,7 +36,7 @@ Toda forma de contribución se agradece y se valora. Consulta la [Tabla de conte
 
 ## Tengo una pregunta
 
-Antes de preguntar, revisa [docs/es/SUPPORT.md](docs/es/SUPPORT.md): explica dónde conseguir ayuda y cómo formular preguntas eficaces.
+Antes de preguntar, revisa [SUPPORT.md](SUPPORT.md): explica dónde conseguir ayuda y cómo formular preguntas eficaces.
 
 > ### Aviso legal
 >
@@ -49,7 +50,7 @@ Antes de preguntar, revisa [docs/es/SUPPORT.md](docs/es/SUPPORT.md): explica dó
 Un buen informe de fallo evita que otras personas tengan que perseguirte para obtener más información. Por eso te pedimos que investigues con cuidado, reúnas información y describas el problema con detalle. Completa estos pasos por adelantado para ayudarnos a corregir cualquier posible fallo lo antes posible.
 
 - Asegúrate de estar usando la última versión.
-- Comprueba que se trata realmente de un fallo y no de un error por tu parte, por ejemplo, componentes o versiones incompatibles del entorno (asegúrate de haber leído la [documentación](https://projectfile.org). Si lo que buscas es ayuda, consulta [docs/es/SUPPORT.md](docs/es/SUPPORT.md)).
+- Comprueba que se trata realmente de un fallo y no de un error por tu parte, por ejemplo, componentes o versiones incompatibles del entorno (asegúrate de haber leído la [documentación](https://projectfile.org). Si lo que buscas es ayuda, consulta [SUPPORT.md](SUPPORT.md)).
 - Para ver si otras personas han tenido (y quizá ya resuelto) el mismo problema, comprueba que no exista ya un informe de tu fallo o error en el [gestor de incidencias](https://codeberg.org/projectfile/bridge/issues?q=label%3Abug).
 - Busca también en internet (incluido Stack Overflow) por si el problema ya se ha comentado fuera de la comunidad.
 - Reúne información sobre el fallo:
@@ -109,4 +110,5 @@ Las propuestas de mejora se gestionan como [incidencias](https://codeberg.org/pr
 
 La documentación está en [https://projectfile.org](https://projectfile.org). Correcciones, mejoras y secciones nuevas son bienvenidas: abre una solicitud de incorporación contra las fuentes de la documentación.
 
+*Generado desde projectfile ([saber cómo](https://projectfile.org/how-to/contributing))*
 <!-- textlint-enable -->

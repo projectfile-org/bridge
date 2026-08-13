@@ -1,12 +1,11 @@
 <!--
 SPDX-FileCopyrightText: 2026 Damián Búho <damian.buho@proton.me>
 SPDX-License-Identifier: MIT
+pf-cli-managed: yes
 -->
 
 <!-- textlint-disable terminology -->
-<!-- pf-cli-managed: yes -->
-
-[English](SUPPORT.md) · [Español](docs/es/SUPPORT.md)
+[English](../../SUPPORT.md) · [Español](../es/SUPPORT.md)
 
 # Як отримати підтримку
 
@@ -17,14 +16,12 @@ SPDX-License-Identifier: MIT
 
 Перегляньте це спершу — можливо, відповідь уже є:
 
-- [специфікація projectfile](https://projectfile.org)
 - [Issues on Codeberg](https://codeberg.org/projectfile/bridge/issues)
 
 ## Куди звертатися
 
-- **Повідомити про відтворювану ваду** — [Issues on Codeberg](https://codeberg.org/projectfile/bridge/issues)
-- **Повідомити про вразливість безпеки** — [docs/uk/SECURITY.md](docs/uk/SECURITY.md)
-- **Зробити внесок у проєкт** — [docs/uk/CONTRIBUTING.md](docs/uk/CONTRIBUTING.md)
+- **Повідомити про вразливість безпеки** — [SECURITY.md](SECURITY.md)
+- **Зробити внесок у проєкт** — [CONTRIBUTING.md](CONTRIBUTING.md)
 
 ## Як поставити гарне запитання
 
@@ -42,4 +39,6 @@ SPDX-License-Identifier: MIT
 ## Час відповіді
 
 Це проєкт, який підтримує спільнота. Супровідники відповідають, коли мають змогу — зазвичай протягом кількох днів, але без гарантій. Просимо про терпіння та повагу.
+
+*Згенеровано з projectfile ([дізнатися як](https://projectfile.org/how-to/support))*
 <!-- textlint-enable -->

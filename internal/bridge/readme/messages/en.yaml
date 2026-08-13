@@ -6,27 +6,29 @@
 # The canonical readme message catalog. Every other messages/<lang>.yaml is a
 # translation of exactly these keys — a key missing there falls back to here.
 #
-# A `%s` is a Markdown link target the bridge substitutes at render time; keep
-# exactly one per body string. Titles double as the link text in their own
-# block, so they are repeated inside the body sentence rather than interpolated:
-# a language that declines nouns needs both forms independently.
+# A doc-link body string carries two indexed verbs: `%[1]s` is the companion
+# file's bare name (the visible link text — a localized readme never offers a
+# translated label for a canonical-named file), and `%[2]s` is its target
+# rebased relative to the document's own path. The section title (above) still
+# names the block in the reader's language. `license.body` is the exception:
+# its single `%s` is the SPDX identifier, not a link.
 
 # Blocks
 logo.alt: logo
 screenshots.title: Screenshots
 features.title: Features
-features.body: See [Features](%s) for the full list.
+features.body: See [%[1]s](%[2]s) for the full list.
 benchmarks.title: Benchmarks
-benchmarks.body: See [Benchmarks](%s) for performance numbers.
+benchmarks.body: See [%[1]s](%[2]s) for performance numbers.
 quick-start.title: Quick Start
-quick-start.body: See [Quick Start](%s) to get going in five minutes.
+quick-start.body: See [%[1]s](%[2]s) to get going in five minutes.
 requirements.title: Requirements
-requirements.body: See [Requirements](%s) for prerequisites.
+requirements.body: See [%[1]s](%[2]s) for prerequisites.
 installation.title: Installation
-installation.body: See [Installation](%s) for setup steps.
+installation.body: See [%[1]s](%[2]s) for setup steps.
 installation.variants: "Available variants:"
 usage.title: Usage
-usage.body: See [Usage](%s) for examples.
+usage.body: See [%[1]s](%[2]s) for examples.
 usage.variants: "Available variants:"
 building.title: Building
 building.goals: "Pipeline entry points:"
@@ -34,15 +36,15 @@ building.intro.make: "Run `make` with no arguments for the default target; run `
 building.intro.dev: "For the local dev loop, `make dev-container` brings up the dev-container."
 documentation.title: Documentation
 faq.title: FAQ
-faq.body: See [FAQ](%s) for common questions.
+faq.body: See [%[1]s](%[2]s) for common questions.
 roadmap.title: Roadmap
-roadmap.body: See the [Roadmap](%s) for what is planned next.
+roadmap.body: See the [%[1]s](%[2]s) for what is planned next.
 configuration.title: Configuration
-configuration.body: See [Configuration](%s) for every setting.
+configuration.body: See [%[1]s](%[2]s) for every setting.
 policies.title: Policies
 links.title: Links
 funding.title: Funding
-funding.body: See [Funding](%s) if you’d like to support this project.
+funding.body: See [%[1]s](%[2]s) if you’d like to support this project.
 license.title: License
 license.body: This project is licensed under %s — see the [LICENSE](LICENSE) file for details.
 

@@ -6,7 +6,7 @@ pf-cli-managed: yes
 
 <!-- textlint-disable terminology -->
 
-[English](README.md) · [Українська](docs/uk/README.md)
+[English](../../README.md) · [Українська](../uk/README.md)
 
 # Projectfile Bridges
 
@@ -24,16 +24,24 @@ pf-bridge projects the projectfile onto files, forges, and the repository
 - Feature and roadmap fragment assembly
 - Projectfile-to-file projection
 
-Consulta [Características](FEATURES.md) para ver la lista completa.
+Consulta [FEATURES.md](../../FEATURES.md) para ver la lista completa.
 
 ## Qué entrega este proyecto
 
 - **Ejecutable** `pf-bridge`
-- **Imagen de contenedor** `kiota.ch/projectfile/bridge:latest`
+- **Imagen de contenedor** `ghcr.io/damian-buho/projectfile/bridge:latest`
+- **Imagen de contenedor** `docker.io/damianbuho/projectfile-bridge:latest`
 
 ## Instalación
 
-Pull the published container image:
+Descarga la imagen de contenedor publicada:
+
+```sh
+docker pull ghcr.io/damian-buho/projectfile/bridge:latest
+docker pull docker.io/damianbuho/projectfile-bridge:latest
+```
+
+Si los registros anteriores no están disponibles, descarga desde el origen:
 
 ```sh
 docker pull kiota.ch/projectfile/bridge:latest
@@ -51,13 +59,14 @@ pf-bridge all
 
 ## Compilación
 
-- [Referencia del Makefile](docs/MAKEFILE.md)
+- [Referencia del Makefile](../MAKEFILE.md)
 
 Puntos de entrada de la canalización:
 
 - `make analyze` — Run the heavy analysis sweep (mutation testing, benchmarks)
 - `make audited` — Re-scan the pinned dependencies and published artifacts for new vulnerabilities
 - `make check-outdated` — Report every pinned dependency that lags upstream
+- `make ready-to-publish` — Run the pseudo-CI pipeline locally — build, test and scan, without publishing
 
 Ejecuta `make` sin argumentos para el destino predeterminado; ejecuta `make help` para listar todos los destinos.
 
@@ -65,14 +74,14 @@ Para el bucle de desarrollo local, `make dev-container` levanta el dev-container
 
 ## Políticas
 
-- [Cómo contribuir](docs/es/CONTRIBUTING.md)
-- [Política de seguridad](docs/es/SECURITY.md)
-- [Cómo obtener ayuda](docs/es/SUPPORT.md)
-- [Código de conducta](docs/es/CODE_OF_CONDUCT.md)
+- [Cómo contribuir](CONTRIBUTING.md)
+- [Política de seguridad](SECURITY.md)
+- [Cómo obtener ayuda](SUPPORT.md)
+- [Código de conducta](CODE_OF_CONDUCT.md)
 
 ## Enlaces
 
-- [especificación de projectfile](https://projectfile.org)
+- [Especificación de Projectfile](https://projectfile.org)
 - [Projectfile Bridges on Codeberg](https://codeberg.org/projectfile/bridge)
 - [Projectfile Bridges on GitHub](https://github.com/damian-buho/projectfile-bridge)
 - [Projectfile Bridges on kiota.ch](https://kiota.ch/projectfile/bridge)
@@ -82,4 +91,5 @@ Para el bucle de desarrollo local, `make dev-container` levanta el dev-container
 
 Este proyecto se publica bajo la licencia MIT — consulta el archivo [LICENSE](LICENSE) para más detalles.
 
+*Generado desde projectfile ([saber cómo](https://projectfile.org/how-to/readme))*
 <!-- textlint-enable -->
