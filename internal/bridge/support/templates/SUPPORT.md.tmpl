@@ -45,8 +45,16 @@ The following {{.ProjectName}} versions currently receive support:
 
 {{range .EOL}}- **{{.Version}}** — supported until {{.Date}}
 {{end}}
+{{end}}{{if .PaidSupport}}
+
+## Paid Support
+
+Paid support for {{.ProjectName}} is available:
+
+{{range .PaidSupport}}- [{{or .Label "Paid Support"}}]({{.URL}})
+{{end}}
 {{end}}
 
 {{- define "want" -}}
-{{if eq . "usage-question"}}Ask a usage question{{else if eq . "bug"}}Report a reproducible bug{{else if eq . "chat"}}Chat with the community{{else if eq . "security"}}Report a security vulnerability{{else if eq . "contributing"}}Contribute to the project{{else if eq . "paid-support"}}Get commercial support / SLA{{else}}{{.}}{{end}}
+{{if eq . "usage-question"}}Ask a usage question{{else if eq . "bug"}}Report a reproducible bug{{else if eq . "chat"}}Chat with the community{{else if eq . "security"}}Report a security vulnerability{{else if eq . "contributing"}}Contribute to the project{{else}}{{.}}{{end}}
 {{- end -}}

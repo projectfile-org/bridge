@@ -48,6 +48,9 @@ func (Bridge) Render(pf *projectfile.Document, opts core.Options) (core.Output, 
 	// with its own link labels inside the per-language view below.
 	beforeLinks := buildBeforeLinks(pf, "")
 	rows := buildTableRows(pf, "", "")
+	// paid-support is a standalone end block, not a "Where to Ask" row: its
+	// presence is the "paid support available" flag.
+	paidSupport := resolveLabeledLinks(pf, "paid-support", "", "", "")
 
 	// The response-time fallback is a full sentence of prose, so the template
 	// owns it: passing the field through empty lets each localized template
@@ -70,7 +73,7 @@ func (Bridge) Render(pf *projectfile.Document, opts core.Options) (core.Output, 
 		}
 	}
 
-	emitDecisionTrace(pf, ext, beforeLinks, rows, statusPageURL, responseTime, responseTimeSrc)
+	emitDecisionTrace(pf, ext, beforeLinks, rows, paidSupport, statusPageURL, responseTime, responseTimeSrc)
 
 	return core.RenderLocalized(pf, core.LocalizedSpec{
 		Filename: filenameSupport,
@@ -90,6 +93,7 @@ func (Bridge) Render(pf *projectfile.Document, opts core.Options) (core.Output, 
 				ResponseTime: responseTime,
 				StatusPage:   statusPageURL,
 				EOL:          eolViews,
+				PaidSupport:  resolveLabeledLinks(pf, "paid-support", "", "", strLang),
 			}
 		},
 	}, opts)
@@ -150,10 +154,6 @@ func buildTableRows(pf *projectfile.Document, pathLang, strLang string) []tableR
 	contributing := core.RelLinkSibling(core.FileContributing, pathLang, filenameSupport)
 	rows = append(rows, tableRow{Kind: kindContributing, GoTo: "[" + core.FileContributing + "](" + contributing + ")"})
 
-	for _, ll := range resolveLabeledLinks(pf, "paid-support", "", "Commercial Support", strLang) {
-		rows = append(rows, tableRow{Kind: kindPaidSupport, GoTo: mdLink(ll)})
-	}
-
 	return rows
 }
 
@@ -170,7 +170,7 @@ func valOrUnset(s string) string {
 }
 
 func emitDecisionTrace(pf *projectfile.Document, ext *pfmodel.SupportExtension,
-	beforeLinks []beforeLink, rows []tableRow,
+	beforeLinks []beforeLink, rows []tableRow, paidSupport []labeledLink,
 	statusPageURL, responseTime, responseTimeSrc string,
 ) {
 	genlog.Decision("project_name", pfmodel.DisplayName(pf), "identity.title.en or namespace/name", "")
@@ -179,6 +179,15 @@ func emitDecisionTrace(pf *projectfile.Document, ext *pfmodel.SupportExtension,
 	}
 	for _, r := range rows {
 		genlog.Decision("table_row", r.Kind+" → "+r.GoTo, "links[] or local file", "")
+	}
+	if len(paidSupport) == 0 {
+		genlog.Decision("paid_support", "(unset, section omitted)", "links[type=paid-support]", "")
+	} else {
+		var entries []string
+		for _, p := range paidSupport {
+			entries = append(entries, p.Label+" → "+p.URL)
+		}
+		genlog.Decision("paid_support", strings.Join(entries, ", "), "links[type=paid-support]", "")
 	}
 	genlog.Decision("status_page_url", valOrUnset(statusPageURL), "links[type=status-page]", "")
 	genlog.Decision("response_time", responseTime, responseTimeSrc, "[org.projectfile.support].response-time")

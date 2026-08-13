@@ -44,8 +44,16 @@
 
 {{range .EOL}}- **{{.Version}}** — підтримка до {{.Date}}
 {{end}}
+{{end}}{{if .PaidSupport}}
+
+## Платна підтримка
+
+Платна підтримка для {{.ProjectName}} доступна:
+
+{{range .PaidSupport}}- [{{or .Label "Платна підтримка"}}]({{.URL}})
+{{end}}
 {{end}}
 
 {{- define "want" -}}
-{{if eq . "usage-question"}}Поставити запитання щодо використання{{else if eq . "bug"}}Повідомити про відтворювану ваду{{else if eq . "chat"}}Поспілкуватися зі спільнотою{{else if eq . "security"}}Повідомити про вразливість безпеки{{else if eq . "contributing"}}Зробити внесок у проєкт{{else if eq . "paid-support"}}Отримати комерційну підтримку / SLA{{else}}{{.}}{{end}}
+{{if eq . "usage-question"}}Поставити запитання щодо використання{{else if eq . "bug"}}Повідомити про відтворювану ваду{{else if eq . "chat"}}Поспілкуватися зі спільнотою{{else if eq . "security"}}Повідомити про вразливість безпеки{{else if eq . "contributing"}}Зробити внесок у проєкт{{else}}{{.}}{{end}}
 {{- end -}}

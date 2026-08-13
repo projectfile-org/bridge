@@ -44,8 +44,16 @@ Las siguientes versiones de {{.ProjectName}} reciben soporte actualmente:
 
 {{range .EOL}}- **{{.Version}}** — con soporte hasta {{.Date}}
 {{end}}
+{{end}}{{if .PaidSupport}}
+
+## Soporte de pago
+
+Hay soporte de pago disponible para {{.ProjectName}}:
+
+{{range .PaidSupport}}- [{{or .Label "Soporte de pago"}}]({{.URL}})
+{{end}}
 {{end}}
 
 {{- define "want" -}}
-{{if eq . "usage-question"}}Hacer una pregunta de uso{{else if eq . "bug"}}Informar de un fallo reproducible{{else if eq . "chat"}}Charlar con la comunidad{{else if eq . "security"}}Informar de una vulnerabilidad de seguridad{{else if eq . "contributing"}}Contribuir al proyecto{{else if eq . "paid-support"}}Obtener soporte comercial / SLA{{else}}{{.}}{{end}}
+{{if eq . "usage-question"}}Hacer una pregunta de uso{{else if eq . "bug"}}Informar de un fallo reproducible{{else if eq . "chat"}}Charlar con la comunidad{{else if eq . "security"}}Informar de una vulnerabilidad de seguridad{{else if eq . "contributing"}}Contribuir al proyecto{{else}}{{.}}{{end}}
 {{- end -}}

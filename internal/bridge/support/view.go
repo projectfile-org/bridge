@@ -18,6 +18,7 @@ type supportView struct {
 	ResponseTime string
 	StatusPage   string
 	EOL          []eolView
+	PaidSupport  []labeledLink
 }
 
 type beforeLink struct {
@@ -34,7 +35,6 @@ const (
 	kindChat          = "chat"
 	kindSecurity      = "security"
 	kindContributing  = "contributing"
-	kindPaidSupport   = "paid-support"
 )
 
 type tableRow struct {

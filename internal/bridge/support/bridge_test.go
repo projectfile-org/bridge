@@ -150,3 +150,60 @@ func TestRenderBeforeLinksPriorityOrdersWithinType(t *testing.T) {
 	assert.Less(t, guideIdx, docsIdx,
 		"higher-priority documentation link renders first in Before You Ask")
 }
+
+// TestRenderPaidSupportBlock: a links[type=paid-support] entry is the "paid
+// support available" flag — it renders a dedicated end block in each language,
+// NOT a "Where to Ask" row, so the link appears once and only inside the block.
+func TestRenderPaidSupportBlock(t *testing.T) {
+	pf := localizedDoc("es")
+	pf.Links = []projectfile.Link{
+		{
+			Type:  "paid-support",
+			URL:   "https://example.test/enterprise",
+			Label: &projectfile.LocalizedString{Bare: "Enterprise Support"},
+		},
+	}
+
+	out, err := support.Bridge{}.Render(pf, core.Options{Offline: true})
+	require.NoError(t, err)
+	en := string(out.Files["SUPPORT.md"])
+	es := string(out.Files["docs/es/SUPPORT.md"])
+
+	assert.Contains(t, en, "## Paid Support")
+	assert.Contains(t, en, "Paid support for Widget is available:")
+	assert.Contains(t, es, "## Soporte de pago")
+	assert.Contains(t, es, "Hay soporte de pago disponible para Artilugio:")
+	assert.Contains(t, en, "- [Enterprise Support](https://example.test/enterprise)")
+
+	// Not a "Where to Ask" row: the URL shows up exactly once, after the block
+	// heading rather than in the table above it.
+	assert.Equal(t, 1, strings.Count(en, "https://example.test/enterprise"))
+	assert.Greater(t, strings.Index(en, "https://example.test/enterprise"),
+		strings.Index(en, "## Paid Support"))
+	assert.NotContains(t, en, "commercial support / SLA", "removed row label must not render")
+}
+
+// TestRenderPaidSupportEmail: a mailto: URL renders as a clickable email link,
+// so the same links[type=paid-support] entry covers the email case for free.
+func TestRenderPaidSupportEmail(t *testing.T) {
+	pf := localizedDoc()
+	pf.Links = []projectfile.Link{
+		{
+			Type:  "paid-support",
+			URL:   "mailto:sales@example.test",
+			Label: &projectfile.LocalizedString{Bare: "Sales"},
+		},
+	}
+
+	out, err := support.Bridge{}.Render(pf, core.Options{Offline: true})
+	require.NoError(t, err)
+	assert.Contains(t, string(out.Files["SUPPORT.md"]), "- [Sales](mailto:sales@example.test)")
+}
+
+// TestRenderNoPaidSupportOmitsBlock: no links[type=paid-support] entry means no
+// block at all — the flag is the link's presence.
+func TestRenderNoPaidSupportOmitsBlock(t *testing.T) {
+	out, err := support.Bridge{}.Render(localizedDoc(), core.Options{Offline: true})
+	require.NoError(t, err)
+	assert.NotContains(t, string(out.Files["SUPPORT.md"]), "## Paid Support")
+}
