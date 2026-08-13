@@ -10,7 +10,7 @@ import "bytes"
 // dictionary rules do not flag legitimate translated prose. terminology and
 // common-misspellings are built for English copy, so a Spanish or Ukrainian
 // sentence trips false positives on words that are simply correct in that
-// language (e.g. Spanish "autor").
+// language (e.g. the Spanish word for "author").
 const (
 	textlintDisable = "<!-- textlint-disable terminology,common-misspellings -->"
 	textlintEnable  = "<!-- textlint-enable -->"
