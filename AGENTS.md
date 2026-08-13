@@ -444,6 +444,18 @@ basename), so adding either is a catalog edit and not a Go edit; and a
 dropping the file — the whole-file skip rule above governs the other five
 documents, whose unit of translation is the document.
 
+Scan/derive link labels localize too: `pfmodel.ComposeOnLabel` composes
+`"{subject} {connector} {forge}"` per declared language (the connector and the
+type noun — Issues/Packages/Source Code — live in `pfmodel/labels.go`, not the
+readme catalog, because the catalog’s `link.type.*` values are the full
+standalone names). The subject for source-code links is the project title;
+`PromoteSourceCodeLabel` is the localized successor to the scan title-rewrite
+(the scanner writes a “Source Code” noun placeholder, the rewrite swaps in the
+effective title in every language at once). `pfmodel.SetLinkLabel` is the sole
+label writer, gap-fill like `SetLinkTags`. Load-bearing: a producer MUST clear
+`Bare` when emitting a `Langs` map, or `ExtractLocalizedStringForLang` returns
+`Bare` first and every language renders the English default.
+
 Remaining limit: labels the bridge humanizes from a filename (`docs/*.md` in
 the documentation block) are the file’s own name, so they read the same in
 every language. The `docs/<lang>/` locale directories are skipped by the docs
