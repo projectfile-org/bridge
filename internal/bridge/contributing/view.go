@@ -61,7 +61,20 @@ type followLink struct {
 	// Key is the identifier a Toggle filters on: a link host for forge stars
 	// (e.g. "codeberg.org") or a handle platform / "site" / "funding" for the
 	// recommend-to-follow block. Empty means "unfiltered" (always passes).
-	Key   string
+	Key string
+	// Platform identifies the follow link kind so the template can pick its URL
+	// pattern: a handle platform ("mastodon", "github", …) or "site".
+	Platform string
+	// Handle is the raw handle/username (follows) or the host domain (sites).
+	// The template composes the URL from it — no URL building happens in Go.
+	Handle string
+	// Site is the language-neutral brand name of the platform (Mastodon, …),
+	// shown next to the handle so each template localizes only the prose.
+	Site string
+	// URL is the resolved link target for sites (author websites). Follow links
+	// leave it empty and build the URL in the template.
+	URL string
+	// Label is the pre-built markdown used by forge-star and project-social
+	// links (host text / project name), which carry no translatable prose.
 	Label string
-	URL   string
 }

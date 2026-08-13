@@ -130,7 +130,7 @@ func (Bridge) Render(pf *projectfile.Document, opts core.Options) (core.Output, 
 	// versioning, then one row per declared stack style-guide-url. Resolved in
 	// Go so the template is a uniform range and any unknown enum value degrades
 	// to a raw-value bullet instead of vanishing.
-	conventionRows := buildConventions(workflow, commitStyle, versioning, defaultBranch, conv, pf)
+	conventionRows := buildConventions(workflow, commitStyle, versioning, conv, pf)
 
 	emitDecisionTrace(pf, ext, sections, sectionsSrc, docsURL, bugsURL,
 		chatURL, cocURL, claURL, securityContact, commitStyle, workflow, versioning, styleGuideURL,
@@ -222,11 +222,11 @@ func repoURL(pf *projectfile.Document) string {
 // projectfile values stay visible. Empty workflow/versioning produce no row;
 // empty commit-style falls back to Conventional Commits (matching the prior
 // default-when-unset behaviour).
-func buildConventions(workflow, commitStyle, versioning, defaultBranch string,
+func buildConventions(workflow, commitStyle, versioning string,
 	conv *pfmodel.ConventionsExtension, pf *projectfile.Document,
 ) []conventionItem {
 	var rows []conventionItem
-	if d := workflowDetail(workflow, defaultBranch); d != "" {
+	if d := workflowDetail(workflow); d != "" {
 		rows = append(rows, conventionItem{Label: "Workflow", Detail: d})
 	}
 	rows = append(rows, conventionItem{Label: "Commits", Detail: commitDetail(commitStyle)})
@@ -237,26 +237,13 @@ func buildConventions(workflow, commitStyle, versioning, defaultBranch string,
 	return rows
 }
 
-// workflowDetail maps a workflow value to its rendered sentence. Known values
-// interpolate the default branch; unknown values degrade to a raw-value
-// bullet. Returns "" so an unset workflow yields no row.
-func workflowDetail(workflow, defaultBranch string) string {
-	switch workflow {
-	case "":
+// workflowDetail renders the raw workflow value; the descriptive sentences were
+// dropped as dogmatic. Returns "" so an unset workflow yields no row.
+func workflowDetail(workflow string) string {
+	if workflow == "" {
 		return ""
-	case "github-flow":
-		return fmt.Sprintf("GitHub Flow — branch from `%s`, open a pull request.", defaultBranch)
-	case "git-flow":
-		return fmt.Sprintf("Git Flow — feature branches from `develop`, release branches from `develop`, hotfix branches from `%s`.", defaultBranch)
-	case "gitlab-flow":
-		return fmt.Sprintf("GitLab Flow — feature branches merged into `%s` with environment-specific deployments.", defaultBranch)
-	case "trunk-based":
-		return fmt.Sprintf("Trunk-Based Development — commit to `%s` directly or via short-lived feature branches with feature flags.", defaultBranch)
-	case "centralized":
-		return fmt.Sprintf("centralized — commits go directly to `%s`.", defaultBranch)
-	default:
-		return fmt.Sprintf("uses the `%s` workflow.", workflow)
 	}
+	return workflow
 }
 
 // commitDetail maps a commit-style value to its rendered text. Empty defaults
@@ -362,10 +349,10 @@ func emitDecisionTrace(pf *projectfile.Document, ext *pfmodel.ContributingExtens
 		genlog.Decision("forge_star", f.URL, "links[type=source-code]", f.URL)
 	}
 	for _, f := range authorFollows {
-		genlog.Decision("author_follow", f.Label, "people[role=author].handles", f.URL)
+		genlog.Decision("author_follow", f.Handle, "people[role=author].handles", f.Site)
 	}
 	for _, s := range authorSites {
-		genlog.Decision("author_site", s.Label, "people[role=author].url", s.URL)
+		genlog.Decision("author_site", s.URL, "people[role=author].url", s.Handle)
 	}
 	for _, s := range projectSocials {
 		genlog.Decision("project_social", s.Label, "links[].handles or links[type=social]", s.URL)
@@ -392,22 +379,22 @@ func valOrDefault(s, def string) string {
 // Twitter/X is deliberately excluded.
 var socialHandleOrder = []string{socialMastodon, socialBluesky, "github", "codeberg", "linkedin", "rss"}
 
-// socialLinkLabels maps handle keys to human-readable labels for markdown links.
-var socialLinkLabels = map[string]string{
-	socialMastodon: "on Mastodon",
-	socialBluesky:  "on Bluesky",
-	"github":       "on GitHub",
-	"codeberg":     "on Codeberg",
-	"linkedin":     "on LinkedIn",
-	"rss":          "RSS feed",
+// socialSiteNames maps handle platforms to their language-neutral brand names,
+// shown next to the handle so each template localizes only the connective prose.
+var socialSiteNames = map[string]string{
+	socialMastodon: "Mastodon",
+	socialBluesky:  "Bluesky",
+	"github":       "GitHub",
+	"codeberg":     "Codeberg",
+	"linkedin":     "LinkedIn",
+	"rss":          "RSS",
 }
 
-// resolveAuthorFollows collects followable links from people with role
-// "author". Each author can have multiple handles; we produce one followLink
-// per (author, platform) pair, ordered by socialHandleOrder. A handle value
-// may be a string, an array of strings, or a map of strings (spec §4.5.1);
-// every string in any of those shapes becomes its own follow link so multiple
-// accounts on the same platform are all surfaced.
+// resolveAuthorFollows collects one follow link per (author, platform) handle.
+// It carries only data (platform, raw handle, brand) — the template composes the
+// URL and the localized prose, so no English label is baked in and each language
+// renders natively. A handle value may be a string, an array, or a map (spec
+// §4.5.1); every string in any shape becomes its own follow link.
 func resolveAuthorFollows(pf *projectfile.Document) []followLink {
 	if pf == nil {
 		return nil
@@ -417,22 +404,18 @@ func resolveAuthorFollows(pf *projectfile.Document) []followLink {
 		if !hasRole(p.Roles, "author") || len(p.Handles) == 0 {
 			continue
 		}
-		name := pfmodel.FlatPersonName(p)
-		if name == "" {
-			continue
-		}
 		for _, platform := range socialHandleOrder {
 			raw, ok := p.Handles[platform]
 			if !ok {
 				continue
 			}
-			suffix, hasSuffix := socialLinkLabels[platform]
-			for _, url := range handleStrings(raw) {
-				label := fmt.Sprintf("[author (%s)](%s)", name, url)
-				if hasSuffix {
-					label = fmt.Sprintf("[author (%s) %s](%s)", name, suffix, url)
-				}
-				out = append(out, followLink{Key: platform, Label: label, URL: url})
+			for _, handle := range handleStrings(raw) {
+				out = append(out, followLink{
+					Key:      platform,
+					Platform: platform,
+					Handle:   handle,
+					Site:     socialSiteNames[platform],
+				})
 			}
 		}
 	}
@@ -476,8 +459,9 @@ func handleStrings(v any) []string {
 	return nil
 }
 
-// resolveAuthorSites collects website links from people with role "author"
-// who have a url field set.
+// resolveAuthorSites collects website links from people with role "author" who
+// have a url field set. The template shows the host domain next to the link; a
+// template cannot parse a URL, so the host is read here as data.
 func resolveAuthorSites(pf *projectfile.Document) []followLink {
 	if pf == nil {
 		return nil
@@ -487,12 +471,16 @@ func resolveAuthorSites(pf *projectfile.Document) []followLink {
 		if !hasRole(p.Roles, "author") || p.URL == "" {
 			continue
 		}
-		name := pfmodel.FlatPersonName(p)
-		if name == "" {
-			continue
+		host := p.URL
+		if u, err := url.Parse(p.URL); err == nil && u.Host != "" {
+			host = strings.TrimPrefix(u.Host, "www.")
 		}
-		label := fmt.Sprintf("Visit [author’s (%s) site](%s)", name, p.URL)
-		out = append(out, followLink{Key: "site", Label: label, URL: p.URL})
+		out = append(out, followLink{
+			Key:      "site",
+			Platform: "site",
+			URL:      p.URL,
+			Handle:   host,
+		})
 	}
 	return out
 }

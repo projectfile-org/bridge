@@ -11,10 +11,10 @@ Toda forma de contribución se agradece y se valora. Consulta la [Tabla de conte
 > - Dale una estrella al proyecto{{end}}{{end}}
 > - Menciona este proyecto en el readme del tuyo
 > - Habla del proyecto en encuentros locales y cuéntaselo a tus amistades y colegas
-{{- if .AuthorFollows}}{{range .AuthorFollows}}
-> - Sigue {{.Label}}{{end}}{{end}}
+{{- if .AuthorFollows}}{{/* mastodon: el handle se guarda sin esquema (host/@user); la URL se prefija por plataforma aquí */}}{{range .AuthorFollows}}
+> - Sigue al [autor ({{.Handle}}) en {{.Site}}]({{if eq .Platform "mastodon"}}https://{{.Handle}}{{else if eq .Platform "github"}}https://github.com/{{.Handle}}{{else if eq .Platform "codeberg"}}https://codeberg.org/{{.Handle}}{{else if eq .Platform "linkedin"}}https://www.linkedin.com/in/{{.Handle}}{{else if eq .Platform "bluesky"}}https://bsky.app/profile/{{.Handle}}{{end}}){{end}}{{end}}
 {{- if .AuthorSites}}{{range .AuthorSites}}
-> - {{.Label}}{{end}}{{end}}
+> - Visita el [sitio del autor ({{.Handle}})]({{.URL}}){{end}}{{end}}
 {{- if .ProjectSocials}}{{range .ProjectSocials}}
 > - {{.Label}}{{end}}{{end}}
 {{- if .HasFunding}}
@@ -76,12 +76,11 @@ Antes de preguntar, revisa [SUPPORT.md]({{$.SupportFile}}): explica dónde conse
 
 Un buen informe de fallo evita que otras personas tengan que perseguirte para obtener más información. Por eso te pedimos que investigues con cuidado, reúnas información y describas el problema con detalle. Completa estos pasos por adelantado para ayudarnos a corregir cualquier posible fallo lo antes posible.
 
-- Asegúrate de estar usando la última versión.
+- Asegúrate de usar una [versión con soporte]({{$.SupportFile}}).
 - Comprueba que se trata realmente de un fallo y no de un error por tu parte, por ejemplo, componentes o versiones incompatibles del entorno (asegúrate de haber leído la{{if $.DocsURL}} [documentación]({{$.DocsURL}}){{end}}{{if not $.DocsURL}} documentación{{end}}. Si lo que buscas es ayuda, consulta [SUPPORT.md]({{$.SupportFile}})).
 - Para ver si otras personas han tenido (y quizá ya resuelto) el mismo problema, comprueba que no exista ya un informe de tu fallo o error en el{{if $.BugsURL}} [gestor de incidencias]({{$.BugsURL}}?q=label%3Abug){{end}}{{if not $.BugsURL}} gestor de incidencias{{end}}.
-- Busca también en internet (incluido Stack Overflow) por si el problema ya se ha comentado fuera de la comunidad.
-- Reúne información sobre el fallo:
-    - Traza de la pila (traceback)
+- Si puedes, los siguientes detalles serían de ayuda:
+    - Traza de la pila, si la hay
     - Sistema operativo, plataforma y versión (Windows, Linux, macOS, x86, ARM)
     - Versión del intérprete, compilador, SDK, entorno de ejecución o gestor de paquetes, según lo que resulte relevante.
     - Si es posible, la entrada que usaste y la salida obtenida
@@ -99,12 +98,6 @@ Un buen informe de fallo evita que otras personas tengan que perseguirte para ob
 - Aporta todo el contexto posible y describe los *pasos de reproducción* que otra persona pueda seguir para recrear el problema. Esto suele incluir tu código. En un buen informe conviene aislar el problema y crear un caso de prueba reducido.
 - Incluye la información que reuniste en el apartado anterior.
 
-Una vez enviada:
-
-- El equipo del proyecto etiquetará la incidencia según corresponda.
-- Alguien del equipo intentará reproducir el problema con los pasos que aportaste. Si no hay pasos de reproducción o no existe una forma evidente de reproducirlo, el equipo te los pedirá y marcará la incidencia como `needs-repro`. Los fallos con la etiqueta `needs-repro` no se abordarán hasta que puedan reproducirse.
-- Si el equipo logra reproducir el problema, se marcará como `needs-fix`, posiblemente junto a otras etiquetas (como `critical`), y quedará a la espera de que [alguien lo implemente](#convenciones).
-
 {{end}}
 {{if eq . "enhancements"}}## Cómo sugerir mejoras
 
@@ -113,10 +106,10 @@ Esta sección te guía para enviar una propuesta de mejora para {{$.ProjectName}
 <!-- omit in toc -->
 ### Antes de enviar una propuesta de mejora
 
-- Asegúrate de estar usando la última versión.
-- Lee con atención la{{if $.DocsURL}} [documentación]({{$.DocsURL}}){{end}}{{if not $.DocsURL}} documentación{{end}} y averigua si la funcionalidad ya existe, quizá mediante alguna configuración concreta.
+- Asegúrate de usar una [versión con soporte]({{$.SupportFile}}).
+- Comprueba si la funcionalidad ya existe, quizá mediante alguna configuración concreta — la{{if $.DocsURL}} [documentación]({{$.DocsURL}}){{end}}{{if not $.DocsURL}} documentación{{end}} es un buen punto de partida.
 - Haz una{{if $.BugsURL}} [búsqueda]({{$.BugsURL}}){{end}}{{if not $.BugsURL}} búsqueda{{end}} para ver si ya se ha propuesto. Si es así, comenta en la incidencia existente en lugar de abrir una nueva.
-- Valora si tu idea encaja con el alcance y los objetivos del proyecto. Te corresponde a ti argumentar de forma convincente el valor de esta funcionalidad. Ten en cuenta que buscamos funcionalidades útiles para la mayoría de quienes usan el proyecto, no solo para un grupo reducido. Si tu propuesta se dirige a una minoría, plantéate escribir una extensión o biblioteca complementaria.
+- Valora si tu idea encaja con el alcance y los objetivos del proyecto.
 
 <!-- omit in toc -->
 ### ¿Cómo envío una buena propuesta de mejora?
@@ -126,7 +119,7 @@ Las propuestas de mejora se gestionan como{{if $.BugsURL}} [incidencias]({{$.Bug
 - Usa un **título claro y descriptivo** que identifique la propuesta.
 - Describe la mejora sugerida **paso a paso** y con el mayor detalle posible.
 - **Describe el comportamiento actual** y **explica qué comportamiento esperabas** y por qué. Aquí también puedes indicar qué alternativas no te sirven.
-- **Explica por qué esta mejora sería útil** para la mayoría de quienes usan {{$.ProjectName}}. También puedes señalar otros proyectos que lo hayan resuelto mejor y que sirvan de inspiración.
+- **Explica por qué esta mejora sería útil** para quienes usan {{$.ProjectName}}. También puedes señalar otros proyectos que lo hayan resuelto mejor y que sirvan de inspiración.
 
 {{end}}
 {{if eq . "docs"}}{{if $.DocsURL}}## Mejorar la documentación

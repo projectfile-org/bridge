@@ -18,12 +18,13 @@ import (
 )
 
 const (
-	testRecommendToStar = "recommend-to-star"
-	testMastodon        = "mastodon"
-	testMastodonURL     = "https://m.to/@a"
-	testGitHub          = "github"
-	testAuthor          = "testauthor"
-	testSourceCode      = "source-code"
+	testRecommendToStar   = "recommend-to-star"
+	testRecommendToFollow = "recommend-to-follow"
+	testMastodon          = "mastodon"
+	testMastodonHandle    = "m.to/@a"
+	testGitHub            = "github"
+	testAuthor            = "testauthor"
+	testSourceCode        = "source-code"
 )
 
 func docWithSourceCodeLinks(urls ...string) *projectfile.Document {
@@ -241,7 +242,7 @@ func TestStarToggleMapAllowlist(t *testing.T) {
 func TestFollowToggleUnsetHidesAll(t *testing.T) {
 	b := contributing.Bridge{}
 	pf := docWithAuthor(map[string]any{
-		testMastodon: testMastodonURL,
+		testMastodon: testMastodonHandle,
 		testGitHub:   testAuthor,
 	})
 	out, err := b.Render(pf, core.Options{Offline: true})
@@ -253,32 +254,51 @@ func TestFollowToggleUnsetHidesAll(t *testing.T) {
 func TestFollowToggleBoolTrueShowsAll(t *testing.T) {
 	b := contributing.Bridge{}
 	pf := withContributing(docWithAuthor(map[string]any{
-		testMastodon: testMastodonURL,
+		testMastodon: testMastodonHandle,
 		testGitHub:   testAuthor,
-	}), map[string]any{"recommend-to-follow": true})
+	}), map[string]any{testRecommendToFollow: true})
 	out, err := b.Render(pf, core.Options{Offline: true})
 	require.NoError(t, err)
 	body := string(out.Files["CONTRIBUTING.md"])
-	assert.Contains(t, body, "Follow [author (Test Author) on Mastodon]")
-	assert.Contains(t, body, "Follow [author (Test Author) on GitHub]")
+	assert.Contains(t, body, "Follow [author (m.to/@a) on Mastodon](https://m.to/@a)")
+	assert.Contains(t, body, "Follow [author (testauthor) on GitHub](https://github.com/testauthor)")
 }
 
 func TestFollowToggleMapAllowlist(t *testing.T) {
 	b := contributing.Bridge{}
 	pf := withContributing(docWithAuthor(map[string]any{
-		testMastodon: testMastodonURL,
+		testMastodon: testMastodonHandle,
 		testGitHub:   testAuthor,
 		"codeberg":   testAuthor,
-	}), map[string]any{"recommend-to-follow": map[string]any{
+	}), map[string]any{testRecommendToFollow: map[string]any{
 		testMastodon: true,
 		testGitHub:   false,
 	}})
 	out, err := b.Render(pf, core.Options{Offline: true})
 	require.NoError(t, err)
 	body := string(out.Files["CONTRIBUTING.md"])
-	assert.Contains(t, body, "Follow [author (Test Author) on Mastodon]")
+	assert.Contains(t, body, "Follow [author (m.to/@a) on Mastodon](https://m.to/@a)")
 	assert.NotContains(t, body, "on GitHub]", "false key must be hidden")
 	assert.NotContains(t, body, "on Codeberg]", "absent key must be hidden in allowlist mode")
+}
+
+// TestAuthorSiteUsesDomain confirms the author-site line links the full URL and
+// shows the host domain rather than the author's repeated name.
+func TestAuthorSiteUsesDomain(t *testing.T) {
+	b := contributing.Bridge{}
+	pf := withContributing(&projectfile.Document{
+		Identity: projectfile.Identity{Name: "site-proj"},
+		People: []projectfile.Person{{
+			GivenNames:  "Test",
+			FamilyNames: "Author",
+			Roles:       []string{"author"},
+			URL:         "https://dbuho.me",
+		}},
+	}, map[string]any{testRecommendToFollow: true})
+	out, err := b.Render(pf, core.Options{Offline: true})
+	require.NoError(t, err)
+	body := string(out.Files["CONTRIBUTING.md"])
+	assert.Contains(t, body, "Visit the [author’s site (dbuho.me)](https://dbuho.me)")
 }
 
 // ── Conventions section ─────────────────────────────────────────────────────
@@ -321,9 +341,8 @@ func TestRenderConventionsVersioningArbitrary(t *testing.T) {
 	assert.Contains(t, body, "**Versioning:** my-scheme", "unknown value must render raw, not drop")
 }
 
-// TestRenderConventionsWorkflowArbitrary guards graceful degradation for an
-// unknown workflow: the raw value surfaces and the default branch is NOT
-// interpolated (no known sentence template applies).
+// TestRenderConventionsWorkflowArbitrary guards that an unknown workflow value
+// still surfaces verbatim as a raw bullet rather than vanishing.
 func TestRenderConventionsWorkflowArbitrary(t *testing.T) {
 	b := contributing.Bridge{}
 	pf := withConventions(&projectfile.Document{Identity: projectfile.Identity{Name: "w-proj"}},
@@ -331,22 +350,20 @@ func TestRenderConventionsWorkflowArbitrary(t *testing.T) {
 	out, err := b.Render(pf, core.Options{Offline: true})
 	require.NoError(t, err)
 	body := string(out.Files["CONTRIBUTING.md"])
-	assert.Contains(t, body, "**Workflow:** uses the `weird-flow` workflow.")
+	assert.Contains(t, body, "**Workflow:** weird-flow")
 }
 
-// TestRenderConventionsWorkflowKnownInterpolatesBranch confirms a known
-// workflow value interpolates the default branch into its sentence.
-func TestRenderConventionsWorkflowKnownInterpolatesBranch(t *testing.T) {
+// TestRenderConventionsWorkflowRenderedRaw confirms the workflow row shows the
+// raw value verbatim — the descriptive sentences were dropped as dogmatic.
+func TestRenderConventionsWorkflowRenderedRaw(t *testing.T) {
 	b := contributing.Bridge{}
 	pf := withConventions(&projectfile.Document{
-		Identity:     projectfile.Identity{Name: "w-proj"},
-		Repositories: []projectfile.Repository{{Role: "origin", Branch: "trunk"}},
+		Identity: projectfile.Identity{Name: "w-proj"},
 	}, map[string]any{"workflow": "git-flow"})
 	out, err := b.Render(pf, core.Options{Offline: true})
 	require.NoError(t, err)
 	body := string(out.Files["CONTRIBUTING.md"])
-	assert.Contains(t, body, "**Workflow:** Git Flow — feature branches from `develop`")
-	assert.Contains(t, body, "hotfix branches from `trunk`.", "default branch must be interpolated")
+	assert.Contains(t, body, "**Workflow:** git-flow")
 }
 
 // TestRenderConventionsLanguageStyles renders one bullet per declared stack
