@@ -440,17 +440,25 @@ func applyRepository(doc *projectfile.Document, repo projectfile.Repository) {
 // existing values win, so a manually set preferred:true is never downgraded
 // and a curated capability list is never overruled.
 //
-// force applies to the capability tags ONLY. It is how a fleet that already
-// wrote one tag vocabulary can be moved to the next one; label and preferred
-// stay gap-fill, because nothing generates a better label than the user.
+// force overwrites label, preferred AND capability tags. Gap-fill alone is
+// irreversible: a Bare label written before org.projectfile.i18n.languages was
+// declared, or one tag vocabulary, would freeze forever. --force is how such a
+// fleet is moved to the current localized/vocabulary form — the scanner
+// rebuilds every field, applyLink replaces it, then the title-rewrite promotes
+// the placeholder subject to the project title.
 func applyLink(doc *projectfile.Document, link projectfile.Link, force bool) {
 	for i := range doc.Links {
 		existing := &doc.Links[i]
 		if existing.Type == link.Type && existing.URL == link.URL {
-			if existing.Label == nil && link.Label != nil {
+			if link.Label != nil && (force || existing.Label == nil) {
+				if force && existing.Label != nil {
+					genlog.Info("scan: label overwritten", "url", existing.URL)
+				}
 				existing.Label = link.Label
 			}
-			if !existing.Preferred && link.Preferred {
+			if force {
+				existing.Preferred = link.Preferred
+			} else if !existing.Preferred && link.Preferred {
 				existing.Preferred = link.Preferred
 			}
 			if tags := pfmodel.LinkTags(link); pfmodel.SetLinkTags(existing, tags, force) {
@@ -523,7 +531,7 @@ func Main(binName string) {
 	scanCmd.Flags().BoolVar(&scanPrune, "prune", false,
 		"remove stale tags from pf in place (mutually exclusive with --strict, stacks only)")
 	scanCmd.Flags().BoolVarP(&scanForce, "force", "f", false,
-		"overwrite a declared links[].tags with the host proposal (links only; label and preferred stay gap-fill)")
+		"overwrite declared links[] label, preferred and tags with the host proposal (links only)")
 	rootflags.Bind(scanCmd)
 
 	if err := scanCmd.Execute(); err != nil {

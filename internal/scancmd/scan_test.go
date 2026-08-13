@@ -124,11 +124,12 @@ func TestApplyLinkGapFillsTags(t *testing.T) {
 	})
 }
 
-// TestApplyLinkForceRetags guards the escape hatch. Gap-fill alone makes the
-// first fleet-wide scan irreversible: 152 projectfiles would hold whatever
-// vocabulary shipped first, and no later run could correct them. --force is
-// how a vocabulary change reaches a fleet that already declared one.
-func TestApplyLinkForceRetags(t *testing.T) {
+// TestApplyLinkForceOverwrites guards the escape hatch. Gap-fill alone makes
+// the first fleet-wide scan irreversible: 152 projectfiles would hold whatever
+// label/tags shipped first, and no later run could correct them. --force is how
+// a Bare label written before i18n, or one tag vocabulary, reaches a fleet that
+// already declared one — label, preferred AND tags are all replaced.
+func TestApplyLinkForceOverwrites(t *testing.T) {
 	incoming := projectfile.Link{
 		Type:  projectfile.LinkSourceCode,
 		URL:   testApplyLinkURL,
@@ -149,26 +150,29 @@ func TestApplyLinkForceRetags(t *testing.T) {
 			pfmodel.LinkTags(doc.Links[0]))
 	})
 
-	t.Run("leaves_label_and_preferred_alone", func(t *testing.T) {
-		kept := &projectfile.LocalizedString{Bare: "Curated label"}
+	t.Run("overwrites_label_and_preferred", func(t *testing.T) {
+		// A Bare label from before i18n + Preferred:true — both must yield to
+		// the scanner's freshly rebuilt (now-localized) proposal under --force.
 		doc := &projectfile.Document{
 			Links: []projectfile.Link{{
 				Type:      projectfile.LinkSourceCode,
 				URL:       testApplyLinkURL,
-				Label:     kept,
+				Label:     &projectfile.LocalizedString{Bare: "Curated label"},
 				Preferred: true,
 				Extra:     map[string]any{tagsKey: []any{"badges"}},
 			}},
 		}
-		applyLink(doc, projectfile.Link{
-			Type:  projectfile.LinkSourceCode,
-			URL:   testApplyLinkURL,
-			Label: &projectfile.LocalizedString{Bare: "Source Code on GitHub"},
-			Extra: map[string]any{tagsKey: []string{pfmodel.TagPublic}},
-		}, true)
+		proposed := projectfile.Link{
+			Type:      projectfile.LinkSourceCode,
+			URL:       testApplyLinkURL,
+			Label:     &projectfile.LocalizedString{Bare: "Source Code on GitHub"},
+			Preferred: false,
+			Extra:     map[string]any{tagsKey: []string{pfmodel.TagPublic}},
+		}
+		applyLink(doc, proposed, true)
 		require.Len(t, doc.Links, 1)
-		assert.Equal(t, kept, doc.Links[0].Label, "--force must not touch a curated label")
-		assert.True(t, doc.Links[0].Preferred, "--force must not touch preferred")
+		assert.Equal(t, proposed.Label, doc.Links[0].Label, "--force overwrites a declared label")
+		assert.False(t, doc.Links[0].Preferred, "--force overwrites preferred")
 		assert.Equal(t, []string{pfmodel.TagPublic}, pfmodel.LinkTags(doc.Links[0]))
 	})
 }
