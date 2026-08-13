@@ -7,11 +7,12 @@ package core
 import "bytes"
 
 // textlintDisable and textlintEnable bracket a body so the English-only
-// terminology rule does not flag legitimate translated prose. The rule's
-// dictionary is built for English copy, so a Spanish or Ukrainian sentence
-// trips false positives on words that are simply correct in that language.
+// dictionary rules do not flag legitimate translated prose. terminology and
+// common-misspellings are built for English copy, so a Spanish or Ukrainian
+// sentence trips false positives on words that are simply correct in that
+// language (e.g. Spanish "autor").
 const (
-	textlintDisable = "<!-- textlint-disable terminology -->"
+	textlintDisable = "<!-- textlint-disable terminology,common-misspellings -->"
 	textlintEnable  = "<!-- textlint-enable -->"
 )
 

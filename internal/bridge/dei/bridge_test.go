@@ -168,12 +168,12 @@ func TestRenderLocalizedVariants(t *testing.T) {
 	assert.Contains(t, out.Files, "docs/uk/DEI.md")
 	assert.Contains(t, string(out.Files["docs/es/DEI.md"]), "Declaración de Diversidad")
 	assert.Contains(t, string(out.Files["docs/uk/DEI.md"]), "Заява про різноманітність")
-	// Translated prose would trip the English-only terminology rule, so every
-	// non-English variant is bracketed with a disable/enable pair while the
-	// canonical English file is not.
-	assert.Contains(t, string(out.Files["docs/es/DEI.md"]), "<!-- textlint-disable terminology -->")
+	// Translated prose trips the English-only dictionary rules (owned by core),
+	// so every non-English variant is bracketed with a disable/enable pair while
+	// the canonical English file is not; this only asserts the bracket.
+	assert.Contains(t, string(out.Files["docs/es/DEI.md"]), "<!-- textlint-disable ")
 	assert.Contains(t, string(out.Files["docs/es/DEI.md"]), "<!-- textlint-enable -->")
-	assert.Contains(t, string(out.Files["docs/uk/DEI.md"]), "<!-- textlint-disable terminology -->")
+	assert.Contains(t, string(out.Files["docs/uk/DEI.md"]), "<!-- textlint-disable ")
 	assert.NotContains(t, string(out.Files["DEI.md"]), "textlint-disable", "English file must not be wrapped")
 }
 

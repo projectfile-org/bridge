@@ -13,18 +13,18 @@ import (
 )
 
 // TestWrapLocalizedTextlintNonEnglish wraps any non-English language variant
-// in the disable/enable pair, so the English-only terminology rule does not
+// in the disable/enable pair, so the English-only dictionary rules do not
 // flag legitimate translated prose. The pair must enclose the whole body and
 // the enable directive must close the file.
 func TestWrapLocalizedTextlintNonEnglish(t *testing.T) {
 	out := string(core.WrapLocalizedTextlint([]byte("# Código de Conducta\n"), "es"))
 	assert.Equal(t,
-		"<!-- textlint-disable terminology -->\n# Código de Conducta\n<!-- textlint-enable -->\n",
+		"<!-- textlint-disable terminology,common-misspellings -->\n# Código de Conducta\n<!-- textlint-enable -->\n",
 		out)
 }
 
 // TestWrapLocalizedTextlintEnglishPassthrough pins the English path as a no-op:
-// the terminology rule is built for English copy, so the canonical file must
+// the disabled rules are built for English copy, so the canonical file must
 // come out byte-identical to its input.
 func TestWrapLocalizedTextlintEnglishPassthrough(t *testing.T) {
 	body := []byte("# Code of Conduct\n")
@@ -36,6 +36,6 @@ func TestWrapLocalizedTextlintEnglishPassthrough(t *testing.T) {
 func TestWrapLocalizedTextlintPadsMissingTrailingNewline(t *testing.T) {
 	out := string(core.WrapLocalizedTextlint([]byte("Політика"), "uk"))
 	assert.Equal(t,
-		"<!-- textlint-disable terminology -->\nПолітика\n<!-- textlint-enable -->\n",
+		"<!-- textlint-disable terminology,common-misspellings -->\nПолітика\n<!-- textlint-enable -->\n",
 		out)
 }
