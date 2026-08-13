@@ -50,7 +50,7 @@ Antes de preguntar, revisa [SUPPORT.md](SUPPORT.md): explica dónde conseguir ay
 Un buen informe de fallo evita que otras personas tengan que perseguirte para obtener más información. Por eso te pedimos que investigues con cuidado, reúnas información y describas el problema con detalle. Completa estos pasos por adelantado para ayudarnos a corregir cualquier posible fallo lo antes posible.
 
 - Asegúrate de usar una [versión con soporte](SUPPORT.md).
-- Comprueba que se trata realmente de un fallo y no de un error por tu parte, por ejemplo, componentes o versiones incompatibles del entorno (asegúrate de haber leído la [documentación](https://projectfile.org). Si lo que buscas es ayuda, consulta [SUPPORT.md](SUPPORT.md)).
+- Comprueba que se trata realmente de un fallo y no de un error por tu parte, por ejemplo, componentes o versiones incompatibles del entorno (asegúrate de haber leído la [documentación](/docs). Si lo que buscas es ayuda, consulta [SUPPORT.md](SUPPORT.md)).
 - Para ver si otras personas han tenido (y quizá ya resuelto) el mismo problema, comprueba que no exista ya un informe de tu fallo o error en el [gestor de incidencias](https://codeberg.org/projectfile/bridge/issues?q=label%3Abug).
 - Si puedes, los siguientes detalles serían de ayuda:
     - Traza de la pila, si la hay
@@ -79,7 +79,7 @@ Esta sección te guía para enviar una propuesta de mejora para Projectfile Brid
 ### Antes de enviar una propuesta de mejora
 
 - Asegúrate de usar una [versión con soporte](SUPPORT.md).
-- Comprueba si la funcionalidad ya existe, quizá mediante alguna configuración concreta — la [documentación](https://projectfile.org) es un buen punto de partida.
+- Comprueba si la funcionalidad ya existe, quizá mediante alguna configuración concreta — la [documentación](/docs) es un buen punto de partida.
 - Haz una [búsqueda](https://codeberg.org/projectfile/bridge/issues) para ver si ya se ha propuesto. Si es así, comenta en la incidencia existente en lugar de abrir una nueva.
 - Valora si tu idea encaja con el alcance y los objetivos del proyecto.
 
@@ -101,7 +101,7 @@ Las propuestas de mejora se gestionan como [incidencias](https://codeberg.org/pr
 
 ## Mejorar la documentación
 
-La documentación está en [https://projectfile.org](https://projectfile.org). Correcciones, mejoras y secciones nuevas son bienvenidas: abre una solicitud de incorporación contra las fuentes de la documentación.
+La documentación está en [/docs](/docs). Correcciones, mejoras y secciones nuevas son bienvenidas: abre una solicitud de incorporación contra las fuentes de la documentación.
 
 *Generado desde projectfile ([saber cómo](https://projectfile.org/how-to/contributing))*
 <!-- textlint-enable -->

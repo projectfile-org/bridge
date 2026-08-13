@@ -84,6 +84,7 @@ For the local dev loop, `make dev-container` brings up the dev-container.
 - [Projectfile Bridges on GitHub](https://github.com/damian-buho/projectfile-bridge)
 - [Projectfile Bridges on kiota.ch](https://kiota.ch/projectfile/bridge)
 - [Issues on Codeberg](https://codeberg.org/projectfile/bridge/issues)
+- [Documentation](/docs)
 
 ## License
 

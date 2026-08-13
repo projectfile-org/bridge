@@ -86,6 +86,7 @@ pf-bridge all
 - [Projectfile Bridges на GitHub](https://github.com/damian-buho/projectfile-bridge)
 - [Projectfile Bridges на kiota.ch](https://kiota.ch/projectfile/bridge)
 - [Issues на Codeberg](https://codeberg.org/projectfile/bridge/issues)
+- [Документація](/docs)
 
 ## Ліцензія
 

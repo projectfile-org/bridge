@@ -158,3 +158,13 @@ links:
       - support
     type: bugs
     url: https://codeberg.org/projectfile/bridge/issues
+
+  # The project's own documentation lives in /docs. Preferred so it wins over
+  # the shared projectfile.org spec link (a reference article, not the main docs).
+  - type: documentation
+    preferred: true
+    url: /docs
+    label:
+      en: Documentation
+      es: Documentación
+      uk: Документація
