@@ -18,8 +18,8 @@ const scannerGitRemotes = "git-remotes"
 
 // remotesScanner extracts repositories and source-code links from git remotes.
 // The "origin" remote is given role "origin"; all others are mirrors. For each
-// remote on a known forge host, a links[type=source-code] entry is emitted
-// with the forge landing page URL.
+// remote on a known forge host, links[type=source-code] (forge landing page)
+// and links[type=bugs] (issue tracker) entries are emitted, both localized.
 type remotesScanner struct{}
 
 func (remotesScanner) Name() string { return scannerGitRemotes }
@@ -95,6 +95,17 @@ func (remotesScanner) Scan(root string) (*source.Partial, []core.Hit, error) {
 			}
 			p.Links = append(p.Links, link)
 			hits = append(hits, core.Hit{Source: scannerGitRemotes, Field: "links[type=source-code]:" + name})
+
+			// Issues link for the same mirror, localized like the source-code one so a scan refreshes both in one pass.
+			if rule, _ := hostmatch.Resolve(page); rule != nil && rule.Tracker != nil {
+				if tracker := rule.Tracker(page); tracker != "" {
+					bugs := projectfile.Link{Type: projectfile.LinkBugs, URL: tracker}
+					bugs.Label = pfmodel.ComposeOnLabel(langDoc, pfmodel.NounLabel(langDoc, pfmodel.NounIssues), forge)
+					p.Links = append(p.Links, bugs)
+					genlog.Info("git scanner: deriving issues link", "url", tracker, "from", page)
+					hits = append(hits, core.Hit{Source: scannerGitRemotes, Field: "links[type=bugs]:" + name})
+				}
+			}
 		}
 	}
 

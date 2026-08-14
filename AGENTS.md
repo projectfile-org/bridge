@@ -451,10 +451,14 @@ readme catalog, because the catalog’s `link.type.*` values are the full
 standalone names). The subject for source-code links is the project title;
 `PromoteSourceCodeLabel` is the localized successor to the scan title-rewrite
 (the scanner writes a “Source Code” noun placeholder, the rewrite swaps in the
-effective title in every language at once). `pfmodel.SetLinkLabel` is the sole
-label writer, gap-fill like `SetLinkTags`. Load-bearing: a producer MUST clear
-`Bare` when emitting a `Langs` map, or `ExtractLocalizedStringForLang` returns
-`Bare` first and every language renders the English default.
+effective title in every language at once). The git-remotes scanner emits
+`links[type=bugs]` beside each source-code link as well — the same localized
+“Issues on {forge}”, but final in the scanner since its subject is the type
+noun, not the title, so no placeholder/rewrite is needed. `pfmodel.SetLinkLabel`
+is the sole label writer, gap-fill like `SetLinkTags`. Load-bearing: a producer
+MUST clear `Bare` when emitting a `Langs` map, or
+`ExtractLocalizedStringForLang` returns `Bare` first and every language renders
+the English default.
 
 Remaining limit: labels the bridge humanizes from a filename (`docs/*.md` in
 the documentation block) are the file’s own name, so they read the same in

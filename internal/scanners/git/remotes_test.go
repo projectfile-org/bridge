@@ -5,7 +5,9 @@
 package git
 
 import (
+	"os"
 	"os/exec"
+	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -101,9 +103,14 @@ func TestRemotesScannerSoleRemotePreferred(t *testing.T) {
 
 	p, _, err := remotesScanner{}.Scan(dir)
 	require.NoError(t, err)
-	require.Len(t, p.Links, 1)
-	assert.Equal(t, projectfile.LinkSourceCode, p.Links[0].Type)
-	assert.True(t, p.Links[0].Preferred, "sole origin link must be Preferred")
+	var src *projectfile.Link
+	for i := range p.Links {
+		if p.Links[i].Type == projectfile.LinkSourceCode {
+			src = &p.Links[i]
+		}
+	}
+	require.NotNil(t, src, "source-code link must be emitted")
+	assert.True(t, src.Preferred, "sole origin link must be Preferred")
 }
 
 // TestRemotesScannerProposesCapabilityTags guards the end-to-end proposal on
@@ -150,4 +157,73 @@ func TestRemotesScannerProposesCapabilityTags(t *testing.T) {
 		}
 	}
 	assert.True(t, tagHit, "the proposal must be visible in --dry-run output")
+}
+
+// TestRemotesScannerDerivesIssuesLink guards that a links[type=bugs] entry is
+// emitted beside each source-code one: the tracker URL the host rule resolves
+// and a localized "Issues on {forge}" label, so a scan refreshes both entries
+// a project's support surface needs in one pass.
+func TestRemotesScannerDerivesIssuesLink(t *testing.T) {
+	dir := remotesRepo(t)
+	p, hits, err := remotesScanner{}.Scan(dir)
+	require.NoError(t, err)
+
+	bugsFor := func(url string) *projectfile.Link {
+		for i := range p.Links {
+			if p.Links[i].Type == projectfile.LinkBugs && p.Links[i].URL == url {
+				return &p.Links[i]
+			}
+		}
+		return nil
+	}
+
+	gh := bugsFor("https://github.com/acme/proj/issues")
+	require.NotNil(t, gh, "github issues link must be emitted")
+	require.NotNil(t, gh.Label, "issues link must carry a label")
+	assert.Equal(t, "Issues on GitHub", gh.Label.Bare)
+
+	cb := bugsFor("https://codeberg.org/acme/proj/issues")
+	require.NotNil(t, cb, "codeberg issues link must be emitted")
+	require.NotNil(t, cb.Label)
+	assert.Equal(t, "Issues on Codeberg", cb.Label.Bare)
+
+	var hit bool
+	for _, h := range hits {
+		if h.Field == "links[type=bugs]:origin" {
+			hit = true
+		}
+	}
+	assert.True(t, hit, "the issues derivation must be visible in --dry-run output")
+}
+
+// TestRemotesScannerDerivesIssuesLinkLocalized verifies the issues label is a
+// Langs map when the project declares org.projectfile.i18n.languages — the
+// multi-language parity with source-code links this change closes. A single-
+// language project stays Bare (verified by TestRemotesScannerDerivesIssuesLink).
+func TestRemotesScannerDerivesIssuesLinkLocalized(t *testing.T) {
+	if _, err := exec.LookPath("git"); err != nil {
+		t.Skip("git not available")
+	}
+	dir := t.TempDir()
+	pfPath := filepath.Join(dir, "projectfile.yaml")
+	require.NoError(t, os.WriteFile(pfPath, []byte("org:\n  projectfile:\n    i18n:\n      default-language: en\n      languages: [es]\n"), 0o644))
+	require.NoError(t, exec.Command("git", "-C", dir, "init", "--quiet").Run())
+	require.NoError(t, exec.Command("git", "-C", dir, "remote", "add", "origin", "https://github.com/acme/proj.git").Run())
+
+	p, _, err := remotesScanner{}.Scan(dir)
+	require.NoError(t, err)
+
+	var bugs *projectfile.Link
+	for i := range p.Links {
+		if p.Links[i].Type == projectfile.LinkBugs {
+			bugs = &p.Links[i]
+		}
+	}
+	require.NotNil(t, bugs)
+	require.NotNil(t, bugs.Label)
+	assert.Empty(t, bugs.Label.Bare, "multi-language label must be a Langs map with Bare cleared")
+	assert.Equal(t, map[string]string{
+		"en": "Issues on GitHub",
+		"es": "Incidencias en GitHub",
+	}, bugs.Label.Langs)
 }
