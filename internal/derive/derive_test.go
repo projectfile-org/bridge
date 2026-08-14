@@ -216,7 +216,7 @@ func TestApplyDeriveLabelLocalized(t *testing.T) {
 	assert.Equal(t, map[string]string{
 		"en": "Issues on GitHub",
 		"es": "Incidencias en GitHub",
-		"uk": "Issues на GitHub",
+		"uk": "Задачі на GitHub",
 	}, label.Langs)
 
 	var written *projectfile.LocalizedString

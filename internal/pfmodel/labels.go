@@ -48,7 +48,7 @@ var onConnector = map[string]string{
 // degrades to English then to the bare key (nounWord).
 var linkNouns = map[string]map[string]string{
 	NounSourceCode: {"en": "Source Code", "es": "Código fuente", "uk": "Вихідний код"},
-	NounIssues:     {"en": "Issues", "es": "Incidencias", "uk": "Issues"},
+	NounIssues:     {"en": "Issues", "es": "Incidencias", "uk": "Задачі"},
 	NounPackages:   {"en": "Packages", "es": "Paquetes", "uk": "Пакунки"},
 }
 

@@ -83,7 +83,7 @@ func TestComposeOnLabelDefaultLanguageIsFirst(t *testing.T) {
 func TestNounLabelTranslatesSubjects(t *testing.T) {
 	pf := i18nDoc("en", "es", "uk")
 	assert.Equal(t, map[string]string{
-		"en": "Issues", "es": "Incidencias", "uk": "Issues",
+		"en": "Issues", "es": "Incidencias", "uk": "Задачі",
 	}, pfmodel.NounLabel(pf, pfmodel.NounIssues).Langs)
 	assert.Equal(t, map[string]string{
 		"en": "Packages", "es": "Paquetes", "uk": "Пакунки",
@@ -103,7 +103,7 @@ func TestComposeOnLabelWithNounSubject(t *testing.T) {
 	assert.Equal(t, map[string]string{
 		"en": "Issues on Codeberg",
 		"es": "Incidencias en Codeberg",
-		"uk": "Issues на Codeberg",
+		"uk": "Задачі на Codeberg",
 	}, label.Langs)
 }
 
