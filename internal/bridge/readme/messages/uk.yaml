@@ -11,6 +11,7 @@ logo.alt: логотип
 screenshots.title: Знімки екрана
 features.title: Можливості
 features.body: Див. [%[1]s](%[2]s), щоб переглянути повний перелік.
+features.untranslated: Вибачте, цю частину ще не перекладено.
 benchmarks.title: Продуктивність
 benchmarks.body: Див. [%[1]s](%[2]s), щоб переглянути результати вимірювань.
 quick-start.title: Швидкий старт

@@ -15,13 +15,19 @@
 // split is what lets the drift gate run offline and deterministically while the
 // inherited text still names a real upstream version instead of implying it is
 // current.
+//
+// Documents localize per org.projectfile.i18n: the canonical file assembles
+// from docs/<name>.d/ as before, and each other declared language assembles
+// from docs/<lang>/<name>.d/ into docs/<lang>/<Out>. A language with no
+// translated fragments renders nothing under a localized name (warned); the
+// inherited sections stay in every variant — they quote upstream, which
+// publishes one language.
 package fragments
 
 import (
 	"fmt"
 	"path"
 	"path/filepath"
-	"strings"
 
 	"kiota.ch/projectfile/core/v2/pkg/genlog"
 	"kiota.ch/projectfile/core/v2/pkg/projectfile"
@@ -29,9 +35,10 @@ import (
 	"projectfile.org/projectfile/bridge/internal/pfmodel"
 )
 
-// templateName is the single structural template every document renders
-// through. Fragments are data, not prose, so one template suffices; per
-// language variants (fragments.es.md.tmpl) can be added later if needed.
+// templateName is the single structural template every document and every
+// language renders through. Fragments are data, not prose; the strings the
+// assembler itself contributes (title, section headings) localize from the
+// strings table, so no per-language template exists.
 const (
 	templateName = "fragments.md.tmpl"
 	bridgeName   = "fragments"
@@ -86,6 +93,8 @@ func (Bridge) Render(pf *projectfile.Document, opts core.Options) (core.Output, 
 		return core.Output{}, nil
 	}
 
+	langs := pfmodel.Languages(pf)
+	defLang := pfmodel.DefaultLanguage(pf)
 	reuse := core.REUSEHeader(pf, core.StyleHTML)
 	out := core.Output{Files: map[string][]byte{}}
 	for _, doc := range docs {
@@ -101,16 +110,35 @@ func (Bridge) Render(pf *projectfile.Document, opts core.Options) (core.Output, 
 			}
 		}
 
-		body, empty, err := assembleDocument(opts.Dir, doc, reuse, refreshed)
+		own, inherited, err := loadDocument(opts.Dir, doc, refreshed)
 		if err != nil {
 			return core.Output{}, fmt.Errorf("%s: %w", doc.Out, err)
 		}
-		if empty {
+		if len(own) == 0 && len(inherited) == 0 {
 			genlog.Plain(fmt.Sprintf("bridge: %s (skipped, no fragments)", doc.Out))
 			continue
 		}
+
+		// Variants resolve BEFORE any render: the cross-language bar names
+		// exactly the set that ships, in the canonical file too.
+		variants := resolveVariantLangs(opts.Dir, doc.Dir, doc.Out, own, langs)
+
+		body, err := assembleDocument(opts.Dir, defLang, "", defLang, doc, own, inherited, variants, reuse)
+		if err != nil {
+			return core.Output{}, fmt.Errorf("%s: %w", doc.Out, err)
+		}
 		out.Files[doc.Out] = body
 		genlog.Plain(fmt.Sprintf("bridge: %s", doc.Out))
+
+		for _, v := range variants {
+			rel := core.LocalizedFilename(doc.Out, v.Lang)
+			body, err := assembleDocument(opts.Dir, v.Lang, v.Lang, defLang, doc, v.Fragments, inherited, variants, reuse)
+			if err != nil {
+				return core.Output{}, fmt.Errorf("%s: %w", rel, err)
+			}
+			out.Files[rel] = body
+			genlog.Plain(fmt.Sprintf("bridge: %s", rel))
+		}
 	}
 	return out, nil
 }
@@ -145,51 +173,64 @@ func resolveDocuments(pf *projectfile.Document) ([]pfmodel.FragmentDocument, err
 	return out, nil
 }
 
-// assembleDocument builds one artefact: own fragments under a Project section,
-// then one section per parent, rendered through the template with the SPDX
-// header prepended. refreshed carries the copies just read from upstream and
-// wins over the copy on disk for the same parent; parents absent from it keep
-// what was committed, which is how a failed or offline refresh degrades.
-//
-// empty is true when the document has neither own nor inherited entries — the
-// caller skips emitting such files to avoid empty-section lint failures.
-func assembleDocument(projectDir string, doc pfmodel.FragmentDocument, reuse string, refreshed map[string]inheritedCopy) (body []byte, empty bool, err error) {
+// loadDocument reads one document's own fragments and its declared inherited
+// copies, folding in the copies a --refresh in this same run just read.
+func loadDocument(projectDir string, doc pfmodel.FragmentDocument, refreshed map[string]inheritedCopy) ([]Fragment, []inheritedCopy, error) {
 	own, err := loadFragments(projectDir, doc.Dir)
 	if err != nil {
-		return nil, false, err
+		return nil, nil, err
 	}
 	cached, err := loadInherited(projectDir, doc.Dir)
 	if err != nil {
-		return nil, false, err
+		return nil, nil, err
 	}
 	for name, copied := range refreshed {
 		cached[name] = copied
 	}
-	inherited := orderedCopies(declaredOnly(cached, doc))
+	return own, orderedCopies(declaredOnly(cached, doc)), nil
+}
 
-	if len(own) == 0 && len(inherited) == 0 {
-		return nil, true, nil
-	}
-
+// assembleDocument builds one artefact through the structural template: own
+// fragments under a Project section, then one section per parent. strLang
+// resolves the assembler's structural strings (the default language for the
+// canonical render, the variant's own tag otherwise); barLang is the render
+// sentinel the cross-language bar keys off. Variants nest the SAME inherited
+// sections as the canonical file — they quote upstream, which publishes one
+// language, and a variant that dropped them would understate the project.
+func assembleDocument(projectDir, strLang, barLang, defLang string, doc pfmodel.FragmentDocument, own []Fragment, inherited []inheritedCopy, variants []variantFragments, reuse string) ([]byte, error) {
 	view := fragmentView{
 		REUSEHeader:      reuse,
-		Title:            doc.Title,
+		Title:            localizedDocTitle(doc.Title, doc.Out, strLang),
 		HasProject:       len(own) > 0,
-		ProjectHeading:   "## Project " + doc.Title,
+		ProjectHeading:   localizedProjectHeading(doc.Title, doc.Out, strLang),
 		ProjectFragments: own,
-		Inherited:        inherited,
+		Inherited:        localizedInherited(inherited, strLang),
 	}
 	// core.Render resolves project-local template overrides under projectDir,
 	// then the embedded template — same dir the fragments were loaded from.
 	out, err := core.Render(projectDir, templateName, view)
 	if err != nil {
-		return nil, false, err
+		return nil, err
 	}
-	// The template's per-fragment range leaves a trailing blank line after
-	// every fragment — including each section's last — so section boundaries
-	// stack into 3+ newlines. Collapse every run of 3+ newlines to exactly
-	// one blank line (markdownlint MD012), then pin a single trailing newline
-	// (MD047). Single blank lines between paragraphs/headings are preserved.
-	collapsed := multiBlankRE.ReplaceAllString(string(out), "\n\n")
-	return []byte(strings.TrimRight(collapsed, "\n") + "\n"), false, nil
+	// Post-processing pipeline, same order every render: collapse the runs the
+	// template's per-fragment range leaves (MD012), set the cross-language bar
+	// above the H1, wrap the non-English body for the textlint terminology
+	// rule (after the REUSE header, which must stay the file's first block),
+	// and collapse once more for the seams those steps add.
+	body := core.CollapseBlankLines(out)
+	body = core.InsertLanguageBar(body, doc.Out, barLang, defLang, variantLangTags(variants))
+	body = wrapAfterHeader(body, strLang)
+	return core.CollapseBlankLines(body), nil
+}
+
+// variantLangTags flattens the resolved variant set for the language bar.
+func variantLangTags(variants []variantFragments) []string {
+	if len(variants) == 0 {
+		return nil
+	}
+	tags := make([]string, 0, len(variants))
+	for _, v := range variants {
+		tags = append(tags, v.Lang)
+	}
+	return tags
 }

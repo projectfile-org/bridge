@@ -941,7 +941,13 @@ func extractFirstHeading(dir, rel string) string {
 // The H1/H2 are skipped so only the feature titles reach the bullet list.
 // Returns nil when FEATURES.md is absent or holds no H3.
 func featureHeadings(dir string) []string {
-	body, err := readFile(dir, fileFeatures)
+	return featureHeadingsAt(dir, fileFeatures)
+}
+
+// featureHeadingsAt is featureHeadings against one repo-relative path, so the
+// localized probe can read docs/<lang>/FEATURES.md with the same parser.
+func featureHeadingsAt(dir, rel string) []string {
+	body, err := readFile(dir, rel)
 	if err != nil {
 		return nil
 	}
@@ -954,6 +960,49 @@ func featureHeadings(dir string) []string {
 		out = append(out, text)
 	}
 	return out
+}
+
+// featureDoc is the features block's whole data source: which FEATURES.md this
+// render links and scrapes, plus the fallback note. A variant render prefers
+// the same-language document (docs/<lang>/FEATURES.md); when the translation
+// does not exist yet it falls back to the canonical file and says so — an
+// English bullet list under a localized heading, never a missing section.
+type featureDoc struct {
+	Label        string   // section heading, resolved in the render language
+	Name         string   // companion file's bare name (link text)
+	Filename     string   // link target, rebased to this readme's own path
+	Headings     []string // level-3 feature titles scraped from the linked file
+	Untranslated bool     // true when the render fell back to the default language
+}
+
+// buildFeatureDoc resolves the featureDoc for one render. pathLang is the
+// render sentinel (the default language probes the root file, others probe
+// docs/<lang>/ first); strLang resolves the label.
+func buildFeatureDoc(dir, pathLang, strLang string) *featureDoc {
+	label := translate(strLang, "features.title")
+	docPath := readmeDocPath(pathLang)
+	if pathLang != "" {
+		localized := core.LocalizedFilename(fileFeatures, pathLang)
+		if fileExists(dir, localized) {
+			return &featureDoc{
+				Label:    label,
+				Name:     fileFeatures,
+				Filename: core.RelLink(localized, docPath),
+				Headings: featureHeadingsAt(dir, localized),
+			}
+		}
+		genlog.Decision("features_fallback", localized, fileFeatures, "no localized document yet")
+	}
+	if !fileExists(dir, fileFeatures) {
+		return nil
+	}
+	return &featureDoc{
+		Label:        label,
+		Name:         fileFeatures,
+		Filename:     core.RelLink(fileFeatures, docPath),
+		Headings:     featureHeadings(dir),
+		Untranslated: pathLang != "",
+	}
 }
 
 // formatDecisionTrace emits one decision-trace line per data source so the

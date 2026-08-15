@@ -20,11 +20,11 @@ pf-bridge projects the projectfile onto files, forges, and the repository
 
 ## Можливості
 
-- Forge identity, scanning and scaffolding
-- Feature and roadmap fragment assembly
-- Projectfile-to-file projection
+- Ідентичність форжу, сканування та каркаси
+- Збирання фрагментів можливостей і дорожньої карти
+- Проєкція projectfile у файли
 
-Див. [FEATURES.md](../../FEATURES.md), щоб переглянути повний перелік.
+Див. [FEATURES.md](FEATURES.md), щоб переглянути повний перелік.
 
 ## Що надає цей проєкт
 

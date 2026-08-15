@@ -20,11 +20,11 @@ pf-bridge projects the projectfile onto files, forges, and the repository
 
 ## Características
 
-- Forge identity, scanning and scaffolding
-- Feature and roadmap fragment assembly
-- Projectfile-to-file projection
+- Identidad de forja, escaneo y scaffolding
+- Ensamblado de fragmentos de características y hoja de ruta
+- Proyección de projectfile a archivos
 
-Consulta [FEATURES.md](../../FEATURES.md) para ver la lista completa.
+Consulta [FEATURES.md](FEATURES.md) para ver la lista completa.
 
 ## Qué entrega este proyecto
 

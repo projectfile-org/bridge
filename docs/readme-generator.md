@@ -56,7 +56,7 @@ rich project fills every section.
 | `basics`        | `identity.title` + `identity.summary`                                                      | yes            |
 | `badges`        | `readme.shields` (see [Badges](#badges))                                                   | yes            |
 | `screenshots`   | `docs/screenshots/*.<img>` probe                                                           | yes            |
-| `features`      | `FEATURES.md` probe (H3 feature titles as bullets + link)                                  | yes            |
+| `features`      | `FEATURES.md` probe, localized first (H3 feature titles as bullets + link)                 | yes            |
 | `benchmarks`    | `BENCHMARKS.md` probe                                                                      | yes            |
 | `quick-start`   | `readme.quick-start` groups, else `QUICKSTART.md` probe                                    | yes            |
 | `requirements`  | `REQUIREMENTS.md` probe                                                                    | yes            |
@@ -555,7 +555,7 @@ a block to the list never pays for probes it does not use.
 | `screenshots`                         | `[]{.Path .Name}`             | `docs/screenshots/*.<img>`                              |
 | `docLinks`                            | `[]{.Filename .Label}`        | `docs/*.md`; label is the file’s first heading          |
 | `buildLinks`                          | `[]{.Filename .Label}`        | `BUILD.md` + `docs/MAKEFILE.md`                         |
-| `featureHeadings`                     | `[]string`                    | `FEATURES.md` level-3 titles (feature bullets)          |
+| `featureDoc`                          | `{…}` or nil                  | features block data; prefers `docs/<lang>/FEATURES.md`  |
 
 Call a function with no arguments by name (`{{projectName}}`,
 `{{with badges}}…{{end}}`). `docLink` is the one two-argument function:
@@ -950,12 +950,18 @@ Localization scope:
     bridge derives rather than reads: the `policies` link text, the
     link-group headings, the link-type names, the boilerplate sentence in
     each probe block. See [Message catalogs](#message-catalogs).
+- **Features localize by document, not bullet** — a variant render reads
+    `docs/<lang>/FEATURES.md` when it exists (built by the fragments bridge
+    from `docs/<lang>/features.d/`), so both the bullets and the link target
+    stay in the reader’s language. When the translation does not exist yet the
+    block falls back to the canonical `FEATURES.md` — English bullets under a
+    localized heading — and says so with the localized
+    `features.untranslated` note.
 - **Untranslatable** — labels taken from a document’s first heading
     (`docs/deployment-guide.md` whose `# Deploying the App` heading becomes
     “Deploying the App” in the `documentation` block; a heading-less file falls
     back to its humanized filename). The heading on disk is the same in every
-    language; give the file a localized name, or override the block. The
-    `features` bullets likewise come from `FEATURES.md`’s H3 titles verbatim.
+    language; give the file a localized name, or override the block.
 
 Per-language extras content: declare the `content` as a language map and the
 bridge picks the right variant for each render. A bare-string `content` is

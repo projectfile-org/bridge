@@ -474,3 +474,150 @@ func TestRenderConventionsNoParents(t *testing.T) {
 	assert.Contains(t, got, "### Solo")
 	assert.NotContains(t, got, "## Inherited", "no parents → no inherited section")
 }
+
+// i18nBlock declares org.projectfile.i18n.languages for the writeProjectfile
+// body — kept as one helper so the column-4 indentation lives in one place.
+func i18nBlock(langs ...string) string {
+	block := "    i18n:\n      languages:\n"
+	for _, l := range langs {
+		block += "        - " + l + "\n"
+	}
+	return block
+}
+
+// TestRenderLocalizedVariants is the localization baseline: a project with
+// English fragments plus docs/es/features.d renders the canonical FEATURES.md
+// (byte-stable shape, now with the cross-language bar) AND docs/es/FEATURES.md
+// from the Spanish fragments with localized structural headings.
+func TestRenderLocalizedVariants(t *testing.T) {
+	dir := t.TempDir()
+	writeProjectfile(t, dir,
+		i18nBlock("es")+
+			"    fragments:\n      documents:\n"+
+			"        - {dir: docs/features.d, out: FEATURES.md, title: Features}")
+	writeFragment(t, dir, "docs/features.d", "alpha", "Alpha Feature", "Alpha body.")
+	writeFragment(t, dir, "docs/es/features.d", "alpha", "Característica Alfa", "Cuerpo alfa.")
+
+	out, err := fragments.Bridge{}.Render(docWithFragments(t, dir), core.Options{Dir: dir})
+	require.NoError(t, err)
+	require.Contains(t, out.Files, outFeatures)
+	require.Contains(t, out.Files, "docs/es/FEATURES.md")
+
+	root := string(out.Files[outFeatures])
+	assert.Contains(t, root, "# Features")
+	assert.Contains(t, root, "## Project Features")
+	assert.Contains(t, root, "### Alpha Feature")
+	// The canonical file carries the bar naming exactly the shipped variants.
+	assert.Contains(t, root, "[Español](docs/es/FEATURES.md)")
+
+	es := string(out.Files["docs/es/FEATURES.md"])
+	assert.Contains(t, es, "# Características")
+	assert.Contains(t, es, "## Características del proyecto")
+	assert.Contains(t, es, "### Característica Alfa")
+	assert.Contains(t, es, "Cuerpo alfa.")
+	// The variant carries the bar back to the canonical file and the
+	// terminology wrap (non-English render).
+	assert.Contains(t, es, "[English](../../FEATURES.md)")
+	assert.Contains(t, es, "textlint-disable")
+	// The REUSE header stays the file's first block.
+	assert.True(t, strings.HasPrefix(es, "<!--\nSPDX-FileCopyrightText"))
+}
+
+// TestRenderLocalizedVariantsNestInherited pins that a variant nests the SAME
+// inherited sections as the canonical file — they quote upstream, which
+// publishes one language — under a localized heading.
+func TestRenderLocalizedVariantsNestInherited(t *testing.T) {
+	child := t.TempDir()
+	body := i18nBlock("es") +
+		"    fragments:\n      documents:\n        - dir: docs/features.d\n" +
+		"          out: FEATURES.md\n          title: Features\n" +
+		parentsBlock(parentURL)
+	writeProjectfile(t, child, body)
+	writeFragment(t, child, "docs/features.d", "own", "Own Feature", "Own body.")
+	writeFragment(t, child, "docs/es/features.d", "own", "Característica Propia", "Cuerpo propio.")
+	writeInherited(t, child, "docs/features.d", "b19-ubuntu", "b19/ubuntu", "1.0.0", "Parent Feature")
+
+	out, err := fragments.Bridge{}.Render(docWithFragments(t, child), core.Options{Dir: child})
+	require.NoError(t, err)
+	es := string(out.Files["docs/es/FEATURES.md"])
+	assert.Contains(t, es, "## Heredado de b19/ubuntu 1.0.0")
+	assert.Contains(t, es, "### Parent Feature")
+	assert.Contains(t, es, "### Característica Propia")
+}
+
+// TestRenderSkipsLanguageWithoutFragments pins the missing-translation
+// policy: a declared language with no docs/<lang>/features.d renders nothing
+// under a localized name, and no bar advertises it.
+func TestRenderSkipsLanguageWithoutFragments(t *testing.T) {
+	dir := t.TempDir()
+	writeProjectfile(t, dir,
+		i18nBlock("es", "uk")+
+			"    fragments:\n      documents:\n"+
+			"        - {dir: docs/features.d, out: FEATURES.md, title: Features}")
+	writeFragment(t, dir, "docs/features.d", "alpha", "Alpha Feature", "Alpha body.")
+	writeFragment(t, dir, "docs/es/features.d", "alpha", "Característica Alfa", "Cuerpo alfa.")
+	// No docs/uk/features.d — Ukrainian is declared but untranslated.
+
+	out, err := fragments.Bridge{}.Render(docWithFragments(t, dir), core.Options{Dir: dir})
+	require.NoError(t, err)
+	assert.NotContains(t, out.Files, "docs/uk/FEATURES.md")
+	root := string(out.Files[outFeatures])
+	assert.NotContains(t, root, "docs/uk/FEATURES.md", "bar must not advertise an unshipped variant")
+	assert.Contains(t, root, "docs/es/FEATURES.md")
+}
+
+// TestRenderUnilingualProjectIsByteStable pins the no-op property: a project
+// with no declared languages renders exactly one file, with no bar and no
+// wrap — the output the drift gate has always compared against.
+func TestRenderUnilingualProjectIsByteStable(t *testing.T) {
+	dir := t.TempDir()
+	writeProjectfile(t, dir, "    fragments:\n      documents:\n        - {dir: docs/features.d, out: FEATURES.md, title: Features}")
+	writeFragment(t, dir, "docs/features.d", "alpha", "Alpha Feature", "Alpha body.")
+
+	out, err := fragments.Bridge{}.Render(docWithFragments(t, dir), core.Options{Dir: dir})
+	require.NoError(t, err)
+	assert.Len(t, out.Files, 1)
+	got := string(out.Files[outFeatures])
+	assert.NotContains(t, got, "textlint-disable")
+	assert.NotContains(t, got, "[English](")
+	assert.True(t, strings.HasPrefix(got, "<!--\nSPDX-FileCopyrightText"))
+	assert.True(t, strings.HasSuffix(got, "Alpha body.\n"), "single trailing newline, nothing after the last fragment")
+}
+
+// TestRenderVariantRequiresOwnDefaultFragments pins that an inherited-only
+// document (own default-language set empty) never grows variants: a
+// translation of features the project does not declare would be the only
+// place those features exist.
+func TestRenderVariantRequiresOwnDefaultFragments(t *testing.T) {
+	child := t.TempDir()
+	body := i18nBlock("es") +
+		"    fragments:\n      documents:\n        - dir: docs/features.d\n" +
+		"          out: FEATURES.md\n          title: Features\n" +
+		parentsBlock(parentURL)
+	writeProjectfile(t, child, body)
+	writeInherited(t, child, "docs/features.d", "b19-ubuntu", "b19/ubuntu", "1.0.0", "Parent Feature")
+	writeFragment(t, child, "docs/es/features.d", "own", "Característica Propia", "Cuerpo propio.")
+
+	out, err := fragments.Bridge{}.Render(docWithFragments(t, child), core.Options{Dir: child})
+	require.NoError(t, err)
+	assert.Contains(t, out.Files, outFeatures, "inherited-only canonical file still renders")
+	assert.NotContains(t, out.Files, "docs/es/FEATURES.md", "no own default fragments → no variant")
+}
+
+// TestRenderNonLocalizableDocumentSkipsVariants pins the convention gate: a
+// document whose dir is outside docs/ (custom override) or whose out nests
+// under a directory stays single-language by decision.
+func TestRenderNonLocalizableDocumentSkipsVariants(t *testing.T) {
+	dir := t.TempDir()
+	writeProjectfile(t, dir,
+		i18nBlock("es")+
+			"    fragments:\n      documents:\n"+
+			"        - {dir: changelog.d, out: CHANGELOG.md, title: Changelog}")
+	writeFragment(t, dir, "changelog.d", "c1", "Change One", "Body.")
+	writeFragment(t, dir, "docs/es/changelog.d", "c1", "Cambio Uno", "Cuerpo.")
+
+	out, err := fragments.Bridge{}.Render(docWithFragments(t, dir), core.Options{Dir: dir})
+	require.NoError(t, err)
+	assert.Contains(t, out.Files, "CHANGELOG.md")
+	assert.NotContains(t, out.Files, "docs/es/CHANGELOG.md")
+}
