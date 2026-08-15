@@ -1,7 +1,11 @@
-{{- with docLink "FEATURES.md" (t "features.title")}}
+{{- with featureDoc}}
 ## {{.Label}}
 
-{{range featureHeadings}}- {{.}}
+{{range .Headings}}- {{.}}
 {{end}}
 {{printf (t "features.body") .Name .Filename}}
+{{- if .Untranslated}}
+
+{{t "features.untranslated"}}
+{{- end}}
 {{end -}}

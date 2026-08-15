@@ -357,9 +357,25 @@ keys:
   to `en`. The canonical root-level files are written in this language; every
   OTHER language renders under `docs/<lang>/`.
 
-Localizable set: readme, CONTRIBUTING, CODE_OF_CONDUCT, SECURITY, SUPPORT, DEI.
-LICENSE is deliberately excluded — a licence’s legal force lives in its
-canonical text.
+Localizable set: readme, CONTRIBUTING, CODE_OF_CONDUCT, SECURITY, SUPPORT, DEI,
+plus every fragments-bridge document (FEATURES.md, ROADMAP.md, …). LICENSE is
+deliberately excluded — a licence’s legal force lives in its canonical text.
+
+**Localized fragments.** A fragment document’s unit of translation is the
+fragment DIRECTORY, not a template: each declared language reads
+`docs/<lang>/<name>.d/*.md` and assembles `docs/<lang>/<Out>`, keeping the
+canonical file byte-stable for single-language projects (bar and terminology
+wrap are no-ops without variants). The skip rule carries over — a locale dir
+with no fragments warns with the path to add and renders nothing under a
+localized name. Structural strings (title, "Project …", "Inherited from …")
+localize from the Go table in `internal/bridge/fragments/strings.go`, the same
+shape core’s `footerStrings` uses — five keys do not justify a YAML catalog.
+Inherited sections appear verbatim in every variant: they quote upstream,
+which publishes one language, and dropping them would understate the project.
+A variant requires own default-language fragments to exist (inherited-only
+documents never grow variants). The readme’s features block prefers the
+same-language document and falls back to the canonical one with the localized
+`features.untranslated` note.
 
 **Layout.** The locale lives in the directory, not the filename: the canonical
 (default-language) file renders at the repository root, and each other

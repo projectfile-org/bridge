@@ -18,6 +18,7 @@ logo.alt: logo
 screenshots.title: Screenshots
 features.title: Features
 features.body: See [%[1]s](%[2]s) for the full list.
+features.untranslated: Sorry, this part is not yet translated.
 benchmarks.title: Benchmarks
 benchmarks.body: See [%[1]s](%[2]s) for performance numbers.
 quick-start.title: Quick Start

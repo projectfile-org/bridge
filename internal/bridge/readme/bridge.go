@@ -343,9 +343,11 @@ func execBlockTemplate(name string, body []byte, data readmeView, dir string, ex
 			"screenshots": func() []screenshot { return probeScreenshots(dir) },
 			"docLinks":    func() []staticLink { return listDocsMarkdown(dir, readmeDocPath(data.Lang)) },
 			"buildLinks":  func() []staticLink { return probeBuildLinks(dir, readmeDocPath(data.Lang), data.StrLang) },
-			// featureHeadings reads FEATURES.md's H3 feature titles for the
-			// features block bullet list; nil when the file is absent.
-			"featureHeadings": func() []string { return featureHeadings(dir) },
+			// featureDoc is the features block's data source: which
+			// FEATURES.md this language links and scrapes (the localized
+			// document when it exists, else the canonical file plus the
+			// not-yet-translated note); nil when neither exists.
+			"featureDoc": func() *featureDoc { return buildFeatureDoc(dir, data.Lang, data.StrLang) },
 		}).
 		Option("missingkey=zero").
 		Parse(string(body))

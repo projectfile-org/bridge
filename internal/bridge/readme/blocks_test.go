@@ -602,3 +602,84 @@ func TestCollapseBlankLines(t *testing.T) {
 	assert.False(t, strings.HasSuffix(string(out), "\n\n"),
 		"trailing blanks must collapse to a single newline")
 }
+
+// renderLangBody renders one language variant through the public Render by
+// declaring the language set on the document, returning the variant's body.
+func renderLangBody(t *testing.T, dir string, pf *projectfile.Document, lang string) string {
+	t.Helper()
+	projectfile.SetExtension(pf, pfmodel.I18NExtensionNS, map[string]any{
+		"languages": []any{lang},
+	})
+	out, err := Bridge{}.Render(pf, core.Options{Dir: dir, Mode: modeWrite, Force: true})
+	require.NoError(t, err)
+	require.Contains(t, out.Files, core.LocalizedFilename(filenameReadme, lang))
+	return string(out.Files[core.LocalizedFilename(filenameReadme, lang)])
+}
+
+// TestFeaturesBlockPrefersLocalizedDoc pins the localized probe: a variant
+// render with docs/es/FEATURES.md on disk links and scrapes THAT file, with
+// no untranslated note.
+func TestFeaturesBlockPrefersLocalizedDoc(t *testing.T) {
+	dir := t.TempDir()
+	writeFile(t, dir, "FEATURES.md", "# Features\n\n## Project Features\n\n### Persistent APT cache\n")
+	writeFile(t, dir, "docs/es/FEATURES.md", "# Características\n\n## Características del proyecto\n\n### Función Alfa\n")
+	body := renderLangBody(t, dir, minimalDoc(t), "es")
+
+	assert.Contains(t, body, "## Características")
+	assert.Contains(t, body, "- Función Alfa")
+	assert.Contains(t, body, "[FEATURES.md](FEATURES.md)", "docs/es/README.md links its co-located sibling")
+	assert.NotContains(t, body, "- Persistent APT cache")
+	assert.NotContains(t, body, "not yet translated")
+}
+
+// TestFeaturesBlockFallsBackWithNote pins the fallback: a variant render
+// without docs/es/FEATURES.md keeps the section (heading localized, bullets
+// from the canonical file, link to the canonical file) and says the part is
+// not yet translated — in the render language.
+func TestFeaturesBlockFallsBackWithNote(t *testing.T) {
+	dir := t.TempDir()
+	writeFile(t, dir, "FEATURES.md", "# Features\n\n## Project Features\n\n### Persistent APT cache\n")
+	body := renderLangBody(t, dir, minimalDoc(t), "es")
+
+	assert.Contains(t, body, "## Características")
+	assert.Contains(t, body, "- Persistent APT cache")
+	assert.Contains(t, body, "[FEATURES.md](../../FEATURES.md)", "fallback links the canonical file")
+	assert.Contains(t, body, "Lo sentimos, esta parte aún no está traducida.")
+}
+
+// TestFeaturesBlockFallbackNoteInUkrainian pins the same fallback through the
+// Ukrainian catalog — the note is reader-facing prose, not a fixed string.
+func TestFeaturesBlockFallbackNoteInUkrainian(t *testing.T) {
+	dir := t.TempDir()
+	writeFile(t, dir, "FEATURES.md", "# Features\n\n## Project Features\n\n### Persistent APT cache\n")
+	body := renderLangBody(t, dir, minimalDoc(t), "uk")
+	assert.Contains(t, body, "Вибачте, цю частину ще не перекладено.")
+}
+
+// TestBuildFeatureDocProbes pins the probe matrix: canonical render reads the
+// root file (no note), variant prefers the localized file, missing localized
+// file falls back with Untranslated set, and a missing canonical file is nil.
+func TestBuildFeatureDocProbes(t *testing.T) {
+	dir := t.TempDir()
+	writeFile(t, dir, "FEATURES.md", "# Features\n\n### Root Feature\n")
+
+	doc := buildFeatureDoc(dir, "", "en")
+	require.NotNil(t, doc)
+	assert.Equal(t, "FEATURES.md", doc.Filename)
+	assert.False(t, doc.Untranslated)
+
+	doc = buildFeatureDoc(dir, "es", "es")
+	require.NotNil(t, doc)
+	assert.Equal(t, "../../FEATURES.md", doc.Filename)
+	assert.True(t, doc.Untranslated)
+
+	writeFile(t, dir, "docs/es/FEATURES.md", "# Características\n\n### Característica\n")
+	doc = buildFeatureDoc(dir, "es", "es")
+	require.NotNil(t, doc)
+	assert.Equal(t, "FEATURES.md", doc.Filename)
+	assert.False(t, doc.Untranslated)
+	assert.Equal(t, []string{"Característica"}, doc.Headings)
+
+	assert.Nil(t, buildFeatureDoc(t.TempDir(), "", "en"))
+	assert.Nil(t, buildFeatureDoc(t.TempDir(), "es", "es"), "neither file → nil, block drops")
+}
