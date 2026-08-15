@@ -90,10 +90,18 @@ func wrapAfterHeader(body []byte, lang string) []byte {
 	if lang == "en" || len(body) == 0 {
 		return body
 	}
-	cut := bytes.Index(body, reuseClose)
-	if cut < 0 {
-		return core.WrapLocalizedTextlint(body, lang)
+	head, rest := "", bytes.TrimSpace(body)
+	if cut := bytes.Index(body, reuseClose); cut >= 0 {
+		end := cut + len(reuseClose)
+		head = string(body[:end]) + "\n\n"
+		rest = bytes.TrimSpace(body[end:])
 	}
-	rest := core.WrapLocalizedTextlint(body[cut+len(reuseClose):], lang)
-	return append(body[:cut+len(reuseClose):cut+len(reuseClose)], rest...)
+	wrapped := core.WrapLocalizedTextlint(rest, lang)
+	// WrapLocalizedTextlint joins the disable comment to the content with a
+	// single newline; re-open that seam into the blank line every generated
+	// localized file carries around the directives.
+	if c := bytes.IndexByte(wrapped, '\n'); c >= 0 {
+		wrapped = append(wrapped[:c+1:c+1], append([]byte("\n"), wrapped[c+1:]...)...)
+	}
+	return append([]byte(head), wrapped...)
 }
