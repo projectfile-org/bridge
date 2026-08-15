@@ -4,7 +4,7 @@ SPDX-License-Identifier: MIT
 pf-cli-managed: yes
 -->
 
-<!-- textlint-disable terminology -->
+<!-- textlint-disable terminology,common-misspellings -->
 
 [English](../../README.md) · [Українська](../uk/README.md)
 
@@ -20,11 +20,11 @@ pf-bridge projects the projectfile onto files, forges, and the repository
 
 ## Características
 
-- Forge identity, scanning and scaffolding
-- Feature and roadmap fragment assembly
-- Projectfile-to-file projection
+- Identidad de forja, escaneo y scaffolding
+- Ensamblado de fragmentos de características y hoja de ruta
+- Proyección de projectfile a archivos
 
-Consulta [FEATURES.md](../../FEATURES.md) para ver la lista completa.
+Consulta [FEATURES.md](FEATURES.md) para ver la lista completa.
 
 ## Qué entrega este proyecto
 
@@ -81,12 +81,18 @@ Para el bucle de desarrollo local, `make dev-container` levanta el dev-container
 
 ## Enlaces
 
+### Proyecto
+
 - [Especificación de Projectfile](https://projectfile.org)
 - [Projectfile Bridges en Codeberg](https://codeberg.org/projectfile/bridge)
 - [Projectfile Bridges en GitHub](https://github.com/damian-buho/projectfile-bridge)
 - [Projectfile Bridges en kiota.ch](https://kiota.ch/projectfile/bridge)
 - [Incidencias en Codeberg](https://codeberg.org/projectfile/bridge/issues)
 - [Documentación](/docs)
+
+### Otros
+
+- [Del autor](https://dbuho.me)
 
 ## Licencia
 

@@ -4,7 +4,7 @@ SPDX-License-Identifier: MIT
 pf-cli-managed: yes
 -->
 
-<!-- textlint-disable terminology -->
+<!-- textlint-disable terminology,common-misspellings -->
 
 [English](../../README.md) · [Español](../es/README.md)
 
@@ -20,11 +20,11 @@ pf-bridge projects the projectfile onto files, forges, and the repository
 
 ## Можливості
 
-- Forge identity, scanning and scaffolding
-- Feature and roadmap fragment assembly
-- Projectfile-to-file projection
+- Ідентичність форжу, сканування та каркаси
+- Збирання фрагментів можливостей і дорожньої карти
+- Проєкція projectfile у файли
 
-Див. [FEATURES.md](../../FEATURES.md), щоб переглянути повний перелік.
+Див. [FEATURES.md](FEATURES.md), щоб переглянути повний перелік.
 
 ## Що надає цей проєкт
 
@@ -81,12 +81,18 @@ pf-bridge all
 
 ## Посилання
 
+### Проєкт
+
 - [Специфікація Projectfile](https://projectfile.org)
 - [Projectfile Bridges на Codeberg](https://codeberg.org/projectfile/bridge)
 - [Projectfile Bridges на GitHub](https://github.com/damian-buho/projectfile-bridge)
 - [Projectfile Bridges на kiota.ch](https://kiota.ch/projectfile/bridge)
 - [Issues на Codeberg](https://codeberg.org/projectfile/bridge/issues)
 - [Документація](/docs)
+
+### Інше
+
+- [Від автора](https://dbuho.me)
 
 ## Ліцензія
 
