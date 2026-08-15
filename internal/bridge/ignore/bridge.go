@@ -104,7 +104,7 @@ func assemble(pf *projectfile.Document, filename, extKey string, ext *pfmodel.Ig
 
 	var buf bytes.Buffer
 	buf.WriteString(core.REUSEHeader(pf, core.StyleHash))
-	buf.WriteString(core.Banner(filename, extKey, pf.Stack))
+	buf.WriteString(core.Banner(filename, extKey))
 	buf.Write(content.Bytes())
 	return buf.Bytes()
 }
