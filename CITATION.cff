@@ -25,3 +25,11 @@ contact:
     website: https://dbuho.me
 license: MIT
 repository-code: https://kiota.ch/projectfile/bridge
+keywords:
+  - pf-bridge
+  - projectfile
+  - forge
+  - codegen
+  - scaffolding
+  - go
+  - cli

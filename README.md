@@ -70,6 +70,10 @@ Run `make` with no arguments for the default target; run `make help` to list eve
 
 For the local dev loop, `make dev-container` brings up the dev-container.
 
+## Documentation
+
+- [LLM Policy Generator](docs/llm-generator.md)
+
 ## Policies
 
 - [How to contribute](CONTRIBUTING.md)
@@ -79,12 +83,19 @@ For the local dev loop, `make dev-container` brings up the dev-container.
 
 ## Links
 
+### Project
+
 - [Projectfile Specification](https://projectfile.org)
 - [Projectfile Bridges on Codeberg](https://codeberg.org/projectfile/bridge)
 - [Projectfile Bridges on GitHub](https://github.com/damian-buho/projectfile-bridge)
 - [Projectfile Bridges on kiota.ch](https://kiota.ch/projectfile/bridge)
 - [Issues on Codeberg](https://codeberg.org/projectfile/bridge/issues)
 - [Documentation](/docs)
+- [Issues on GitHub](https://github.com/damian-buho/projectfile-bridge/issues)
+
+### Other
+
+- [From author](https://dbuho.me)
 
 ## License
 

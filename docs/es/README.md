@@ -4,7 +4,7 @@ SPDX-License-Identifier: MIT
 pf-cli-managed: yes
 -->
 
-<!-- textlint-disable terminology -->
+<!-- textlint-disable terminology,common-misspellings -->
 
 [English](../../README.md) · [Українська](../uk/README.md)
 
@@ -72,6 +72,10 @@ Ejecuta `make` sin argumentos para el destino predeterminado; ejecuta `make help
 
 Para el bucle de desarrollo local, `make dev-container` levanta el dev-container.
 
+## Documentación
+
+- [LLM Policy Generator](../llm-generator.md)
+
 ## Políticas
 
 - [Cómo contribuir](CONTRIBUTING.md)
@@ -81,12 +85,19 @@ Para el bucle de desarrollo local, `make dev-container` levanta el dev-container
 
 ## Enlaces
 
+### Proyecto
+
 - [Especificación de Projectfile](https://projectfile.org)
 - [Projectfile Bridges en Codeberg](https://codeberg.org/projectfile/bridge)
 - [Projectfile Bridges en GitHub](https://github.com/damian-buho/projectfile-bridge)
 - [Projectfile Bridges en kiota.ch](https://kiota.ch/projectfile/bridge)
 - [Incidencias en Codeberg](https://codeberg.org/projectfile/bridge/issues)
 - [Documentación](/docs)
+- [Incidencias en GitHub](https://github.com/damian-buho/projectfile-bridge/issues)
+
+### Otros
+
+- [Del autor](https://dbuho.me)
 
 ## Licencia
 

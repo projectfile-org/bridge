@@ -10,6 +10,7 @@ identity:
   name: bridge
   summary: pf-bridge projects the projectfile onto files, forges, and the repository
   title: Projectfile Bridges
+  description: 'pf-bridge is the projection tool of the projectfile: it derives forge identity files, assembles feature and roadmap fragments, and projects the projectfile onto the files a forge and repository expect. Companion binary to pf-cli for the projectfile.org tooling.'
 includes:
   - .makefile/b19/ci.yaml
   - .makefile/b19/images/go.yaml
@@ -127,7 +128,6 @@ links:
       - public
       - badges
       - badges-gitea
-      - releases
     type: source-code
     url: https://codeberg.org/projectfile/bridge
   - label:
@@ -138,7 +138,6 @@ links:
       - public
       - badges
       - badges-github
-      - ci
     type: source-code
     url: https://github.com/damian-buho/projectfile-bridge
   - label:
@@ -153,18 +152,36 @@ links:
   - label:
       en: Issues on Codeberg
       es: Incidencias en Codeberg
-      uk: Issues на Codeberg
+      uk: Задачі на Codeberg
     tags:
       - support
     type: bugs
     url: https://codeberg.org/projectfile/bridge/issues
-
-  # The project's own documentation lives in /docs. Preferred so it wins over
-  # the shared projectfile.org spec link (a reference article, not the main docs).
-  - type: documentation
-    preferred: true
-    url: /docs
-    label:
+  - label:
       en: Documentation
       es: Documentación
       uk: Документація
+    preferred: true
+    type: documentation
+    url: /docs
+  - label:
+      en: Issues on GitHub
+      es: Incidencias en GitHub
+      uk: Задачі на GitHub
+    tags:
+      - support
+    type: bugs
+    url: https://github.com/damian-buho/projectfile-bridge/issues
+keywords:
+  - pf-bridge
+  - projectfile
+  - forge
+  - codegen
+  - scaffolding
+  - go
+  - cli
+technologies:
+  - go
+license:
+  covers: project
+  spdx: "MIT"

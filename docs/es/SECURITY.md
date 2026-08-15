@@ -4,7 +4,7 @@ SPDX-License-Identifier: MIT
 pf-cli-managed: yes
 -->
 
-<!-- textlint-disable terminology -->
+<!-- textlint-disable terminology,common-misspellings -->
 [English](../../SECURITY.md) · [Українська](../uk/SECURITY.md)
 
 # Política de seguridad

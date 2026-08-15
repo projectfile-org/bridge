@@ -4,7 +4,7 @@ SPDX-License-Identifier: MIT
 pf-cli-managed: yes
 -->
 
-<!-- textlint-disable terminology -->
+<!-- textlint-disable terminology,common-misspellings -->
 
 [English](../../README.md) · [Español](../es/README.md)
 
@@ -72,6 +72,10 @@ pf-bridge all
 
 Для локального циклу розробки `make dev-container` піднімає dev-container.
 
+## Документація
+
+- [LLM Policy Generator](../llm-generator.md)
+
 ## Політики
 
 - [Як зробити внесок](CONTRIBUTING.md)
@@ -81,12 +85,19 @@ pf-bridge all
 
 ## Посилання
 
+### Проєкт
+
 - [Специфікація Projectfile](https://projectfile.org)
 - [Projectfile Bridges на Codeberg](https://codeberg.org/projectfile/bridge)
 - [Projectfile Bridges на GitHub](https://github.com/damian-buho/projectfile-bridge)
 - [Projectfile Bridges на kiota.ch](https://kiota.ch/projectfile/bridge)
-- [Issues на Codeberg](https://codeberg.org/projectfile/bridge/issues)
+- [Задачі на Codeberg](https://codeberg.org/projectfile/bridge/issues)
 - [Документація](/docs)
+- [Задачі на GitHub](https://github.com/damian-buho/projectfile-bridge/issues)
+
+### Інше
+
+- [Від автора](https://dbuho.me)
 
 ## Ліцензія
 
