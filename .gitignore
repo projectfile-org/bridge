@@ -25,6 +25,3 @@ reports/
 .secrets/
 # <<< user-extra
 
-
-# Feature worktrees (AGENTS: a worktree left here blocks the parent gates)
-.worktrees/
