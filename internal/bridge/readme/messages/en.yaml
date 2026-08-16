@@ -27,10 +27,8 @@ requirements.title: Requirements
 requirements.body: See [%[1]s](%[2]s) for prerequisites.
 installation.title: Installation
 installation.body: See [%[1]s](%[2]s) for setup steps.
-installation.variants: "Available variants:"
 usage.title: Usage
 usage.body: See [%[1]s](%[2]s) for examples.
-usage.variants: "Available variants:"
 building.title: Building
 building.goals: "Pipeline entry points:"
 building.intro.make: "Run `make` with no arguments for the default target; run `make help` to list every target."
@@ -48,6 +46,10 @@ funding.title: Funding
 funding.body: See [%[1]s](%[2]s) if you’d like to support this project.
 license.title: License
 license.body: This project is licensed under %s — see the [LICENSE](LICENSE) file for details.
+
+# Command sections — heading word for a per-sink subsection; the sink's
+# declared label completes the phrase ("From GHCR").
+sink.from: From
 
 # Artifacts block — what the project ships. The kind key is DERIVED from the
 # declared `kind`, so a project inventing one only needs a line here (and falls

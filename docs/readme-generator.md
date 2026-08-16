@@ -254,11 +254,21 @@ docker pull kiota.ch/b19/ubuntu/resolute:latest
 docker pull kiota.ch/b19/ubuntu/noble:latest
 ```
 
-When a group fans out to more than one command, the bridge renders the **first**
-cell as a showcased default block, then a one-line variant summary
-(`B19_LLVM_SERIES: 22, 21`), then the remaining cells — so a reader sees the
-primary image to grab and every other variant, instead of an undifferentiated
-wall of pulls. A single-cell group renders one block with no summary.
+When a group fans out to more than one command, every cell renders **joined**
+in one fenced block — the values are visible in the lines themselves, so no
+variant note restates what the fence already shows.
+
+**Per-sink subsections.** A group whose commands all name a sink’s composed
+reference — the shape every container project inherits from
+`m6e/container/traits/oci-image.yaml` — splits further: one `### From <label>`
+subsection per destination, in sink `priority` order, each holding that
+destination’s cells joined in its own fence. The label is the sink entry’s
+`label` key, falling back to the sink name; the heading word localizes from the
+`sink.from` catalog key. A document carrying a single sink (the legacy
+`readme.registry` projects) keeps the plain one-fence shape — a sole
+destination needs no heading naming it — and a group referencing anything no
+sink declares (an npm artifact, a hand-written host) never gains a destination
+heading nobody declared for it.
 
 Two sources of several values, either of which works:
 
@@ -428,6 +438,7 @@ org:
 | `owner`    | the account the default template nests every image under |
 | `role`     | `primary` (the default) or `fallback`                    |
 | `priority` | render order, higher first                               |
+| `label`    | readme display name for per-sink install subsections     |
 
 Every **other** key is opaque data the entry’s own template may address as
 `${sink.<key>}`, and that value may itself interpolate — which is what keeps the

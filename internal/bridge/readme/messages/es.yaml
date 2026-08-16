@@ -20,10 +20,8 @@ requirements.title: Requisitos
 requirements.body: Consulta [%[1]s](%[2]s) para conocer los prerrequisitos.
 installation.title: Instalación
 installation.body: Consulta [%[1]s](%[2]s) para ver los pasos de instalación.
-installation.variants: "Variantes disponibles:"
 usage.title: Uso
 usage.body: Consulta [%[1]s](%[2]s) para ver ejemplos.
-usage.variants: "Variantes disponibles:"
 building.title: Compilación
 building.goals: "Puntos de entrada de la canalización:"
 building.intro.make: "Ejecuta `make` sin argumentos para el destino predeterminado; ejecuta `make help` para listar todos los destinos."
@@ -41,6 +39,10 @@ funding.title: Financiación
 funding.body: Consulta [%[1]s](%[2]s) si quieres apoyar este proyecto.
 license.title: Licencia
 license.body: Este proyecto se publica bajo la licencia %s — consulta el archivo [LICENSE](LICENSE) para más detalles.
+
+# Secciones de comandos — palabra de encabezado de una subsección por registro;
+# la etiqueta declarada del registro completa la frase («Desde GHCR»).
+sink.from: Desde
 
 # Bloque de artefactos — lo que el proyecto entrega. La clave de cada tipo se
 # deriva del `kind` declarado.

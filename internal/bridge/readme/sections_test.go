@@ -44,6 +44,17 @@ const (
 	// pathCLI stands in for a build output in the address-chain cases.
 	pathCLI     = "dist/pf-cli"
 	artifactsNS = "org.projectfile.artifacts"
+	sinksNS     = "org.projectfile.sinks"
+	// Sink-fixture names and the shared series axis, named so goconst sees one
+	// home per string across the grouping tests.
+	sinkGhcr   = "ghcr"
+	sinkKiota  = "kiota"
+	axisSeries = "B19_UBUNTU_SERIES"
+	// Sink-fixture refs and series values, same goconst rule.
+	refSinkGhcr    = "ghcr.io/o/demo:latest"
+	refSinkKiota   = "kiota.ch/demo:latest"
+	seriesResolute = "resolute"
+	seriesNoble    = "noble"
 	// refImage is the address every recipe below installs from — the ONE thing
 	// a project has to declare for the docker-pull group to render.
 	refImage = "docker pull ${org.projectfile.artifacts{kind=image}.ref}"
@@ -202,7 +213,7 @@ func TestSeriesImageFansOutFromAxisList(t *testing.T) {
 	pf.Extensions = map[string]any{
 		ciExtensionNS: map[string]any{
 			keyMatrix: map[string]any{keyAxes: map[string]any{
-				"B19_UBUNTU_SERIES": []any{"resolute", "noble"},
+				axisSeries: []any{seriesResolute, seriesNoble},
 			}},
 		},
 		artifactsNS: imageArtifact(
@@ -229,7 +240,7 @@ func TestSeriesImageFansOutFromAxisPlaceholder(t *testing.T) {
 		ciExtensionNS: map[string]any{
 			keyImage: "b19/ubuntu/{B19_UBUNTU_SERIES}",
 			keyMatrix: map[string]any{keyAxes: map[string]any{
-				"B19_UBUNTU_SERIES": []any{"resolute", "noble"},
+				axisSeries: []any{seriesResolute, seriesNoble},
 			}},
 		},
 		artifactsNS: imageArtifact("kiota.ch/${org.projectfile.ci.image}:latest"),
@@ -301,11 +312,11 @@ func TestScalarToStringCoercesAxisShapes(t *testing.T) {
 	assert.Empty(t, scalarToString([]any{"x"}), "a composite is not a matrix value")
 }
 
-// TestMatrixSectionRendersDefaultThenVariants: a matrix install group renders
-// the FIRST cell (the default) as its own fenced block, then a one-line summary
-// of the axes, then the remaining cells — so a reader sees the primary image to
-// grab and every other variant, rather than an undifferentiated wall of pulls.
-func TestMatrixSectionRendersDefaultThenVariants(t *testing.T) {
+// TestMatrixSectionRendersJoinedBlock: a matrix install group renders every
+// cell in ONE fenced block. The old layout — first cell showcased alone, a
+// variants note, then the remaining cells — is retired: the joined fence
+// already lists every cell, and a note would restate what the lines show.
+func TestMatrixSectionRendersJoinedBlock(t *testing.T) {
 	pf := minimalDoc(t)
 	pf.Extensions = map[string]any{
 		ciExtensionNS: map[string]any{
@@ -322,14 +333,134 @@ func TestMatrixSectionRendersDefaultThenVariants(t *testing.T) {
 
 	out := renderDoc(t, t.TempDir(), pf)
 
-	// The default (first cell) renders in its own block.
-	assert.Contains(t, out, "docker pull kiota.ch/b19/llvm/22:latest")
-	// The variant summary line names the axis and every value (code spans: the
-	// prose rules must not rewrite literal identifiers).
-	assert.Contains(t, out, "Available variants: B19_LLVM_SERIES: `22`, `21`")
-	// The non-default cell renders in the second block, not collapsed onto the
-	// default line.
-	assert.Contains(t, out, "docker pull kiota.ch/b19/llvm/21:latest")
+	assert.Contains(t, out, "```sh\ndocker pull kiota.ch/b19/llvm/22:latest\ndocker pull kiota.ch/b19/llvm/21:latest\n```")
+	assert.NotContains(t, out, "Available variants")
+}
+
+// TestMultiSinkGroupRendersPerSinkSubsections: when a group's commands fan out
+// over several sinks, each destination renders its own "From <label>"
+// subsection with one joined fence, ordered by the fan-out — which is sink
+// priority, descending. A sink declaring no label is named by its sink name.
+func TestMultiSinkGroupRendersPerSinkSubsections(t *testing.T) {
+	pf := minimalDoc(t)
+	pf.Extensions = map[string]any{
+		sinksNS: map[string]any{
+			sinkKiota: map[string]any{keyRef: refSinkKiota, pfmodel.SinkRoleKey: pfmodel.SinkRolePrimary, keyPriority: 10},
+			sinkGhcr:  map[string]any{keyRef: refSinkGhcr, pfmodel.SinkRoleKey: pfmodel.SinkRolePrimary, keyPriority: 90, pfmodel.SinkLabelKey: "GHCR"},
+		},
+		artifactsNS: imageArtifact("${org.projectfile.sinks{role=primary}.ref}"),
+		readmeNS: map[string]any{
+			blockInstallation: []any{group(keyImage, "Pull the published image:", refImage)},
+		},
+	}
+
+	out := renderDoc(t, t.TempDir(), pf)
+
+	assert.Contains(t, out, "### From GHCR")
+	assert.Contains(t, out, "### From kiota")
+	assert.Less(t, index(out, "### From GHCR"), index(out, "### From kiota"),
+		"the fan-out order (priority desc) orders the subsections")
+	assert.Contains(t, out, "```sh\ndocker pull ghcr.io/o/demo:latest\n```")
+	assert.Contains(t, out, "```sh\ndocker pull kiota.ch/demo:latest\n```")
+}
+
+// TestSinkSubsectionsJoinMatrixCells: each destination's fence lists EVERY
+// matrix cell of that sink, joined — one block per registry, never one per
+// cell.
+func TestSinkSubsectionsJoinMatrixCells(t *testing.T) {
+	pf := minimalDoc(t)
+	pf.Extensions = map[string]any{
+		ciExtensionNS: map[string]any{
+			keyMatrix: map[string]any{keyAxes: map[string]any{
+				axisSeries: []any{seriesResolute, seriesNoble},
+			}},
+		},
+		sinksNS: map[string]any{
+			sinkGhcr:  map[string]any{keyRef: "ghcr.io/o/demo/{B19_UBUNTU_SERIES}:latest", pfmodel.SinkRoleKey: pfmodel.SinkRolePrimary, keyPriority: 90, pfmodel.SinkLabelKey: "GHCR"},
+			sinkKiota: map[string]any{keyRef: "kiota.ch/demo/{B19_UBUNTU_SERIES}:latest", pfmodel.SinkRoleKey: pfmodel.SinkRolePrimary, keyPriority: 10},
+		},
+		artifactsNS: imageArtifact("${org.projectfile.sinks{role=primary}.ref}"),
+		readmeNS: map[string]any{
+			blockInstallation: []any{group(keyImage, "Pull the published image:", refImage)},
+		},
+	}
+
+	out := renderDoc(t, t.TempDir(), pf)
+
+	assert.Contains(t, out, "### From GHCR\n\n```sh\ndocker pull ghcr.io/o/demo/resolute:latest\ndocker pull ghcr.io/o/demo/noble:latest\n```")
+	assert.Contains(t, out, "### From kiota\n\n```sh\ndocker pull kiota.ch/demo/resolute:latest\ndocker pull kiota.ch/demo/noble:latest\n```")
+}
+
+// TestSingleSinkGroupRendersPlain: a document carrying ONE sink (the legacy
+// single-registry projects) keeps the plain prefix + fence shape — a sole
+// destination needs no subsection heading naming it.
+func TestSingleSinkGroupRendersPlain(t *testing.T) {
+	pf := minimalDoc(t)
+	pf.Extensions = map[string]any{
+		sinksNS: map[string]any{
+			sinkKiota: map[string]any{keyRef: refSinkKiota, pfmodel.SinkRoleKey: pfmodel.SinkRolePrimary},
+		},
+		artifactsNS: imageArtifact("${org.projectfile.sinks{role=primary}.ref}"),
+		readmeNS: map[string]any{
+			blockInstallation: []any{group(keyImage, "Pull the published image:", refImage)},
+		},
+	}
+
+	out := renderDoc(t, t.TempDir(), pf)
+
+	assert.Contains(t, out, "```sh\ndocker pull kiota.ch/demo:latest\n```")
+	assert.NotContains(t, out, "### From", "one sink needs no destination heading")
+}
+
+// TestNonSinkCommandsStayPlain: a group whose commands reference something no
+// sink declares renders one fence even in a multi-sink document — bucketing
+// must not guess a destination nobody named.
+func TestNonSinkCommandsStayPlain(t *testing.T) {
+	pf := minimalDoc(t)
+	pf.Extensions = map[string]any{
+		sinksNS: map[string]any{
+			sinkGhcr:  map[string]any{keyRef: refSinkGhcr, pfmodel.SinkRoleKey: pfmodel.SinkRolePrimary, keyPriority: 90},
+			sinkKiota: map[string]any{keyRef: refSinkKiota, pfmodel.SinkRoleKey: pfmodel.SinkRolePrimary, keyPriority: 10},
+		},
+		artifactsNS: imageArtifact("registry.example/other/demo:latest"),
+		readmeNS: map[string]any{
+			blockInstallation: []any{group(keyImage, "Pull the published image:", refImage)},
+		},
+	}
+
+	out := renderDoc(t, t.TempDir(), pf)
+
+	assert.Contains(t, out, "```sh\ndocker pull registry.example/other/demo:latest\n```")
+	assert.NotContains(t, out, "### From")
+}
+
+// TestFallbackSinkGroupKeepsProseAndHeading: the shared fragment's origin group
+// references the {role=fallback} sink alone; in a multi-sink document it keeps
+// its warning prose and its one bucket is named like any other destination.
+func TestFallbackSinkGroupKeepsProseAndHeading(t *testing.T) {
+	pf := minimalDoc(t)
+	pf.Extensions = map[string]any{
+		sinksNS: map[string]any{
+			sinkGhcr:  map[string]any{keyRef: refSinkGhcr, pfmodel.SinkRoleKey: pfmodel.SinkRolePrimary, keyPriority: 90},
+			sinkKiota: map[string]any{keyRef: refSinkKiota, pfmodel.SinkRoleKey: "fallback", keyPriority: 10},
+		},
+		artifactsNS: imageArtifact("${org.projectfile.sinks{role=primary}.ref}"),
+		readmeNS: map[string]any{
+			blockInstallation: []any{
+				group(keyImage, "Pull the published image:", refImage),
+				group("image-fallback", "If the registries above are unreachable, pull from the origin instead:",
+					"docker pull ${org.projectfile.sinks{role=fallback}.ref}"),
+			},
+		},
+	}
+
+	out := renderDoc(t, t.TempDir(), pf)
+
+	assert.Contains(t, out, "If the registries above are unreachable")
+	assert.Contains(t, out, "### From ghcr")
+	assert.Contains(t, out, "### From kiota")
+	assert.Less(t, index(out, "### From ghcr"), index(out, "If the registries above"),
+		"the fallback group renders after the primary one")
 }
 
 // TestNonMatrixSectionRendersSingleBlock: a single-image project (no matrix)
@@ -348,17 +479,6 @@ func TestNonMatrixSectionRendersSingleBlock(t *testing.T) {
 
 	assert.Contains(t, out, "```sh\ndocker pull kiota.ch/d9t/dind:latest\n```")
 	assert.NotContains(t, out, "Available variants")
-}
-
-// TestMatrixSummaryOrdersAxes deterministically: a two-axis matrix renders its
-// axis summary in sorted axis order with values joined by "·".
-func TestMatrixSummaryOrdersAxes(t *testing.T) {
-	summary := matrixSummary(map[string][]string{
-		"B19_PHP_SAPI":   {"cli", "fpm"},
-		"B19_PHP_SERIES": {"8.5", "8.4", "8.3"},
-	})
-	assert.Equal(t, "B19_PHP_SAPI: `cli`, `fpm` · B19_PHP_SERIES: `8.5`, `8.4`, `8.3`", summary)
-	assert.Empty(t, matrixSummary(nil))
 }
 
 // ciNodes builds an org.projectfile.ci.nodes extension for the goal-filter

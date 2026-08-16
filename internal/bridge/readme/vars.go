@@ -26,18 +26,32 @@ const ciExtensionNS = "org.projectfile.ci"
 // installation/quick-start/usage/building templates: prose already localized and
 // interpolated, commands already expanded and fanned out.
 //
-// Variants is a humanised summary of the matrix axes that fanned the commands out
-// (e.g. "SAPI: cli, fpm · series: 8.5, 8.4, 8.3"). Empty for a single-image
-// project — no matrix, no variant note. The template uses it to introduce the
-// fan-out block so a reader can see every cell the project publishes without
-// scanning the command lines themselves.
+// Subgroups is the per-destination split of those commands, set when they fan
+// out over several sinks: each sink's lines render under their own heading with
+// every matrix cell of that destination joined in ONE fence. Nil otherwise, and
+// Commands carries the lines instead — the two are mutually exclusive.
 type sectionGroupView struct {
-	Name     string
-	Prefix   string
+	Name      string
+	Prefix    string
+	Commands  []string
+	Postfix   string
+	Syntax    string
+	Subgroups []sectionSubgroupView
+}
+
+// sectionSubgroupView is one sink's slice of a group: the label its heading
+// shows and the commands destined for that sink, matrix cells joined.
+type sectionSubgroupView struct {
+	Label    string
 	Commands []string
-	Postfix  string
-	Variants string
-	Syntax   string
+}
+
+// sinkView is one sink as the readme names it: the composed pull reference and
+// the label a per-destination subsection heading shows.
+type sinkView struct {
+	Name  string
+	Label string
+	Ref   string
 }
 
 // sectionView is a whole section: its localized title plus the groups that
@@ -103,21 +117,23 @@ func buildSection(doc *projectfile.Document, ext *pfmodel.ReadmeExtension, name,
 // commands but none survived expansion — the prose exists to introduce those
 // commands, so keeping it alone would leave a lead-in pointing at nothing. A
 // group that declared NO commands is pure prose and is kept as authored.
+//
+// A group whose commands ALL name a sink's composed reference splits into one
+// subgroup per destination (buckets, sink priority order); anything else keeps
+// the single-fence shape, so an npm recipe or a hand-written host never gains a
+// destination heading nobody declared for it.
 func buildSectionGroup(doc *projectfile.Document, group pfmodel.ReadmeSectionGroup, axes map[string][]string, source, lang string) (sectionGroupView, bool) {
 	label := groupLabel(group.Name)
-	var commands []string
+	var expanded []string
 	for _, command := range group.Commands {
-		expanded, resolved := interp.ExpandFanOut(doc, command)
+		lines, resolved := interp.ExpandFanOut(doc, command)
 		if !resolved {
 			genlog.Decision("readme_command", command, "unresolved reference (dropped)", label)
 			continue
 		}
-		for _, line := range expandAxes(expanded, axes) {
-			genlog.Decision("readme_command", line, source, "group="+label+" lang="+lang)
-			commands = append(commands, line)
-		}
+		expanded = append(expanded, lines...)
 	}
-	if len(group.Commands) > 0 && len(commands) == 0 {
+	if len(group.Commands) > 0 && len(expanded) == 0 {
 		genlog.Decision("readme_group", label, "no command resolved (group dropped)", source)
 		return sectionGroupView{}, false
 	}
@@ -125,39 +141,102 @@ func buildSectionGroup(doc *projectfile.Document, group pfmodel.ReadmeSectionGro
 	if syntax == "" {
 		syntax = syntaxDefault
 	}
-	return sectionGroupView{
-		Name:     group.Name,
-		Prefix:   expandProse(doc, sectionText(group.Prefix, group.PrefixByLang, lang), label),
-		Commands: commands,
-		Postfix:  expandProse(doc, sectionText(group.Postfix, group.PostfixByLang, lang), label),
-		Variants: matrixSummary(axes),
-		Syntax:   syntax,
-	}, true
+	view := sectionGroupView{
+		Name:    group.Name,
+		Prefix:  expandProse(doc, sectionText(group.Prefix, group.PrefixByLang, lang), label),
+		Postfix: expandProse(doc, sectionText(group.Postfix, group.PostfixByLang, lang), label),
+		Syntax:  syntax,
+	}
+	// Bucketing runs on lines still carrying {AXIS}: the composed ref is a
+	// literal substring of its own pull line at that point, and axis expansion
+	// would erase the match.
+	sinks := readmeSinks(doc)
+	subgroups, bucketed := bucketBySink(sinks, expanded)
+	if bucketed && len(sinks) > 1 {
+		for i := range subgroups {
+			subgroups[i].Commands = expandAxes(subgroups[i].Commands, axes)
+		}
+		view.Subgroups = subgroups
+		genlog.Decision("readme_group", label, "commands grouped by sink", source+" sinks="+strconv.Itoa(len(subgroups)))
+		for _, sg := range subgroups {
+			for _, line := range sg.Commands {
+				genlog.Decision("readme_command", line, source, "group="+label+" sink="+sg.Label+" lang="+lang)
+			}
+		}
+		return view, true
+	}
+	view.Commands = expandAxes(expanded, axes)
+	for _, line := range view.Commands {
+		genlog.Decision("readme_command", line, source, "group="+label+" lang="+lang)
+	}
+	return view, true
 }
 
-// matrixSummary renders a project's matrix axes as one humanised line, in sorted
-// axis order so a two-axis image reads deterministically. Values are code spans:
-// they are literal identifiers (env values, tags) whose casing the prose rules
-// must not rewrite ("gnu" is a variant name, not the term "GNU"). Empty when
-// there is no matrix or the matrix carries no values — the caller treats empty
-// as "no variant note", so a single-image project renders no fan-out block.
-func matrixSummary(axes map[string][]string) string {
-	if len(axes) == 0 {
-		return ""
+// readmeSinks lists the sinks a document carries, for naming per-destination
+// subsections: each entry's composed `ref` (written by the ocisinks derive pass
+// before render) and the label its heading shows — the declared `label`, else
+// the sink name. Sorted longest-ref-first so a ref that is a prefix of another
+// (`x/y:1` inside `x/y:12`) cannot steal its line during matching.
+func readmeSinks(doc *projectfile.Document) []sinkView {
+	raw, ok := projectfile.LookupExtension(doc, pfmodel.SinksExtensionNS)
+	if !ok {
+		return nil
 	}
-	var parts []string
-	for _, axis := range slices.Sorted(maps.Keys(axes)) {
-		values := axes[axis]
-		if len(values) == 0 {
+	m, ok := raw.(map[string]any)
+	if !ok {
+		return nil
+	}
+	out := make([]sinkView, 0, len(m))
+	for name, v := range m {
+		entry, ok := v.(map[string]any)
+		if !ok {
 			continue
 		}
-		quoted := make([]string, len(values))
-		for i, v := range values {
-			quoted[i] = "`" + v + "`"
+		ref, _ := entry[pfmodel.SinkRefKey].(string)
+		if ref == "" {
+			continue
 		}
-		parts = append(parts, axis+": "+strings.Join(quoted, ", "))
+		label, _ := entry[pfmodel.SinkLabelKey].(string)
+		if label == "" {
+			label = name
+		}
+		out = append(out, sinkView{Name: name, Label: label, Ref: ref})
 	}
-	return strings.Join(parts, " · ")
+	slices.SortFunc(out, func(a, b sinkView) int { return len(b.Ref) - len(a.Ref) })
+	return out
+}
+
+// bucketBySink partitions expanded command lines by the sink whose composed
+// reference the line carries — a pull command names its destination's ref, so
+// the ref is a literal substring of the line. ok is false when any line names
+// no sink: a group referencing something else (an npm artifact, a hand-written
+// host) renders as one fence rather than guessing a destination. Bucket order
+// is first appearance, which is the priority-ordered fan-out order.
+func bucketBySink(sinks []sinkView, lines []string) ([]sectionSubgroupView, bool) {
+	if len(sinks) == 0 || len(lines) == 0 {
+		return nil, false
+	}
+	var buckets []sectionSubgroupView
+	at := make(map[string]int, len(sinks))
+	for _, line := range lines {
+		var owner *sinkView
+		for i := range sinks {
+			if strings.Contains(line, sinks[i].Ref) {
+				owner = &sinks[i]
+				break
+			}
+		}
+		if owner == nil {
+			return nil, false
+		}
+		if pos, seen := at[owner.Name]; seen {
+			buckets[pos].Commands = append(buckets[pos].Commands, line)
+			continue
+		}
+		at[owner.Name] = len(buckets)
+		buckets = append(buckets, sectionSubgroupView{Label: owner.Label, Commands: []string{line}})
+	}
+	return buckets, true
 }
 
 // groupUnnamed labels a group that declares no name, for the decision trace only.

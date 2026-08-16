@@ -5,18 +5,16 @@
 
 {{.}}
 {{- end}}
-{{- if and $g.Variants (gt (len $g.Commands) 1)}}
+{{- if $g.Subgroups}}
+{{- range $sg := $g.Subgroups}}
+
+### {{t "sink.from"}} {{$sg.Label}}
 
 ```{{$g.Syntax}}
-{{index $g.Commands 0}}
+{{range $sg.Commands}}{{.}}
+{{end -}}
 ```
-
-{{t (printf "%s.variants" "installation")}} {{$g.Variants}}
-
-```{{$g.Syntax}}
-{{range $i, $c := $g.Commands}}{{if $i}}{{.}}
-{{end}}{{end -}}
-```
+{{- end}}
 {{- else if $g.Commands}}
 
 ```{{$g.Syntax}}

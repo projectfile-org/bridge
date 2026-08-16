@@ -57,14 +57,16 @@ const (
 	ImageExtensionNS = "org.projectfile.image"
 )
 
-// Keys a sink entry carries. Only these two are read anywhere: `ref` is the
-// template, and `role` is what makes an entry ADDRESSABLE, because a bare `{}`
-// projection admits no trailing field and `.ref` is reachable only through the
-// selector form `{role=…}`. Every other key an author writes is theirs — a
-// template may name it and nothing here interprets it.
+// Keys a sink entry carries. `ref` is the template, and `role` is what makes an
+// entry ADDRESSABLE, because a bare `{}` projection admits no trailing field
+// and `.ref` is reachable only through the selector form `{role=…}`. `label` is
+// the display name the readme's per-destination install subsections show.
+// Every other key an author writes is theirs — a template may name it and
+// nothing here interprets it.
 const (
-	SinkRefKey  = "ref"
-	SinkRoleKey = "role"
+	SinkRefKey   = "ref"
+	SinkRoleKey  = "role"
+	SinkLabelKey = "label"
 
 	// SinkRolePrimary is the role an entry carries when it declares none: the
 	// ordinary destination, as opposed to the fallback a reader is told to try
