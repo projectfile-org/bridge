@@ -136,9 +136,11 @@ func buildSectionGroup(doc *projectfile.Document, group pfmodel.ReadmeSectionGro
 }
 
 // matrixSummary renders a project's matrix axes as one humanised line, in sorted
-// axis order so a two-axis image reads deterministically. Empty when there is no
-// matrix or the matrix carries no values — the caller treats empty as "no variant
-// note", so a single-image project renders no fan-out block at all.
+// axis order so a two-axis image reads deterministically. Values are code spans:
+// they are literal identifiers (env values, tags) whose casing the prose rules
+// must not rewrite ("gnu" is a variant name, not the term "GNU"). Empty when
+// there is no matrix or the matrix carries no values — the caller treats empty
+// as "no variant note", so a single-image project renders no fan-out block.
 func matrixSummary(axes map[string][]string) string {
 	if len(axes) == 0 {
 		return ""
@@ -149,7 +151,11 @@ func matrixSummary(axes map[string][]string) string {
 		if len(values) == 0 {
 			continue
 		}
-		parts = append(parts, axis+": "+strings.Join(values, ", "))
+		quoted := make([]string, len(values))
+		for i, v := range values {
+			quoted[i] = "`" + v + "`"
+		}
+		parts = append(parts, axis+": "+strings.Join(quoted, ", "))
 	}
 	return strings.Join(parts, " · ")
 }

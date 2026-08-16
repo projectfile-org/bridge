@@ -324,8 +324,9 @@ func TestMatrixSectionRendersDefaultThenVariants(t *testing.T) {
 
 	// The default (first cell) renders in its own block.
 	assert.Contains(t, out, "docker pull kiota.ch/b19/llvm/22:latest")
-	// The variant summary line names the axis and every value.
-	assert.Contains(t, out, "Available variants: B19_LLVM_SERIES: 22, 21")
+	// The variant summary line names the axis and every value (code spans: the
+	// prose rules must not rewrite literal identifiers).
+	assert.Contains(t, out, "Available variants: B19_LLVM_SERIES: `22`, `21`")
 	// The non-default cell renders in the second block, not collapsed onto the
 	// default line.
 	assert.Contains(t, out, "docker pull kiota.ch/b19/llvm/21:latest")
@@ -356,7 +357,7 @@ func TestMatrixSummaryOrdersAxes(t *testing.T) {
 		"B19_PHP_SAPI":   {"cli", "fpm"},
 		"B19_PHP_SERIES": {"8.5", "8.4", "8.3"},
 	})
-	assert.Equal(t, "B19_PHP_SAPI: cli, fpm · B19_PHP_SERIES: 8.5, 8.4, 8.3", summary)
+	assert.Equal(t, "B19_PHP_SAPI: `cli`, `fpm` · B19_PHP_SERIES: `8.5`, `8.4`, `8.3`", summary)
 	assert.Empty(t, matrixSummary(nil))
 }
 
