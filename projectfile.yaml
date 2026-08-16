@@ -8,9 +8,15 @@ copyright:
 identity:
   created: "2026-07-07"
   name: bridge
-  summary: pf-bridge projects the projectfile onto files, forges, and the repository
+  summary:
+    en: pf-bridge projects the projectfile onto files, forges, and the repository
+    es: pf-bridge proyecta el projectfile sobre archivos, forges y el repositorio
+    uk: pf-bridge проєктує projectfile на файли, forge-майданчики та репозиторій
   title: Projectfile Bridges
-  description: 'pf-bridge is the projection tool of the projectfile: it derives forge identity files, assembles feature and roadmap fragments, and projects the projectfile onto the files a forge and repository expect. Companion binary to pf-cli for the projectfile.org tooling.'
+  description:
+    en: 'pf-bridge is the projection tool of the projectfile: it derives forge identity files, assembles feature and roadmap fragments, and projects the projectfile onto the files a forge and repository expect. Companion binary to pf-cli for the projectfile.org tooling.'
+    es: 'pf-bridge es la herramienta de proyección del projectfile: deriva los archivos de identidad del forge, ensambla los fragmentos de características y hoja de ruta, y proyecta el projectfile sobre los archivos que un forge y un repositorio esperan. Binario compañero de pf-cli para las herramientas de projectfile.org.'
+    uk: 'pf-bridge — інструмент проєктування projectfile: він створює файли ідентичності forge-майданчика, збирає фрагменти функцій і дорожньої карти та проєктує projectfile на файли, яких очікують forge і репозиторій. Бінарник-компаньйон pf-cli в інструментарії projectfile.org.'
 includes:
   - .makefile/b19/ci.yaml
   - .makefile/b19/images/go.yaml
