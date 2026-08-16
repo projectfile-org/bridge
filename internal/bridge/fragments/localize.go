@@ -11,6 +11,7 @@ import (
 
 	"kiota.ch/projectfile/core/v2/pkg/genlog"
 	"projectfile.org/projectfile/bridge/internal/bridge/core"
+	"projectfile.org/projectfile/bridge/internal/pfmodel"
 )
 
 // Localized fragment documents. The default-language fragments stay where
@@ -21,9 +22,13 @@ import (
 //
 // A language is a whole-document translation, same contract as the health
 // files: a locale dir with no fragments renders nothing under a localized
-// name, and the warning names the dir to create. The readme bridge's features
-// block carries the reader-facing fallback (English bullets plus a
-// not-yet-translated note), so the two halves together degrade honestly.
+// name, and the warning names the dir to create. Inherited sections localize
+// from the parent's own published docs/<lang>/<Out> — cached under the locale
+// variant of the inherited dir — and fall back to the canonical copy for a
+// parent that publishes no such language: the child cannot translate text it
+// does not own. The readme bridge's features block carries the reader-facing
+// fallback (English bullets plus a not-yet-translated note), so the two
+// halves together degrade honestly.
 
 // localizedFragDir maps a document's fragment dir to its per-language
 // variant: docs/features.d + es → docs/es/features.d. Dirs outside docs/ have
@@ -33,49 +38,101 @@ func localizedFragDir(dir, lang string) string {
 	return path.Join(core.LocalizedDir, lang, rest)
 }
 
-// A document is localizable when its out is a bare filename (localized
-// outputs live under docs/<lang>/ keeping the canonical basename) and its
-// fragment dir sits under docs/. Custom override documents outside the
-// convention stay single-language by decision, not by error.
+// docLocalizable reports whether a document's variants have a docs/<lang>/
+// slot in the layout: a bare out filename (localized outputs keep the
+// canonical basename under docs/<lang>/) and a fragment dir under docs/.
+// Custom override documents outside the convention stay single-language by
+// decision, not by error.
+func docLocalizable(doc pfmodel.FragmentDocument) bool {
+	return !strings.Contains(doc.Out, "/") && strings.HasPrefix(doc.Dir, core.LocalizedDir+"/")
+}
 
-// variantFragments is one declared language's own translated fragments.
+// variantFragments is one declared language's render set: its own translated
+// fragments and the inherited copies that variant nests.
 type variantFragments struct {
 	Lang      string
 	Fragments []Fragment
+	Inherited []inheritedCopy
 }
 
-// resolveVariantLangs probes every declared language's fragment dir and keeps
-// the ones with at least one own fragment. A missing translation warns with
-// the exact dir to add — the same contract the health-file bridges run.
-// Documents whose own default-language set is empty (inherited-only, or the
-// whole doc skipped) return nil: there is nothing to translate, and a variant
-// must never be the only place a feature exists.
-func resolveVariantLangs(projectDir, dir, out string, own []Fragment, langs []string) []variantFragments {
-	if len(own) == 0 || len(langs) == 0 {
+// resolveVariantLangs probes every declared language for content it can ship:
+// its own translated fragments, or inherited copies the parents publish in
+// that language. A language with neither renders nothing under a localized
+// name — never faked — and the warning names the dir to add.
+func resolveVariantLangs(projectDir string, doc pfmodel.FragmentDocument, inherited []inheritedCopy, refreshedLangs map[string]map[string]inheritedCopy, langs []string) []variantFragments {
+	if len(langs) == 0 {
 		return nil
 	}
-	if strings.Contains(out, "/") || !strings.HasPrefix(dir, core.LocalizedDir+"/") {
-		genlog.Decision("fragments_localization", out, dir, "skipped (dir outside docs/ or nested out)")
+	if !docLocalizable(doc) {
+		genlog.Decision("fragments_localization", doc.Out, doc.Dir, "skipped (dir outside docs/ or nested out)")
 		return nil
 	}
 	out2 := make([]variantFragments, 0, len(langs))
 	for _, lang := range langs {
-		frags, err := loadFragments(projectDir, localizedFragDir(dir, lang))
+		frags, err := loadFragments(projectDir, localizedFragDir(doc.Dir, lang))
 		if err != nil {
 			genlog.Warn("unreadable localized fragment dir — language skipped",
-				"dir", localizedFragDir(dir, lang), "error", err.Error())
+				"dir", localizedFragDir(doc.Dir, lang), "error", err.Error())
 			continue
 		}
-		if len(frags) == 0 {
+		localized := localizedCopies(projectDir, doc, lang, refreshedLangs[lang])
+		if len(frags) == 0 && len(localized) == 0 {
 			genlog.Warn("no fragments for language — file skipped",
-				"file", core.LocalizedFilename(out, lang),
+				"file", core.LocalizedFilename(doc.Out, lang),
 				"lang", lang,
-				"hint", "add "+localizedFragDir(dir, lang)+"/<feature>.md")
+				"hint", "add "+localizedFragDir(doc.Dir, lang)+"/<feature>.md")
 			continue
 		}
-		out2 = append(out2, variantFragments{Lang: lang, Fragments: frags})
+		out2 = append(out2, variantFragments{
+			Lang:      lang,
+			Fragments: frags,
+			Inherited: overCanonical(inherited, localized, lang, doc.Out),
+		})
 	}
 	return out2
+}
+
+// localizedCopies reads one language's cached parent copies, folding in the
+// copies a --refresh in this same run just read and keeping only declared
+// parents. Existence lives here, before any fallback: a variant built only of
+// canonical bodies would be English under a localized name.
+func localizedCopies(projectDir string, doc pfmodel.FragmentDocument, lang string, refreshed map[string]inheritedCopy) map[string]inheritedCopy {
+	dir := localizedFragDir(doc.Dir, lang)
+	localized := map[string]inheritedCopy{}
+	if cached, err := loadInherited(projectDir, dir); err != nil {
+		genlog.Warn("fragments: unreadable localized inherited dir, falling back to canonical copies",
+			"dir", dir, "error", err.Error())
+	} else {
+		localized = cached
+	}
+	for name, copied := range refreshed {
+		localized[name] = copied
+	}
+	return declaredOnly(localized, doc)
+}
+
+// overCanonical layers one language's localized copies over the canonical
+// set: a parent that publishes the language reads translated, one that does
+// not falls back to the body it does publish — the child cannot translate
+// text it does not own.
+func overCanonical(canonical []inheritedCopy, localized map[string]inheritedCopy, lang, document string) []inheritedCopy {
+	if len(canonical) == 0 && len(localized) == 0 {
+		return nil
+	}
+	merged := make(map[string]inheritedCopy, len(canonical)+len(localized))
+	for _, c := range canonical {
+		merged[slug(c.Name)] = c
+	}
+	for name, copied := range localized {
+		merged[name] = copied
+	}
+	for _, c := range canonical {
+		if _, translated := localized[slug(c.Name)]; !translated {
+			genlog.Info("fragments: parent publishes no localized document, nesting the canonical copy",
+				"parent", c.Name, "lang", lang, "document", document)
+		}
+	}
+	return orderedCopies(merged)
 }
 
 // reuseClose is the boundary marker of the leading REUSE comment the template

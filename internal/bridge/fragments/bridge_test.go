@@ -84,6 +84,23 @@ func writeInherited(t *testing.T, projectDir, dir, cacheName, parent, ref, entry
 	require.NoError(t, os.WriteFile(filepath.Join(full, cacheName+".md"), []byte(content), 0o644))
 }
 
+// writeInheritedLang writes one cached localized parent copy exactly as
+// --refresh would: under the locale variant of the fragment dir, with the
+// lang provenance attr and the textlint wrap that protects the on-disk prose.
+func writeInheritedLang(t *testing.T, projectDir, lang, cacheName, parent, ref, entry, body string) {
+	t.Helper()
+	full := filepath.Join(projectDir, "docs", lang, "features.d", ".inherited")
+	require.NoError(t, os.MkdirAll(full, 0o755))
+	document := "docs/" + lang + "/" + outFeatures
+	content := "<!--\nSPDX-FileCopyrightText: 2026 Upstream\n" + spdxTag + ": " + spdxMIT + "\n-->\n\n" +
+		"<!-- pf-bridge:inherited name=\"" + parent + "\" url=\"https://example.test/" + parent +
+		"\" ref=\"" + ref + "\" commit=\"0123456789abcdef\" document=\"" + document + "\" lang=\"" + lang + "\" -->\n\n" +
+		"<!-- textlint-disable terminology,common-misspellings -->\n\n" +
+		"### " + entry + "\n\n" + body + "\n\n" +
+		"<!-- textlint-enable -->\n"
+	require.NoError(t, os.WriteFile(filepath.Join(full, cacheName+".md"), []byte(content), 0o644))
+}
+
 // parentsBlock declares URL parents inside a document, matching the shape a
 // projectfile carries now that parents are repository URLs rather than paths.
 func parentsBlock(urls ...string) string {
@@ -552,9 +569,10 @@ func TestRenderStripsFragmentTextlintDirectives(t *testing.T) {
 	assert.NotContains(t, root, "textlint-")
 }
 
-// TestRenderLocalizedVariantsNestInherited pins that a variant nests the SAME
-// inherited sections as the canonical file — they quote upstream, which
-// publishes one language — under a localized heading.
+// TestRenderLocalizedVariantsNestInherited pins the fallback: a parent that
+// publishes no Spanish document still appears in the Spanish variant under a
+// localized heading — the child cannot translate text it does not own, so the
+// canonical copy is nested verbatim.
 func TestRenderLocalizedVariantsNestInherited(t *testing.T) {
 	child := t.TempDir()
 	body := i18nBlock("es") +
@@ -572,6 +590,34 @@ func TestRenderLocalizedVariantsNestInherited(t *testing.T) {
 	assert.Contains(t, es, "## Heredado de b19/ubuntu 1.0.0")
 	assert.Contains(t, es, "### Parent Feature")
 	assert.Contains(t, es, "### Característica Propia")
+}
+
+// TestRenderLocalizedVariantUsesParentTranslation is the core of inherited
+// localization: a parent copy cached under docs/es/features.d/.inherited/
+// renders its translated entries in the Spanish variant, while the canonical
+// file keeps nesting the canonical copy — one cache, two renders, no leak.
+func TestRenderLocalizedVariantUsesParentTranslation(t *testing.T) {
+	child := t.TempDir()
+	body := i18nBlock("es") +
+		"    fragments:\n      documents:\n        - dir: docs/features.d\n" +
+		"          out: FEATURES.md\n          title: Features\n" +
+		parentsBlock(parentURL)
+	writeProjectfile(t, child, body)
+	writeFragment(t, child, "docs/features.d", "own", "Own Feature", "Own body.")
+	writeFragment(t, child, "docs/es/features.d", "own", "Característica Propia", "Cuerpo propio.")
+	writeInherited(t, child, "docs/features.d", "b19-ubuntu", "b19/ubuntu", "1.0.0", "Parent Feature")
+	writeInheritedLang(t, child, "es", "b19-ubuntu", "b19/ubuntu", "1.0.0", "Característica del Padre", "Cuerpo del padre.")
+
+	out, err := fragments.Bridge{}.Render(docWithFragments(t, child), core.Options{Dir: child})
+	require.NoError(t, err)
+	es := string(out.Files["docs/es/FEATURES.md"])
+	assert.Contains(t, es, "## Heredado de b19/ubuntu 1.0.0")
+	assert.Contains(t, es, "### Característica del Padre")
+	assert.Contains(t, es, "Cuerpo del padre.")
+	assert.NotContains(t, es, "### Parent Feature", "variant must not nest the canonical body it has a translation for")
+	root := string(out.Files[outFeatures])
+	assert.Contains(t, root, "### Parent Feature", "canonical file keeps the canonical copy")
+	assert.NotContains(t, root, "Característica del Padre")
 }
 
 // TestRenderSkipsLanguageWithoutFragments pins the missing-translation
@@ -613,11 +659,11 @@ func TestRenderUnilingualProjectIsByteStable(t *testing.T) {
 	assert.True(t, strings.HasSuffix(got, "Alpha body.\n"), "single trailing newline, nothing after the last fragment")
 }
 
-// TestRenderVariantRequiresOwnDefaultFragments pins that an inherited-only
-// document (own default-language set empty) never grows variants: a
-// translation of features the project does not declare would be the only
-// place those features exist.
-func TestRenderVariantRequiresOwnDefaultFragments(t *testing.T) {
+// TestRenderVariantRequiresContent pins the skip rule for a language with
+// nothing to ship: no own translated fragments and no localized inherited
+// copies renders nothing under a localized name, never a heading-only stub —
+// while the inherited-only canonical file still renders.
+func TestRenderVariantRequiresContent(t *testing.T) {
 	child := t.TempDir()
 	body := i18nBlock("es") +
 		"    fragments:\n      documents:\n        - dir: docs/features.d\n" +
@@ -625,12 +671,60 @@ func TestRenderVariantRequiresOwnDefaultFragments(t *testing.T) {
 		parentsBlock(parentURL)
 	writeProjectfile(t, child, body)
 	writeInherited(t, child, "docs/features.d", "b19-ubuntu", "b19/ubuntu", "1.0.0", "Parent Feature")
-	writeFragment(t, child, "docs/es/features.d", "own", "Característica Propia", "Cuerpo propio.")
 
 	out, err := fragments.Bridge{}.Render(docWithFragments(t, child), core.Options{Dir: child})
 	require.NoError(t, err)
 	assert.Contains(t, out.Files, outFeatures, "inherited-only canonical file still renders")
-	assert.NotContains(t, out.Files, "docs/es/FEATURES.md", "no own default fragments → no variant")
+	assert.NotContains(t, out.Files, "docs/es/FEATURES.md", "no own fragments and no localized copies → no variant")
+}
+
+// TestRenderInheritedOnlyVariantFromParentTranslation covers the
+// inherited-only project (own default-language set empty): the parent's
+// localized cached copies alone grow the variant, because the translation is
+// the parent's own published document, not a translation this project owns.
+func TestRenderInheritedOnlyVariantFromParentTranslation(t *testing.T) {
+	child := t.TempDir()
+	body := i18nBlock("es") +
+		"    fragments:\n      documents:\n        - dir: docs/features.d\n" +
+		"          out: FEATURES.md\n          title: Features\n" +
+		parentsBlock(parentURL)
+	writeProjectfile(t, child, body)
+	writeInherited(t, child, "docs/features.d", "b19-ubuntu", "b19/ubuntu", "1.0.0", "Parent Feature")
+	writeInheritedLang(t, child, "es", "b19-ubuntu", "b19/ubuntu", "1.0.0", "Característica del Padre", "Cuerpo del padre.")
+
+	out, err := fragments.Bridge{}.Render(docWithFragments(t, child), core.Options{Dir: child})
+	require.NoError(t, err)
+	es := string(out.Files["docs/es/FEATURES.md"])
+	assert.Contains(t, es, "### Característica del Padre")
+	assert.NotContains(t, es, "### Parent Feature")
+	assert.NotContains(t, es, "## Características del proyecto", "no own fragments → no empty project section")
+	// The bar names the shipped variant even though the project owns none of it.
+	root := string(out.Files[outFeatures])
+	assert.Contains(t, root, "[Español](docs/es/FEATURES.md)")
+}
+
+// TestRenderVariantIgnoresUndeclaredLocalizedCopy extends the
+// projectfile-is-authority rule to the locale caches: a localized copy whose
+// parent is no longer declared must not keep appearing in the variant.
+func TestRenderVariantIgnoresUndeclaredLocalizedCopy(t *testing.T) {
+	child := t.TempDir()
+	body := i18nBlock("es") +
+		"    fragments:\n      documents:\n        - dir: docs/features.d\n" +
+		"          out: FEATURES.md\n          title: Features\n" +
+		parentsBlock("ssh://git@example.test/b19/ubuntu.git")
+	writeProjectfile(t, child, body)
+	writeFragment(t, child, "docs/features.d", "own", "Own Feature", "Own body.")
+	writeFragment(t, child, "docs/es/features.d", "own", "Característica Propia", "Cuerpo propio.")
+	writeInherited(t, child, "docs/features.d", "b19-ubuntu", "b19/ubuntu", "1.0.0", "Kept Feature")
+	writeInheritedLang(t, child, "es", "b19-ubuntu", "b19/ubuntu", "1.0.0", "Característica Mantenida", "Cuerpo.")
+	writeInheritedLang(t, child, "es", "b19-dropped", "b19/dropped", "1.0.0", "Característica Eliminada", "Cuerpo.")
+
+	out, err := fragments.Bridge{}.Render(docWithFragments(t, child), core.Options{Dir: child})
+	require.NoError(t, err)
+	es := string(out.Files["docs/es/FEATURES.md"])
+	assert.Contains(t, es, "### Característica Mantenida")
+	assert.NotContains(t, es, "b19/dropped")
+	assert.NotContains(t, es, "Característica Eliminada")
 }
 
 // TestRenderNonLocalizableDocumentSkipsVariants pins the convention gate: a

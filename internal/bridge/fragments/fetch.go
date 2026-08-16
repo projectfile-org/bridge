@@ -60,20 +60,26 @@ var projectfileNames = []string{pfYAML, pfTOML, pfJSON}
 
 // refreshParents reads every declared parent's published document and returns
 // the copies, keyed by cache filename so the caller can both write them and
-// assemble from them in the same run.
+// assemble from them in the same run — plus, per declared language, the
+// parent's localized document read at the same ref.
 //
 // A parent that cannot be reached is warned and skipped, never fatal: the copy
 // already committed stays on disk untouched, so a forge outage degrades to
 // "documents are as fresh as last time" instead of a broken build.
-func refreshParents(doc pfmodel.FragmentDocument, opts core.Options) map[string]inheritedCopy {
+func refreshParents(doc pfmodel.FragmentDocument, opts core.Options, langs []string) (map[string]inheritedCopy, map[string]map[string]inheritedCopy) {
 	if opts.Offline {
 		genlog.Warn("fragments: offline, keeping the cached parent copies", "document", doc.Out, "parents", len(doc.Parents))
-		return nil
+		return nil, nil
 	}
 
+	fetchLangs := langs
+	if !docLocalizable(doc) {
+		fetchLangs = nil
+	}
 	copies := map[string]inheritedCopy{}
+	localized := map[string]map[string]inheritedCopy{}
 	for _, parent := range doc.Parents {
-		copied, err := fetchParent(context.Background(), parent, doc.Out)
+		copied, translated, err := fetchParent(context.Background(), parent, doc.Out, fetchLangs)
 		switch {
 		case errors.Is(err, errNotPublished):
 			genlog.Info("fragments: parent publishes no such document, nothing to inherit",
@@ -85,36 +91,45 @@ func refreshParents(doc pfmodel.FragmentDocument, opts core.Options) map[string]
 			continue
 		}
 		copies[slug(copied.Name)] = copied
+		for lang, lc := range translated {
+			if localized[lang] == nil {
+				localized[lang] = map[string]inheritedCopy{}
+			}
+			localized[lang][slug(lc.Name)] = lc
+		}
 		genlog.Info("fragments: refreshed parent",
-			"parent", copied.Name, "ref", copied.Ref, "commit", shortCommit(copied.Commit), "document", doc.Out)
+			"parent", copied.Name, "ref", copied.Ref, "commit", shortCommit(copied.Commit),
+			"document", doc.Out, "languages", len(translated))
 	}
-	return copies
+	return copies, localized
 }
 
 // fetchParent resolves which version of the parent to read, downloads that one
-// document, and reduces it to the entries a child nests. The parent's SPDX
-// header travels with the copy — it is the licence of the text being vendored,
-// so it is kept verbatim rather than replaced by this project's own.
+// document, and reduces it to the entries a child nests — then reads the
+// parent's localized document for each declared language at the same ref. The
+// parent's SPDX header travels with every copy — it is the licence of the text
+// being vendored, so it is kept verbatim rather than replaced by this
+// project's own.
 //
 // Everything goes over git, the transport these repositories already use: no
 // forge API, no raw-file URL that differs per forge kind, and a private parent
 // resolves with the credentials the developer already has.
-func fetchParent(ctx context.Context, parent pfmodel.FragmentParent, document string) (inheritedCopy, error) {
+func fetchParent(ctx context.Context, parent pfmodel.FragmentParent, document string, langs []string) (inheritedCopy, map[string]inheritedCopy, error) {
 	if err := validateRepoURL(parent.URL); err != nil {
-		return inheritedCopy{}, err
+		return inheritedCopy{}, nil, err
 	}
 	name := ownerRepo(parent.URL)
 
 	ref, commit, err := resolveRef(ctx, parent.URL, parent.Ref)
 	if err != nil {
-		return inheritedCopy{}, err
+		return inheritedCopy{}, nil, err
 	}
 	genlog.Info("fragments: resolved parent version",
 		"parent", name, "requested", parent.Ref, "ref", ref, "commit", shortCommit(commit))
 
 	body, err := fetchDocument(ctx, parent.URL, archiveRef(ref), document)
 	if err != nil {
-		return inheritedCopy{}, err
+		return inheritedCopy{}, nil, err
 	}
 
 	spdx, rest := splitSPDX(body)
@@ -122,10 +137,10 @@ func fetchParent(ctx context.Context, parent pfmodel.FragmentParent, document st
 	// this repository and break REUSE for a fault upstream owns. Refuse, and say
 	// which parent to fix.
 	if spdx == "" {
-		return inheritedCopy{}, fmt.Errorf("%s in %s carries no SPDX header — refusing to vendor unlicensed text", document, name)
+		return inheritedCopy{}, nil, fmt.Errorf("%s in %s carries no SPDX header — refusing to vendor unlicensed text", document, name)
 	}
 
-	return inheritedCopy{
+	cop := inheritedCopy{
 		Name:     name,
 		Title:    parentTitle(ctx, parent.URL, archiveRef(ref)),
 		URL:      parent.URL,
@@ -134,7 +149,57 @@ func fetchParent(ctx context.Context, parent pfmodel.FragmentParent, document st
 		Document: document,
 		SPDX:     spdx,
 		Body:     normalizeInherited(rest),
-	}, nil
+	}
+	return cop, fetchTranslations(ctx, parent, cop, ref, document, langs), nil
+}
+
+// fetchTranslations reads the parent's localized document per declared
+// language at the ref the canonical copy was read at, so one section's version
+// and one language's entries never describe different releases. A language the
+// parent does not publish is an absence, not a failure: the variant falls back
+// to the canonical copy.
+func fetchTranslations(ctx context.Context, parent pfmodel.FragmentParent, canonical inheritedCopy, ref, document string, langs []string) map[string]inheritedCopy {
+	if len(langs) == 0 {
+		return nil
+	}
+	out := map[string]inheritedCopy{}
+	for _, lang := range langs {
+		cop, err := fetchLocalizedCopy(ctx, parent, canonical, ref, document, lang)
+		switch {
+		case errors.Is(err, errNotPublished):
+			genlog.Info("fragments: parent publishes no such document, variant falls back to the canonical copy",
+				"parent", parent.URL, "document", core.LocalizedFilename(document, lang))
+			continue
+		case err != nil:
+			warn.Record("fragments: localized parent refresh failed, variant falls back to the canonical copy",
+				"parent", parent.URL, "document", core.LocalizedFilename(document, lang), "lang", lang, "error", err.Error())
+			continue
+		}
+		out[lang] = cop
+		genlog.Info("fragments: refreshed localized parent copy",
+			"parent", cop.Name, "lang", lang, "ref", cop.Ref, "document", cop.Document)
+	}
+	return out
+}
+
+// fetchLocalizedCopy reads one language's document from the parent and reduces
+// it to the same nesting shape as the canonical copy, sharing its provenance.
+func fetchLocalizedCopy(ctx context.Context, parent pfmodel.FragmentParent, canonical inheritedCopy, ref, document, lang string) (inheritedCopy, error) {
+	path := core.LocalizedFilename(document, lang)
+	body, err := fetchDocument(ctx, parent.URL, archiveRef(ref), path)
+	if err != nil {
+		return inheritedCopy{}, err
+	}
+	spdx, rest := splitSPDX(body)
+	if spdx == "" {
+		return inheritedCopy{}, fmt.Errorf("%s in %s carries no SPDX header — refusing to vendor unlicensed text", path, canonical.Name)
+	}
+	cop := canonical
+	cop.SPDX = spdx
+	cop.Body = normalizeInherited(rest)
+	cop.Document = path
+	cop.Lang = lang
+	return cop, nil
 }
 
 // parentTitle reads what the parent calls ITSELF — identity.title — so a
@@ -409,13 +474,17 @@ func splitSPDX(raw string) (header, body string) {
 }
 
 // normalizeInherited drops the parent's H1 and H2 headings so its entries nest
-// one level below this project's own section heading. Fenced blocks are left
-// alone — a shell comment inside an example starts with "# " too, and dropping
-// those lines would quietly rewrite the parent's code samples.
+// one level below this project's own section heading, and the textlint wrap a
+// published localized document carries — the cache file re-wraps itself on
+// disk, and assembly wraps the whole variant, so the pair never nests. Fenced
+// blocks are left alone — a shell comment inside an example starts with "# "
+// too, and dropping those lines would quietly rewrite the parent's code
+// samples.
 //
 // What survives is the parent's whole chain in one hop: its published document
 // already carries what IT inherited, so no walk up the ancestry is needed.
 func normalizeInherited(raw string) string {
+	raw = textlintDirectiveRE.ReplaceAllString(raw, "")
 	var kept []string
 	fence := ""
 	for _, line := range strings.Split(raw, "\n") {

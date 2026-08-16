@@ -18,9 +18,10 @@ import (
 )
 
 // inheritedDir holds one cached copy per parent, under the document's own
-// fragment directory (docs/features.d/.inherited/b19-ubuntu.md). Dot-prefixed
-// so loadFragments' `*.md` glob never mistakes a parent's copy for one of this
-// project's own fragments.
+// fragment directory (docs/features.d/.inherited/b19-ubuntu.md); a translated
+// copy caches under the locale variant of that path (docs/es/features.d/
+// .inherited/b19-ubuntu.md). Dot-prefixed so loadFragments' `*.md` glob never
+// mistakes a parent's copy for one of this project's own fragments.
 //
 // The copies are committed on purpose: assembly then reads local files only, so
 // the drift gate needs no network and two runs on the same tree always agree.
@@ -48,6 +49,7 @@ type inheritedCopy struct {
 	Document string // parent file the copy came from (FEATURES.md, …)
 	SPDX     string // the parent's REUSE header, kept with the text it licenses
 	Body     string // H3 entry blocks, ready to nest
+	Lang     string // language the Body is translated into; empty when canonical
 }
 
 // Heading is the H2 the copy renders under. It names the version, so the claim
@@ -171,6 +173,8 @@ func parseInherited(path string) (inheritedCopy, error) {
 				c.Commit = kv[2]
 			case "document":
 				c.Document = kv[2]
+			case "lang":
+				c.Lang = kv[2]
 			}
 		}
 		text = provenanceRE.ReplaceAllString(text, "")
@@ -178,22 +182,45 @@ func parseInherited(path string) (inheritedCopy, error) {
 		genlog.Warn("fragments: cached parent copy has no provenance comment", "file", path)
 	}
 
+	// A translated copy carries the textlint wrap on disk (the cache file is
+	// linted by this project); assembly re-wraps the whole variant, so the
+	// pair is a storage pragma here, never content.
+	text = textlintDirectiveRE.ReplaceAllString(text, "")
 	c.SPDX, c.Body = splitSPDX(text)
 	return c, nil
 }
 
+// textlint wrap lines bracketing a translated copy on disk — the same pair
+// core wraps every localized render with; the cache file is linted by this
+// project, not by upstream.
+const (
+	textlintDisableLine = "<!-- textlint-disable terminology,common-misspellings -->"
+	textlintEnableLine  = "<!-- textlint-enable -->"
+)
+
 // renderInherited builds the file refresh writes: the parent's own SPDX header,
 // then the provenance, then the entry blocks. No fetch date is recorded — a
 // timestamp would rewrite the file on every refresh even when upstream did not
-// move, which turns an honest "nothing changed" into drift.
+// move, which turns an honest "nothing changed" into drift. A translated copy
+// brackets its body with the textlint pair; parseInherited strips it back out.
 func renderInherited(c inheritedCopy) []byte {
 	var b strings.Builder
 	b.WriteString(strings.TrimSpace(c.SPDX))
 	b.WriteString("\n\n")
-	fmt.Fprintf(&b, "<!-- pf-bridge:inherited name=%q title=%q url=%q ref=%q commit=%q document=%q -->\n\n",
+	fmt.Fprintf(&b, "<!-- pf-bridge:inherited name=%q title=%q url=%q ref=%q commit=%q document=%q",
 		c.Name, c.Title, c.URL, c.Ref, c.Commit, c.Document)
-	b.WriteString(strings.TrimSpace(c.Body))
-	b.WriteString("\n")
+	if c.Lang != "" {
+		fmt.Fprintf(&b, " lang=%q", c.Lang)
+	}
+	b.WriteString(" -->\n\n")
+	if c.Lang != "" {
+		b.WriteString(textlintDisableLine + "\n\n")
+		b.WriteString(strings.TrimSpace(c.Body))
+		b.WriteString("\n\n" + textlintEnableLine + "\n")
+	} else {
+		b.WriteString(strings.TrimSpace(c.Body))
+		b.WriteString("\n")
+	}
 	return []byte(b.String())
 }
 

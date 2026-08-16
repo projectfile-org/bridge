@@ -28,6 +28,7 @@ const (
 const (
 	testParent      = "b19/ubuntu"
 	testParentTitle = "B19/Ubuntu"
+	testParentURL   = "https://kiota.ch/b19/ubuntu"
 	testRef         = "1.0.0"
 )
 
@@ -70,6 +71,16 @@ func TestNormalizeInheritedDropsH1AndH2(t *testing.T) {
 	assert.NotContains(t, got, "\n\n\n", "collapsed to at most one blank line (MD012)")
 }
 
+// TestNormalizeInheritedStripsTextlintWrap verifies the pair a parent's
+// published localized document carries does not survive into the copy: the
+// cache file re-wraps itself and assembly wraps the whole variant, so a pair
+// that nested would double-wrap and mis-scope the disable.
+func TestNormalizeInheritedStripsTextlintWrap(t *testing.T) {
+	got := normalizeInherited("<!-- textlint-disable terminology,common-misspellings -->\n\n### Entrada\n\nCuerpo.\n\n<!-- textlint-enable -->\n")
+	assert.NotContains(t, got, "textlint-")
+	assert.Contains(t, got, "### Entrada")
+}
+
 // TestNormalizeInheritedKeepsFencedHashes is the regression that matters for
 // documents with shell examples: a comment inside a fence starts with "# " too,
 // and dropping those lines would silently rewrite the parent's code samples.
@@ -90,7 +101,7 @@ func TestRoundTripsProvenance(t *testing.T) {
 	dir := t.TempDir()
 	want := inheritedCopy{
 		Name:     testParent,
-		URL:      "https://kiota.ch/b19/ubuntu",
+		URL:      testParentURL,
 		Ref:      testRef,
 		Commit:   "db0ef9b031b82d578410a6f3ec14e51e971049f2",
 		Document: "FEATURES.md",
@@ -109,6 +120,36 @@ func TestRoundTripsProvenance(t *testing.T) {
 	assert.Equal(t, want.Body, got.Body)
 	assert.Contains(t, got.SPDX, spdxTag+": "+spdxMIT)
 	assert.Equal(t, "## Inherited from b19/ubuntu 1.0.0", got.Heading())
+}
+
+// TestRoundTripsLocalizedProvenance verifies a translated cache file round-trips:
+// the lang attr reaches the parsed copy, the on-disk textlint wrap protects the
+// file's prose but never leaks into the assembled Body.
+func TestRoundTripsLocalizedProvenance(t *testing.T) {
+	dir := t.TempDir()
+	want := inheritedCopy{
+		Name:     testParent,
+		URL:      testParentURL,
+		Ref:      testRef,
+		Commit:   "db0ef9b031b82d578410a6f3ec14e51e971049f2",
+		Document: "docs/es/FEATURES.md",
+		SPDX:     "<!--\nSPDX-FileCopyrightText: 2026 Upstream\n" + spdxTag + ": " + spdxMIT + "\n-->",
+		Body:     "### Entrada\n\nCuerpo.",
+		Lang:     "es",
+	}
+	path := filepath.Join(dir, "b19-ubuntu.md")
+	require.NoError(t, os.WriteFile(path, renderInherited(want), 0o644))
+
+	raw, err := os.ReadFile(path)
+	require.NoError(t, err)
+	assert.Contains(t, string(raw), "textlint-disable", "the on-disk copy is linted, so it carries the wrap")
+
+	got, err := parseInherited(path)
+	require.NoError(t, err)
+	assert.Equal(t, want.Lang, got.Lang)
+	assert.Equal(t, want.Document, got.Document)
+	assert.Equal(t, want.Body, got.Body)
+	assert.NotContains(t, got.Body, "textlint-", "the wrap is storage pragma, stripped on read")
 }
 
 // TestHeadingFallsBackToCommit verifies a parent that publishes no tags is
@@ -135,7 +176,7 @@ func TestTitleSurvivesTheCachedCopy(t *testing.T) {
 	want := inheritedCopy{
 		Name:     testParent,
 		Title:    testParentTitle,
-		URL:      "https://kiota.ch/b19/ubuntu",
+		URL:      testParentURL,
 		Ref:      testRef,
 		Document: "FEATURES.md",
 		SPDX:     "<!--\nSPDX-FileCopyrightText: 2026 Upstream\n" + spdxTag + ": " + spdxMIT + "\n-->",

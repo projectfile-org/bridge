@@ -241,15 +241,17 @@ Two rules hold the design together:
 
 - **Assembly is local and offline.** Each parent’s published document is cached
   in the repository under `docs/<name>.d/.inherited/<owner>-<repo>.md` and
-  committed. An ordinary run and the drift gate read those files and nothing
+  committed — one copy per declared language under the locale variant of that
+  path. An ordinary run and the drift gate read those files and nothing
   else, so `--check` never needs a network and two runs always agree.
 - **`--refresh` is the only step that reaches a forge.** It resolves each
   parent’s newest release tag (`git ls-remote --sort=-v:refname`, so Git orders
-  the versions), fetches ONE path with `git archive --remote`, and rewrites the
-  cache. Everything goes over Git — the transport these repositories already
-  use — so there is no forge API, no per-forge raw-URL table, and a private
-  parent resolves with the developer’s own credentials. `--refresh --check`
-  answers “has upstream moved?” without writing.
+  the versions), fetches the canonical path plus each declared language’s
+  `docs/<lang>/<Out>` at that one ref with `git archive --remote`, and rewrites
+  the caches. Everything goes over Git — the transport these repositories
+  already use — so there is no forge API, no per-forge raw-URL table, and a
+  private parent resolves with the developer’s own credentials.
+  `--refresh --check` answers “has upstream moved?” without writing.
 
 Why a version, not a hash pin: the heading states `## Inherited from B19/Ubuntu
 1.0.0`, and that claim stays true however far upstream moves afterwards. An
@@ -365,17 +367,23 @@ deliberately excluded — a licence’s legal force lives in its canonical text.
 fragment DIRECTORY, not a template: each declared language reads
 `docs/<lang>/<name>.d/*.md` and assembles `docs/<lang>/<Out>`, keeping the
 canonical file byte-stable for single-language projects (bar and terminology
-wrap are no-ops without variants). The skip rule carries over — a locale dir
-with no fragments warns with the path to add and renders nothing under a
-localized name. Structural strings (title, "Project …", "Inherited from …")
-localize from the Go table in `internal/bridge/fragments/strings.go`, the same
-shape core’s `footerStrings` uses — five keys do not justify a YAML catalog.
-Inherited sections appear verbatim in every variant: they quote upstream,
-which publishes one language, and dropping them would understate the project.
-A variant requires own default-language fragments to exist (inherited-only
-documents never grow variants). The readme’s features block prefers the
-same-language document and falls back to the canonical one with the localized
-`features.untranslated` note.
+wrap are no-ops without variants). The skip rule carries over — a language
+with neither translated fragments nor localized inherited copies warns with
+the path to add and renders nothing under a localized name. Structural
+strings (title, "Project …", "Inherited from …") localize from the Go table
+in `internal/bridge/fragments/strings.go`, the same shape core’s
+`footerStrings` uses — five keys do not justify a YAML catalog. Inherited
+sections localize from the parent’s own `docs/<lang>/<Out>`, fetched at the
+same ref as the canonical copy and cached under
+`docs/<lang>/<name>.d/.inherited/` (provenance `lang` attr; the on-disk copy
+carries the textlint wrap, stripped on read so it never nests inside the
+variant’s whole-file wrap). A parent publishing no such language falls back
+to its canonical copy in that variant — the child cannot translate text it
+does not own — and a refresh that finds a cached localized copy whose parent
+dropped the language warns with the file to delete. Inherited-only documents
+grow variants from localized inherited copies alone. The readme’s features
+block prefers the same-language document and falls back to the canonical one
+with the localized `features.untranslated` note.
 
 **Layout.** The locale lives in the directory, not the filename: the canonical
 (default-language) file renders at the repository root, and each other

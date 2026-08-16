@@ -19,9 +19,12 @@
 // Documents localize per org.projectfile.i18n: the canonical file assembles
 // from docs/<name>.d/ as before, and each other declared language assembles
 // from docs/<lang>/<name>.d/ into docs/<lang>/<Out>. A language with no
-// translated fragments renders nothing under a localized name (warned); the
-// inherited sections stay in every variant — they quote upstream, which
-// publishes one language.
+// translated fragments and no localized inherited copies renders nothing
+// under a localized name (warned). The inherited sections localize from the
+// parent's own docs/<lang>/<Out> — cached under docs/<lang>/<name>.d/
+// .inherited/ — and fall back to the canonical copy for a parent that
+// publishes no such language, since a child cannot translate text it does
+// not own.
 package fragments
 
 import (
@@ -33,6 +36,7 @@ import (
 	"kiota.ch/projectfile/core/v2/pkg/projectfile"
 	"projectfile.org/projectfile/bridge/internal/bridge/core"
 	"projectfile.org/projectfile/bridge/internal/pfmodel"
+	"projectfile.org/projectfile/bridge/internal/warn"
 )
 
 // templateName is the single structural template every document and every
@@ -101,13 +105,22 @@ func (Bridge) Render(pf *projectfile.Document, opts core.Options) (core.Output, 
 		// Refreshed copies are emitted AND fed straight into the assembly, so one
 		// run cannot write a new copy while assembling from the previous one.
 		var refreshed map[string]inheritedCopy
+		var refreshedLocalized map[string]map[string]inheritedCopy
 		if opts.Refresh {
-			refreshed = refreshParents(doc, opts)
+			refreshed, refreshedLocalized = refreshParents(doc, opts, langs)
 			for name, copied := range refreshed {
 				rel := path.Join(doc.Dir, inheritedDir, name+".md")
 				out.Files[rel] = renderInherited(copied)
 				genlog.Plain("bridge: " + rel)
 			}
+			for lang, copies := range refreshedLocalized {
+				for name, copied := range copies {
+					rel := path.Join(localizedFragDir(doc.Dir, lang), inheritedDir, name+".md")
+					out.Files[rel] = renderInherited(copied)
+					genlog.Plain("bridge: " + rel)
+				}
+			}
+			warnStaleLocalized(opts.Dir, doc, refreshed, refreshedLocalized, langs)
 		}
 
 		own, inherited, err := loadDocument(opts.Dir, doc, refreshed)
@@ -121,7 +134,7 @@ func (Bridge) Render(pf *projectfile.Document, opts core.Options) (core.Output, 
 
 		// Variants resolve BEFORE any render: the cross-language bar names
 		// exactly the set that ships, in the canonical file too.
-		variants := resolveVariantLangs(opts.Dir, doc.Dir, doc.Out, own, langs)
+		variants := resolveVariantLangs(opts.Dir, doc, inherited, refreshedLocalized, langs)
 
 		body, err := assembleDocument(opts.Dir, defLang, "", defLang, doc, own, inherited, variants, reuse)
 		if err != nil {
@@ -132,7 +145,7 @@ func (Bridge) Render(pf *projectfile.Document, opts core.Options) (core.Output, 
 
 		for _, v := range variants {
 			rel := core.LocalizedFilename(doc.Out, v.Lang)
-			body, err := assembleDocument(opts.Dir, v.Lang, v.Lang, defLang, doc, v.Fragments, inherited, variants, reuse)
+			body, err := assembleDocument(opts.Dir, v.Lang, v.Lang, defLang, doc, v.Fragments, v.Inherited, variants, reuse)
 			if err != nil {
 				return core.Output{}, fmt.Errorf("%s: %w", rel, err)
 			}
@@ -141,6 +154,33 @@ func (Bridge) Render(pf *projectfile.Document, opts core.Options) (core.Output, 
 		}
 	}
 	return out, nil
+}
+
+// warnStaleLocalized reports a cached localized copy whose parent refresh
+// reached (so absence is upstream's choice, not an outage) yet produced no
+// localized copy for that language: nothing ever deletes the file, so the
+// variant would keep quoting a version upstream no longer publishes.
+func warnStaleLocalized(projectDir string, doc pfmodel.FragmentDocument, refreshed map[string]inheritedCopy, refreshedLocalized map[string]map[string]inheritedCopy, langs []string) {
+	if !docLocalizable(doc) || len(refreshed) == 0 {
+		return
+	}
+	for _, lang := range langs {
+		cached, err := loadInherited(projectDir, localizedFragDir(doc.Dir, lang))
+		if err != nil {
+			continue
+		}
+		for name, copied := range cached {
+			if _, reached := refreshed[name]; !reached {
+				continue
+			}
+			if _, published := refreshedLocalized[lang][name]; published {
+				continue
+			}
+			warn.Record("fragments: parent no longer publishes this language, the cached localized copy is stale",
+				"parent", copied.Name, "lang", lang, "document", doc.Out,
+				"hint", "delete "+path.Join(localizedFragDir(doc.Dir, lang), inheritedDir, name+".md"))
+		}
+	}
 }
 
 // resolveDocuments applies the override-then-conventions precedence and
