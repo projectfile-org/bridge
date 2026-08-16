@@ -12,9 +12,3 @@
 # published text, so an autofixable rule (apostrophes, terminology) rewriting it
 # would do real damage.
 internal/bridge/license/spdx/
-
-# Translated feature-fragment sources: fd discovery spares them for the same
-# reason as .textlintignore — English-tuned prose rules false-positive on
-# Spanish and Ukrainian. The assembled docs/<lang>/FEATURES.md stays linted.
-docs/es/features.d/
-docs/uk/features.d/

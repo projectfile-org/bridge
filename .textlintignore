@@ -12,11 +12,3 @@ internal/bridge/license/spdx/
 # Go templates carry `{{ }}` directives that confuse pair-match rules. The
 # generator tests verify the rendered output, which is what humans read.
 internal/generators/template/templates/
-
-# Translated feature-fragment sources. The English-tuned rules (terminology,
-# common-misspellings) false-positive on natural Spanish and Ukrainian prose
-# ("comando" is not a misspelling of "commando"). The assembled
-# docs/<lang>/FEATURES.md variants stay linted — they are machine-wrapped in a
-# textlint-disable block; these are the human translation sources.
-docs/es/features.d/
-docs/uk/features.d/

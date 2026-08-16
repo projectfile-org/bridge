@@ -403,14 +403,15 @@ template lookup did not — registered by walking each bridge’s embedded
 never a `register.go` edit. `es` and `uk` ship embedded.
 
 **textlint terminology vs non-English files.** The shared textlint config’s
-`terminology` rule (`textlint-rule-terminology`) is English-tuned and
-false-positives on legitimate non-English text (e.g. Spanish “Todos” = “all”).
-Inline `<!-- textlint-disable terminology -->` comments do NOT suppress this
-rule — it does not implement textlint’s comment-directive API. The supported
-fix is `.textlintignore` + `.fdignore` (the latter is load-bearing: auto-textlint
-discovers files with `fd`, so explicit-arg paths bypass `.textlintignore`
-discovery but still honour it as an ignore). TODO: add `docs/<lang>/` non-default
-locale dirs to both ignore files so localized health files lint clean.
+`terminology` and `common-misspellings` rules are English-tuned and
+false-positive on legitimate non-English text (e.g. Spanish `comando` is not
+“commando”). The config enables `filters.comments`, so inline
+`<!-- textlint-disable terminology,common-misspellings -->` …
+`<!-- textlint-enable -->` directives suppress them — that is the one
+supported mechanism, emitted by `core.WrapLocalizedTextlint` for every
+non-English render and carried by hand-translated fragment sources
+(`docs/<lang>/features.d/`), where `parseFragment` strips the pair as a
+source pragma before assembly. Locale dirs never go into `.textlintignore`.
 
 **Default-language re-anchoring.** The render loop’s `""` sentinel is the
 canonical root render. `core.ResolveLang(lang, pf)` maps that sentinel to the

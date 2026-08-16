@@ -523,6 +523,35 @@ func TestRenderLocalizedVariants(t *testing.T) {
 	assert.True(t, strings.HasPrefix(es, "<!--\nSPDX-FileCopyrightText"))
 }
 
+// TestRenderStripsFragmentTextlintDirectives pins how assembly treats the
+// textlint directive pair translated fragment sources carry: a pragma, not
+// content. The variant keeps exactly one wrap — its own whole-file one — the
+// H1 behind the directive still demotes to an H3 (the readme bridge scrapes
+// that level), and the canonical file stays directive-free.
+func TestRenderStripsFragmentTextlintDirectives(t *testing.T) {
+	dir := t.TempDir()
+	writeProjectfile(t, dir,
+		i18nBlock("es")+
+			"    fragments:\n      documents:\n"+
+			"        - {dir: docs/features.d, out: FEATURES.md, title: Features}")
+	writeFragment(t, dir, "docs/features.d", "alpha", "Alpha Feature", "Alpha body.")
+	esDir := filepath.Join(dir, "docs/es/features.d")
+	require.NoError(t, os.MkdirAll(esDir, 0o755))
+	source := "<!--\nSPDX-FileCopyrightText: 2026 Tester\n" + spdxTag + ": " + spdxMIT + "\n-->\n\n" +
+		"<!-- textlint-disable terminology,common-misspellings -->\n\n" +
+		"# Característica Alfa\n\nCuerpo alfa.\n\n" +
+		"<!-- textlint-enable -->\n"
+	require.NoError(t, os.WriteFile(filepath.Join(esDir, "alpha.md"), []byte(source), 0o644))
+
+	out, err := fragments.Bridge{}.Render(docWithFragments(t, dir), core.Options{Dir: dir})
+	require.NoError(t, err)
+	es := string(out.Files["docs/es/FEATURES.md"])
+	assert.Equal(t, 1, strings.Count(es, "textlint-disable"), "one whole-file wrap, the source pair must not leak")
+	assert.Contains(t, es, "### Característica Alfa")
+	root := string(out.Files[outFeatures])
+	assert.NotContains(t, root, "textlint-")
+}
+
 // TestRenderLocalizedVariantsNestInherited pins that a variant nests the SAME
 // inherited sections as the canonical file — they quote upstream, which
 // publishes one language — under a localized heading.

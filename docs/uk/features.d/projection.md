@@ -4,8 +4,12 @@ SPDX-FileCopyrightText: 2026 Damián Búho <damian.buho@proton.me>
 SPDX-License-Identifier: MIT
 -->
 
+<!-- textlint-disable terminology,common-misspellings -->
+
 # Проєкція projectfile у файли
 
 - Генерує та підтримує двонаправлені зовнішні файли, яких очікує форж, з одного документа projectfile: маніфести пакунків, CITATION.cff, LICENSE плюс тексти за ліцензіями SPDX, родина gitignore, readme та громадські документи.
 - Синхронізує кожен зовнішній файл у обох напрямках; одна команда оновлює все — або один файл за ім’ям.
 - Перевірка дрейфу рендерить без запису та звітує про кожен здрейфований або відсутній файл уніфікованим diff-ом, завершуючись помилкою за потреби.
+
+<!-- textlint-enable -->
