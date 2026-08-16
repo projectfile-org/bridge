@@ -338,9 +338,11 @@ func TestMatrixSectionRendersJoinedBlock(t *testing.T) {
 }
 
 // TestMultiSinkGroupRendersPerSinkSubsections: when a group's commands fan out
-// over several sinks, each destination renders its own "From <label>"
+// over several sinks, each destination renders its own "<verb> <label>"
 // subsection with one joined fence, ordered by the fan-out — which is sink
 // priority, descending. A sink declaring no label is named by its sink name.
+// The usage block pairs with the install block so the test also pins the
+// per-block verb: a shared word repeats the heading in both blocks (MD024).
 func TestMultiSinkGroupRendersPerSinkSubsections(t *testing.T) {
 	pf := minimalDoc(t)
 	pf.Extensions = map[string]any{
@@ -351,17 +353,21 @@ func TestMultiSinkGroupRendersPerSinkSubsections(t *testing.T) {
 		artifactsNS: imageArtifact("${org.projectfile.sinks{role=primary}.ref}"),
 		readmeNS: map[string]any{
 			blockInstallation: []any{group(keyImage, "Pull the published image:", refImage)},
+			blockUsage:        []any{group(keyImage, "Build on it:", "FROM ${org.projectfile.sinks{role=primary}.ref}")},
 		},
 	}
 
 	out := renderDoc(t, t.TempDir(), pf)
 
-	assert.Contains(t, out, "### From GHCR")
-	assert.Contains(t, out, "### From kiota")
-	assert.Less(t, index(out, "### From GHCR"), index(out, "### From kiota"),
+	assert.Contains(t, out, "### Pull from GHCR")
+	assert.Contains(t, out, "### Pull from kiota")
+	assert.Less(t, index(out, "### Pull from GHCR"), index(out, "### Pull from kiota"),
 		"the fan-out order (priority desc) orders the subsections")
 	assert.Contains(t, out, "```sh\ndocker pull ghcr.io/o/demo:latest\n```")
 	assert.Contains(t, out, "```sh\ndocker pull kiota.ch/demo:latest\n```")
+	assert.Contains(t, out, "### From GHCR", "usage keeps the bare verb")
+	assert.Equal(t, 1, strings.Count(out, "### From GHCR"),
+		"install and usage must not repeat a heading")
 }
 
 // TestSinkSubsectionsJoinMatrixCells: each destination's fence lists EVERY
@@ -387,8 +393,8 @@ func TestSinkSubsectionsJoinMatrixCells(t *testing.T) {
 
 	out := renderDoc(t, t.TempDir(), pf)
 
-	assert.Contains(t, out, "### From GHCR\n\n```sh\ndocker pull ghcr.io/o/demo/resolute:latest\ndocker pull ghcr.io/o/demo/noble:latest\n```")
-	assert.Contains(t, out, "### From kiota\n\n```sh\ndocker pull kiota.ch/demo/resolute:latest\ndocker pull kiota.ch/demo/noble:latest\n```")
+	assert.Contains(t, out, "### Pull from GHCR\n\n```sh\ndocker pull ghcr.io/o/demo/resolute:latest\ndocker pull ghcr.io/o/demo/noble:latest\n```")
+	assert.Contains(t, out, "### Pull from kiota\n\n```sh\ndocker pull kiota.ch/demo/resolute:latest\ndocker pull kiota.ch/demo/noble:latest\n```")
 }
 
 // TestSingleSinkGroupRendersPlain: a document carrying ONE sink (the legacy
@@ -409,7 +415,7 @@ func TestSingleSinkGroupRendersPlain(t *testing.T) {
 	out := renderDoc(t, t.TempDir(), pf)
 
 	assert.Contains(t, out, "```sh\ndocker pull kiota.ch/demo:latest\n```")
-	assert.NotContains(t, out, "### From", "one sink needs no destination heading")
+	assert.NotContains(t, out, "### Pull from", "one sink needs no destination heading")
 }
 
 // TestNonSinkCommandsStayPlain: a group whose commands reference something no
@@ -431,7 +437,7 @@ func TestNonSinkCommandsStayPlain(t *testing.T) {
 	out := renderDoc(t, t.TempDir(), pf)
 
 	assert.Contains(t, out, "```sh\ndocker pull registry.example/other/demo:latest\n```")
-	assert.NotContains(t, out, "### From")
+	assert.NotContains(t, out, "### Pull from")
 }
 
 // TestFallbackSinkGroupKeepsProseAndHeading: the shared fragment's origin group
@@ -457,9 +463,9 @@ func TestFallbackSinkGroupKeepsProseAndHeading(t *testing.T) {
 	out := renderDoc(t, t.TempDir(), pf)
 
 	assert.Contains(t, out, "If the registries above are unreachable")
-	assert.Contains(t, out, "### From ghcr")
-	assert.Contains(t, out, "### From kiota")
-	assert.Less(t, index(out, "### From ghcr"), index(out, "If the registries above"),
+	assert.Contains(t, out, "### Pull from ghcr")
+	assert.Contains(t, out, "### Pull from kiota")
+	assert.Less(t, index(out, "### Pull from ghcr"), index(out, "If the registries above"),
 		"the fallback group renders after the primary one")
 }
 

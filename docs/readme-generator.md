@@ -263,8 +263,10 @@ reference — the shape every container project inherits from
 `m6e/container/traits/oci-image.yaml` — splits further: one `### From <label>`
 subsection per destination, in sink `priority` order, each holding that
 destination’s cells joined in its own fence. The label is the sink entry’s
-`label` key, falling back to the sink name; the heading word localizes from the
-`sink.from` catalog key. A document carrying a single sink (the legacy
+`label` key, falling back to the sink name; the heading verb localizes from the
+`installation.sink` / `usage.sink` catalog keys — one per command block, because
+a shared verb repeats the heading in both blocks and trips MD024 in every
+consumer. A document carrying a single sink (the legacy
 `readme.registry` projects) keeps the plain one-fence shape — a sole
 destination needs no heading naming it — and a group referencing anything no
 sink declares (an npm artifact, a hand-written host) never gains a destination

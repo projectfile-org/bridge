@@ -41,8 +41,11 @@ license.title: Licencia
 license.body: Este proyecto se publica bajo la licencia %s — consulta el archivo [LICENSE](LICENSE) para más detalles.
 
 # Secciones de comandos — palabra de encabezado de una subsección por registro;
-# la etiqueta declarada del registro completa la frase («Desde GHCR»).
-sink.from: Desde
+# la etiqueta declarada del registro completa la frase («Descargar de GHCR»).
+# Instalación y uso llevan su propio verbo: una palabra compartida repetiría el
+# encabezado en ambos bloques (MD024).
+installation.sink: Descargar de
+usage.sink: Desde
 
 # Bloque de artefactos — lo que el proyecto entrega. La clave de cada tipo se
 # deriva del `kind` declarado.

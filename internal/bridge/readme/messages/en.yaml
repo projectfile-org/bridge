@@ -48,8 +48,11 @@ license.title: License
 license.body: This project is licensed under %s — see the [LICENSE](LICENSE) file for details.
 
 # Command sections — heading word for a per-sink subsection; the sink's
-# declared label completes the phrase ("From GHCR").
-sink.from: From
+# declared label completes the phrase ("Pull from GHCR"). Install and usage
+# carry their own verb: one shared word repeats the heading in both blocks,
+# which trips MD024 in every consumer.
+installation.sink: Pull from
+usage.sink: From
 
 # Artifacts block — what the project ships. The kind key is DERIVED from the
 # declared `kind`, so a project inventing one only needs a line here (and falls
