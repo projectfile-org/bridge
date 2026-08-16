@@ -379,7 +379,7 @@ var imageExts = map[string]bool{
 	"svg":  true,
 }
 
-// docMarkdownExcluded lists docs/*.md files that the documentation block
+// docMarkdownExcluded lists docs/how-to/*.md files that the documentation block
 // should NOT surface: meta-docs about the bridge itself, and the generated
 // Makefile reference, which the building block already links as the answer to
 // "how do I build this" — listing it twice is pure noise.
@@ -390,10 +390,11 @@ var docMarkdownExcluded = map[string]bool{
 
 const (
 	docsDir           = "docs"
+	howToSubdir       = "how-to"
 	screenshotsSubdir = "screenshots"
 	logoBasename      = "logo"
 	mkDirAssets       = "assets"
-	makefileDocPath   = "docs/MAKEFILE.md"
+	makefileDocPath   = "docs/how-to/MAKEFILE.md"
 	makefileDocKey    = "build.makefile"
 	buildDocFile      = "BUILD.md"
 	buildDocKey       = "build.build"
@@ -629,6 +630,11 @@ func buildLinkGroups(pf *projectfile.Document, lang string) []linkGroup {
 		if isRelatedLink(l) {
 			continue
 		}
+		// The Links section is curated copy, not the whole links[] table: only
+		// a link tagged `readme` renders here.
+		if !isReadmeLink(l) {
+			continue
+		}
 		cat, ok := linkCategories[l.Type]
 		if !ok {
 			cat = groupOther
@@ -666,7 +672,25 @@ func buildLinkGroups(pf *projectfile.Document, lang string) []linkGroup {
 			Links:   entries,
 		})
 	}
+	if len(out) == 0 && len(pf.Links) > 0 {
+		genlog.Decision("links", strconv.Itoa(len(pf.Links)), "no readme-tagged link (section dropped)",
+			"links[] declared="+strconv.Itoa(len(pf.Links)))
+	}
 	return out
+}
+
+// linksTagReadme is the advisory links[].tags value that opts a link INTO the
+// readme's Links section — the section is curated, so a link renders there only
+// when the project says so. Mirrors the `readme` goal tag (vars.go) and
+// relatedTag: `tags` round-trips through Link.Extra per spec §139, no core
+// change.
+const linksTagReadme = "readme"
+
+// isReadmeLink reports whether a top-level link carries the readme tag. The
+// tag lives in Link.Extra (§139 additional key), tolerant of a missing or
+// mistyped tags list — hasTag already handles the wrong-type cases.
+func isReadmeLink(l projectfile.Link) bool {
+	return hasTag(l.Extra["tags"], linksTagReadme)
 }
 
 // relatedTag is the advisory links[].tags value that opts a link into the
@@ -756,20 +780,15 @@ func probeHealthFiles(dir, docPath, pathLang, strLang string) []staticLink {
 	return out
 }
 
-// listDocsMarkdown lists every docs/*.md file as a static link, excluding the
-// meta-docs in docMarkdownExcluded and the per-language docs/<lang>/ directories
-// (localized health files live there; they are not generic documentation and
-// are surfaced through the policies block's language bar instead). Label is the
-// file's first Markdown heading, falling back to the humanized filename when
-// the file has no heading. Returns nil when docs/ is absent or empty.
+// listDocsMarkdown lists every docs/how-to/*.md file as a static link,
+// excluding the meta-docs in docMarkdownExcluded. Label is the file's first
+// Markdown heading, falling back to the humanized filename when the file has
+// no heading. Returns nil when docs/how-to/ is absent or empty.
 func listDocsMarkdown(dir, docPath string) []staticLink {
-	entries := readDir(dir, docsDir)
+	entries := readDir(dir, filepath.Join(docsDir, howToSubdir))
 	var out []staticLink
 	for _, e := range entries {
 		if e.IsDir() {
-			// A locale directory (docs/<lang>/) holds localized health files,
-			// not standalone documentation — skip it so the docs block does
-			// not list "es", "uk", … as document titles.
 			continue
 		}
 		name := e.Name()
@@ -779,7 +798,7 @@ func listDocsMarkdown(dir, docPath string) []staticLink {
 		if docMarkdownExcluded[strings.ToLower(name)] {
 			continue
 		}
-		rel := docsDir + "/" + name
+		rel := filepath.Join(docsDir, howToSubdir, name)
 		label := extractFirstHeading(dir, rel)
 		if label == "" {
 			label = humanizeFilename(name)
@@ -790,7 +809,8 @@ func listDocsMarkdown(dir, docPath string) []staticLink {
 }
 
 // probeBuildLinks builds the multi-link building block: BUILD.md at the root
-// plus the generated Makefile reference at docs/MAKEFILE.md if either exists.
+// plus the generated Makefile reference at docs/how-to/MAKEFILE.md if either
+// exists.
 func probeBuildLinks(dir, docPath, lang string) []staticLink {
 	var out []staticLink
 	if link := docLink(dir, docPath, buildDocFile, translate(lang, buildDocKey)); link != nil {
@@ -920,7 +940,7 @@ func parseATXHeading(line string) (level int, text string, ok bool) {
 
 // extractFirstHeading reads dir/rel and returns the text of the first ATX
 // heading of any level, or "" on a read error or when the file has no heading.
-// Used by the documentation block to label each docs/*.md link with the
+// Used by the documentation block to label each docs/how-to/*.md link with the
 // heading a reader actually sees rather than the bare filename.
 func extractFirstHeading(dir, rel string) string {
 	body, err := readFile(dir, rel)
@@ -1045,7 +1065,7 @@ func formatDecisionTrace(dir, lang string, v readmeView, ext *pfmodel.ReadmeExte
 		genlog.Decision("screenshot", s.Path, "docs/screenshots probe", "")
 	}
 	for _, d := range listDocsMarkdown(dir, readmeDocPath(lang)) {
-		genlog.Decision("doc_link", d.Label+" → "+d.Filename, "docs/*.md probe", "")
+		genlog.Decision("doc_link", d.Label+" → "+d.Filename, "docs/how-to/*.md probe", "")
 	}
 	for _, b := range probeBuildLinks(dir, readmeDocPath(lang), lang) {
 		genlog.Decision("build_link", b.Label+" → "+b.Filename, "BUILD/MAKEFILE probe", "")

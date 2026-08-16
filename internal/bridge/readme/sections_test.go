@@ -595,8 +595,8 @@ func TestBuildingBlockOmitsDevLoopWhenNoDevContainer(t *testing.T) {
 func TestLinksSingleGroupDropsSubheading(t *testing.T) {
 	pf := minimalDoc(t)
 	pf.Links = []projectfile.Link{
-		{Type: linkTypeSourceCode, URL: urlExampleRepo},
-		{Type: "bugs", URL: "https://example.com/issues"},
+		readmeLink(linkTypeSourceCode, urlExampleRepo),
+		readmeLink("bugs", "https://example.com/issues"),
 	}
 	out := renderDoc(t, t.TempDir(), pf)
 	assert.Contains(t, out, "## Links")
@@ -611,12 +611,37 @@ func TestLinksSingleGroupDropsSubheading(t *testing.T) {
 func TestLinksMultipleGroupsKeepSubheadings(t *testing.T) {
 	pf := minimalDoc(t)
 	pf.Links = []projectfile.Link{
-		{Type: linkTypeSourceCode, URL: urlExampleRepo},
-		{Type: "chat", URL: "https://example.com/chat"},
+		readmeLink(linkTypeSourceCode, urlExampleRepo),
+		readmeLink("chat", "https://example.com/chat"),
 	}
 	out := renderDoc(t, t.TempDir(), pf)
 	assert.Contains(t, out, "### Project")
 	assert.Contains(t, out, "### Community")
+}
+
+// TestLinksRequireReadmeTag: the Links section is curated — a link renders
+// there only when tagged `readme`, and a project whose links carry no tag
+// renders no section at all rather than an uncurated dump.
+func TestLinksRequireReadmeTag(t *testing.T) {
+	pf := minimalDoc(t)
+	pf.Links = []projectfile.Link{
+		{Type: linkTypeSourceCode, URL: urlExampleRepo},
+		{Type: "bugs", URL: "https://example.com/issues"},
+	}
+	out := renderDoc(t, t.TempDir(), pf)
+	assert.NotContains(t, out, "## Links")
+	assert.NotContains(t, out, "https://example.com/repo")
+}
+
+// readmeLink builds one link fixture tagged for the readme's Links section —
+// the shape a YAML-decoded `tags: [readme]` entry takes after the spec §139
+// round-trip stashes tags into Link.Extra.
+func readmeLink(linkType, url string) projectfile.Link {
+	return projectfile.Link{
+		Type:  linkType,
+		URL:   url,
+		Extra: map[string]any{keyTags: []any{linksTagReadme}},
+	}
 }
 
 // relatedLink builds one top-level link fixture tagged `related` — the form a
@@ -659,19 +684,19 @@ func TestRelatedBarSkippedWhenNoTaggedLinks(t *testing.T) {
 
 // TestRelatedLinkExcludedFromLinksBlock: a link tagged `related` renders in the
 // bar and NOT also in the regular Links section — surfacing a sibling twice is
-// pure noise. An untagged source-code link still appears under Links.
+// pure noise. A readme-tagged source-code link still appears under Links.
 func TestRelatedLinkExcludedFromLinksBlock(t *testing.T) {
 	pf := minimalDoc(t)
 	pf.Links = []projectfile.Link{
 		relatedLink("Sibling", urlExampleX),
-		{Type: linkTypeSourceCode, URL: urlExampleRepo},
+		readmeLink(linkTypeSourceCode, urlExampleRepo),
 	}
 	out := renderDoc(t, t.TempDir(), pf)
 	// The tagged sibling is in the bar …
 	assert.Contains(t, out, "[Sibling]("+urlExampleX+")")
 	// … and not duplicated under the Links section.
 	assert.NotContains(t, out, "[Sibling](https://example.com/repo)")
-	// The untagged link still renders under Links.
+	// The readme-tagged link still renders under Links.
 	assert.Contains(t, out, "[Source Code]("+urlExampleRepo+")")
 }
 
@@ -719,14 +744,13 @@ func TestRelatedLinksPriorityOrdersBar(t *testing.T) {
 // TestLinkGroupsPriorityOrdersWithinBucket: priority orders links WITHIN a
 // category bucket (higher first); the category order itself is unchanged.
 func TestLinkGroupsPriorityOrdersWithinBucket(t *testing.T) {
+	home := readmeLink("homepage", "https://example.test/home")
+	home.Label = &projectfile.LocalizedString{Bare: "Home"}
+	source := readmeLink(linkTypeSourceCode, "https://example.test/repo")
+	source.Label = &projectfile.LocalizedString{Bare: "Source"}
+	source.Extra[keyPriority] = 300
 	pf := minimalDoc(t)
-	pf.Links = []projectfile.Link{
-		{Type: "homepage", URL: "https://example.test/home", Label: &projectfile.LocalizedString{Bare: "Home"}},
-		{
-			Type: linkTypeSourceCode, URL: "https://example.test/repo",
-			Label: &projectfile.LocalizedString{Bare: "Source"}, Extra: map[string]any{keyPriority: 300},
-		},
-	}
+	pf.Links = []projectfile.Link{home, source}
 	groups := buildLinkGroups(pf, "")
 	require.Len(t, groups, 1, "both links fall in the project bucket")
 	require.Len(t, groups[0].Links, 2)

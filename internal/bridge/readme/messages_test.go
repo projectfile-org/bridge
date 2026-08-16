@@ -115,7 +115,7 @@ func TestRenderLocalizedSections(t *testing.T) {
 	writeFile(t, dir, "INSTALL.md", "# i\n")
 
 	pf := minimalDoc(t)
-	pf.Links = []projectfile.Link{{Type: linkTypeSourceCode, URL: urlExampleRepo}}
+	pf.Links = []projectfile.Link{readmeLink(linkTypeSourceCode, urlExampleRepo)}
 	pf.Extensions = map[string]any{
 		pfmodel.I18NExtensionNS: map[string]any{keyLanguages: []any{langES, langUK}},
 	}

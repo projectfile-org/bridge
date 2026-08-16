@@ -195,28 +195,32 @@ func TestScreenshotsBlockFromDocsScreenshots(t *testing.T) {
 	assert.Contains(t, body, "![demo.png](docs/screenshots/demo.png)")
 }
 
-// TestDocumentationBlockListsDocsMarkdown verifies the documentation block
-// lists every docs/*.md file EXCEPT the excluded ones (the meta-doc
+// TestDocumentationBlockListsHowToMarkdown verifies the documentation block
+// lists every docs/how-to/*.md file EXCEPT the excluded ones (the meta-doc
 // readme-generator.md and the Makefile reference the building block owns),
 // labelling each link with the file's first Markdown heading (falling back to
-// the humanized filename when a doc carries no heading).
-func TestDocumentationBlockListsDocsMarkdown(t *testing.T) {
+// the humanized filename when a doc carries no heading). An article left at
+// docs/ root is not listed — articles live in docs/how-to/.
+func TestDocumentationBlockListsHowToMarkdown(t *testing.T) {
 	dir := t.TempDir()
-	writeFile(t, dir, "docs/MAKEFILE.md", "# Makefile Targets\n")
-	writeFile(t, dir, "docs/readme-generator.md", "# meta\n")
-	writeFile(t, dir, "docs/architecture.md", "# Architecture Overview\n")
-	writeFile(t, dir, "docs/deploy.md", "no heading here\n")
+	writeFile(t, dir, "docs/how-to/MAKEFILE.md", "# Makefile Targets\n")
+	writeFile(t, dir, "docs/how-to/readme-generator.md", "# meta\n")
+	writeFile(t, dir, "docs/how-to/architecture.md", "# Architecture Overview\n")
+	writeFile(t, dir, "docs/how-to/deploy.md", "no heading here\n")
+	writeFile(t, dir, "docs/legacy.md", "# Left At The Old Root\n")
 	pf := minimalDoc(t)
 	body := renderDoc(t, dir, pf)
 
 	assert.Contains(t, body, "## Documentation")
-	assert.NotContains(t, body, "[Makefile Targets](docs/MAKEFILE.md)",
+	assert.NotContains(t, body, "[Makefile Targets](docs/how-to/MAKEFILE.md)",
 		"the Makefile reference belongs to the building block, not here")
-	assert.Contains(t, body, "[Architecture Overview](docs/architecture.md)")
-	assert.Contains(t, body, "[Deploy](docs/deploy.md)",
+	assert.Contains(t, body, "[Architecture Overview](docs/how-to/architecture.md)")
+	assert.Contains(t, body, "[Deploy](docs/how-to/deploy.md)",
 		"a doc without a heading falls back to the humanized filename")
 	assert.NotContains(t, body, "readme-generator",
 		"the bridge's own meta-doc must not be advertised as user documentation")
+	assert.NotContains(t, body, "docs/legacy.md",
+		"an article outside docs/how-to/ is not listed")
 }
 
 // TestLogoBlockFromDocsLogo verifies the logo block renders when an image
@@ -230,14 +234,14 @@ func TestLogoBlockFromDocsLogo(t *testing.T) {
 }
 
 // TestBuildingBlockIncludesMakefileDoc verifies the building block lists
-// docs/MAKEFILE.md when present (BUILD.md is absent here).
+// docs/how-to/MAKEFILE.md when present (BUILD.md is absent here).
 func TestBuildingBlockIncludesMakefileDoc(t *testing.T) {
 	dir := t.TempDir()
-	writeFile(t, dir, "docs/MAKEFILE.md", "# Makefile\n")
+	writeFile(t, dir, "docs/how-to/MAKEFILE.md", "# Makefile\n")
 	pf := minimalDoc(t)
 	body := renderDoc(t, dir, pf)
 	assert.Contains(t, body, "## Building")
-	assert.Contains(t, body, "[Makefile reference](docs/MAKEFILE.md)")
+	assert.Contains(t, body, "[Makefile reference](docs/how-to/MAKEFILE.md)")
 }
 
 // TestBuildingBlockIncludesBuildDoc verifies the building block lists BUILD.md
@@ -302,8 +306,8 @@ func TestRenderIncludesAllPresentBlocks(t *testing.T) {
 	} {
 		writeFile(t, dir, f, "# "+f+"\n")
 	}
-	writeFile(t, dir, "docs/MAKEFILE.md", "# Makefile\n")
-	writeFile(t, dir, "docs/architecture.md", "# Architecture\n")
+	writeFile(t, dir, "docs/how-to/MAKEFILE.md", "# Makefile\n")
+	writeFile(t, dir, "docs/how-to/architecture.md", "# Architecture\n")
 	writeFile(t, dir, "docs/screenshots/x.png", "x\n")
 	writeFile(t, dir, "docs/logo.png", "logo\n")
 

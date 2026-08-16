@@ -65,13 +65,13 @@ rich project fills every section.
 | `installation`  | `readme.installation` groups, else `INSTALL.md` probe                                      | yes            |
 | `usage`         | `readme.usage` groups, else `USAGE.md` probe                                               | yes            |
 | `configuration` | `CONFIGURATION.md` probe                                                                   | yes            |
-| `building`      | `readme.building` groups, else `BUILD.md` + `docs/MAKEFILE.md` + the `ci` goal nodes       | yes            |
-| `documentation` | `docs/*.md` probe (excludes `readme-generator.md` and `MAKEFILE.md`)                       | yes            |
+| `building`      | `readme.building` groups, else `BUILD.md` + `docs/how-to/MAKEFILE.md` + `ci` goals         | yes            |
+| `documentation` | `docs/how-to/*.md` probe (excludes `readme-generator.md` and `MAKEFILE.md`)                | yes            |
 | `faq`           | `FAQ.md` probe                                                                             | yes            |
 | `roadmap`       | `ROADMAP.md` probe                                                                         | yes            |
 | `policies`      | CONTRIBUTING / SECURITY / SUPPORT / CODE_OF_CONDUCT `.md` probe (human-readable labels)    | yes            |
 | `related`       | `links[]` tagged `tags: [related]` — “Related projects” bar (fixed after `badges`)         | yes            |
-| `links`         | top-level `links[]`, categorized                                                           | yes            |
+| `links`         | top-level `links[]` tagged `tags: [readme]`, categorized                                   | yes            |
 | `funding`       | `FUNDING.md` probe                                                                         | yes            |
 | `license`       | `license.spdx`                                                                             | yes            |
 
@@ -560,14 +560,14 @@ a block to the list never pays for probes it does not use.
 | `license`                             | `string` (empty when unset)   | `license.spdx`                                          |
 | `badges`                              | `[]{.Alt .Img .Href}`         | `readme.shields[]` (alt falls back to name)             |
 | `readmeSection "name"`                | {.Title …} or nil             | `readme.<name>` section, `${…}` expanded in commands    |
-| `linkGroups`                          | `[]{.Key .Heading .Links}`    | top-level `links[]`, bucketed by category               |
+| `linkGroups`                          | `[]{.Key .Heading .Links}`    | `links[]` tagged `tags: [readme]`, bucketed by category |
 | `relatedLinks`                        | `[]{.Label .URL}`             | `links[]` tagged `tags: [related]` — the related bar    |
 | `staticLinks`                         | `[]{.Filename .Label}`        | health-file probe; label is human-readable              |
 | `docLink "FILE" "Label"`              | `{.Filename .Label}` or nil   | single companion-file probe; `{{with}}` drops on nil    |
 | `logo`                                | `[]string`                    | `docs/logo.<ext>` then `assets/logo.<ext>`              |
 | `screenshots`                         | `[]{.Path .Name}`             | `docs/screenshots/*.<img>`                              |
-| `docLinks`                            | `[]{.Filename .Label}`        | `docs/*.md`; label is the file’s first heading          |
-| `buildLinks`                          | `[]{.Filename .Label}`        | `BUILD.md` + `docs/MAKEFILE.md`                         |
+| `docLinks`                            | `[]{.Filename .Label}`        | `docs/how-to/*.md`; label is the file’s first heading   |
+| `buildLinks`                          | `[]{.Filename .Label}`        | `BUILD.md` + `docs/how-to/MAKEFILE.md`                  |
 | `featureDoc`                          | `{…}` or nil                  | features block data; prefers `docs/<lang>/FEATURES.md`  |
 
 Call a function with no arguments by name (`{{projectName}}`,
@@ -575,7 +575,10 @@ Call a function with no arguments by name (`{{projectName}}`,
 `{{with docLink "FEATURES.md" "Features"}}…{{.Filename}}…{{end}}`.
 
 `links[]` entries are bucketed into the groups `project`, `community`,
-`security`, then `other` (in that order). `.Key` is that stable identity;
+`security`, then `other` (in that order). Only links tagged `tags: [readme]`
+render here — the section is curated copy, not the whole `links[]` table, and a
+project whose links carry no tag renders no section at all (the same drop rule
+every block runs). `.Key` is that stable identity;
 `.Heading` is the same key resolved through the message catalog, which is what
 the template prints. The category comes from the link’s `type`. Within a
 category, links order by [priority](#priority) (higher first) and fall back to
