@@ -104,6 +104,14 @@ func (Bridge) Render(pf *projectfile.Document, opts core.Options) (core.Output, 
 		defaultBranch = repo.Branch
 	}
 
+	// LLM.md is a separate bridge's file; contributing only points at it —
+	// restating the policy here would be the drift this suite exists to kill
+	// (llm-generator.md, Integration). Gated on the namespace, not a file-exists
+	// probe: every other cross-link in this bridge already assumes the fleet
+	// convention that a declared sibling renders, and a stat call would just
+	// duplicate that assumption with a race against pf-bridge-llm's own run.
+	hasLLMPolicy := pfmodel.HasExtension(pf, pfmodel.LLMExtensionNS)
+
 	authorFollows := resolveAuthorFollows(pf)
 	authorSites := resolveAuthorSites(pf)
 	projectSocials := resolveProjectSocials(pf)
@@ -135,6 +143,7 @@ func (Bridge) Render(pf *projectfile.Document, opts core.Options) (core.Output, 
 	emitDecisionTrace(pf, ext, sections, sectionsSrc, docsURL, bugsURL,
 		chatURL, cocURL, claURL, securityContact, commitStyle, workflow, versioning, styleGuideURL,
 		authorFollows, authorSites, projectSocials, forgeStars, hasFunding)
+	genlog.Decision("llm_policy_pointer", fmt.Sprintf("%v", hasLLMPolicy), "org.projectfile.llm present", "")
 
 	// Only three things vary per language here: the project's own display
 	// name, its summary (both localized-strings), and the SUPPORT.md
@@ -179,6 +188,7 @@ func (Bridge) Render(pf *projectfile.Document, opts core.Options) (core.Output, 
 				Conventions:          conventionRows,
 				ForgeStars:           forgeStars,
 				StarsEnabled:         starsEnabled,
+				LLMPolicyFile:        llmPolicyFile(hasLLMPolicy, lang),
 			}
 		},
 	}, opts)
@@ -192,6 +202,16 @@ func resolveURL(extVal string, pf *projectfile.Document, linkType string) string
 		return extVal
 	}
 	return pfmodel.LinkURL(pf, linkType)
+}
+
+// llmPolicyFile resolves the LLM.md cross-link for this render language, or
+// "" when the project declared no org.projectfile.llm namespace — the
+// template's {{with}} then drops the pointer line entirely.
+func llmPolicyFile(declared bool, lang string) string {
+	if !declared {
+		return ""
+	}
+	return core.RelLinkSibling(core.FileLLM, lang, core.FileContributing)
 }
 
 // deriveNewIssueURL appends /new to the bugs URL when it looks like an

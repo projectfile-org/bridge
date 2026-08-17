@@ -304,6 +304,7 @@ const (
 	fileSecurity      = core.FileSecurity
 	fileSupport       = core.FileSupport
 	fileCodeOfConduct = core.FileCodeOfConduct
+	fileLLM           = core.FileLLM
 )
 
 // healthFiles are the community-health markdown files the policies block
@@ -313,6 +314,7 @@ var healthFiles = []string{
 	fileSecurity,
 	fileSupport,
 	fileCodeOfConduct,
+	fileLLM,
 }
 
 // healthFileLabel is a health file's policies link text in lang. The catalog

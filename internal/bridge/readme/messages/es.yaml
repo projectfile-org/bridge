@@ -65,6 +65,7 @@ policy.contributing: Cómo contribuir
 policy.security: Política de seguridad
 policy.support: Cómo obtener ayuda
 policy.code-of-conduct: Código de conducta
+policy.llm: Política sobre IA y LLM
 
 # Bloque de compilación
 build.build: Cómo compilar

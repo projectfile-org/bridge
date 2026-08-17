@@ -73,6 +73,7 @@ policy.contributing: How to contribute
 policy.security: Security policy
 policy.support: Getting support
 policy.code-of-conduct: Code of Conduct
+policy.llm: AI and LLM Policy
 
 # Building block — key is the probed file’s role.
 build.build: How to build

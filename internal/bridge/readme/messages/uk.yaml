@@ -65,6 +65,7 @@ policy.contributing: Як зробити внесок
 policy.security: Політика безпеки
 policy.support: Як отримати підтримку
 policy.code-of-conduct: Кодекс поведінки
+policy.llm: Політика щодо ШІ та LLM
 
 # Блок збирання
 build.build: Як зібрати проєкт

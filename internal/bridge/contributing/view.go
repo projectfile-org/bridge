@@ -45,6 +45,10 @@ type contribView struct {
 	// unset or false) no star line renders at all. When true with an empty
 	// ForgeStars the template falls back to a bare "Star the project".
 	StarsEnabled bool
+	// LLMPolicyFile is the LLM.md cross-link for this render language, or ""
+	// when the project declared no org.projectfile.llm namespace. A pointer
+	// only — the policy itself is stated once, by the llm bridge.
+	LLMPolicyFile string
 }
 
 // conventionItem is one row of the Conventions section. Label is the bold
