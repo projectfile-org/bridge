@@ -182,6 +182,30 @@ type DEIExtension struct {
 	Metrics      map[string][]string `toml:"metrics" yaml:"metrics" json:"metrics"`
 }
 
+// LLMExtension binds `[org.projectfile.llm]` — the project's stance on AI/LLM
+// use, over two independent axes (inbound: what may come INTO the project;
+// outbound: how the project's own content may be consumed BY AI systems).
+// Absence of the namespace means NO DECLARED POLICY: GetLLMExtension returns
+// (nil, nil) in that case, and the bridge MUST NOT render a permissive
+// default — there is no Enabled gate here, unlike DEIExtension, because a
+// policy namespace with no policy in it has no other meaning.
+//
+// Activities carries every declared per-activity override VERBATIM, keyed by
+// its raw activity name — including entries equal to Attitude. "Only an
+// override reaches the table" is a rendering rule, not a parsing one, so it
+// is applied where the table is built, not here. The `skills` sub-namespace
+// is deliberately absent from this struct: the bridge is a Renderer with no
+// read-back path, so a field this bridge never writes needs no typed shape.
+type LLMExtension struct {
+	Attitude         string                       `toml:"attitude"           yaml:"attitude"           json:"attitude"`
+	Autonomy         string                       `toml:"autonomy"           yaml:"autonomy"           json:"autonomy"`
+	Statement        *projectfile.LocalizedString `toml:"statement"          yaml:"statement"          json:"statement"`
+	DiscloseRequired bool                         `toml:"disclose-required"  yaml:"disclose-required"  json:"disclose-required"`
+	DiscloseTrailer  string                       `toml:"disclose-trailer"   yaml:"disclose-trailer"   json:"disclose-trailer"`
+	ContentSignals   []string                     `toml:"content-signals"    yaml:"content-signals"    json:"content-signals"`
+	Activities       map[string]string            `toml:"-" yaml:"-" json:"-"`
+}
+
 // ContributingExtension binds `[org.projectfile.contributing]`.
 type ContributingExtension struct {
 	Sections          []string           `toml:"sections" yaml:"sections" json:"sections"`

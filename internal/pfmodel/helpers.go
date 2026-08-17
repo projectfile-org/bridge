@@ -36,6 +36,7 @@ const (
 	SecurityExtensionNS        = "org.projectfile.security"
 	CodeOfConductExtensionNS   = "org.projectfile.code-of-conduct"
 	DEIExtensionNS             = "org.projectfile.dei"
+	LLMExtensionNS             = "org.projectfile.llm"
 	ContributingExtensionNS    = "org.projectfile.contributing"
 	CodeOwnersExtensionNS      = "org.projectfile.codeowners"
 	CLIExtensionNS             = "org.projectfile.cli"
@@ -213,4 +214,32 @@ func boolVal(m map[string]any, key string) bool {
 		return false
 	}
 	return b
+}
+
+// localizedStringVal converts an extension-map value into a
+// *projectfile.LocalizedString, accepting either encoding spec §7 allows for
+// a reserved localized-string field: a bare scalar (language-agnostic) or a
+// map of BCP 47 tag -> string. Returns nil when the key is absent or every
+// candidate value is empty, so callers can treat nil as "no statement" the
+// same way they treat a missing key.
+func localizedStringVal(m map[string]any, key string) *projectfile.LocalizedString {
+	switch v := m[key].(type) {
+	case string:
+		if v == "" {
+			return nil
+		}
+		return &projectfile.LocalizedString{Bare: v}
+	case map[string]any:
+		langs := make(map[string]string, len(v))
+		for lang, raw := range v {
+			if s, ok := raw.(string); ok && s != "" {
+				langs[lang] = s
+			}
+		}
+		if len(langs) == 0 {
+			return nil
+		}
+		return &projectfile.LocalizedString{Langs: langs}
+	}
+	return nil
 }

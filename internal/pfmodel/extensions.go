@@ -57,6 +57,64 @@ func GetDEIExtension(doc *projectfile.Document) (*DEIExtension, error) {
 	return ext, nil
 }
 
+// llmReservedKeys are the org.projectfile.llm keys that are NOT activity
+// overrides. Everything else found in the namespace map is an activity: the
+// vocabulary is open at the key level (spec: "consumers MUST accept an
+// unknown activity key"), so activities are discovered by exclusion rather
+// than enumerated. `skills` is reserved here only to keep it OUT of
+// Activities — the bridge never reads its contents (see LLMExtension doc).
+var llmReservedKeys = map[string]bool{
+	"attitude":          true,
+	"autonomy":          true,
+	"statement":         true,
+	"disclose-required": true,
+	"disclose-trailer":  true,
+	"content-signals":   true,
+	"skills":            true,
+}
+
+// llmDefaultAutonomy is the spec default when `autonomy` is unset — full
+// autonomous-agent use is permitted, same as an absent per-activity override
+// defaulting to `attitude`.
+const llmDefaultAutonomy = "any"
+
+// GetLLMExtension parses `org.projectfile.llm`. Returns (nil, nil) when the
+// namespace is absent — absence is not permission: an absent namespace means
+// NO DECLARED POLICY, and the caller MUST NOT treat nil as any particular
+// stance.
+func GetLLMExtension(doc *projectfile.Document) (*LLMExtension, error) {
+	m, present, err := lookupNS(doc, LLMExtensionNS)
+	if err != nil {
+		return nil, err
+	}
+	if !present {
+		return nil, nil
+	}
+	ext := &LLMExtension{
+		Attitude:         strVal(m, "attitude"),
+		Autonomy:         strVal(m, "autonomy"),
+		Statement:        localizedStringVal(m, "statement"),
+		DiscloseRequired: boolVal(m, "disclose-required"),
+		DiscloseTrailer:  strVal(m, "disclose-trailer"),
+		ContentSignals:   strListVal(m, "content-signals"),
+	}
+	if ext.Autonomy == "" {
+		ext.Autonomy = llmDefaultAutonomy
+	}
+	for key, v := range m {
+		if llmReservedKeys[key] {
+			continue
+		}
+		if s, ok := v.(string); ok {
+			if ext.Activities == nil {
+				ext.Activities = make(map[string]string)
+			}
+			ext.Activities[key] = s
+		}
+	}
+	return ext, nil
+}
+
 // GetContributingExtension parses `org.projectfile.contributing`. Returns
 // (nil, nil) when absent; the CONTRIBUTING.md generator applies its default
 // section list at render time.

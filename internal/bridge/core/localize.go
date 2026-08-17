@@ -47,6 +47,7 @@ const (
 	FileDEI           = "DEI.md"
 	FileSecurity      = "SECURITY.md"
 	FileSupport       = "SUPPORT.md"
+	FileLLM           = "LLM.md"
 )
 
 // langLabels maps a BCP 47 tag to the language's own name (endonym) — what a
