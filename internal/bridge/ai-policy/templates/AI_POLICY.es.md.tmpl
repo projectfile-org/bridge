@@ -11,9 +11,11 @@ Política completa: <{{.}}>
 {{template "attitude" .Attitude}}
 
 {{template "autonomy" .Autonomy}}
-{{if eq .AppliesTo "contributors"}}
-Estas reglas rigen las contribuciones externas al proyecto. Quienes lo mantienen responden por su propia práctica, que este documento expone aparte.
-{{end}}{{if .DiscloseRequired}}
+{{if eq .AppliesTo "contributors"}}{{if .ProjectUseRows}}
+Estas reglas rigen las contribuciones externas al proyecto. Quienes lo mantienen responden por su propia práctica — véase [Cómo usa la IA este proyecto](#cómo-usa-la-ia-este-proyecto) más abajo.
+{{else}}
+Estas reglas rigen las contribuciones externas al proyecto. La práctica de quienes lo mantienen no está regulada por este documento.
+{{end}}{{end}}{{if .DiscloseRequired}}
 Quienes contribuyen deben declarar cuándo una contribución se realizó con asistencia de IA/LLM.
 {{if .DiscloseDetails}}
 Cada declaración indica:
@@ -37,10 +39,12 @@ Quien envía el trabajo sigue debiendo todo esto:
 
 {{range .}}- {{template "obligation" .}}
 {{end}}{{end}}{{if .Rows}}
-| Actividad | Postura |
+| Actividad de contribución | Postura |
 | --- | --- |
 {{range .Rows}}| {{template "activity" .Activity}} | {{template "stance" .Stance}} |
 {{end}}
+{{end}}{{with .DefaultActivities}}
+{{template "stance" $.Attitude}}: {{range $i, $a := .}}{{if $i}}, {{end}}{{template "activity" $a}}{{end}}.
 {{end}}{{with .Enforcement}}
 ## Cuando no se respeta esta política
 
@@ -48,7 +52,7 @@ Quien envía el trabajo sigue debiendo todo esto:
 {{end}}{{end}}{{with .ProjectUseRows}}
 ## Cómo usa la IA este proyecto
 
-| Actividad | Quién decide |
+| Actividad interna | Quién decide |
 | --- | --- |
 {{range .}}| {{template "activity" .Activity}} | {{template "use" .Autonomy}} |
 {{end}}

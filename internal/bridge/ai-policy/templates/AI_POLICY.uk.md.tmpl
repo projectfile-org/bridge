@@ -11,9 +11,11 @@
 {{template "attitude" .Attitude}}
 
 {{template "autonomy" .Autonomy}}
-{{if eq .AppliesTo "contributors"}}
-Ці правила стосуються внесків ззовні проєкту. Супровідники відповідають за власну практику, яку цей документ викладає окремо.
-{{end}}{{if .DiscloseRequired}}
+{{if eq .AppliesTo "contributors"}}{{if .ProjectUseRows}}
+Ці правила стосуються внесків ззовні проєкту. Супровідники відповідають за власну практику — див. [Як цей проєкт використовує ШІ](#як-цей-проєкт-використовує-ші) нижче.
+{{else}}
+Ці правила стосуються внесків ззовні проєкту. Цей документ не регулює власну практику супровідників.
+{{end}}{{end}}{{if .DiscloseRequired}}
 Учасники повинні повідомляти, коли внесок було зроблено за допомогою ШІ/LLM.
 {{if .DiscloseDetails}}
 Кожне повідомлення містить:
@@ -37,10 +39,12 @@
 
 {{range .}}- {{template "obligation" .}}
 {{end}}{{end}}{{if .Rows}}
-| Діяльність | Позиція |
+| Діяльність внеску | Позиція |
 | --- | --- |
 {{range .Rows}}| {{template "activity" .Activity}} | {{template "stance" .Stance}} |
 {{end}}
+{{end}}{{with .DefaultActivities}}
+{{template "stance" $.Attitude}}: {{range $i, $a := .}}{{if $i}}, {{end}}{{template "activity" $a}}{{end}}.
 {{end}}{{with .Enforcement}}
 ## Коли цієї політики не дотримуються
 
@@ -48,7 +52,7 @@
 {{end}}{{end}}{{with .ProjectUseRows}}
 ## Як цей проєкт використовує ШІ
 
-| Діяльність | Хто вирішує |
+| Внутрішня діяльність | Хто вирішує |
 | --- | --- |
 {{range .}}| {{template "activity" .Activity}} | {{template "use" .Autonomy}} |
 {{end}}

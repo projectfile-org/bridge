@@ -77,6 +77,7 @@ func (Bridge) Render(pf *projectfile.Document, opts core.Options) (core.Output, 
 
 	outName := pfmodel.AIPolicyFilename(pf)
 	rows := buildActivityRows(ext)
+	defaultActivities := buildDefaultActivityKeys(ext, rows)
 	useRows := buildProjectUseRows(ext)
 	signals := dedupSignals(ext.ContentSignals)
 	obligations := dedupSignals(ext.Obligations)
@@ -85,7 +86,7 @@ func (Bridge) Render(pf *projectfile.Document, opts core.Options) (core.Output, 
 	policyURL := pfmodel.LinkURL(pf, aiPolicyLinkType)
 	contact, contactSrc := pfmodel.ContactEmail(pf, projectfile.RoleCommunity)
 
-	emitDecisionTrace(ext, outName, rows, useRows, signals, enforcement, policyURL, contact, contactSrc)
+	emitDecisionTrace(ext, outName, rows, defaultActivities, useRows, signals, enforcement, policyURL, contact, contactSrc)
 
 	return core.RenderLocalized(pf, core.LocalizedSpec{
 		Filename: outName,
@@ -94,30 +95,31 @@ func (Bridge) Render(pf *projectfile.Document, opts core.Options) (core.Output, 
 		View: func(lang string) any {
 			strLang := core.ResolveLang(lang, pf)
 			return policyView{
-				ProjectName:      pfmodel.DisplayNameForLang(pf, strLang),
-				Statement:        projectfile.ExtractLocalizedStringForLang(ext.Statement, strLang),
-				PolicyURL:        policyURL,
-				Attitude:         ext.Attitude,
-				Autonomy:         ext.Autonomy,
-				AppliesTo:        ext.AppliesTo,
-				DiscloseRequired: ext.DiscloseRequired,
-				DiscloseTrailer:  ext.DiscloseTrailer,
-				DiscloseDetails:  details,
-				Obligations:      obligations,
-				IssueRequired:    ext.IssueRequired,
-				ExcludedLabels:   ext.ExcludedLabels,
-				Enforcement:      enforcement,
-				Rows:             rows,
-				ProjectUseRows:   useRows,
-				ContentSignals:   signals,
-				ContactEmail:     contact,
-				SupportFile:      core.RelLinkSibling(core.FileSupport, lang, outName),
+				ProjectName:       pfmodel.DisplayNameForLang(pf, strLang),
+				Statement:         projectfile.ExtractLocalizedStringForLang(ext.Statement, strLang),
+				PolicyURL:         policyURL,
+				Attitude:          ext.Attitude,
+				Autonomy:          ext.Autonomy,
+				AppliesTo:         ext.AppliesTo,
+				DiscloseRequired:  ext.DiscloseRequired,
+				DiscloseTrailer:   ext.DiscloseTrailer,
+				DiscloseDetails:   details,
+				Obligations:       obligations,
+				IssueRequired:     ext.IssueRequired,
+				ExcludedLabels:    ext.ExcludedLabels,
+				Enforcement:       enforcement,
+				Rows:              rows,
+				DefaultActivities: defaultActivities,
+				ProjectUseRows:    useRows,
+				ContentSignals:    signals,
+				ContactEmail:      contact,
+				SupportFile:       core.RelLinkSibling(core.FileSupport, lang, outName),
 			}
 		},
 	}, opts)
 }
 
-func emitDecisionTrace(ext *pfmodel.AIExtension, outName string, rows []activityRow, useRows []projectUseRow, signals, enforcement []string, policyURL, contact, contactSrc string) {
+func emitDecisionTrace(ext *pfmodel.AIExtension, outName string, rows []activityRow, defaultActivities []string, useRows []projectUseRow, signals, enforcement []string, policyURL, contact, contactSrc string) {
 	genlog.Decision("filename", outName, "[org.projectfile.ai].filename", "default: "+filenameAIPolicy)
 	genlog.Decision("attitude", ext.Attitude, "[org.projectfile.ai].attitude", "")
 	genlog.Decision("autonomy", ext.Autonomy, "[org.projectfile.ai].autonomy", "default: any")
@@ -126,6 +128,7 @@ func emitDecisionTrace(ext *pfmodel.AIExtension, outName string, rows []activity
 	for _, r := range rows {
 		genlog.Decision("activity_override", r.Activity+" -> "+r.Stance, "[org.projectfile.ai].activities."+r.Activity, "differs from attitude")
 	}
+	genlog.Decision("default_activities", strings.Join(defaultActivities, ", "), "[org.projectfile.ai].attitude", "activities with no override — governed by attitude")
 	for _, r := range useRows {
 		genlog.Decision("project_use", r.Activity+" -> "+r.Autonomy, "[org.projectfile.ai].project-use."+r.Activity, "internal direction")
 	}

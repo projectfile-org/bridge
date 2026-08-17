@@ -11,9 +11,11 @@ Full policy: <{{.}}>
 {{template "attitude" .Attitude}}
 
 {{template "autonomy" .Autonomy}}
-{{if eq .AppliesTo "contributors"}}
-These rules bind contributions from outside the project. Maintainers answer for their own practice, which this document states separately.
-{{end}}{{if .DiscloseRequired}}
+{{if eq .AppliesTo "contributors"}}{{if .ProjectUseRows}}
+These rules bind contributions from outside the project. Maintainers answer for their own practice — see [How this project uses AI](#how-this-project-uses-ai) below.
+{{else}}
+These rules bind contributions from outside the project. Maintainers’ own practice is not governed by this document.
+{{end}}{{end}}{{if .DiscloseRequired}}
 Contributors must disclose when a contribution was made with AI/LLM assistance.
 {{if .DiscloseDetails}}
 Every disclosure states:
@@ -37,10 +39,12 @@ Whoever submits the work still owes all of this:
 
 {{range .}}- {{template "obligation" .}}
 {{end}}{{end}}{{if .Rows}}
-| Activity | Stance |
+| Contribution activity | Stance |
 | --- | --- |
 {{range .Rows}}| {{template "activity" .Activity}} | {{template "stance" .Stance}} |
 {{end}}
+{{end}}{{with .DefaultActivities}}
+{{template "stance" $.Attitude}}: {{range $i, $a := .}}{{if $i}}, {{end}}{{template "activity" $a}}{{end}}.
 {{end}}{{with .Enforcement}}
 ## When this policy is not followed
 
@@ -48,7 +52,7 @@ Whoever submits the work still owes all of this:
 {{end}}{{end}}{{with .ProjectUseRows}}
 ## How this project uses AI
 
-| Activity | Who decides |
+| Internal activity | Who decides |
 | --- | --- |
 {{range .}}| {{template "activity" .Activity}} | {{template "use" .Autonomy}} |
 {{end}}

@@ -17,24 +17,25 @@ import (
 // {{define}} blocks, one per language — Go decides WHICH tokens exist, the
 // template says what they mean.
 type policyView struct {
-	ProjectName      string
-	Statement        string // "" omits the statement block
-	PolicyURL        string // "" omits the "Full policy" line
-	Attitude         string
-	Autonomy         string
-	AppliesTo        string
-	DiscloseRequired bool
-	DiscloseTrailer  string   // "" keeps the disclosure prose generic
-	DiscloseDetails  []string // what the disclosure must carry
-	Obligations      []string
-	IssueRequired    bool
-	ExcludedLabels   []string
-	Enforcement      []string // declared order IS the escalation order
-	Rows             []activityRow
-	ProjectUseRows   []projectUseRow
-	ContentSignals   []string
-	ContactEmail     string // "" falls back to the SupportFile pointer
-	SupportFile      string
+	ProjectName       string
+	Statement         string // "" omits the statement block
+	PolicyURL         string // "" omits the "Full policy" line
+	Attitude          string
+	Autonomy          string
+	AppliesTo         string
+	DiscloseRequired  bool
+	DiscloseTrailer   string   // "" keeps the disclosure prose generic
+	DiscloseDetails   []string // what the disclosure must carry
+	Obligations       []string
+	IssueRequired     bool
+	ExcludedLabels    []string
+	Enforcement       []string // declared order IS the escalation order
+	Rows              []activityRow
+	DefaultActivities []string // every known activity NOT in Rows — governed by Attitude, not an override
+	ProjectUseRows    []projectUseRow
+	ContentSignals    []string
+	ContactEmail      string // "" falls back to the SupportFile pointer
+	SupportFile       string
 }
 
 // activityRow is one row of the "only overrides reach the table" list.
@@ -120,6 +121,35 @@ func buildActivityRows(ext *pfmodel.AIExtension) []activityRow {
 		}
 	}
 	return rows
+}
+
+// buildDefaultActivityKeys returns every activity governed by Attitude alone —
+// the canonical vocabulary plus any custom key the project declared, minus
+// whatever already reached rows as an override. Rows only shows exceptions;
+// this is the explicit "and everything else follows the default" list a
+// reader needs to tell "inherits the default" apart from "never considered."
+func buildDefaultActivityKeys(ext *pfmodel.AIExtension, rows []activityRow) []string {
+	if ext == nil {
+		return nil
+	}
+	overridden := make(map[string]bool, len(rows))
+	for _, r := range rows {
+		overridden[r.Activity] = true
+	}
+	union := make(map[string]string, len(activityOrder)+len(ext.Activities))
+	for _, key := range activityOrder {
+		union[key] = ""
+	}
+	for key, v := range ext.Activities {
+		union[key] = v
+	}
+	var out []string
+	for _, key := range orderedActivityKeys(union) {
+		if !overridden[key] {
+			out = append(out, key)
+		}
+	}
+	return out
 }
 
 // buildProjectUseRows resolves the INTERNAL table. No filter: a project that
