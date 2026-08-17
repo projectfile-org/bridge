@@ -5,10 +5,10 @@ SPDX-License-Identifier: MIT
 
 # AI Policy Generator
 
-`pf-bridge-llm` renders the project’s AI policy — `AI_POLICY.md` by default —
+`pf-bridge ai-policy` renders the project’s AI policy — `AI_POLICY.md` by default —
 from the `org.projectfile.llm` extension namespace.
 
-> Source: `internal/bridge/llm/` — bridge (`bridge.go`), view model
+> Source: `internal/bridge/aipolicy/` — bridge (`bridge.go`), view model
 > (`view.go`), embedded templates (`templates/AI_POLICY{,.es,.uk}.md.tmpl`).
 
 ## Why a bridge and not a hand-written file
@@ -151,7 +151,7 @@ project chose says nothing about which prose belongs in it.
 
 `Bridge.Filename()` stays the DEFAULT name — the dispatcher resolves a bridge
 before it has read a projectfile, so the registry identity cannot depend on
-one. A project with an unusual name is still reachable as `pf-bridge llm`.
+one. A project with an unusual name is still reachable as `pf-bridge ai-policy`.
 
 The value is validated as a bare basename and REJECTED otherwise — never
 sanitized. This field names a file a tool writes, so a separator turns a

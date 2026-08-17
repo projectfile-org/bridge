@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: MIT
 
-package llm
+package aipolicy
 
 import (
 	"sort"
@@ -54,7 +54,7 @@ type projectUseRow struct {
 // llmActivityOrder is the canonical declared order for known activity keys,
 // taken from the illustrative shape (spec/shapes/org.projectfile.llm.yaml) —
 // so two renders of the same document never reorder around Go map iteration.
-// Unknown keys sort alphabetically after these (Determinism, llm-generator.md).
+// Unknown keys sort alphabetically after these (Determinism, ai-policy-generator.md).
 // The three families of the shape are kept in order: channel, content, task.
 var llmActivityOrder = []string{
 	"pull-requests", "commit-messages", "bug-reports", "discussions",

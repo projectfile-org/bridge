@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: MIT
 
-package llm_test
+package aipolicy_test
 
 import (
 	"strings"
@@ -12,8 +12,8 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"kiota.ch/projectfile/core/v2/pkg/projectfile"
+	"projectfile.org/projectfile/bridge/internal/bridge/aipolicy"
 	"projectfile.org/projectfile/bridge/internal/bridge/core"
-	"projectfile.org/projectfile/bridge/internal/bridge/llm"
 	"projectfile.org/projectfile/bridge/internal/pfmodel"
 )
 
@@ -39,7 +39,7 @@ const (
 // org.projectfile.llm gets no policy file — absence must never render as any
 // particular stance, permissive or otherwise.
 func TestRenderAbsentNamespaceEmitsNothing(t *testing.T) {
-	b := llm.Bridge{}
+	b := aipolicy.Bridge{}
 	pf := &projectfile.Document{Identity: projectfile.Identity{Name: testProject}}
 	out, err := b.Render(pf, core.Options{Offline: true})
 	require.NoError(t, err)
@@ -51,7 +51,7 @@ func TestRenderAbsentNamespaceEmitsNothing(t *testing.T) {
 // TestRenderDefaultFilename confirms a document that declares no filename
 // renders AI_POLICY.md.
 func TestRenderDefaultFilename(t *testing.T) {
-	b := llm.Bridge{}
+	b := aipolicy.Bridge{}
 	pf := withLLM(&projectfile.Document{Identity: projectfile.Identity{Name: testProject}},
 		map[string]any{testAttitude: testAllowed})
 	out, err := b.Render(pf, core.Options{Offline: true})
@@ -63,7 +63,7 @@ func TestRenderDefaultFilename(t *testing.T) {
 // nothing else: the prose still comes from the canonical template, which is
 // why LocalizedSpec carries Template separately from Filename.
 func TestRenderFilenameOverride(t *testing.T) {
-	b := llm.Bridge{}
+	b := aipolicy.Bridge{}
 	pf := withLLM(&projectfile.Document{Identity: projectfile.Identity{Name: testProject}},
 		map[string]any{testAttitude: testAllowed, testFilename: testAltFile})
 	out, err := b.Render(pf, core.Options{Offline: true})
@@ -76,7 +76,7 @@ func TestRenderFilenameOverride(t *testing.T) {
 // TestRenderFilenameWithPathRejected confirms a filename carrying a path is an
 // error, not a sanitized basename: this field names a file a tool writes.
 func TestRenderFilenameWithPathRejected(t *testing.T) {
-	b := llm.Bridge{}
+	b := aipolicy.Bridge{}
 	pf := withLLM(&projectfile.Document{Identity: projectfile.Identity{Name: testProject}},
 		map[string]any{testAttitude: testAllowed, testFilename: "../../etc/AI_POLICY.md"})
 	_, err := b.Render(pf, core.Options{Offline: true})
@@ -90,7 +90,7 @@ func TestRenderFilenameWithPathRejected(t *testing.T) {
 // stance equals attitude produces no table at all — a row that repeats the
 // default is noise, not information.
 func TestRenderActivityEqualToAttitudeNoRow(t *testing.T) {
-	b := llm.Bridge{}
+	b := aipolicy.Bridge{}
 	pf := withLLM(&projectfile.Document{Identity: projectfile.Identity{Name: testProject}},
 		map[string]any{testAttitude: testAllowed, testActivities: map[string]any{"pull-requests": testAllowed}})
 	out, err := b.Render(pf, core.Options{Offline: true})
@@ -102,7 +102,7 @@ func TestRenderActivityEqualToAttitudeNoRow(t *testing.T) {
 // TestRenderActivityDifferingFromAttitudeRendersRow confirms an activity whose
 // stance differs from attitude gets its own table row.
 func TestRenderActivityDifferingFromAttitudeRendersRow(t *testing.T) {
-	b := llm.Bridge{}
+	b := aipolicy.Bridge{}
 	pf := withLLM(&projectfile.Document{Identity: projectfile.Identity{Name: testProject}},
 		map[string]any{testAttitude: testAllowed, testActivities: map[string]any{"security-reports": testProhibited}})
 	out, err := b.Render(pf, core.Options{Offline: true})
@@ -114,7 +114,7 @@ func TestRenderActivityDifferingFromAttitudeRendersRow(t *testing.T) {
 // TestRenderMediaActivitiesSplit confirms the question one media flag could
 // never answer: images banned, audio allowed, in the same document.
 func TestRenderMediaActivitiesSplit(t *testing.T) {
-	b := llm.Bridge{}
+	b := aipolicy.Bridge{}
 	pf := withLLM(&projectfile.Document{Identity: projectfile.Identity{Name: testProject}},
 		map[string]any{testAttitude: testAllowed, testActivities: map[string]any{
 			"images": testProhibited,
@@ -133,7 +133,7 @@ func TestRenderMediaActivitiesSplit(t *testing.T) {
 // canonical vocabulary still reaches the table under its own raw name — a new
 // activity needs no Go edit.
 func TestRenderUnknownActivityKeySurvives(t *testing.T) {
-	b := llm.Bridge{}
+	b := aipolicy.Bridge{}
 	pf := withLLM(&projectfile.Document{Identity: projectfile.Identity{Name: testProject}},
 		map[string]any{testAttitude: "neutral", testActivities: map[string]any{"benchmarks": testEncouraged}})
 	out, err := b.Render(pf, core.Options{Offline: true})
@@ -147,7 +147,7 @@ func TestRenderUnknownActivityKeySurvives(t *testing.T) {
 // TestRenderProjectUseRendersEveryEntry confirms project-use rows all render:
 // unlike an activity, an entry here has no document-level default to repeat.
 func TestRenderProjectUseRendersEveryEntry(t *testing.T) {
-	b := llm.Bridge{}
+	b := aipolicy.Bridge{}
 	pf := withLLM(&projectfile.Document{Identity: projectfile.Identity{Name: testProject}},
 		map[string]any{testAttitude: testAllowed, "project-use": map[string]any{
 			"pull-requests": "assisted",
@@ -164,7 +164,7 @@ func TestRenderProjectUseRendersEveryEntry(t *testing.T) {
 // TestRenderProjectUseAbsentOmitsSection confirms the internal section is
 // dropped whole when the project said nothing about its own practice.
 func TestRenderProjectUseAbsentOmitsSection(t *testing.T) {
-	b := llm.Bridge{}
+	b := aipolicy.Bridge{}
 	pf := withLLM(&projectfile.Document{Identity: projectfile.Identity{Name: testProject}},
 		map[string]any{testAttitude: testAllowed})
 	out, err := b.Render(pf, core.Options{Offline: true})
@@ -177,7 +177,7 @@ func TestRenderProjectUseAbsentOmitsSection(t *testing.T) {
 // TestRenderEnforcementKeepsDeclaredOrder confirms the escalation ladder is
 // rendered in the order the project declared it — the order IS the meaning.
 func TestRenderEnforcementKeepsDeclaredOrder(t *testing.T) {
-	b := llm.Bridge{}
+	b := aipolicy.Bridge{}
 	pf := withLLM(&projectfile.Document{Identity: projectfile.Identity{Name: testProject}},
 		map[string]any{testAttitude: testAllowed, "enforcement": []any{"warn", "revoke", "ban"}})
 	out, err := b.Render(pf, core.Options{Offline: true})
@@ -194,7 +194,7 @@ func TestRenderEnforcementKeepsDeclaredOrder(t *testing.T) {
 // TestRenderObligationsAndGates confirms the duties and the two contribution
 // gates render from their own fields.
 func TestRenderObligationsAndGates(t *testing.T) {
-	b := llm.Bridge{}
+	b := aipolicy.Bridge{}
 	pf := withLLM(&projectfile.Document{Identity: projectfile.Identity{Name: testProject}},
 		map[string]any{
 			testAttitude:      testAllowed,
@@ -214,7 +214,7 @@ func TestRenderObligationsAndGates(t *testing.T) {
 // TestRenderAppliesToContributorsStatesExemption confirms a maintainer
 // exemption is stated rather than left for a reader to discover in the log.
 func TestRenderAppliesToContributorsStatesExemption(t *testing.T) {
-	b := llm.Bridge{}
+	b := aipolicy.Bridge{}
 	pf := withLLM(&projectfile.Document{Identity: projectfile.Identity{Name: testProject}},
 		map[string]any{testAttitude: testAllowed, "applies-to": "contributors"})
 	out, err := b.Render(pf, core.Options{Offline: true})
@@ -225,7 +225,7 @@ func TestRenderAppliesToContributorsStatesExemption(t *testing.T) {
 // TestRenderAppliesToDefaultBindsEveryone confirms the exemption sentence is
 // absent by default: an exemption nobody declared is not one to render.
 func TestRenderAppliesToDefaultBindsEveryone(t *testing.T) {
-	b := llm.Bridge{}
+	b := aipolicy.Bridge{}
 	pf := withLLM(&projectfile.Document{Identity: projectfile.Identity{Name: testProject}},
 		map[string]any{testAttitude: testAllowed})
 	out, err := b.Render(pf, core.Options{Offline: true})
@@ -239,7 +239,7 @@ func TestRenderAppliesToDefaultBindsEveryone(t *testing.T) {
 // the same bytes every time — the canonical/alphabetical ordering rule must
 // not leave any Go map iteration order visible in the output.
 func TestRenderTwoRendersByteIdentical(t *testing.T) {
-	b := llm.Bridge{}
+	b := aipolicy.Bridge{}
 	pf := withLLM(&projectfile.Document{Identity: projectfile.Identity{Name: testProject}},
 		map[string]any{
 			testAttitude: testAllowed,
@@ -268,7 +268,7 @@ func TestRenderTwoRendersByteIdentical(t *testing.T) {
 // TestRenderContentSignalsAbsentStatesAbsence confirms the content section
 // always renders, even with nothing declared, and says so explicitly.
 func TestRenderContentSignalsAbsentStatesAbsence(t *testing.T) {
-	b := llm.Bridge{}
+	b := aipolicy.Bridge{}
 	pf := withLLM(&projectfile.Document{Identity: projectfile.Identity{Name: testProject}},
 		map[string]any{testAttitude: testAllowed})
 	out, err := b.Render(pf, core.Options{Offline: true})
@@ -280,7 +280,7 @@ func TestRenderContentSignalsAbsentStatesAbsence(t *testing.T) {
 // TestRenderContentSignalsDedupPreservesOrder confirms declared content
 // signals render as bullets in declared order with duplicates dropped.
 func TestRenderContentSignalsDedupPreservesOrder(t *testing.T) {
-	b := llm.Bridge{}
+	b := aipolicy.Bridge{}
 	pf := withLLM(&projectfile.Document{Identity: projectfile.Identity{Name: testProject}},
 		map[string]any{
 			testAttitude:      testAllowed,
@@ -299,7 +299,7 @@ func TestRenderContentSignalsDedupPreservesOrder(t *testing.T) {
 // TestRenderDiscloseRequiredWithTrailer confirms the disclosure paragraph, the
 // detail list and the trailer block render only when disclose-required is true.
 func TestRenderDiscloseRequiredWithTrailer(t *testing.T) {
-	b := llm.Bridge{}
+	b := aipolicy.Bridge{}
 	pf := withLLM(&projectfile.Document{Identity: projectfile.Identity{Name: testProject}},
 		map[string]any{
 			testAttitude:        testAllowed,
@@ -319,7 +319,7 @@ func TestRenderDiscloseRequiredWithTrailer(t *testing.T) {
 // TestRenderDiscloseNotRequiredOmitsParagraph confirms the disclosure block is
 // absent when disclose-required is unset (default false).
 func TestRenderDiscloseNotRequiredOmitsParagraph(t *testing.T) {
-	b := llm.Bridge{}
+	b := aipolicy.Bridge{}
 	pf := withLLM(&projectfile.Document{Identity: projectfile.Identity{Name: testProject}},
 		map[string]any{testAttitude: testAllowed})
 	out, err := b.Render(pf, core.Options{Offline: true})
@@ -333,7 +333,7 @@ func TestRenderDiscloseNotRequiredOmitsParagraph(t *testing.T) {
 // TestRenderStatementRendersVerbatim confirms a declared statement renders
 // under the H1, unmodified.
 func TestRenderStatementRendersVerbatim(t *testing.T) {
-	b := llm.Bridge{}
+	b := aipolicy.Bridge{}
 	pf := withLLM(&projectfile.Document{Identity: projectfile.Identity{Name: testProject}},
 		map[string]any{testAttitude: testAllowed, "statement": "We review every patch the same way regardless of how it was written."})
 	out, err := b.Render(pf, core.Options{Offline: true})
@@ -345,7 +345,7 @@ func TestRenderStatementRendersVerbatim(t *testing.T) {
 // TestRenderPolicyURLFromLinks confirms a links[type=ai-policy] entry surfaces
 // as the "Full policy" pointer.
 func TestRenderPolicyURLFromLinks(t *testing.T) {
-	b := llm.Bridge{}
+	b := aipolicy.Bridge{}
 	pf := withLLM(&projectfile.Document{
 		Identity: projectfile.Identity{Name: testProject},
 		Links:    []projectfile.Link{{Type: "ai-policy", URL: "https://example.org/ai-policy"}},
@@ -361,7 +361,7 @@ func TestRenderPolicyURLFromLinks(t *testing.T) {
 // TestRenderContactFromCommunityRole confirms the Questions section resolves
 // the reporting contact from a person with the 'community' role.
 func TestRenderContactFromCommunityRole(t *testing.T) {
-	b := llm.Bridge{}
+	b := aipolicy.Bridge{}
 	pf := withLLM(&projectfile.Document{
 		Identity: projectfile.Identity{Name: testProject},
 		People: []projectfile.Person{{
@@ -380,7 +380,7 @@ func TestRenderContactFromCommunityRole(t *testing.T) {
 // TestRenderContactMissingFallsBackToSupportFile confirms an unresolvable
 // contact degrades to the SUPPORT.md pointer rather than failing generation.
 func TestRenderContactMissingFallsBackToSupportFile(t *testing.T) {
-	b := llm.Bridge{}
+	b := aipolicy.Bridge{}
 	pf := withLLM(&projectfile.Document{Identity: projectfile.Identity{Name: testProject}},
 		map[string]any{testAttitude: testAllowed})
 	out, err := b.Render(pf, core.Options{Offline: true})
@@ -394,7 +394,7 @@ func TestRenderContactMissingFallsBackToSupportFile(t *testing.T) {
 // TestRenderLocalizedVariants confirms declared i18n languages render sibling
 // files when templates exist (es, uk both ship).
 func TestRenderLocalizedVariants(t *testing.T) {
-	b := llm.Bridge{}
+	b := aipolicy.Bridge{}
 	pf := withLLM(&projectfile.Document{Identity: projectfile.Identity{Name: testProject}},
 		map[string]any{testAttitude: testAllowed})
 	projectfile.SetExtension(pf, pfmodel.I18NExtensionNS, map[string]any{
@@ -412,7 +412,7 @@ func TestRenderLocalizedVariants(t *testing.T) {
 // TestRenderLocalizedVariantsFollowFilename confirms a renamed policy keeps its
 // name in every language: the locale lives in the directory, not the basename.
 func TestRenderLocalizedVariantsFollowFilename(t *testing.T) {
-	b := llm.Bridge{}
+	b := aipolicy.Bridge{}
 	pf := withLLM(&projectfile.Document{Identity: projectfile.Identity{Name: testProject}},
 		map[string]any{testAttitude: testAllowed, testFilename: testAltFile})
 	projectfile.SetExtension(pf, pfmodel.I18NExtensionNS, map[string]any{
@@ -427,16 +427,16 @@ func TestRenderLocalizedVariantsFollowFilename(t *testing.T) {
 // ── bridge identity ─────────────────────────────────────────────────────────
 
 func TestBridgeFilename(t *testing.T) {
-	assert.Equal(t, testFile, llm.Bridge{}.Filename())
+	assert.Equal(t, testFile, aipolicy.Bridge{}.Filename())
 }
 
 func TestBridgeAliases(t *testing.T) {
-	assert.Equal(t, []string{"AI.md", "AI-POLICY.md", "LLM.md"}, llm.Bridge{}.Aliases())
+	assert.Equal(t, []string{"AI.md", "AI-POLICY.md", "LLM.md"}, aipolicy.Bridge{}.Aliases())
 }
 
 func TestBridgePolicyMarker(t *testing.T) {
-	assert.True(t, llm.Bridge{}.Policy().Marker, "the policy file must use the Marker policy")
-	assert.False(t, llm.Bridge{}.Policy().ScaffoldOnce, "the policy file is a projection, never scaffold-once")
+	assert.True(t, aipolicy.Bridge{}.Policy().Marker, "the policy file must use the Marker policy")
+	assert.False(t, aipolicy.Bridge{}.Policy().ScaffoldOnce, "the policy file is a projection, never scaffold-once")
 }
 
 // withLLM attaches an org.projectfile.llm extension to pf.

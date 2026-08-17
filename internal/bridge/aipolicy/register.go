@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: MIT
 
-package llm
+package aipolicy
 
 import (
 	"embed"

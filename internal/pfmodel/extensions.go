@@ -184,7 +184,7 @@ func GetLLMExtension(doc *projectfile.Document) (*LLMExtension, error) {
 // AIPolicyFilename is the basename this document's AI policy lives under, or
 // "" when the namespace is absent — no declared policy, so no file and no
 // cross-reference to it from README or CONTRIBUTING. A malformed filename
-// resolves to "" here too: the llm bridge fails loudly on it, and a
+// resolves to "" here too: the ai-policy bridge fails loudly on it, and a
 // cross-link is not the place to state that error a second time.
 func AIPolicyFilename(doc *projectfile.Document) string {
 	ext, err := GetLLMExtension(doc)

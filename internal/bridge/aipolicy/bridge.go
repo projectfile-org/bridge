@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: MIT
 
-package llm
+package aipolicy
 
 import (
 	"fmt"
@@ -30,7 +30,7 @@ const aiPolicyLinkType = "ai-policy"
 // POLICY: the bridge emits nothing and never invents a permissive default.
 type Bridge struct{}
 
-func (Bridge) Name() string { return "llm" }
+func (Bridge) Name() string { return "ai-policy" }
 
 // Filename is the registry/CLI identity, so it is the DEFAULT name rather
 // than any one document's choice: the dispatcher resolves a bridge before it
