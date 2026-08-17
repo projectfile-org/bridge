@@ -1,0 +1,57 @@
+# Política sobre IA y LLM
+
+Este documento expone la política de {{.ProjectName}} sobre el uso de IA y LLM — tanto para personas como para los sistemas que leen este repositorio.
+{{with .Statement}}
+{{.}}
+{{end}}{{with .PolicyURL}}
+Política completa: <{{.}}>
+{{end}}
+## Contribuciones realizadas con asistencia de IA
+
+{{template "attitude" .Attitude}}
+
+{{template "autonomy" .Autonomy}}
+{{if .DiscloseRequired}}
+Quienes contribuyen deben declarar cuándo una contribución se realizó con asistencia de IA/LLM.
+{{if .DiscloseTrailer}}
+Añade este trailer al mensaje de commit:
+
+```
+{{.DiscloseTrailer}}: <nombre del modelo o herramienta>
+```
+{{end}}
+{{end}}
+{{if .Rows}}
+| Actividad | Postura |
+| --- | --- |
+{{range .Rows}}| {{template "activity" .Activity}} | {{template "stance" .Stance}} |
+{{end}}
+{{end}}
+## Uso del contenido de este proyecto
+
+{{if .ContentSignals}}{{range .ContentSignals}}- {{template "signal" .}}
+{{end}}{{else}}No se declaran señales de contenido. El silencio no es consentimiento: la ausencia de una señal aquí no es un permiso para entrenar con el contenido de este proyecto ni para consumirlo de otro modo, y la licencia rige la reutilización con independencia de lo indicado en esta sección.
+{{end}}
+## Preguntas
+
+{{if .ContactEmail}}¿Tienes preguntas sobre esta política? Escribe a <{{.ContactEmail}}>.{{else}}¿Tienes preguntas sobre esta política? Consulta [SUPPORT.md]({{.SupportFile}}).{{end}}
+
+{{- define "attitude" -}}
+{{if eq . "encouraged"}}Fomentamos activamente las contribuciones realizadas con asistencia de IA/LLM.{{else if eq . "allowed"}}Las contribuciones realizadas con asistencia de IA/LLM son bienvenidas.{{else if eq . "neutral"}}No hemos tomado una posición sobre las contribuciones asistidas por IA/LLM — ante la duda, pregunta primero.{{else if eq . "discouraged"}}Desaconsejamos las contribuciones asistidas por IA/LLM, aunque no las prohibimos.{{else if eq . "prohibited"}}No aceptamos contribuciones asistidas por IA/LLM.{{else}}Nuestra postura sobre las contribuciones asistidas por IA/LLM es: {{.}}.{{end}}
+{{- end -}}
+
+{{- define "autonomy" -}}
+{{if eq . "any"}}Los agentes autónomos pueden actuar en nombre de este proyecto, incluyendo abrir pull requests e incidencias sin que haya una persona en el proceso.{{else if eq . "assisted"}}Una persona debe dirigir, revisar y enviar cada contribución — no se permiten agentes autónomos.{{else if eq . "none"}}No se permite ninguna intervención de LLM en ninguna parte del proceso de contribución.{{else}}Autonomía permitida: {{.}}.{{end}}
+{{- end -}}
+
+{{- define "activity" -}}
+{{if eq . "pull-requests"}}Pull requests{{else if eq . "commit-messages"}}Mensajes de commit{{else if eq . "discussions"}}Debates{{else if eq . "bug-reports"}}Informes de errores{{else if eq . "security-reports"}}Informes de seguridad{{else if eq . "documentation"}}Documentación{{else if eq . "code-comments"}}Comentarios en el código{{else if eq . "translations"}}Traducciones{{else if eq . "grammar-tools"}}Herramientas gramaticales{{else}}{{.}}{{end}}
+{{- end -}}
+
+{{- define "stance" -}}
+{{if eq . "encouraged"}}Fomentada{{else if eq . "allowed"}}Permitida{{else if eq . "neutral"}}Sin postura declarada{{else if eq . "discouraged"}}Desaconsejada{{else if eq . "prohibited"}}Prohibida{{else}}{{.}}{{end}}
+{{- end -}}
+
+{{- define "signal" -}}
+{{if eq . "ai-train"}}`ai-train` — este contenido puede usarse para entrenar modelos de IA/ML.{{else if eq . "search"}}`search` — este contenido puede aparecer en resultados de búsqueda potenciados por IA.{{else if eq . "ai-input"}}`ai-input` — este contenido puede usarse como entrada de un sistema de IA en tiempo de inferencia.{{else}}`{{.}}`{{end}}
+{{- end -}}
