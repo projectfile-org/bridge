@@ -114,7 +114,7 @@ func (Bridge) Render(pf *projectfile.Document, opts core.Options) (core.Output, 
 	// file-exists probe: every other cross-link in this bridge already assumes
 	// the fleet convention that a declared sibling renders, and a stat call
 	// would just duplicate that assumption with a race against
-	// pf-bridge-aipolicy's own run. "" means no namespace, so no pointer at all.
+	// pf-bridge-ai-policy's own run. "" means no namespace, so no pointer at all.
 	aiPolicyName := pfmodel.AIPolicyFilename(pf)
 
 	authorFollows := resolveAuthorFollows(pf)

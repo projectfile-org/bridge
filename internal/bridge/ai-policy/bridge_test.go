@@ -12,7 +12,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"kiota.ch/projectfile/core/v2/pkg/projectfile"
-	"projectfile.org/projectfile/bridge/internal/bridge/aipolicy"
+	"projectfile.org/projectfile/bridge/internal/bridge/ai-policy"
 	"projectfile.org/projectfile/bridge/internal/bridge/core"
 	"projectfile.org/projectfile/bridge/internal/pfmodel"
 )

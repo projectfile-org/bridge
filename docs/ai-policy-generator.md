@@ -8,7 +8,7 @@ SPDX-License-Identifier: MIT
 `pf-bridge ai-policy` renders the project’s AI policy — `AI_POLICY.md` by default —
 from the `org.projectfile.ai` extension namespace.
 
-> Source: `internal/bridge/aipolicy/` — bridge (`bridge.go`), view model
+> Source: `internal/bridge/ai-policy/` — bridge (`bridge.go`), view model
 > (`view.go`), embedded templates (`templates/AI_POLICY{,.es,.uk}.md.tmpl`).
 
 ## Why a bridge and not a hand-written file
