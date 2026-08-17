@@ -11,8 +11,10 @@
 package main
 
 import (
+	"context"
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -20,8 +22,12 @@ import (
 	"sort"
 	"strings"
 	"syscall"
+	"time"
+
+	"github.com/mattn/go-isatty"
 
 	"projectfile.org/projectfile/bridge/internal/buildinfo"
+	"projectfile.org/projectfile/bridge/internal/describe"
 	"projectfile.org/projectfile/bridge/internal/warn"
 )
 
@@ -64,9 +70,7 @@ func main() {
 		fmt.Printf("pf-bridge version %s\n", buildinfo.Version)
 		return
 	case "--list", "list":
-		for _, name := range discover() {
-			fmt.Println(name)
-		}
+		listBridges(os.Stdout)
 		return
 	case cmdAll, dirTo, dirFrom:
 		if err := runAll(args); err != nil {
@@ -213,8 +217,38 @@ func fanout(mode string, names, flags []string) error {
 	return nil
 }
 
+// goosKnown / goarchKnown are Go's platform vocabulary, used only to recognise
+// release artifacts (pf-bridge-npm-linux-amd64) so discovery lists commands,
+// not their cross-compile copies. A bridge genuinely named "<goos>-<goarch>"
+// would be hidden — none is.
+var goosKnown = map[string]bool{
+	"aix": true, "android": true, "darwin": true, "dragonfly": true,
+	"freebsd": true, "illumos": true, "ios": true, "js": true, "linux": true,
+	"netbsd": true, "openbsd": true, "plan9": true, "solaris": true,
+	"wasip1": true, "windows": true, "zos": true,
+}
+
+var goarchKnown = map[string]bool{
+	"386": true, "amd64": true, "arm": true, "arm64": true, "arm64be": true,
+	"loong64": true, "mips": true, "mipsle": true, "mips64": true,
+	"mips64le": true, "ppc64": true, "ppc64le": true, "riscv64": true,
+	"s390x": true, "sparc": true, "sparc64": true, "wasm": true,
+}
+
+// isPlatformArtifact reports whether name ends in a <goos>-<goarch> pair — the
+// suffix every dist/release binary carries from the cross-compile matrix. The
+// suffixed dispatcher copy (pf-bridge-linux-amd64) matches too, which matters:
+// listed as a "bridge" it would fan out into itself, forever.
+func isPlatformArtifact(name string) bool {
+	parts := strings.Split(name, "-")
+	if len(parts) < 2 {
+		return false
+	}
+	return goosKnown[parts[len(parts)-2]] && goarchKnown[parts[len(parts)-1]]
+}
+
 // discover returns the sorted, de-duplicated set of pf-bridge-* suffixes found
-// as executables on PATH.
+// as executables on PATH, minus cross-compile release artifacts.
 func discover() []string {
 	seen := map[string]bool{}
 	for _, dir := range filepath.SplitList(os.Getenv("PATH")) {
@@ -231,7 +265,7 @@ func discover() []string {
 				continue
 			}
 			suffix := strings.TrimPrefix(n, prefix)
-			if suffix != "" {
+			if suffix != "" && !isPlatformArtifact(suffix) {
 				seen[suffix] = true
 			}
 		}
@@ -244,6 +278,74 @@ func discover() []string {
 	return out
 }
 
+// listBridges writes every installed bridge with its self-description.
+func listBridges(w *os.File) {
+	names := discover()
+	if len(names) == 0 {
+		fmt.Fprintln(w, "(no pf-bridge-* binaries found on PATH)")
+		return
+	}
+	renderList(w, withDescriptions(names), useColor(w))
+}
+
+// withDescriptions probes every child for its one-line self-introduction.
+// Children that cannot answer (older install, foreign binary) keep an empty
+// description rather than failing the listing; a spent deadline lists the
+// rest by name alone.
+func withDescriptions(names []string) []bridgeEntry {
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+	entries := make([]bridgeEntry, len(names))
+	for i, name := range names {
+		entries[i].name = name
+	}
+	for i, name := range names {
+		if ctx.Err() != nil {
+			break
+		}
+		entries[i].desc = probeDescribe(ctx, name)
+	}
+	return entries
+}
+
+// probeDescribe asks one child who it is; empty when it cannot answer.
+func probeDescribe(ctx context.Context, name string) string {
+	cmd := exec.CommandContext(ctx, prefix+name, describe.Flag) // #nosec G204 -- probing the named sibling is this command's job
+	out, err := cmd.Output()
+	if err != nil {
+		return ""
+	}
+	line, _, _ := strings.Cut(string(out), "\n")
+	return strings.TrimSpace(line)
+}
+
+type bridgeEntry struct{ name, desc string }
+
+// renderList writes the aligned name/description table. Names go bold when
+// color is on; padding stays outside the escape so columns line up either way.
+func renderList(w io.Writer, entries []bridgeEntry, color bool) {
+	width := 0
+	for _, e := range entries {
+		if len(e.name) > width {
+			width = len(e.name)
+		}
+	}
+	for _, e := range entries {
+		name := e.name
+		pad := strings.Repeat(" ", width-len(name))
+		if color {
+			name = "\x1b[1m" + name + "\x1b[22m"
+		}
+		fmt.Fprintf(w, "  %s%s  %s\n", name, pad, e.desc)
+	}
+}
+
+// useColor reports whether w is an interactive terminal that has not opted out
+// via NO_COLOR.
+func useColor(w *os.File) bool {
+	return os.Getenv("NO_COLOR") == "" && isatty.IsTerminal(w.Fd())
+}
+
 func usage(w *os.File) {
 	fmt.Fprintf(w, "pf-bridge — project the projectfile onto files, forges, and the repo\n\n")
 	fmt.Fprintf(w, "Usage:\n")
@@ -253,11 +355,12 @@ func usage(w *os.File) {
 	fmt.Fprintf(w, "  pf-bridge check <name>…   check only the named bridges\n")
 	fmt.Fprintf(w, "  pf-bridge to all          write pf → every external file\n")
 	fmt.Fprintf(w, "  pf-bridge from all        read every external file → pf\n")
-	fmt.Fprintf(w, "  pf-bridge --list          list installed pf-bridge-* binaries\n\n")
+	fmt.Fprintf(w, "  pf-bridge --list          list installed bridges with a one-line description\n\n")
 	fmt.Fprintf(w, "Flags after a fan-out verb reach every bridge: `pf-bridge check --fail-on-drift`,\n")
 	fmt.Fprintf(w, "`pf-bridge all --dry-run`. Drift warns by default; --fail-on-drift makes it fatal.\n\n")
 	if names := discover(); len(names) > 0 {
-		fmt.Fprintf(w, "Installed: %s\n", strings.Join(names, ", "))
+		fmt.Fprintf(w, "Installed bridges:\n")
+		renderList(w, withDescriptions(names), useColor(w))
 	} else {
 		fmt.Fprintf(w, "Installed: (none found on PATH)\n")
 	}

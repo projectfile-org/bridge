@@ -23,6 +23,7 @@ import (
 	"kiota.ch/projectfile/core/v2/pkg/projectfile"
 	"kiota.ch/projectfile/core/v2/pkg/spdx"
 	"projectfile.org/projectfile/bridge/internal/buildinfo"
+	"projectfile.org/projectfile/bridge/internal/describe"
 	"projectfile.org/projectfile/bridge/internal/rootflags"
 )
 
@@ -204,6 +205,9 @@ func Main(binName string) {
 	cacheCmd.AddCommand(cachePurgeCmd)
 	rootflags.Bind(cacheCmd)
 
+	if describe.Handled(cacheCmd, os.Args[1:]) {
+		return
+	}
 	if err := cacheCmd.Execute(); err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %s\n", err)
 		os.Exit(1)

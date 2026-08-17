@@ -97,8 +97,9 @@ bridge/
 └── internal/
     ├── bridgerun/          bridge command run logic + Main(binName) (registry-driven)
     ├── rootflags/          shared persistent flags + PersistentPreRun + ReadOpts/Offline
+    ├── describe/           the --describe probe spelling shared by dispatcher and children
     ├── buildinfo/          Version var (single -ldflags -X target for every binary)
-    ├── forgecmd/ scancmd/ initcmd/   each: a command + Main(binName)
+    ├── forgecmd/ scancmd/ initcmd/ cachecmd/   each: a command + Main(binName)
     ├── pfmodel/            bridge-owned projectfile extension shapes (citation, readme,
     │                        forge, funding, ...) — moved out of core in the core-2.0 cut
     ├── bridge/             every projectfile↔external-file bridge + core/ contract + registry
@@ -317,7 +318,16 @@ calls `bridgerun.Main` — so that binary links only its code, and the same
 registry-driven command sees only its own filename(s). `pf-bridge` (main.go)
 carries no bridges: it discovers `pf-bridge-*` on PATH and `syscall.Exec`s the
 match; `all` fans out across the file-bridge set (skipping forge/scan/init).
-Adding a bridge = add the package + re-run `.scripts/gen-bridge-cmds.sh`
+Discovery skips names ending in a `<goos>-<goarch>` pair — the dist set
+installs the cross-compile artifacts next to the plain binaries, and an
+unfiltered PATH listed `npm-linux-amd64` as a second bridge, double-ran every
+sweep, and exec’d the suffixed dispatcher copy (`pf-bridge-linux-amd64 all`)
+into itself forever. `--list` and the usage tail annotate each name through
+the `--describe` probe (`internal/describe`): children print one line before
+cobra runs (registry filenames + one direction suffix, or a `core.Describer`
+line when Filename says nothing, or the cobra `Short` for the tool binaries),
+and the dispatcher bolds names on a TTY (NO_COLOR honoured, 2 s shared probe
+deadline). Adding a bridge = add the package + re-run `.scripts/gen-bridge-cmds.sh`
 (idempotent). Escape hatch (§5): to collapse binaries later, drop the extra
 mains — the `pf-bridge <name>` call sites never change.
 

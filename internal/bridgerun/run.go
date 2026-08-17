@@ -26,6 +26,7 @@ import (
 	"projectfile.org/projectfile/bridge/internal/bridge/core"
 	"projectfile.org/projectfile/bridge/internal/buildinfo"
 	"projectfile.org/projectfile/bridge/internal/derive"
+	"projectfile.org/projectfile/bridge/internal/describe"
 	"projectfile.org/projectfile/bridge/internal/pfmodel"
 	"projectfile.org/projectfile/bridge/internal/rootflags"
 	"projectfile.org/projectfile/bridge/internal/warn"
@@ -129,6 +130,13 @@ func Main(binName string) {
 	root.Flags().BoolVar(&bridgeList, "list", false,
 		"print every registered bridge filename and exit")
 	rootflags.Bind(root)
+
+	// The dispatcher's listing probe: answer before cobra runs so no config
+	// or lock work happens.
+	if describe.Requested(os.Args[1:]) {
+		fmt.Println(describeLine())
+		return
+	}
 
 	err := root.Execute()
 	// The ledger flushes LAST, after the error line, so the final thing on
@@ -310,6 +318,43 @@ func bridgeFilenames() []string {
 		out = append(out, b.Filename())
 	}
 	return out
+}
+
+// describeLine answers the dispatcher's --describe probe: the file(s) this
+// binary bridges and the direction of the exchange, e.g.
+// "package.json — two-way sync". Every file of one binary shares the
+// direction, so the suffix is stated once. Bridges implementing
+// core.Describer supply their own complete line (their Filename says nothing
+// on its own).
+func describeLine() string {
+	parts := make([]string, 0, 4)
+	var files []string
+	syncers, renderers := 0, 0
+	for _, b := range bridge.List() {
+		if d, ok := b.(core.Describer); ok {
+			parts = append(parts, d.Describe())
+			continue
+		}
+		files = append(files, b.Filename())
+		switch b.(type) {
+		case core.Syncer:
+			syncers++
+		case core.Renderer:
+			renderers++
+		}
+	}
+	switch {
+	case len(files) == 0:
+	case syncers > 0 && renderers > 0:
+		parts = append(parts, strings.Join(files, ", ")+" — sync and render")
+	case syncers > 0:
+		parts = append(parts, strings.Join(files, ", ")+" — two-way sync")
+	case renderers > 0:
+		parts = append(parts, strings.Join(files, ", ")+" — one-way render")
+	default:
+		parts = append(parts, strings.Join(files, ", "))
+	}
+	return strings.Join(parts, ", ")
 }
 
 func pickBridgeTarget() (string, error) {

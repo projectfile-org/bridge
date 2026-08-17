@@ -18,6 +18,7 @@ import (
 	"kiota.ch/projectfile/core/v2/pkg/projectfile"
 	"kiota.ch/projectfile/core/v2/pkg/selector"
 	"projectfile.org/projectfile/bridge/internal/buildinfo"
+	"projectfile.org/projectfile/bridge/internal/describe"
 	"projectfile.org/projectfile/bridge/internal/pfmodel"
 	"projectfile.org/projectfile/bridge/internal/rootflags"
 	"projectfile.org/projectfile/bridge/internal/scanners/core"
@@ -534,6 +535,9 @@ func Main(binName string) {
 		"overwrite declared links[] label, preferred and tags with the host proposal (links only)")
 	rootflags.Bind(scanCmd)
 
+	if describe.Handled(scanCmd, os.Args[1:]) {
+		return
+	}
 	if err := scanCmd.Execute(); err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %s\n", err)
 		os.Exit(1)

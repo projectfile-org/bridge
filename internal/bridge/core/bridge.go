@@ -83,6 +83,15 @@ type StackAware interface {
 	Stacks() []string
 }
 
+// Describer is an optional capability for bridges whose Filename alone does
+// not say what they manage. Describe returns the complete one-line
+// self-introduction for the dispatcher's listing probe (direction included).
+// Bridges whose Filename is the whole story need not implement it.
+type Describer interface {
+	Bridge
+	Describe() string
+}
+
 // Missing is one prompt the dispatcher shows in fill-mode. Setter mutates
 // pf in place; a nil Setter signals "I just need you to know about this but
 // I cannot fix it" — the dispatcher surfaces the row read-only.

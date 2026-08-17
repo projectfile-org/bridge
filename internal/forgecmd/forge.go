@@ -22,6 +22,7 @@ import (
 	"kiota.ch/projectfile/core/v2/pkg/genlog"
 	"kiota.ch/projectfile/core/v2/pkg/projectfile"
 	"projectfile.org/projectfile/bridge/internal/buildinfo"
+	"projectfile.org/projectfile/bridge/internal/describe"
 	forgecore "projectfile.org/projectfile/bridge/internal/forge/core"
 	"projectfile.org/projectfile/bridge/internal/forge/hostmatch"
 	"projectfile.org/projectfile/bridge/internal/pfmodel"
@@ -181,6 +182,9 @@ func Main(binName string) {
 	forgeCmd.AddCommand(forgeListCmd)
 	rootflags.Bind(forgeCmd)
 
+	if describe.Handled(forgeCmd, os.Args[1:]) {
+		return
+	}
 	if err := forgeCmd.Execute(); err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %s\n", err)
 		os.Exit(1)

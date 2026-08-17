@@ -13,6 +13,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"projectfile.org/projectfile/bridge/internal/buildinfo"
+	"projectfile.org/projectfile/bridge/internal/describe"
 	"projectfile.org/projectfile/bridge/internal/rootflags"
 	"projectfile.org/projectfile/bridge/internal/scaffold"
 )
@@ -67,6 +68,9 @@ func Main(binName string) {
 	initCmd.Flags().BoolVar(&initNoScan, "no-scan", false, "skip init-time scanners (git history, stack detection)")
 	rootflags.Bind(initCmd)
 
+	if describe.Handled(initCmd, os.Args[1:]) {
+		return
+	}
 	if err := initCmd.Execute(); err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %s\n", err)
 		os.Exit(1)

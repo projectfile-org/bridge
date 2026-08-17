@@ -59,6 +59,12 @@ func (Bridge) Filename() string         { return bridgeName }
 func (Bridge) Aliases() []string        { return nil }
 func (Bridge) Labels() (string, string) { return bridgeName, "projectfile" }
 
+// Describe answers the dispatcher probe: "fragments" names no file — the
+// outputs are whatever documents org.projectfile.fragments declares.
+func (Bridge) Describe() string {
+	return "FEATURES.md, ROADMAP.md, … assembled from docs/<name>.d fragments (one-way render)"
+}
+
 // Policy is empty: assembled documents are pure generated artefacts with
 // no user-edit expectation, so the dispatcher always overwrites.
 func (Bridge) Policy() core.Policy { return core.Policy{} }

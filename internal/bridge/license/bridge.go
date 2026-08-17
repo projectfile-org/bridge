@@ -37,6 +37,12 @@ func (Bridge) Filename() string         { return filenameLicense }
 func (Bridge) Aliases() []string        { return []string{"LICENSE.md", "LICENSE.txt"} }
 func (Bridge) Labels() (string, string) { return filenameLicense, "projectfile" }
 
+// Describe answers the dispatcher probe: the licence bridge writes a tree,
+// not the one file its Filename names.
+func (Bridge) Describe() string {
+	return filenameLicense + " + LICENSES/<spdx>.txt (one-way render, scaffold-once)"
+}
+
 func (Bridge) Policy() core.Policy {
 	// Legal artefact — refuse to touch an existing LICENSE unless --force.
 	return core.Policy{ScaffoldOnce: true}
