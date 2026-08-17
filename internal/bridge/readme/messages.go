@@ -45,10 +45,11 @@ const (
 // `type`, or a health file's basename. Adding a link type or a health file is
 // therefore a catalog edit, not a Go edit.
 const (
-	keyPrefixLinkType     = "link.type."
-	keyPrefixLinkGroup    = "link.group."
-	keyPrefixPolicy       = "policy."
-	keyPrefixArtifactKind = "artifact.kind."
+	keyPrefixLinkType         = "link.type."
+	keyPrefixLinkGroup        = "link.group."
+	keyPrefixPolicy           = "policy."
+	keyPrefixArtifactKind     = "artifact.kind."
+	keyPrefixAcknowledgements = "acknowledgements."
 )
 
 var (

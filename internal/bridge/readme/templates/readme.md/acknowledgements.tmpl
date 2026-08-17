@@ -1,0 +1,9 @@
+{{- with acknowledgements}}
+## {{t "acknowledgements.title"}}
+
+{{range .}}### {{.Heading}}
+
+{{range .Items}}- {{.}}
+{{end}}
+{{end -}}
+{{end -}}

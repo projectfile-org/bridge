@@ -63,7 +63,7 @@ A good bug report shouldn’t leave others needing to chase you up for more info
 
 > You must never report security related issues, vulnerabilities or bugs including sensitive information to the issue tracker, or elsewhere in public. Instead sensitive bugs must be sent by email to <damian.buho@proton.me>.
 
-We use [issues](https://codeberg.org/projectfile/bridge/issues) to track bugs and errors. If you run into an issue with the project:
+We use [Codeberg Issues](https://codeberg.org/projectfile/bridge/issues) to track bugs and errors. If you run into an issue with the project:
 
 - Open an [Issue](https://codeberg.org/projectfile/bridge/issues/new). (Since we can’t be sure at this point whether it is a bug or not, we ask you not to talk about a bug yet and not to label the issue.)
 - Explain the behavior you would expect and the actual behavior.
@@ -85,7 +85,7 @@ This section guides you through submitting an enhancement suggestion for Project
 <!-- omit in toc -->
 ### How Do I Submit a Good Enhancement Suggestion?
 
-Enhancement suggestions are tracked as [issues](https://codeberg.org/projectfile/bridge/issues).
+Enhancement suggestions are tracked as Codeberg Issues.
 
 - Use a **clear and descriptive title** for the issue to identify the suggestion.
 - Provide a **step-by-step description of the suggested enhancement** in as much detail as possible.

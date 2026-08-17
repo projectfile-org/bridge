@@ -61,6 +61,7 @@ const (
 	// Fixture strings shared across the matrix, goal and link tests.
 	descPublish    = "Publish"
 	descAnalyze    = "Analyze"
+	descDevLoop    = "Dev loop"
 	urlExampleRepo = "https://example.com/repo"
 	urlExampleX    = "https://x"
 )
@@ -540,8 +541,10 @@ func TestReadmeGoalsFallbackAllWhenNoneTagged(t *testing.T) {
 func TestReadmeGoalsSkipsNonGoalsAndDescriptionless(t *testing.T) {
 	pf := minimalDoc(t)
 	pf.Extensions = ciNodes(
-		map[string]any{keyName: nodeDevContainer, keyDescription: "Dev loop"}, // not a goal, not tagged
-		map[string]any{keyName: "tagless", keyGoal: true},                     // no description
+		// not a goal, not tagged
+		map[string]any{keyName: nodeDevContainer, keyDescription: descDevLoop},
+		// no description
+		map[string]any{keyName: "tagless", keyGoal: true},
 	)
 	assert.Empty(t, buildReadmeGoals(pf))
 }
@@ -569,11 +572,31 @@ func TestBuildingBlockAdvertisesDevContainer(t *testing.T) {
 	pf := minimalDoc(t)
 	pf.Extensions = ciNodes(
 		map[string]any{keyName: nodePublished, keyGoal: true, keyDescription: descPublish, keyTags: []any{goalTag}},
-		map[string]any{keyName: nodeDevContainer, keyDescription: "Dev loop"},
+		map[string]any{keyName: nodeDevContainer, keyDescription: descDevLoop},
 	)
 	out := renderDoc(t, t.TempDir(), pf)
 	assert.Contains(t, out, devLoopCmd)
 	assert.Contains(t, out, "make` with no arguments")
+}
+
+// TestBuildingBlockIntrosLeadTheSection: the make/dev-loop paragraphs open the
+// Building section and the pipeline entry-point list follows them — the reader
+// gets "how do I build this" before the pipeline map.
+func TestBuildingBlockIntrosLeadTheSection(t *testing.T) {
+	pf := minimalDoc(t)
+	pf.Extensions = ciNodes(
+		map[string]any{keyName: nodePublished, keyGoal: true, keyDescription: descPublish, keyTags: []any{goalTag}},
+		map[string]any{keyName: nodeDevContainer, keyDescription: descDevLoop},
+	)
+	out := renderDoc(t, t.TempDir(), pf)
+	introIdx := strings.Index(out, "make` with no arguments")
+	devIdx := strings.Index(out, devLoopCmd)
+	goalsIdx := strings.Index(out, "Pipeline entry points")
+	require.NotEqual(t, -1, introIdx)
+	require.NotEqual(t, -1, devIdx)
+	require.NotEqual(t, -1, goalsIdx)
+	assert.Less(t, introIdx, devIdx, "the make paragraph opens the section")
+	assert.Less(t, devIdx, goalsIdx, "the dev-container paragraph comes second")
 }
 
 // TestBuildingBlockOmitsDevLoopWhenNoDevContainer: a project with no
@@ -933,9 +956,9 @@ func TestArtifactsBlockSkippedWhenNoneDeclared(t *testing.T) {
 }
 
 // TestPlatformsBlockRendersCartesianProduct: operating-system × architecture
-// (spec §4.8a) renders as the OCI platform set, sorted. A reader scanning a b19
-// image README sees `linux/amd64`, `linux/arm64` … exactly what `docker pull
-// --platform` takes.
+// (spec §4.8a) renders as the OCI platform set, sorted, one bullet per
+// platform. A reader scanning a b19 image README sees `linux/amd64`,
+// `linux/arm64` … exactly what `docker pull --platform` takes.
 func TestPlatformsBlockRendersCartesianProduct(t *testing.T) {
 	pf := minimalDoc(t)
 	pf.Extensions = map[string]any{
@@ -944,7 +967,7 @@ func TestPlatformsBlockRendersCartesianProduct(t *testing.T) {
 	}
 	out := renderDoc(t, t.TempDir(), pf)
 	assert.Contains(t, out, "## Supported platforms")
-	assert.Contains(t, out, "`linux/amd64`, `linux/arm64`")
+	assert.Contains(t, out, "- `linux/amd64`\n- `linux/arm64`")
 }
 
 // TestPlatformsBlockDefaultsOSForArchesOnly: a project that declares only

@@ -49,31 +49,32 @@ When `blocks:` is absent, the bridge uses this built-in order. Every block is
 silently dropped, so a bare project shows only `basics` + `license` while a
 rich project fills every section.
 
-| Block           | Renders from                                                                               | Template ships |
-| --------------- | ------------------------------------------------------------------------------------------ | -------------- |
-| `languages`     | `i18n.languages` (cross-link bar; see [Multi-language READMEs](#multi-language-readmes))   | yes            |
-| `logo`          | `docs/logo.<ext>` then `assets/logo.<ext>` probe                                           | yes            |
-| `basics`        | `identity.title` + `identity.summary`                                                      | yes            |
-| `badges`        | `readme.shields` (see [Badges](#badges))                                                   | yes            |
-| `screenshots`   | `docs/screenshots/*.<img>` probe                                                           | yes            |
-| `features`      | `FEATURES.md` probe, localized first (H3 feature titles as bullets + link)                 | yes            |
-| `benchmarks`    | `BENCHMARKS.md` probe                                                                      | yes            |
-| `quick-start`   | `readme.quick-start` groups, else `QUICKSTART.md` probe                                    | yes            |
-| `requirements`  | `REQUIREMENTS.md` probe                                                                    | yes            |
-| `artifacts`     | `org.projectfile.artifacts` — what the project ships                                       | yes            |
-| `platforms`     | `operating-system` × `architecture` (spec §4.8a) — OCI platform set                        | yes            |
-| `installation`  | `readme.installation` groups, else `INSTALL.md` probe                                      | yes            |
-| `usage`         | `readme.usage` groups, else `USAGE.md` probe                                               | yes            |
-| `configuration` | `CONFIGURATION.md` probe                                                                   | yes            |
-| `building`      | `readme.building` groups, else `BUILD.md` + `docs/how-to/MAKEFILE.md` + `ci` goals         | yes            |
-| `documentation` | `docs/how-to/*.md` probe (excludes `readme-generator.md` and `MAKEFILE.md`)                | yes            |
-| `faq`           | `FAQ.md` probe                                                                             | yes            |
-| `roadmap`       | `ROADMAP.md` probe                                                                         | yes            |
-| `policies`      | CONTRIBUTING / SECURITY / SUPPORT / CODE_OF_CONDUCT `.md` probe (human-readable labels)    | yes            |
-| `related`       | `links[]` tagged `tags: [related]` — “Related projects” bar (fixed after `badges`)         | yes            |
-| `links`         | top-level `links[]` tagged `tags: [readme]`, categorized                                   | yes            |
-| `funding`       | `FUNDING.md` probe                                                                         | yes            |
-| `license`       | `license.spdx`                                                                             | yes            |
+| Block              | Renders from                                                                                                    | Template ships |
+| ------------------ | --------------------------------------------------------------------------------------------------------------- | -------------- |
+| `languages`        | `i18n.languages` (cross-link bar; see [Multi-language READMEs](#multi-language-readmes))                        | yes            |
+| `logo`             | `docs/logo.<ext>` then `assets/logo.<ext>` probe                                                                | yes            |
+| `basics`           | `identity.title` + `identity.summary`                                                                           | yes            |
+| `badges`           | `readme.shields` (see [Badges](#badges))                                                                        | yes            |
+| `screenshots`      | `docs/screenshots/*.<img>` probe                                                                                | yes            |
+| `features`         | `FEATURES.md` probe, localized first (project H3 titles as bullets; inherited ones under per-parent subheaders) | yes            |
+| `benchmarks`       | `BENCHMARKS.md` probe                                                                                           | yes            |
+| `quick-start`      | `readme.quick-start` groups, else `QUICKSTART.md` probe                                                         | yes            |
+| `requirements`     | `REQUIREMENTS.md` probe                                                                                         | yes            |
+| `artifacts`        | `org.projectfile.artifacts` — what the project ships                                                            | yes            |
+| `platforms`        | `operating-system` × `architecture` (spec §4.8a) — OCI platform set                                             | yes            |
+| `installation`     | `readme.installation` groups, else `INSTALL.md` probe                                                           | yes            |
+| `usage`            | `readme.usage` groups, else `USAGE.md` probe                                                                    | yes            |
+| `configuration`    | `CONFIGURATION.md` probe                                                                                        | yes            |
+| `building`         | `readme.building` groups, else `BUILD.md` + `docs/how-to/MAKEFILE.md` + `ci` goals                              | yes            |
+| `documentation`    | `docs/how-to/*.md` probe (excludes `readme-generator.md` and `MAKEFILE.md`)                                     | yes            |
+| `faq`              | `FAQ.md` probe                                                                                                  | yes            |
+| `roadmap`          | `ROADMAP.md` probe                                                                                              | yes            |
+| `policies`         | CONTRIBUTING / SECURITY / SUPPORT / CODE_OF_CONDUCT `.md` probe (human-readable labels)                         | yes            |
+| `related`          | `links[]` tagged `tags: [related]` — “Related projects” bar (fixed after `badges`)                              | yes            |
+| `links`            | top-level `links[]` tagged `tags: [readme]`, categorized                                                        | yes            |
+| `funding`          | `FUNDING.md` probe                                                                                              | yes            |
+| `license`          | `license.spdx`                                                                                                  | yes            |
+| `acknowledgements` | `org.projectfile.acknowledgements` — post-licence credits                                                       | yes            |
 
 Override the list to reorder, drop, or add blocks:
 

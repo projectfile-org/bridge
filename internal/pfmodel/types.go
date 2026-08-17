@@ -12,6 +12,27 @@ import "kiota.ch/projectfile/core/v2/pkg/projectfile"
 // core/internal/projectfile/types.go in the core 2.0 cut; the generic
 // document model (Document, Identity, Person, ...) stays in core.
 
+// AcknowledgementsExtension binds `[org.projectfile.acknowledgements]` — the
+// README's post-licence credits. Four lists, each rendered under its own
+// subheading and each dropped when empty: the people who contributed, the
+// people or organisations thanked, the sponsors funding the work, and the
+// projects or technologies this one builds on.
+type AcknowledgementsExtension struct {
+	Contributors []Acknowledgement `toml:"contributors" yaml:"contributors" json:"contributors"`
+	Thanks       []Acknowledgement `toml:"thanks"       yaml:"thanks"       json:"thanks"`
+	Sponsors     []Acknowledgement `toml:"sponsors"     yaml:"sponsors"     json:"sponsors"`
+	Credits      []Acknowledgement `toml:"credits"      yaml:"credits"      json:"credits"`
+}
+
+// Acknowledgement is one credited party. Name is the display text; URL and
+// Detail are optional — the block links the name when a URL is present and
+// appends the detail after an em dash when it is not empty.
+type Acknowledgement struct {
+	Name   string `toml:"name"   yaml:"name"   json:"name"`
+	URL    string `toml:"url"    yaml:"url"    json:"url"`
+	Detail string `toml:"detail" yaml:"detail" json:"detail"`
+}
+
 type CitationExtension struct {
 	DOI       string             `toml:"doi" yaml:"doi" json:"doi"`
 	Message   string             `toml:"message" yaml:"message" json:"message"`

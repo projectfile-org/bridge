@@ -34,12 +34,21 @@ See [FEATURES.md](FEATURES.md) for the full list.
 
 Pull the published container image:
 
+### Pull from GHCR
+
 ```sh
 docker pull ghcr.io/damian-buho/projectfile/bridge:latest
+```
+
+### Pull from DockerHub
+
+```sh
 docker pull docker.io/damianbuho/projectfile-bridge:latest
 ```
 
 If the registries above are unreachable, pull from the origin instead:
+
+### Pull from Kiota
 
 ```sh
 docker pull kiota.ch/projectfile/bridge:latest
@@ -57,7 +66,9 @@ pf-bridge all
 
 ## Building
 
-- [Makefile reference](docs/MAKEFILE.md)
+Run `make` with no arguments for the default target; run `make help` to list every target.
+
+For the local dev loop, `make dev-container` brings up the dev-container.
 
 Pipeline entry points:
 
@@ -66,36 +77,12 @@ Pipeline entry points:
 - `make check-outdated` — Report every pinned dependency that lags upstream
 - `make ready-to-publish` — Run the pseudo-CI pipeline locally — build, test and scan, without publishing
 
-Run `make` with no arguments for the default target; run `make help` to list every target.
-
-For the local dev loop, `make dev-container` brings up the dev-container.
-
-## Documentation
-
-- [LLM Policy Generator](docs/llm-generator.md)
-
 ## Policies
 
 - [How to contribute](CONTRIBUTING.md)
 - [Security policy](SECURITY.md)
 - [Getting support](SUPPORT.md)
 - [Code of Conduct](CODE_OF_CONDUCT.md)
-
-## Links
-
-### Project
-
-- [Projectfile Specification](https://projectfile.org)
-- [Projectfile Bridges on Codeberg](https://codeberg.org/projectfile/bridge)
-- [Projectfile Bridges on GitHub](https://github.com/damian-buho/projectfile-bridge)
-- [Projectfile Bridges on kiota.ch](https://kiota.ch/projectfile/bridge)
-- [Issues on Codeberg](https://codeberg.org/projectfile/bridge/issues)
-- [Documentation](/docs)
-- [Issues on GitHub](https://github.com/damian-buho/projectfile-bridge/issues)
-
-### Other
-
-- [From author](https://dbuho.me)
 
 ## License
 

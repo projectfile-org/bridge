@@ -64,7 +64,7 @@ Un buen informe de fallo evita que otras personas tengan que perseguirte para ob
 
 > Nunca informes de problemas de seguridad, vulnerabilidades o fallos que incluyan información sensible en el gestor de incidencias ni en ningún otro lugar público. Los fallos sensibles deben enviarse por correo a <damian.buho@proton.me>.
 
-Usamos [incidencias](https://codeberg.org/projectfile/bridge/issues) para seguir fallos y errores. Si te topas con un problema en el proyecto:
+Usamos [Issues de Codeberg](https://codeberg.org/projectfile/bridge/issues) para seguir fallos y errores. Si te topas con un problema en el proyecto:
 
 - Abre una [incidencia](https://codeberg.org/projectfile/bridge/issues/new). (Como todavía no podemos saber si se trata de un fallo, te pedimos que no lo des por hecho ni etiquetes la incidencia.)
 - Explica el comportamiento que esperabas y el que se produjo realmente.
@@ -86,7 +86,7 @@ Esta sección te guía para enviar una propuesta de mejora para Projectfile Brid
 <!-- omit in toc -->
 ### ¿Cómo envío una buena propuesta de mejora?
 
-Las propuestas de mejora se gestionan como [incidencias](https://codeberg.org/projectfile/bridge/issues).
+Las propuestas de mejora se gestionan como Issues de Codeberg.
 
 - Usa un **título claro y descriptivo** que identifique la propuesta.
 - Describe la mejora sugerida **paso a paso** y con el mayor detalle posible.

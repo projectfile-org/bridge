@@ -27,7 +27,7 @@ func TestDefaultBlocksOrder(t *testing.T) {
 		blockFeatures, blockBenchmarks, blockQuickStart, blockRequirements,
 		blockArtifacts, blockPlatforms, blockInstallation, blockUsage, blockConfiguration, blockBuilding,
 		blockDocumentation, blockFAQ, blockRoadmap,
-		blockPolicies, blockLinks, blockFunding, blockLicense,
+		blockPolicies, blockLinks, blockFunding, blockLicense, blockAcknowledgements,
 	}, defaultBlocks)
 }
 
@@ -132,6 +132,77 @@ func TestFeatureHeadingsFiltersH3(t *testing.T) {
 	assert.Equal(t, []string{"One", "Two"}, featureHeadings(dir))
 
 	assert.Nil(t, featureHeadings(t.TempDir()), "absent FEATURES.md → nil")
+}
+
+// TestFeaturesBlockSeparatesInherited: H3 titles under a later "Inherited
+// from …" H2 render under their own subheader, apart from the project's own
+// features — not as one flat list.
+func TestFeaturesBlockSeparatesInherited(t *testing.T) {
+	dir := t.TempDir()
+	writeFile(t, dir, "FEATURES.md",
+		"# Features\n\n## Project features\n\n### Own feature\n\n"+
+			"## Inherited from B19/Ubuntu 1.0.0\n\n### Persistent APT cache\n\n### Non-root by default\n")
+	pf := minimalDoc(t)
+	body := renderDoc(t, dir, pf)
+
+	assert.Contains(t, body, "- Own feature")
+	assert.Contains(t, body, "### Inherited from B19/Ubuntu 1.0.0")
+	assert.Contains(t, body, "- Persistent APT cache")
+	assert.Less(t, strings.Index(body, "- Own feature"), strings.Index(body, "### Inherited from"),
+		"project features render before the inherited subheader")
+}
+
+// TestParseFeatureSectionsLocalizedHeadings: the project/inherited split is
+// structural (first H2 vs later H2s), so a localized document parses without
+// matching any heading text.
+func TestParseFeatureSectionsLocalizedHeadings(t *testing.T) {
+	dir := t.TempDir()
+	writeFile(t, dir, "FEATURES.md",
+		"# Características\n\n## Características del proyecto\n\n### Propia\n\n"+
+			"## Heredado de B19/Ubuntu 1.0.0\n\n### Caché APT\n")
+	parsed := parseFeatureSections(dir, "FEATURES.md")
+	assert.Equal(t, []string{"Propia"}, parsed.Project)
+	require.Len(t, parsed.Inherited, 1)
+	assert.Equal(t, "Heredado de B19/Ubuntu 1.0.0", parsed.Inherited[0].Heading)
+	assert.Equal(t, []string{"Caché APT"}, parsed.Inherited[0].Items)
+}
+
+// ── Acknowledgements block ──────────────────────────────────────────────────
+
+// TestAcknowledgementsBlockRendersGroups: org.projectfile.acknowledgements
+// renders after the licence, one subheading per non-empty list, each party a
+// bullet — linked when it carries a URL, detailed after an em dash when not.
+func TestAcknowledgementsBlockRendersGroups(t *testing.T) {
+	pf := minimalDoc(t)
+	pf.Extensions = map[string]any{
+		pfmodel.AcknowledgementsExtensionNS: map[string]any{
+			"contributors": []any{"Jane Doe"},
+			"sponsors": []any{map[string]any{
+				"name":   "Acme Corp",
+				"url":    "https://acme.example",
+				"detail": "server time",
+			}},
+		},
+	}
+	body := renderDoc(t, t.TempDir(), pf)
+
+	licenseIdx := strings.Index(body, "## License")
+	ackIdx := strings.Index(body, "## Acknowledgements")
+	require.NotEqual(t, -1, licenseIdx, "licence section must render")
+	require.NotEqual(t, -1, ackIdx, "acknowledgements section must render")
+	assert.Less(t, licenseIdx, ackIdx, "acknowledgements come after the licence")
+
+	assert.Contains(t, body, "### Contributors")
+	assert.Contains(t, body, "- Jane Doe")
+	assert.Contains(t, body, "- [Acme Corp](https://acme.example) — server time")
+	assert.NotContains(t, body, "### Thanks", "empty lists drop their subheading")
+}
+
+// TestAcknowledgementsBlockSkippedWhenAbsent: no namespace, no block — the
+// same self-suppression rule every probe-driven block runs.
+func TestAcknowledgementsBlockSkippedWhenAbsent(t *testing.T) {
+	body := renderDoc(t, t.TempDir(), minimalDoc(t))
+	assert.NotContains(t, body, "## Acknowledgements")
 }
 
 // TestParseATXHeading pins the shared heading parser: level detection, the

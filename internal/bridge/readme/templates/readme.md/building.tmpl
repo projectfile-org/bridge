@@ -41,18 +41,16 @@
 {{- end}}
 {{- with $goals}}
 
-{{t "building.goals"}}
-
-{{range .}}- `make {{.Name}}`{{with .Description}} — {{.}}{{end}}
-{{end -}}
-{{- end}}
-{{- with $goals}}
-
 {{t "building.intro.make"}}
 {{- if hasDevContainer}}
 
 {{t "building.intro.dev"}}
 {{- end}}
+
+{{t "building.goals"}}
+
+{{range .}}- `make {{.Name}}`{{with .Description}} — {{.}}{{end}}
+{{end -}}
 {{- end}}
 {{- end}}
 {{- end}}

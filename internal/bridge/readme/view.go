@@ -957,31 +957,60 @@ func extractFirstHeading(dir, rel string) string {
 	return ""
 }
 
-// featureHeadings reads FEATURES.md and returns the text of every level-3
-// heading — the per-feature titles features-md emits under the structural
-// "# Features" / "## Project features" / "## Inherited features" headings.
-// The H1/H2 are skipped so only the feature titles reach the bullet list.
-// Returns nil when FEATURES.md is absent or holds no H3.
-func featureHeadings(dir string) []string {
-	return featureHeadingsAt(dir, fileFeatures)
+// featureGroup is one "Inherited from <parent>" bucket of a FEATURES.md: the
+// H2 heading text verbatim plus the H3 feature titles nested under it.
+type featureGroup struct {
+	Heading string
+	Items   []string
 }
 
-// featureHeadingsAt is featureHeadings against one repo-relative path, so the
-// localized probe can read docs/<lang>/FEATURES.md with the same parser.
-func featureHeadingsAt(dir, rel string) []string {
+// featureOut is the parsed shape of one FEATURES.md: the project's own H3
+// titles (those under the first H2) and one group per subsequent H2 — the
+// "Inherited from …" sections the fragments bridge nests under the document.
+type featureOut struct {
+	Project   []string
+	Inherited []featureGroup
+}
+
+// parseFeatureSections reads a FEATURES.md and splits its H3 titles into the
+// project's own and per-inherited-section groups. The split is STRUCTURAL: the
+// first H2 owns the project features, every later H2 starts an inherited group
+// — no heading text is matched, so localized documents ("Heredado de …")
+// parse identically. Returns the zero value on a read error.
+func parseFeatureSections(dir, rel string) featureOut {
 	body, err := readFile(dir, rel)
 	if err != nil {
-		return nil
+		return featureOut{}
 	}
-	var out []string
+	out := featureOut{}
+	current := &out.Project
+	seenProjectH2 := false
 	for _, line := range strings.Split(string(body), "\n") {
 		level, text, ok := parseATXHeading(line)
-		if !ok || level != 3 {
+		if !ok {
 			continue
 		}
-		out = append(out, text)
+		switch level {
+		case 2:
+			if !seenProjectH2 {
+				seenProjectH2 = true
+				continue
+			}
+			out.Inherited = append(out.Inherited, featureGroup{Heading: text})
+			current = &out.Inherited[len(out.Inherited)-1].Items
+		case 3:
+			*current = append(*current, text)
+		}
 	}
 	return out
+}
+
+// featureHeadings reads FEATURES.md and returns the project's own H3 titles —
+// the per-feature titles features-md emits under the structural
+// "# Features" / "## Project features" headings, excluding the inherited ones.
+// Returns nil when FEATURES.md is absent or holds no project H3.
+func featureHeadings(dir string) []string {
+	return parseFeatureSections(dir, fileFeatures).Project
 }
 
 // featureDoc is the features block's whole data source: which FEATURES.md this
@@ -989,12 +1018,15 @@ func featureHeadingsAt(dir, rel string) []string {
 // the same-language document (docs/<lang>/FEATURES.md); when the translation
 // does not exist yet it falls back to the canonical file and says so — an
 // English bullet list under a localized heading, never a missing section.
+// Inherited features are kept apart from the project's own so the template can
+// subheader them by parent.
 type featureDoc struct {
-	Label        string   // section heading, resolved in the render language
-	Name         string   // companion file's bare name (link text)
-	Filename     string   // link target, rebased to this readme's own path
-	Headings     []string // level-3 feature titles scraped from the linked file
-	Untranslated bool     // true when the render fell back to the default language
+	Label        string         // section heading, resolved in the render language
+	Name         string         // companion file's bare name (link text)
+	Filename     string         // link target, rebased to this readme's own path
+	Headings     []string       // the project's own level-3 feature titles
+	Inherited    []featureGroup // per-parent inherited feature groups
+	Untranslated bool           // true when the render fell back to the default language
 }
 
 // buildFeatureDoc resolves the featureDoc for one render. pathLang is the
@@ -1006,11 +1038,13 @@ func buildFeatureDoc(dir, pathLang, strLang string) *featureDoc {
 	if pathLang != "" {
 		localized := core.LocalizedFilename(fileFeatures, pathLang)
 		if fileExists(dir, localized) {
+			parsed := parseFeatureSections(dir, localized)
 			return &featureDoc{
-				Label:    label,
-				Name:     fileFeatures,
-				Filename: core.RelLink(localized, docPath),
-				Headings: featureHeadingsAt(dir, localized),
+				Label:     label,
+				Name:      fileFeatures,
+				Filename:  core.RelLink(localized, docPath),
+				Headings:  parsed.Project,
+				Inherited: parsed.Inherited,
 			}
 		}
 		genlog.Decision("features_fallback", localized, fileFeatures, "no localized document yet")
@@ -1018,13 +1052,80 @@ func buildFeatureDoc(dir, pathLang, strLang string) *featureDoc {
 	if !fileExists(dir, fileFeatures) {
 		return nil
 	}
+	parsed := parseFeatureSections(dir, fileFeatures)
 	return &featureDoc{
 		Label:        label,
 		Name:         fileFeatures,
 		Filename:     core.RelLink(fileFeatures, docPath),
-		Headings:     featureHeadings(dir),
+		Headings:     parsed.Project,
+		Inherited:    parsed.Inherited,
 		Untranslated: pathLang != "",
 	}
+}
+
+// ackGroup is one rendered acknowledgements subheading: the heading resolved
+// in the render language plus its credited parties as render-ready bullets.
+type ackGroup struct {
+	Heading string
+	Items   []string
+}
+
+// ackOrder fixes the subheading order of the acknowledgements block:
+// contributors, thanks, sponsors, credits.
+var ackOrder = []struct {
+	key string
+	get func(*pfmodel.AcknowledgementsExtension) []pfmodel.Acknowledgement
+}{
+	{"contributors", func(e *pfmodel.AcknowledgementsExtension) []pfmodel.Acknowledgement { return e.Contributors }},
+	{"thanks", func(e *pfmodel.AcknowledgementsExtension) []pfmodel.Acknowledgement { return e.Thanks }},
+	{"sponsors", func(e *pfmodel.AcknowledgementsExtension) []pfmodel.Acknowledgement { return e.Sponsors }},
+	{"credits", func(e *pfmodel.AcknowledgementsExtension) []pfmodel.Acknowledgement { return e.Credits }},
+}
+
+// buildAcknowledgements resolves the acknowledgements block: one group per
+// non-empty declared list, in ackOrder. Each party becomes one bullet — the
+// name linked when it carries a URL, the detail appended after an em dash when
+// present. Returns nil when the namespace is absent or every list is empty, so
+// the block self-suppresses like every probe-driven block.
+func buildAcknowledgements(doc *projectfile.Document, lang string) []ackGroup {
+	ext, err := pfmodel.GetAcknowledgementsExtension(doc)
+	if err != nil {
+		genlog.Warn("unreadable acknowledgements namespace", "error", err.Error())
+		return nil
+	}
+	if ext == nil {
+		return nil
+	}
+	var out []ackGroup
+	for _, g := range ackOrder {
+		list := g.get(ext)
+		if len(list) == 0 {
+			continue
+		}
+		heading, _ := lookupMessage(lang, keyPrefixAcknowledgements+g.key)
+		if heading == "" {
+			heading = g.key
+		}
+		items := make([]string, 0, len(list))
+		for _, a := range list {
+			items = append(items, ackBullet(a))
+			genlog.Decision("acknowledgement", a.Name, pfmodel.AcknowledgementsExtensionNS+"."+g.key, "")
+		}
+		out = append(out, ackGroup{Heading: heading, Items: items})
+	}
+	return out
+}
+
+// ackBullet renders one credited party as a markdown bullet body.
+func ackBullet(a pfmodel.Acknowledgement) string {
+	name := a.Name
+	if a.URL != "" {
+		name = fmt.Sprintf("[%s](%s)", name, a.URL)
+	}
+	if a.Detail != "" {
+		name += " — " + a.Detail
+	}
+	return name
 }
 
 // formatDecisionTrace emits one decision-trace line per data source so the
@@ -1077,8 +1178,14 @@ func formatDecisionTrace(dir, lang string, v readmeView, ext *pfmodel.ReadmeExte
 			genlog.Decision("doc_link", link.Label+" → "+link.Filename, spec.File+" probe", "")
 		}
 	}
-	for _, h := range featureHeadings(dir) {
+	parsed := parseFeatureSections(dir, fileFeatures)
+	for _, h := range parsed.Project {
 		genlog.Decision("feature", h, fileFeatures+" H3 probe", "")
+	}
+	for _, g := range parsed.Inherited {
+		for _, h := range g.Items {
+			genlog.Decision("feature_inherited", h, fileFeatures+" H3 probe", g.Heading)
+		}
 	}
 	if spdx := licenseSPDX(v.Doc); spdx != "" {
 		genlog.Decision("license", spdx, "license.spdx", "")

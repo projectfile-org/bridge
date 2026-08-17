@@ -13,6 +13,56 @@ import (
 // into core internals.
 const keyCommitStyle = "commit-style"
 
+// GetAcknowledgementsExtension parses `org.projectfile.acknowledgements`.
+// Returns (nil, nil) when absent — the readme's acknowledgements block drops
+// itself for a project that declares no credits.
+func GetAcknowledgementsExtension(doc *projectfile.Document) (*AcknowledgementsExtension, error) {
+	m, present, err := lookupNS(doc, AcknowledgementsExtensionNS)
+	if err != nil {
+		return nil, err
+	}
+	if !present {
+		return nil, nil
+	}
+	ext := &AcknowledgementsExtension{
+		Contributors: parseAcknowledgements(m, "contributors"),
+		Thanks:       parseAcknowledgements(m, "thanks"),
+		Sponsors:     parseAcknowledgements(m, "sponsors"),
+		Credits:      parseAcknowledgements(m, "credits"),
+	}
+	return ext, nil
+}
+
+// parseAcknowledgements reads one acknowledgements list. An entry shaped as a
+// plain string becomes a bare-name acknowledgement; a map carries name, url and
+// detail. Entries of any other shape are skipped — a credit nobody can render
+// is noise, not a fact worth failing over.
+func parseAcknowledgements(m map[string]any, key string) []Acknowledgement {
+	items, ok := m[key].([]any)
+	if !ok {
+		return nil
+	}
+	out := make([]Acknowledgement, 0, len(items))
+	for _, item := range items {
+		switch v := item.(type) {
+		case string:
+			if v != "" {
+				out = append(out, Acknowledgement{Name: v})
+			}
+		case map[string]any:
+			a := Acknowledgement{
+				Name:   strVal(v, "name"),
+				URL:    strVal(v, "url"),
+				Detail: strVal(v, "detail"),
+			}
+			if a.Name != "" {
+				out = append(out, a)
+			}
+		}
+	}
+	return out
+}
+
 // GetCodeOfConductExtension parses `org.projectfile.code-of-conduct`. Returns
 // (nil, nil) when absent — the CoC bridge defaults to Contributor Covenant 2.1.
 func GetCodeOfConductExtension(doc *projectfile.Document) (*CodeOfConductExtension, error) {

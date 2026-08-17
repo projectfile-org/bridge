@@ -47,6 +47,14 @@ funding.body: See [%[1]s](%[2]s) if you’d like to support this project.
 license.title: License
 license.body: This project is licensed under %s — see the [LICENSE](LICENSE) file for details.
 
+# Acknowledgements block — post-licence credits, one subheading per declared
+# list (org.projectfile.acknowledgements); each list drops when empty.
+acknowledgements.title: Acknowledgements
+acknowledgements.contributors: Contributors
+acknowledgements.thanks: Thanks
+acknowledgements.sponsors: Sponsors
+acknowledgements.credits: Credits
+
 # Command sections — heading word for a per-sink subsection; the sink's
 # declared label completes the phrase ("Pull from GHCR"). Install and usage
 # carry their own verb: one shared word repeats the heading in both blocks,

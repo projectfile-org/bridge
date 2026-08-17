@@ -390,3 +390,105 @@ func TestRenderConventionsCommitsDefault(t *testing.T) {
 	body := string(out.Files["CONTRIBUTING.md"])
 	assert.Contains(t, body, "**Commits:** [Conventional Commits](https://www.conventionalcommits.org/)")
 }
+
+// ── Docs-improvement URL ────────────────────────────────────────────────────
+
+// docWithDocsInclude is the shape every m6e consumer has after the merge: the
+// specification article contributed by m6e/core under type=documentation, plus
+// an issues repository and mirror links.
+func docWithDocsInclude() *projectfile.Document {
+	return &projectfile.Document{
+		Identity: projectfile.Identity{Name: "docs-proj"},
+		Links: []projectfile.Link{
+			{Type: "documentation", URL: "https://projectfile.org"},
+		},
+		Repositories: []projectfile.Repository{{
+			Issues: true,
+			Role:   "mirror",
+			Type:   "git",
+			URL:    "ssh://git@codeberg.org/d9t/thing.git",
+		}},
+	}
+}
+
+// TestRenderDocsURLSkipsSpecArticle: the specification article the shared
+// m6e include merges under type=documentation is not THIS project's
+// documentation — the section must point at the forge's docs tree instead.
+func TestRenderDocsURLSkipsSpecArticle(t *testing.T) {
+	b := contributing.Bridge{}
+	out, err := b.Render(docWithDocsInclude(), core.Options{Offline: true})
+	require.NoError(t, err)
+	body := string(out.Files["CONTRIBUTING.md"])
+	assert.Contains(t, body, "Documentation lives at [https://codeberg.org/d9t/thing/docs](https://codeberg.org/d9t/thing/docs)",
+		"the docs section must derive the forge docs tree from the issues repository")
+	assert.NotContains(t, body, "https://projectfile.org)",
+		"the specification article must not stand in as the project's documentation")
+}
+
+// TestRenderDocsURLKeepsDeclaredLink: a documentation link the project owns
+// (anything off the spec host, relative or absolute) keeps winning.
+func TestRenderDocsURLKeepsDeclaredLink(t *testing.T) {
+	b := contributing.Bridge{}
+	pf := docWithDocsInclude()
+	pf.Links[0].URL = "https://example.com/handbook"
+	out, err := b.Render(pf, core.Options{Offline: true})
+	require.NoError(t, err)
+	body := string(out.Files["CONTRIBUTING.md"])
+	assert.Contains(t, body, "Documentation lives at [https://example.com/handbook](https://example.com/handbook)")
+}
+
+// ── Forge-named issue tracker ───────────────────────────────────────────────
+
+// TestRenderNamesTheForgeIssues: the tracker sentences name the forge behind
+// the bugs URL instead of the bare word "issues".
+func TestRenderNamesTheForgeIssues(t *testing.T) {
+	b := contributing.Bridge{}
+	pf := &projectfile.Document{
+		Identity: projectfile.Identity{Name: "tracker-proj"},
+		Links:    []projectfile.Link{{Type: "bugs", URL: "https://codeberg.org/d9t/thing/issues"}},
+	}
+	out, err := b.Render(pf, core.Options{Offline: true})
+	require.NoError(t, err)
+	body := string(out.Files["CONTRIBUTING.md"])
+	assert.Contains(t, body, "We use [Codeberg Issues](https://codeberg.org/d9t/thing/issues) to track bugs and errors.")
+	assert.Contains(t, body, "Enhancement suggestions are tracked as Codeberg Issues.")
+}
+
+// TestRenderUnknownForgeFallsBackToIssues: an unrecognized tracker host keeps
+// the generic wording — no invented forge name.
+func TestRenderUnknownForgeFallsBackToIssues(t *testing.T) {
+	b := contributing.Bridge{}
+	pf := &projectfile.Document{
+		Identity: projectfile.Identity{Name: "tracker-proj"},
+		Links:    []projectfile.Link{{Type: "bugs", URL: "https://bugs.example.com"}},
+	}
+	out, err := b.Render(pf, core.Options{Offline: true})
+	require.NoError(t, err)
+	body := string(out.Files["CONTRIBUTING.md"])
+	assert.Contains(t, body, "We use [issues](https://bugs.example.com) to track bugs and errors.")
+}
+
+// ── Conventions LLM row ─────────────────────────────────────────────────────
+
+// TestRenderConventionsLLMRow: a declared org.projectfile.llm namespace adds a
+// Conventions row pointing at the LLM policy document.
+func TestRenderConventionsLLMRow(t *testing.T) {
+	b := contributing.Bridge{}
+	pf := &projectfile.Document{Identity: projectfile.Identity{Name: "llm-proj"}}
+	projectfile.SetExtension(pf, pfmodel.LLMExtensionNS, map[string]any{"attitude": "welcoming"})
+	out, err := b.Render(pf, core.Options{Offline: true})
+	require.NoError(t, err)
+	body := string(out.Files["CONTRIBUTING.md"])
+	assert.Contains(t, body, "**LLM Policy:** [Read our LLM Policy](LLM.md)")
+}
+
+// TestRenderConventionsNoLLMRowWithoutNamespace: the row is gated on the
+// namespace, so a project with no LLM policy renders none.
+func TestRenderConventionsNoLLMRowWithoutNamespace(t *testing.T) {
+	b := contributing.Bridge{}
+	pf := &projectfile.Document{Identity: projectfile.Identity{Name: "llm-proj"}}
+	out, err := b.Render(pf, core.Options{Offline: true})
+	require.NoError(t, err)
+	body := string(out.Files["CONTRIBUTING.md"])
+	assert.NotContains(t, body, "LLM Policy:")
+}

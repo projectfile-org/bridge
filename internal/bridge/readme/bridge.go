@@ -46,29 +46,30 @@ func (Bridge) FullPath(dir string, _ *projectfile.Document) string {
 // constants so the default list and the test suite share one canonical home
 // per name (goconst-clean).
 const (
-	blockLanguages     = "languages"
-	blockLogo          = "logo"
-	blockBasics        = "basics"
-	blockBadges        = "badges"
-	blockScreenshots   = "screenshots"
-	blockArtifacts     = "artifacts"
-	blockPlatforms     = "platforms"
-	blockFeatures      = "features"
-	blockBenchmarks    = "benchmarks"
-	blockQuickStart    = "quick-start"
-	blockRequirements  = "requirements"
-	blockInstallation  = "installation"
-	blockUsage         = "usage"
-	blockConfiguration = "configuration"
-	blockBuilding      = "building"
-	blockDocumentation = "documentation"
-	blockFAQ           = "faq"
-	blockRoadmap       = "roadmap"
-	blockPolicies      = "policies"
-	blockRelated       = "related"
-	blockLinks         = "links"
-	blockFunding       = "funding"
-	blockLicense       = "license"
+	blockLanguages        = "languages"
+	blockLogo             = "logo"
+	blockBasics           = "basics"
+	blockBadges           = "badges"
+	blockScreenshots      = "screenshots"
+	blockArtifacts        = "artifacts"
+	blockPlatforms        = "platforms"
+	blockFeatures         = "features"
+	blockBenchmarks       = "benchmarks"
+	blockQuickStart       = "quick-start"
+	blockRequirements     = "requirements"
+	blockInstallation     = "installation"
+	blockUsage            = "usage"
+	blockConfiguration    = "configuration"
+	blockBuilding         = "building"
+	blockDocumentation    = "documentation"
+	blockFAQ              = "faq"
+	blockRoadmap          = "roadmap"
+	blockPolicies         = "policies"
+	blockRelated          = "related"
+	blockLinks            = "links"
+	blockFunding          = "funding"
+	blockLicense          = "license"
+	blockAcknowledgements = "acknowledgements"
 )
 
 // defaultBlocks is the canonical README composition: every block silently
@@ -77,12 +78,14 @@ const (
 // blockArtifacts sits directly above the installation/usage pair on purpose: it
 // answers "what IS this" (an image, a binary, an npm package) and those two then
 // answer "how do I get it" and "how do I call it" for the very same things.
+// blockAcknowledgements closes the document after the licence — credits read
+// last, the way a film's do.
 var defaultBlocks = []string{
 	blockLanguages, blockLogo, blockBasics, blockBadges, blockRelated, blockScreenshots,
 	blockFeatures, blockBenchmarks, blockQuickStart, blockRequirements,
 	blockArtifacts, blockPlatforms, blockInstallation, blockUsage, blockConfiguration, blockBuilding,
 	blockDocumentation, blockFAQ, blockRoadmap,
-	blockPolicies, blockLinks, blockFunding, blockLicense,
+	blockPolicies, blockLinks, blockFunding, blockLicense, blockAcknowledgements,
 }
 
 const readmeBlockDir = "readme.md"
@@ -348,6 +351,10 @@ func execBlockTemplate(name string, body []byte, data readmeView, dir string, ex
 			// document when it exists, else the canonical file plus the
 			// not-yet-translated note); nil when neither exists.
 			"featureDoc": func() *featureDoc { return buildFeatureDoc(dir, data.Lang, data.StrLang) },
+			// acknowledgements resolves org.projectfile.acknowledgements into
+			// render-ready credit groups; nil when the project declares none,
+			// so the block drops like every probe-driven one.
+			"acknowledgements": func() []ackGroup { return buildAcknowledgements(data.Doc, data.StrLang) },
 		}).
 		Option("missingkey=zero").
 		Parse(string(body))

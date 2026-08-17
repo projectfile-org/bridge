@@ -53,6 +53,17 @@ func TestRenderSingleLanguage(t *testing.T) {
 	assert.NotContains(t, string(out.Files["SUPPORT.md"]), "](SUPPORT.")
 }
 
+// TestRenderDropsMCVEGuideLine: the how-to-ask list stands on its own — the
+// old "See an MCVE guide for tips." pointer added nothing the five points
+// above it had not said, in every language.
+func TestRenderDropsMCVEGuideLine(t *testing.T) {
+	out, err := support.Bridge{}.Render(localizedDoc("es", "uk"), core.Options{Offline: true})
+	require.NoError(t, err)
+	for name, body := range out.Files {
+		assert.NotContains(t, string(body), "MCVE", "file="+name)
+	}
+}
+
 // TestRenderEmitsOneFilePerShippedLanguage verifies the declared languages
 // drive the multi-file output for a community health file: the canonical file
 // at the root, one variant per language under docs/<lang>/.

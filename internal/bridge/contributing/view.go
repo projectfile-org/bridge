@@ -10,12 +10,16 @@ type contribView struct {
 	// SupportFile is the SUPPORT.md cross-link resolved for this render
 	// language — SUPPORT.es.md from CONTRIBUTING.es.md when that variant is
 	// rendered, the canonical SUPPORT.md otherwise.
-	SupportFile          string
-	RepoURL              string
-	SourceCodeURL        string
-	DocsURL              string
-	BugsURL              string
-	NewIssueURL          string
+	SupportFile   string
+	RepoURL       string
+	SourceCodeURL string
+	DocsURL       string
+	BugsURL       string
+	NewIssueURL   string
+	// ForgeLabel names the forge the issue tracker sits on ("Codeberg",
+	// "GitHub", …), resolved from the bugs URL's host. Empty for an unknown
+	// host — the templates then fall back to the bare word "issues".
+	ForgeLabel           string
 	SecurityContact      string
 	LicenseSPDX          string
 	Sections             []string

@@ -15,6 +15,7 @@ import (
 	"kiota.ch/projectfile/core/v2/pkg/genlog"
 	"kiota.ch/projectfile/core/v2/pkg/projectfile"
 	"projectfile.org/projectfile/bridge/internal/bridge/core"
+	"projectfile.org/projectfile/bridge/internal/forge/hostmatch"
 	"projectfile.org/projectfile/bridge/internal/pfmodel"
 )
 
@@ -79,10 +80,13 @@ func (Bridge) Render(pf *projectfile.Document, opts core.Options) (core.Output, 
 	versioning := conv.Versioning
 	styleGuideURL := pfmodel.ConventionsStyleGuideURL(conv, pf.Stack)
 
-	// Resolve URLs: links[] first, extension fields override.
-	docsURL := pfmodel.LinkURL(pf, "documentation")
+	// Resolve URLs: links[] first, extension fields override. The docs URL
+	// skips the fleet-wide spec article and falls back to the forge's docs
+	// tree — see docsSectionURL.
+	docsURL := docsSectionURL(pfmodel.LinkURL(pf, "documentation"), pf)
 	bugsURL := pfmodel.LinkURL(pf, "bugs")
 	newIssueURL := deriveNewIssueURL(bugsURL)
+	forgeLabel := hostmatch.ResolveLabel(bugsURL)
 	sourceCodeURL := pfmodel.LinkURL(pf, "source-code")
 	chatURL := resolveURL(ext.ChatURL, pf, "chat")
 	cocURL := resolveURL(ext.CoCURL, pf, "enforcement")
@@ -144,6 +148,7 @@ func (Bridge) Render(pf *projectfile.Document, opts core.Options) (core.Output, 
 		chatURL, cocURL, claURL, securityContact, commitStyle, workflow, versioning, styleGuideURL,
 		authorFollows, authorSites, projectSocials, forgeStars, hasFunding)
 	genlog.Decision("llm_policy_pointer", fmt.Sprintf("%v", hasLLMPolicy), "org.projectfile.llm present", "")
+	genlog.Decision("forge_label", valOrDefault(forgeLabel, "(unknown host, plain issues)"), "hostmatch on links[type=bugs]", "")
 
 	// Only three things vary per language here: the project's own display
 	// name, its summary (both localized-strings), and the SUPPORT.md
@@ -169,6 +174,7 @@ func (Bridge) Render(pf *projectfile.Document, opts core.Options) (core.Output, 
 				DocsURL:              docsURL,
 				BugsURL:              bugsURL,
 				NewIssueURL:          newIssueURL,
+				ForgeLabel:           forgeLabel,
 				SecurityContact:      securityContact,
 				LicenseSPDX:          licenseSPDX(pf),
 				Sections:             sections,
@@ -185,7 +191,7 @@ func (Bridge) Render(pf *projectfile.Document, opts core.Options) (core.Output, 
 				AuthorSites:          authorSites,
 				ProjectSocials:       projectSocials,
 				HasFunding:           hasFunding,
-				Conventions:          conventionRows,
+				Conventions:          withLLMRow(conventionRows, hasLLMPolicy, lang, strLang),
 				ForgeStars:           forgeStars,
 				StarsEnabled:         starsEnabled,
 				LLMPolicyFile:        llmPolicyFile(hasLLMPolicy, lang),
@@ -225,6 +231,105 @@ func deriveNewIssueURL(bugsURL string) string {
 		return strings.TrimRight(bugsURL, "/") + "/new"
 	}
 	return bugsURL
+}
+
+// specArticleHost is the host of the projectfile specification article that
+// m6e/core's shared conventions merge into every consumer's links under
+// type=documentation. It is an article ABOUT the projectfile, not the
+// consuming project's documentation, so the docs-improvement section must
+// skip it and point at the project's own docs instead.
+const specArticleHost = "projectfile.org"
+
+// docsPathSuffix is where every project in this fleet keeps its in-repo
+// documentation; appended to the forge repository URL.
+const docsPathSuffix = "/docs"
+
+// docsSectionURL resolves the URL the "Improving The Documentation" section
+// points at. The section invites pull requests against the documentation
+// SOURCE, which is the repository's docs tree on the forge — a declared
+// links[type=documentation] entry is kept only when the project owns it (the
+// spec article include does not qualify), and the forge docs tree is the
+// fallback for everything else. Returns "" when neither resolves.
+func docsSectionURL(declared string, pf *projectfile.Document) string {
+	if declared != "" && !strings.Contains(declared, specArticleHost) {
+		return declared
+	}
+	if pf == nil {
+		return declared
+	}
+	for _, repo := range []*projectfile.Repository{
+		pfmodel.IssuesRepository(pf), pfmodel.PrimaryRepository(pf),
+	} {
+		if web := repoWebURL(repoURL2(repo)); web != "" {
+			return web + docsPathSuffix
+		}
+	}
+	// Last resort: the preferred source-code mirror — preferred-first is
+	// LinkByType's own §5.11 selection rule.
+	if source := pfmodel.LinkByType(pf, "source-code"); source != nil {
+		if web := repoWebURL(source.URL); web != "" {
+			return web + docsPathSuffix
+		}
+	}
+	return declared
+}
+
+// repoURL2 nil-guards a repository pointer for the ladder above.
+func repoURL2(repo *projectfile.Repository) string {
+	if repo == nil {
+		return ""
+	}
+	return repo.URL
+}
+
+// repoWebURL normalizes any repository transport to its https web form:
+// ssh://git@host/owner/repo.git and the scp-style git@host:owner/repo.git both
+// become https://host/owner/repo. Returns "" for anything unparseable.
+func repoWebURL(raw string) string {
+	if raw == "" {
+		return ""
+	}
+	if strings.HasPrefix(raw, "http://") || strings.HasPrefix(raw, "https://") {
+		return strings.TrimSuffix(strings.TrimSuffix(raw, "/"), ".git")
+	}
+	if !strings.Contains(raw, "://") {
+		if at := strings.Index(raw, "@"); at >= 0 {
+			raw = raw[at+1:]
+		}
+		raw = "ssh://" + strings.Replace(raw, ":", "/", 1)
+	}
+	u, err := url.Parse(raw)
+	if err != nil || u.Host == "" || u.Path == "" {
+		return ""
+	}
+	return "https://" + u.Host + strings.TrimSuffix(strings.TrimSuffix(u.Path, "/"), ".git")
+}
+
+// llmRowDetail is the Conventions row link text for the LLM policy, per render
+// language — the sibling path itself is resolved per language beside this.
+var llmRowDetail = map[string]string{
+	"en": "Read our LLM Policy",
+	"es": "Lee nuestra política sobre IA y LLM",
+	"uk": "Прочитайте нашу політику щодо LLM",
+}
+
+// withLLMRow appends the LLM-policy pointer row to the Conventions rows when
+// the project declares org.projectfile.llm. The link target is the LLM.md
+// sibling for THIS render language, so the row must be built per language —
+// the base rows stay shared. strLang is the render language already resolved
+// to the project's default.
+func withLLMRow(rows []conventionItem, declared bool, lang, strLang string) []conventionItem {
+	if !declared {
+		return rows
+	}
+	detail, ok := llmRowDetail[strLang]
+	if !ok {
+		detail = llmRowDetail["en"]
+	}
+	return append(slices.Clone(rows), conventionItem{
+		Label:  "LLM Policy",
+		Detail: fmt.Sprintf("[%s](%s)", detail, core.RelLinkSibling(core.FileLLM, lang, core.FileContributing)),
+	})
 }
 
 func repoURL(pf *projectfile.Document) string {
@@ -353,7 +458,7 @@ func emitDecisionTrace(pf *projectfile.Document, ext *pfmodel.ContributingExtens
 ) {
 	genlog.Decision("project_name", pfmodel.DisplayName(pf), "identity.title.en or namespace/name", "")
 	genlog.Decision("sections", strings.Join(sections, ", "), sectionsSrc, "[org.projectfile.contributing].sections")
-	genlog.Decision("docs_url", valOrUnset(docsURL), "links[type=documentation]", "")
+	genlog.Decision("docs_url", valOrUnset(docsURL), "links[type=documentation] or forge <repo>/docs", "")
 	genlog.Decision("bugs_url", valOrUnset(bugsURL), "links[type=bugs]", "")
 	genlog.Decision("chat_url", valOrUnset(chatURL), "links[type=chat] or ext.chat-url", "")
 	genlog.Decision("coc_url", valOrUnset(cocURL), "links[type=enforcement] or ext.coc-url", "")

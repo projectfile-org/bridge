@@ -3,6 +3,14 @@
 
 {{range .Headings}}- {{.}}
 {{end}}
+{{- range .Inherited}}
+
+### {{.Heading}}
+
+{{range .Items}}- {{.}}
+{{end}}
+{{- end}}
+
 {{printf (t "features.body") .Name .Filename}}
 {{- if .Untranslated}}
 

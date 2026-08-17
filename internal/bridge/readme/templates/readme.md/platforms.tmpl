@@ -1,5 +1,6 @@
 {{- with platforms}}
 ## {{t "platforms.title"}}
 
-{{range $i, $p := .}}{{if $i}}, {{end}}`{{$p}}`{{end}}
+{{range .}}- `{{.}}`
+{{end -}}
 {{end -}}

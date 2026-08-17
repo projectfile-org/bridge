@@ -40,6 +40,14 @@ funding.body: Див. [%[1]s](%[2]s), якщо ви хочете підтрим�
 license.title: Ліцензія
 license.body: Цей проєкт ліцензовано на умовах %s — див. файл [LICENSE](LICENSE) для подробиць.
 
+# Блок подяк — згадки після ліцензії, по одному підрозділу на кожен оголошений
+# список (org.projectfile.acknowledgements); порожні списки не показуються.
+acknowledgements.title: Подяки
+acknowledgements.contributors: Учасники
+acknowledgements.thanks: Вдячність
+acknowledgements.sponsors: Спонсори
+acknowledgements.credits: Згадки
+
 # Розділи команд — слово заголовка підрозділу для одного реєстру; оголошена
 # мітка реєстру доповнює фразу («Завантажити з GHCR»). Установка і
 # використання мають власне дієслово: спільне слово повторює заголовок в

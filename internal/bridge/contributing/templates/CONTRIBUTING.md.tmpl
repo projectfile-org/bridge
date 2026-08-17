@@ -91,7 +91,7 @@ A good bug report shouldn’t leave others needing to chase you up for more info
 
 {{if $.SecurityContact}}> You must never report security related issues, vulnerabilities or bugs including sensitive information to the issue tracker, or elsewhere in public. Instead sensitive bugs must be sent by email to <{{$.SecurityContact}}>.
 
-{{end}}We use{{if $.BugsURL}} [issues]({{$.BugsURL}}){{end}}{{if not $.BugsURL}} issues{{end}} to track bugs and errors. If you run into an issue with the project:
+{{end}}We use{{if $.ForgeLabel}}{{if $.BugsURL}} [{{$.ForgeLabel}} Issues]({{$.BugsURL}}){{else}} {{$.ForgeLabel}} Issues{{end}}{{else if $.BugsURL}} [issues]({{$.BugsURL}}){{else}} issues{{end}} to track bugs and errors. If you run into an issue with the project:
 
 - Open{{if $.NewIssueURL}} an [Issue]({{$.NewIssueURL}}){{end}}{{if not $.NewIssueURL}} an issue{{end}}. (Since we can’t be sure at this point whether it is a bug or not, we ask you not to talk about a bug yet and not to label the issue.)
 - Explain the behavior you would expect and the actual behavior.
@@ -114,7 +114,7 @@ This section guides you through submitting an enhancement suggestion for {{$.Pro
 <!-- omit in toc -->
 ### How Do I Submit a Good Enhancement Suggestion?
 
-Enhancement suggestions are tracked as{{if $.BugsURL}} [issues]({{$.BugsURL}}){{end}}{{if not $.BugsURL}} issues{{end}}.
+Enhancement suggestions are tracked as{{if $.ForgeLabel}} {{$.ForgeLabel}} Issues{{else if $.BugsURL}} [issues]({{$.BugsURL}}){{else}} issues{{end}}.
 
 - Use a **clear and descriptive title** for the issue to identify the suggestion.
 - Provide a **step-by-step description of the suggested enhancement** in as much detail as possible.

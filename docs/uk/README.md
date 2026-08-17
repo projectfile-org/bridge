@@ -36,12 +36,21 @@ pf-bridge проєктує projectfile на файли, forge-майданчик
 
 Завантажте опублікований образ контейнера:
 
+### Завантажити з GHCR
+
 ```sh
 docker pull ghcr.io/damian-buho/projectfile/bridge:latest
+```
+
+### Завантажити з DockerHub
+
+```sh
 docker pull docker.io/damianbuho/projectfile-bridge:latest
 ```
 
 Якщо наведені вище реєстри недоступні, завантажте з джерела:
+
+### Завантажити з Kiota
 
 ```sh
 docker pull kiota.ch/projectfile/bridge:latest
@@ -59,7 +68,9 @@ pf-bridge all
 
 ## Збирання
 
-- [Довідник із Makefile](../MAKEFILE.md)
+Виконайте `make` без аргументів для типової цілі; виконайте `make help`, щоб переглянути всі цілі.
+
+Для локального циклу розробки `make dev-container` піднімає dev-container.
 
 Точки входу конвеєра:
 
@@ -68,36 +79,12 @@ pf-bridge all
 - `make check-outdated` — Report every pinned dependency that lags upstream
 - `make ready-to-publish` — Run the pseudo-CI pipeline locally — build, test and scan, without publishing
 
-Виконайте `make` без аргументів для типової цілі; виконайте `make help`, щоб переглянути всі цілі.
-
-Для локального циклу розробки `make dev-container` піднімає dev-container.
-
-## Документація
-
-- [LLM Policy Generator](../llm-generator.md)
-
 ## Політики
 
 - [Як зробити внесок](CONTRIBUTING.md)
 - [Політика безпеки](SECURITY.md)
 - [Як отримати підтримку](SUPPORT.md)
 - [Кодекс поведінки](CODE_OF_CONDUCT.md)
-
-## Посилання
-
-### Проєкт
-
-- [Специфікація Projectfile](https://projectfile.org)
-- [Projectfile Bridges на Codeberg](https://codeberg.org/projectfile/bridge)
-- [Projectfile Bridges на GitHub](https://github.com/damian-buho/projectfile-bridge)
-- [Projectfile Bridges на kiota.ch](https://kiota.ch/projectfile/bridge)
-- [Задачі на Codeberg](https://codeberg.org/projectfile/bridge/issues)
-- [Документація](/docs)
-- [Задачі на GitHub](https://github.com/damian-buho/projectfile-bridge/issues)
-
-### Інше
-
-- [Від автора](https://dbuho.me)
 
 ## Ліцензія
 

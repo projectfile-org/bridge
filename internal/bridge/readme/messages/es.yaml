@@ -40,6 +40,14 @@ funding.body: Consulta [%[1]s](%[2]s) si quieres apoyar este proyecto.
 license.title: Licencia
 license.body: Este proyecto se publica bajo la licencia %s — consulta el archivo [LICENSE](LICENSE) para más detalles.
 
+# Bloque de agradecimientos — créditos tras la licencia, un subtítulo por cada
+# lista declarada (org.projectfile.acknowledgements); las vacías no se muestran.
+acknowledgements.title: Agradecimientos
+acknowledgements.contributors: Colaboradores
+acknowledgements.thanks: Gracias
+acknowledgements.sponsors: Patrocinadores
+acknowledgements.credits: Créditos
+
 # Secciones de comandos — palabra de encabezado de una subsección por registro;
 # la etiqueta declarada del registro completa la frase («Descargar de GHCR»).
 # Instalación y uso llevan su propio verbo: una palabra compartida repetiría el

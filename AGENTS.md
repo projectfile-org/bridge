@@ -58,8 +58,8 @@ correction: `BUSL-1.1` is canonical for the Business Source License — `BSL-1.1
 404s upstream and is a different licence (Boost).
 
 Bridge-owned typed shapes of `org.projectfile.*` extension namespaces
-(citation, readme, forge, funding, codeowners, contributing, support,
-security, release, conventions, cli-derive, ignores, vulnerabilities,
+(citation, readme, forge, funding, acknowledgements, codeowners, contributing,
+support, security, release, conventions, cli-derive, ignores, vulnerabilities,
 editors, dei) and their accessors live in `internal/pfmodel` below — moved out of
 core in the core-2.0 cut. Bridge code reaches them there, not through
 `pkg/projectfile`.
@@ -460,7 +460,7 @@ language set is the contract, and the sibling bridge warns by name about
 anything it is missing.
 
 The readme is the one exception to “a locale is a template”, and deliberately
-so. Its eighteen blocks are three-line fragments, not prose: a per-language
+so. Its two dozen blocks are three-line fragments, not prose: a per-language
 copy of each would mean 18×N near-identical templates and every structural
 change re-applied N times. So the readme localizes its **strings** from one
 flat catalog per language (`internal/bridge/readme/messages/<lang>.yaml`,

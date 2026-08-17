@@ -36,12 +36,21 @@ Consulta [FEATURES.md](FEATURES.md) para ver la lista completa.
 
 Descarga la imagen de contenedor publicada:
 
+### Descargar de GHCR
+
 ```sh
 docker pull ghcr.io/damian-buho/projectfile/bridge:latest
+```
+
+### Descargar de DockerHub
+
+```sh
 docker pull docker.io/damianbuho/projectfile-bridge:latest
 ```
 
 Si los registros anteriores no están disponibles, descarga desde el origen:
+
+### Descargar de Kiota
 
 ```sh
 docker pull kiota.ch/projectfile/bridge:latest
@@ -59,7 +68,9 @@ pf-bridge all
 
 ## Compilación
 
-- [Referencia del Makefile](../MAKEFILE.md)
+Ejecuta `make` sin argumentos para el destino predeterminado; ejecuta `make help` para listar todos los destinos.
+
+Para el bucle de desarrollo local, `make dev-container` levanta el dev-container.
 
 Puntos de entrada de la canalización:
 
@@ -68,36 +79,12 @@ Puntos de entrada de la canalización:
 - `make check-outdated` — Report every pinned dependency that lags upstream
 - `make ready-to-publish` — Run the pseudo-CI pipeline locally — build, test and scan, without publishing
 
-Ejecuta `make` sin argumentos para el destino predeterminado; ejecuta `make help` para listar todos los destinos.
-
-Para el bucle de desarrollo local, `make dev-container` levanta el dev-container.
-
-## Documentación
-
-- [LLM Policy Generator](../llm-generator.md)
-
 ## Políticas
 
 - [Cómo contribuir](CONTRIBUTING.md)
 - [Política de seguridad](SECURITY.md)
 - [Cómo obtener ayuda](SUPPORT.md)
 - [Código de conducta](CODE_OF_CONDUCT.md)
-
-## Enlaces
-
-### Proyecto
-
-- [Especificación de Projectfile](https://projectfile.org)
-- [Projectfile Bridges en Codeberg](https://codeberg.org/projectfile/bridge)
-- [Projectfile Bridges en GitHub](https://github.com/damian-buho/projectfile-bridge)
-- [Projectfile Bridges en kiota.ch](https://kiota.ch/projectfile/bridge)
-- [Incidencias en Codeberg](https://codeberg.org/projectfile/bridge/issues)
-- [Documentación](/docs)
-- [Incidencias en GitHub](https://github.com/damian-buho/projectfile-bridge/issues)
-
-### Otros
-
-- [Del autor](https://dbuho.me)
 
 ## Licencia
 

@@ -91,7 +91,7 @@ Un buen informe de fallo evita que otras personas tengan que perseguirte para ob
 
 {{if $.SecurityContact}}> Nunca informes de problemas de seguridad, vulnerabilidades o fallos que incluyan información sensible en el gestor de incidencias ni en ningún otro lugar público. Los fallos sensibles deben enviarse por correo a <{{$.SecurityContact}}>.
 
-{{end}}Usamos{{if $.BugsURL}} [incidencias]({{$.BugsURL}}){{end}}{{if not $.BugsURL}} incidencias{{end}} para seguir fallos y errores. Si te topas con un problema en el proyecto:
+{{end}}Usamos{{if $.ForgeLabel}}{{if $.BugsURL}} [Issues de {{$.ForgeLabel}}]({{$.BugsURL}}){{else}} Issues de {{$.ForgeLabel}}{{end}}{{else if $.BugsURL}} [incidencias]({{$.BugsURL}}){{else}} incidencias{{end}} para seguir fallos y errores. Si te topas con un problema en el proyecto:
 
 - Abre{{if $.NewIssueURL}} una [incidencia]({{$.NewIssueURL}}){{end}}{{if not $.NewIssueURL}} una incidencia{{end}}. (Como todavía no podemos saber si se trata de un fallo, te pedimos que no lo des por hecho ni etiquetes la incidencia.)
 - Explica el comportamiento que esperabas y el que se produjo realmente.
@@ -114,7 +114,7 @@ Esta sección te guía para enviar una propuesta de mejora para {{$.ProjectName}
 <!-- omit in toc -->
 ### ¿Cómo envío una buena propuesta de mejora?
 
-Las propuestas de mejora se gestionan como{{if $.BugsURL}} [incidencias]({{$.BugsURL}}){{end}}{{if not $.BugsURL}} incidencias{{end}}.
+Las propuestas de mejora se gestionan como{{if $.ForgeLabel}} Issues de {{$.ForgeLabel}}{{else if $.BugsURL}} [incidencias]({{$.BugsURL}}){{else}} incidencias{{end}}.
 
 - Usa un **título claro y descriptivo** que identifique la propuesta.
 - Describe la mejora sugerida **paso a paso** y con el mayor detalle posible.
