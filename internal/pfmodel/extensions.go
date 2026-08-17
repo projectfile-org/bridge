@@ -5,6 +5,9 @@
 package pfmodel
 
 import (
+	"fmt"
+	"strings"
+
 	"kiota.ch/projectfile/core/v2/pkg/projectfile"
 )
 
@@ -107,26 +110,35 @@ func GetDEIExtension(doc *projectfile.Document) (*DEIExtension, error) {
 	return ext, nil
 }
 
-// llmReservedKeys are the org.projectfile.llm keys that are NOT activity
-// overrides. Everything else found in the namespace map is an activity: the
-// vocabulary is open at the key level (spec: "consumers MUST accept an
-// unknown activity key"), so activities are discovered by exclusion rather
-// than enumerated. `skills` is reserved here only to keep it OUT of
-// Activities — the bridge never reads its contents (see LLMExtension doc).
-var llmReservedKeys = map[string]bool{
-	"attitude":          true,
-	"autonomy":          true,
-	"statement":         true,
-	"disclose-required": true,
-	"disclose-trailer":  true,
-	"content-signals":   true,
-	"skills":            true,
-}
-
 // llmDefaultAutonomy is the spec default when `autonomy` is unset — full
 // autonomous-agent use is permitted, same as an absent per-activity override
 // defaulting to `attitude`.
 const llmDefaultAutonomy = "any"
+
+// llmDefaultAppliesTo is the spec default when `applies-to` is unset: the
+// policy binds everyone, maintainers included. An exemption nobody declared
+// is not one a consumer may render.
+const llmDefaultAppliesTo = "everyone"
+
+// DefaultAIPolicyFile is the basename the policy renders to when the document
+// declares no `filename`. No standard exists — AI_POLICY.md, AI-POLICY.md,
+// AI.md and LLM.md are all in the wild — so the project names its own file
+// and this is the name it gets when it does not.
+const DefaultAIPolicyFile = "AI_POLICY.md"
+
+// validAIPolicyFilename rejects anything that is not a bare basename. This
+// field names a file a tool writes, so a separator or a `..` segment is a
+// write outside the project rather than a preference: reject it, never
+// sanitize it into something writable.
+func validAIPolicyFilename(name string) error {
+	if name == "" {
+		return nil
+	}
+	if strings.ContainsAny(name, `/\`) || name == "." || name == ".." {
+		return fmt.Errorf("%s.filename %q is not a basename: declare a file name, not a path", LLMExtensionNS, name)
+	}
+	return nil
+}
 
 // GetLLMExtension parses `org.projectfile.llm`. Returns (nil, nil) when the
 // namespace is absent — absence is not permission: an absent namespace means
@@ -141,28 +153,48 @@ func GetLLMExtension(doc *projectfile.Document) (*LLMExtension, error) {
 		return nil, nil
 	}
 	ext := &LLMExtension{
+		Filename:         strVal(m, "filename"),
 		Attitude:         strVal(m, "attitude"),
 		Autonomy:         strVal(m, "autonomy"),
+		AppliesTo:        strVal(m, "applies-to"),
 		Statement:        localizedStringVal(m, "statement"),
 		DiscloseRequired: boolVal(m, "disclose-required"),
 		DiscloseTrailer:  strVal(m, "disclose-trailer"),
+		DiscloseDetails:  strListVal(m, "disclose-details"),
+		Obligations:      strListVal(m, "obligations"),
+		IssueRequired:    boolVal(m, "issue-required"),
+		ExcludedLabels:   strListVal(m, "excluded-labels"),
+		Enforcement:      strListVal(m, "enforcement"),
 		ContentSignals:   strListVal(m, "content-signals"),
+		Activities:       strMapVal(m, "activities"),
+		ProjectUse:       strMapVal(m, "project-use"),
+	}
+	if err := validAIPolicyFilename(ext.Filename); err != nil {
+		return nil, err
 	}
 	if ext.Autonomy == "" {
 		ext.Autonomy = llmDefaultAutonomy
 	}
-	for key, v := range m {
-		if llmReservedKeys[key] {
-			continue
-		}
-		if s, ok := v.(string); ok {
-			if ext.Activities == nil {
-				ext.Activities = make(map[string]string)
-			}
-			ext.Activities[key] = s
-		}
+	if ext.AppliesTo == "" {
+		ext.AppliesTo = llmDefaultAppliesTo
 	}
 	return ext, nil
+}
+
+// AIPolicyFilename is the basename this document's AI policy lives under, or
+// "" when the namespace is absent — no declared policy, so no file and no
+// cross-reference to it from README or CONTRIBUTING. A malformed filename
+// resolves to "" here too: the llm bridge fails loudly on it, and a
+// cross-link is not the place to state that error a second time.
+func AIPolicyFilename(doc *projectfile.Document) string {
+	ext, err := GetLLMExtension(doc)
+	if err != nil || ext == nil {
+		return ""
+	}
+	if ext.Filename == "" {
+		return DefaultAIPolicyFile
+	}
+	return ext.Filename
 }
 
 // GetContributingExtension parses `org.projectfile.contributing`. Returns

@@ -204,8 +204,9 @@ type DEIExtension struct {
 }
 
 // LLMExtension binds `[org.projectfile.llm]` — the project's stance on AI/LLM
-// use, over two independent axes (inbound: what may come INTO the project;
-// outbound: how the project's own content may be consumed BY AI systems).
+// use, over three independent directions (INBOUND: what may come INTO the
+// project; INTERNAL: how the project itself uses AI; OUTBOUND: how the
+// project's own content may be consumed BY AI systems).
 // Absence of the namespace means NO DECLARED POLICY: GetLLMExtension returns
 // (nil, nil) in that case, and the bridge MUST NOT render a permissive
 // default — there is no Enabled gate here, unlike DEIExtension, because a
@@ -214,17 +215,28 @@ type DEIExtension struct {
 // Activities carries every declared per-activity override VERBATIM, keyed by
 // its raw activity name — including entries equal to Attitude. "Only an
 // override reaches the table" is a rendering rule, not a parsing one, so it
-// is applied where the table is built, not here. The `skills` sub-namespace
-// is deliberately absent from this struct: the bridge is a Renderer with no
-// read-back path, so a field this bridge never writes needs no typed shape.
+// is applied where the table is built, not here. ProjectUse keys share that
+// vocabulary but map to an AUTONOMY token, and every declared entry renders:
+// the internal direction has no document-level default to differ from. The
+// `skills` sub-namespace is deliberately absent from this struct: the bridge
+// is a Renderer with no read-back path, so a field this bridge never writes
+// needs no typed shape.
 type LLMExtension struct {
+	Filename         string                       `toml:"filename"           yaml:"filename"           json:"filename"`
 	Attitude         string                       `toml:"attitude"           yaml:"attitude"           json:"attitude"`
 	Autonomy         string                       `toml:"autonomy"           yaml:"autonomy"           json:"autonomy"`
+	AppliesTo        string                       `toml:"applies-to"         yaml:"applies-to"         json:"applies-to"`
 	Statement        *projectfile.LocalizedString `toml:"statement"          yaml:"statement"          json:"statement"`
 	DiscloseRequired bool                         `toml:"disclose-required"  yaml:"disclose-required"  json:"disclose-required"`
 	DiscloseTrailer  string                       `toml:"disclose-trailer"   yaml:"disclose-trailer"   json:"disclose-trailer"`
+	DiscloseDetails  []string                     `toml:"disclose-details"   yaml:"disclose-details"   json:"disclose-details"`
+	Obligations      []string                     `toml:"obligations"        yaml:"obligations"        json:"obligations"`
+	IssueRequired    bool                         `toml:"issue-required"     yaml:"issue-required"     json:"issue-required"`
+	ExcludedLabels   []string                     `toml:"excluded-labels"    yaml:"excluded-labels"    json:"excluded-labels"`
+	Enforcement      []string                     `toml:"enforcement"        yaml:"enforcement"        json:"enforcement"`
 	ContentSignals   []string                     `toml:"content-signals"    yaml:"content-signals"    json:"content-signals"`
-	Activities       map[string]string            `toml:"-" yaml:"-" json:"-"`
+	Activities       map[string]string            `toml:"activities"         yaml:"activities"         json:"activities"`
+	ProjectUse       map[string]string            `toml:"project-use"        yaml:"project-use"        json:"project-use"`
 }
 
 // ContributingExtension binds `[org.projectfile.contributing]`.

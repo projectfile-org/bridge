@@ -47,7 +47,7 @@ const (
 	FileDEI           = "DEI.md"
 	FileSecurity      = "SECURITY.md"
 	FileSupport       = "SUPPORT.md"
-	FileLLM           = "LLM.md"
+	FileAIPolicy      = pfmodel.DefaultAIPolicyFile
 )
 
 // langLabels maps a BCP 47 tag to the language's own name (endonym) — what a
@@ -253,8 +253,14 @@ func h1Offset(body []byte) int {
 // rule, the missing-translation policy, the cross-language bar and the final
 // assembly live in exactly one place.
 type LocalizedSpec struct {
-	// Filename is the canonical on-disk name, e.g. "CONTRIBUTING.md".
+	// Filename is the on-disk name, e.g. "CONTRIBUTING.md".
 	Filename string
+	// Template is the canonical name the templates are keyed by, when it
+	// differs from Filename. A document that renames its output (the AI
+	// policy names its own file) still renders from the one template shipped
+	// for it — the name a project chose says nothing about which prose to use.
+	// Empty means Filename is also the template name.
+	Template string
 	// Langs are the extra languages from org.projectfile.i18n.languages.
 	Langs []string
 	// View returns the template data for one language, called once per
@@ -274,7 +280,11 @@ func RenderLocalized(pf *projectfile.Document, spec LocalizedSpec, opts Options)
 	// the cross-language bar goes into every variant, so a language dropped
 	// for a missing template must be dropped from the bar too — otherwise
 	// each file advertises a translation that was never written.
-	translated := translatableLangs(spec.Filename, spec.Langs, opts.Dir)
+	tmplBase := spec.Template
+	if tmplBase == "" {
+		tmplBase = spec.Filename
+	}
+	translated := translatableLangs(tmplBase, spec.Langs, opts.Dir)
 	defLang := pfmodel.DefaultLanguage(pf)
 
 	// Every file here is generated, so every file says so. The sentinel tells a
@@ -283,7 +293,7 @@ func RenderLocalized(pf *projectfile.Document, spec LocalizedSpec, opts Options)
 	header := []byte(ManagedREUSEHeader(pf))
 	out := Output{Files: map[string][]byte{}}
 	for _, lang := range append([]string{""}, translated...) {
-		tmpl := LocalizedTemplateName(spec.Filename, lang)
+		tmpl := LocalizedTemplateName(tmplBase, lang)
 		// The View receives the render sentinel ("" for the canonical root
 		// render), NOT a resolved tag: path- producing code inside the view
 		// (LocalizedSibling output keys) must keep "" so the default language
@@ -299,7 +309,10 @@ func RenderLocalized(pf *projectfile.Document, spec LocalizedSpec, opts Options)
 		// copy sits inside the terminology-disable block for non-English. The
 		// trailing \n keeps the single-newline contract (MD047) for the
 		// English root render, which skips the wrap that would otherwise add it.
-		body = append(body, []byte("\n\n"+GeneratedFooter(spec.Filename, ResolveLang(lang, pf))+"\n")...)
+		// The footer's how-to slug follows the CANONICAL name, not the one the
+		// project chose: a renamed file is the same document and earns the
+		// same how-to, where the output name would only miss the map.
+		body = append(body, []byte("\n\n"+GeneratedFooter(tmplBase, ResolveLang(lang, pf))+"\n")...)
 		// ResolveLang maps the canonical render sentinel ("" ) to the default
 		// language, so a Spanish-default project's Spanish root file is wrapped
 		// while its docs/en/ variant is not. Wraps after the language bar so the

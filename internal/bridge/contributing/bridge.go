@@ -108,13 +108,14 @@ func (Bridge) Render(pf *projectfile.Document, opts core.Options) (core.Output, 
 		defaultBranch = repo.Branch
 	}
 
-	// LLM.md is a separate bridge's file; contributing only points at it —
-	// restating the policy here would be the drift this suite exists to kill
-	// (llm-generator.md, Integration). Gated on the namespace, not a file-exists
-	// probe: every other cross-link in this bridge already assumes the fleet
-	// convention that a declared sibling renders, and a stat call would just
-	// duplicate that assumption with a race against pf-bridge-llm's own run.
-	hasLLMPolicy := pfmodel.HasExtension(pf, pfmodel.LLMExtensionNS)
+	// The AI policy is a separate bridge's file; contributing only points at
+	// it — restating the policy here would be the drift this suite exists to
+	// kill (llm-generator.md, Integration). Resolved from the namespace, not a
+	// file-exists probe: every other cross-link in this bridge already assumes
+	// the fleet convention that a declared sibling renders, and a stat call
+	// would just duplicate that assumption with a race against
+	// pf-bridge-llm's own run. "" means no namespace, so no pointer at all.
+	llmPolicyName := pfmodel.AIPolicyFilename(pf)
 
 	authorFollows := resolveAuthorFollows(pf)
 	authorSites := resolveAuthorSites(pf)
@@ -147,7 +148,7 @@ func (Bridge) Render(pf *projectfile.Document, opts core.Options) (core.Output, 
 	emitDecisionTrace(pf, ext, sections, sectionsSrc, docsURL, bugsURL,
 		chatURL, cocURL, claURL, securityContact, commitStyle, workflow, versioning, styleGuideURL,
 		authorFollows, authorSites, projectSocials, forgeStars, hasFunding)
-	genlog.Decision("llm_policy_pointer", fmt.Sprintf("%v", hasLLMPolicy), "org.projectfile.llm present", "")
+	genlog.Decision("llm_policy_pointer", valOrDefault(llmPolicyName, "(no namespace, no pointer)"), "org.projectfile.llm", "")
 	genlog.Decision("forge_label", valOrDefault(forgeLabel, "(unknown host, plain issues)"), "hostmatch on links[type=bugs]", "")
 
 	// Only three things vary per language here: the project's own display
@@ -191,10 +192,10 @@ func (Bridge) Render(pf *projectfile.Document, opts core.Options) (core.Output, 
 				AuthorSites:          authorSites,
 				ProjectSocials:       projectSocials,
 				HasFunding:           hasFunding,
-				Conventions:          withLLMRow(conventionRows, hasLLMPolicy, lang, strLang),
+				Conventions:          withLLMRow(conventionRows, llmPolicyName, lang, strLang),
 				ForgeStars:           forgeStars,
 				StarsEnabled:         starsEnabled,
-				LLMPolicyFile:        llmPolicyFile(hasLLMPolicy, lang),
+				LLMPolicyFile:        llmPolicyFile(llmPolicyName, lang),
 			}
 		},
 	}, opts)
@@ -210,14 +211,16 @@ func resolveURL(extVal string, pf *projectfile.Document, linkType string) string
 	return pfmodel.LinkURL(pf, linkType)
 }
 
-// llmPolicyFile resolves the LLM.md cross-link for this render language, or
-// "" when the project declared no org.projectfile.llm namespace — the
-// template's {{with}} then drops the pointer line entirely.
-func llmPolicyFile(declared bool, lang string) string {
-	if !declared {
+// llmPolicyFile resolves the AI-policy cross-link for this render language,
+// or "" when the project declared no org.projectfile.llm namespace — the
+// template's {{with}} then drops the pointer line entirely. The name comes
+// from the document, so a project that renamed its policy file is linked to
+// the file it actually has.
+func llmPolicyFile(policyName, lang string) string {
+	if policyName == "" {
 		return ""
 	}
-	return core.RelLinkSibling(core.FileLLM, lang, core.FileContributing)
+	return core.RelLinkSibling(policyName, lang, core.FileContributing)
 }
 
 // deriveNewIssueURL appends /new to the bugs URL when it looks like an
@@ -313,13 +316,13 @@ var llmRowDetail = map[string]string{
 	"uk": "Прочитайте нашу політику щодо LLM",
 }
 
-// withLLMRow appends the LLM-policy pointer row to the Conventions rows when
-// the project declares org.projectfile.llm. The link target is the LLM.md
-// sibling for THIS render language, so the row must be built per language —
-// the base rows stay shared. strLang is the render language already resolved
-// to the project's default.
-func withLLMRow(rows []conventionItem, declared bool, lang, strLang string) []conventionItem {
-	if !declared {
+// withLLMRow appends the AI-policy pointer row to the Conventions rows when
+// the project declares org.projectfile.llm — an empty policyName adds no row.
+// The link target is the policy sibling for THIS render language, so the row
+// must be built per language — the base rows stay shared. strLang is the
+// render language already resolved to the project's default.
+func withLLMRow(rows []conventionItem, policyName, lang, strLang string) []conventionItem {
+	if policyName == "" {
 		return rows
 	}
 	detail, ok := llmRowDetail[strLang]
@@ -328,7 +331,7 @@ func withLLMRow(rows []conventionItem, declared bool, lang, strLang string) []co
 	}
 	return append(slices.Clone(rows), conventionItem{
 		Label:  "LLM Policy",
-		Detail: fmt.Sprintf("[%s](%s)", detail, core.RelLinkSibling(core.FileLLM, lang, core.FileContributing)),
+		Detail: fmt.Sprintf("[%s](%s)", detail, core.RelLinkSibling(policyName, lang, core.FileContributing)),
 	})
 }
 

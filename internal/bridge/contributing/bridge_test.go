@@ -479,7 +479,7 @@ func TestRenderConventionsLLMRow(t *testing.T) {
 	out, err := b.Render(pf, core.Options{Offline: true})
 	require.NoError(t, err)
 	body := string(out.Files["CONTRIBUTING.md"])
-	assert.Contains(t, body, "**LLM Policy:** [Read our LLM Policy](LLM.md)")
+	assert.Contains(t, body, "**LLM Policy:** [Read our LLM Policy](AI_POLICY.md)")
 }
 
 // TestRenderConventionsNoLLMRowWithoutNamespace: the row is gated on the

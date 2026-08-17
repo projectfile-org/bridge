@@ -1,0 +1,98 @@
+# Política sobre IA y LLM
+
+Este documento expone la política de {{.ProjectName}} sobre el uso de IA y LLM — tanto para personas como para los sistemas que leen este repositorio.
+{{with .Statement}}
+{{.}}
+{{end}}{{with .PolicyURL}}
+Política completa: <{{.}}>
+{{end}}
+## Contribuciones realizadas con asistencia de IA
+
+{{template "attitude" .Attitude}}
+
+{{template "autonomy" .Autonomy}}
+{{if eq .AppliesTo "contributors"}}
+Estas reglas rigen las contribuciones externas al proyecto. Quienes lo mantienen responden por su propia práctica, que este documento expone aparte.
+{{end}}{{if .DiscloseRequired}}
+Quienes contribuyen deben declarar cuándo una contribución se realizó con asistencia de IA/LLM.
+{{if .DiscloseDetails}}
+Cada declaración indica:
+
+{{range .DiscloseDetails}}- {{template "detail" .}}
+{{end}}{{end}}{{if .DiscloseTrailer}}
+Añade este trailer al mensaje de commit:
+
+```
+{{.DiscloseTrailer}}: <nombre del modelo o herramienta>
+```
+{{end}}
+{{end}}{{if .IssueRequired}}
+Una contribución asistida por IA debe referirse a una incidencia que este proyecto ya haya aceptado. Un parche que no responde a un problema acordado se cierra sin revisión.
+{{end}}{{with .ExcludedLabels}}
+La IA queda excluida en las incidencias con cualquiera de estas etiquetas, sea cual sea la postura anterior:
+
+{{range .}}- `{{.}}`
+{{end}}{{end}}{{with .Obligations}}
+Quien envía el trabajo sigue debiendo todo esto:
+
+{{range .}}- {{template "obligation" .}}
+{{end}}{{end}}{{if .Rows}}
+| Actividad | Postura |
+| --- | --- |
+{{range .Rows}}| {{template "activity" .Activity}} | {{template "stance" .Stance}} |
+{{end}}
+{{end}}{{with .Enforcement}}
+## Cuando no se respeta esta política
+
+{{range .}}- {{template "consequence" .}}
+{{end}}{{end}}{{with .ProjectUseRows}}
+## Cómo usa la IA este proyecto
+
+| Actividad | Quién decide |
+| --- | --- |
+{{range .}}| {{template "activity" .Activity}} | {{template "use" .Autonomy}} |
+{{end}}
+{{end}}## Uso del contenido de este proyecto
+
+{{if .ContentSignals}}{{range .ContentSignals}}- {{template "signal" .}}
+{{end}}{{else}}No se declaran señales de contenido. El silencio no es consentimiento: la ausencia de una señal aquí no es un permiso para entrenar con el contenido de este proyecto ni para consumirlo de otro modo, y la licencia rige la reutilización con independencia de lo indicado en esta sección.
+{{end}}
+## Preguntas
+
+{{if .ContactEmail}}¿Tienes preguntas sobre esta política? Escribe a <{{.ContactEmail}}>.{{else}}¿Tienes preguntas sobre esta política? Consulta [SUPPORT.md]({{.SupportFile}}).{{end}}
+
+{{- define "attitude" -}}
+{{if eq . "encouraged"}}Fomentamos activamente las contribuciones realizadas con asistencia de IA/LLM.{{else if eq . "allowed"}}Las contribuciones realizadas con asistencia de IA/LLM son bienvenidas.{{else if eq . "neutral"}}No hemos tomado una posición sobre las contribuciones asistidas por IA/LLM — ante la duda, pregunta primero.{{else if eq . "discouraged"}}Desaconsejamos las contribuciones asistidas por IA/LLM, aunque no las prohibimos.{{else if eq . "prohibited"}}No aceptamos contribuciones asistidas por IA/LLM.{{else}}Nuestra postura sobre las contribuciones asistidas por IA/LLM es: {{.}}.{{end}}
+{{- end -}}
+
+{{- define "autonomy" -}}
+{{if eq . "any"}}Los agentes autónomos pueden actuar en nombre de este proyecto, incluyendo abrir pull requests e incidencias sin que haya una persona en el proceso.{{else if eq . "assisted"}}Una persona debe dirigir, revisar y enviar cada contribución — no se permiten agentes autónomos.{{else if eq . "none"}}No se permite ninguna intervención de LLM en ninguna parte del proceso de contribución.{{else}}Autonomía permitida: {{.}}.{{end}}
+{{- end -}}
+
+{{- define "detail" -}}
+{{if eq . "tool"}}la herramienta utilizada, por su nombre (Claude Code, Cursor, Amp …).{{else if eq . "extent"}}qué parte del trabajo hizo la herramienta.{{else if eq . "prompt"}}el prompt que produjo el cambio.{{else}}{{.}}{{end}}
+{{- end -}}
+
+{{- define "obligation" -}}
+{{if eq . "understand"}}**Compréndelo.** Si no puedes explicar el cambio, ni cómo encaja en el resto del sistema, sin la herramienta, no lo envíes.{{else if eq . "review"}}**Revísalo tú primero.** Lee cada línea antes de pedir que la lea otra persona.{{else if eq . "test"}}**Ejecútalo.** El código escrito para una plataforma que no puedes probar no está probado, por correcto que parezca.{{else if eq . "edit"}}**Recórtalo.** El texto generado es verboso; edítalo. Los comentarios que describen lo que hizo el modelo son ruido para cualquier lector futuro.{{else if eq . "human-reply"}}**Responde como persona.** Los comentarios de una persona reciben la respuesta de una persona, nunca una automatizada.{{else if eq . "license-cleared"}}**Verifica la licencia.** No incluyas código de terceros salvo que su licencia permita este uso y se cumplan sus condiciones.{{else if eq . "attest-original"}}**Declara que es tuyo.** Enviar el trabajo afirma que es creación propia, con herramienta o sin ella.{{else}}{{.}}{{end}}
+{{- end -}}
+
+{{- define "consequence" -}}
+{{if eq . "warn"}}La primera infracción recibe una advertencia.{{else if eq . "close"}}La contribución se cierra sin revisión.{{else if eq . "revoke"}}Se retiran los permisos de commit o de revisión.{{else if eq . "ban"}}La cuenta queda excluida de futuras contribuciones.{{else if eq . "publish"}}La infracción se registra en una lista pública.{{else}}{{.}}{{end}}
+{{- end -}}
+
+{{- define "use" -}}
+{{if eq . "none"}}Una persona, sin intervención de IA{{else if eq . "assisted"}}Una persona, con asistencia de IA{{else if eq . "any"}}Puede ejecutarse de forma autónoma{{else}}{{.}}{{end}}
+{{- end -}}
+
+{{- define "activity" -}}
+{{if eq . "pull-requests"}}Pull requests{{else if eq . "commit-messages"}}Mensajes de commit{{else if eq . "discussions"}}Debates{{else if eq . "bug-reports"}}Informes de errores{{else if eq . "code-review"}}Revisión de código{{else if eq . "security-reports"}}Informes de seguridad{{else if eq . "code"}}Código{{else if eq . "documentation"}}Documentación{{else if eq . "code-comments"}}Comentarios en el código{{else if eq . "translations"}}Traducciones{{else if eq . "prose"}}Prosa{{else if eq . "images"}}Imágenes{{else if eq . "audio"}}Audio{{else if eq . "video"}}Vídeo{{else if eq . "refactoring"}}Refactorización{{else if eq . "bug-fixing"}}Corrección de errores{{else if eq . "tests"}}Pruebas{{else if eq . "grammar-tools"}}Herramientas gramaticales{{else if eq . "merges"}}Merges{{else if eq . "releases"}}Publicaciones{{else if eq . "triage"}}Clasificación de incidencias{{else}}{{.}}{{end}}
+{{- end -}}
+
+{{- define "stance" -}}
+{{if eq . "encouraged"}}Fomentada{{else if eq . "allowed"}}Permitida{{else if eq . "neutral"}}Sin postura declarada{{else if eq . "discouraged"}}Desaconsejada{{else if eq . "prohibited"}}Prohibida{{else}}{{.}}{{end}}
+{{- end -}}
+
+{{- define "signal" -}}
+{{if eq . "ai-train"}}`ai-train` — este contenido puede usarse para entrenar modelos de IA/ML.{{else if eq . "search"}}`search` — este contenido puede aparecer en resultados de búsqueda potenciados por IA.{{else if eq . "ai-input"}}`ai-input` — este contenido puede usarse como entrada de un sistema de IA en tiempo de inferencia.{{else}}`{{.}}`{{end}}
+{{- end -}}

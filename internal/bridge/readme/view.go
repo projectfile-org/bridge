@@ -304,17 +304,30 @@ const (
 	fileSecurity      = core.FileSecurity
 	fileSupport       = core.FileSupport
 	fileCodeOfConduct = core.FileCodeOfConduct
-	fileLLM           = core.FileLLM
+	fileAIPolicy      = core.FileAIPolicy
 )
 
-// healthFiles are the community-health markdown files the policies block
-// auto-discovers at the repo root. Order is the rendered link order.
-var healthFiles = []string{
+// healthFilesFixed are the community-health markdown files whose names never
+// vary. Order is the rendered link order; the AI policy follows them.
+var healthFilesFixed = []string{
 	fileContributing,
 	fileSecurity,
 	fileSupport,
 	fileCodeOfConduct,
-	fileLLM,
+}
+
+// healthFiles is the probe list for this document. Every name but the AI
+// policy is fixed; that one is whatever the project called it
+// (org.projectfile.llm.filename), so a renamed policy is still discovered and
+// still linked. A project with no namespace probes the default name — the
+// list has always been a file-exists probe, and a file on disk is a file on
+// disk whether or not the projectfile declares it.
+func healthFiles(pf *projectfile.Document) []string {
+	name := pfmodel.AIPolicyFilename(pf)
+	if name == "" {
+		name = fileAIPolicy
+	}
+	return append(slices.Clone(healthFilesFixed), name)
 }
 
 // healthFileLabel is a health file's policies link text in lang. The catalog
@@ -768,9 +781,9 @@ func docLink(dir, docPath, filename, label string) *staticLink {
 // English-default project, whose root file still probes root paths but wants
 // labels in the default language. docPath rebases each emitted link relative
 // to the document's own path.
-func probeHealthFiles(dir, docPath, pathLang, strLang string) []staticLink {
+func probeHealthFiles(pf *projectfile.Document, dir, docPath, pathLang, strLang string) []staticLink {
 	var out []staticLink
-	for _, f := range healthFiles {
+	for _, f := range healthFiles(pf) {
 		target := f
 		if localized := core.LocalizedFilename(f, pathLang); fileExists(dir, localized) {
 			target = localized
@@ -1153,7 +1166,7 @@ func formatDecisionTrace(dir, lang string, v readmeView, ext *pfmodel.ReadmeExte
 	for _, l := range relatedLinks(v.Doc, v.Lang) {
 		genlog.Decision("related", l.Label+" → "+l.URL, "links[] tagged related", "")
 	}
-	for _, s := range probeHealthFiles(dir, readmeDocPath(lang), lang, lang) {
+	for _, s := range probeHealthFiles(v.Doc, dir, readmeDocPath(lang), lang, lang) {
 		genlog.Decision("static_link", s.Label+" → "+s.Filename, "policies probe", "")
 	}
 	for _, r := range buildBadgeRows(v.Doc, ext) {

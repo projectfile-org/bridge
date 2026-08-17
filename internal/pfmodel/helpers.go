@@ -19,6 +19,7 @@ import (
 	"fmt"
 
 	"kiota.ch/projectfile/core/v2/pkg/fieldpath"
+	"kiota.ch/projectfile/core/v2/pkg/genlog"
 	"kiota.ch/projectfile/core/v2/pkg/projectfile"
 )
 
@@ -148,6 +149,27 @@ func strListVal(m map[string]any, key string) []string {
 		return nil
 	}
 	return toStrSlice(v)
+}
+
+// strMapVal reads a nested map of scalar strings, the shape an open-key
+// vocabulary takes (org.projectfile.llm activities). A non-string value is
+// skipped rather than failing the parse: one mistyped entry must not cost the
+// reader the whole policy. Returns nil when the key is absent or not a map.
+func strMapVal(m map[string]any, key string) map[string]string {
+	raw, ok := m[key].(map[string]any)
+	if !ok {
+		return nil
+	}
+	out := make(map[string]string, len(raw))
+	for k, v := range raw {
+		s, ok := v.(string)
+		if !ok {
+			genlog.Warn("ignored non-string entry in map field", "field", key, "entry", k)
+			continue
+		}
+		out[k] = s
+	}
+	return out
 }
 
 // toStrSlice converts a parsed value to []string. Accepts both the

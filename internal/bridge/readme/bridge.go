@@ -333,7 +333,7 @@ func execBlockTemplate(name string, body []byte, data readmeView, dir string, ex
 			// link against this document's own path so a docs/<lang>/ readme
 			// links co-located siblings correctly.
 			"staticLinks": func() []staticLink {
-				return probeHealthFiles(dir, readmeDocPath(data.Lang), data.Lang, data.StrLang)
+				return probeHealthFiles(data.Doc, dir, readmeDocPath(data.Lang), data.Lang, data.StrLang)
 			},
 			// docLink probes one companion file; nil when absent so
 			// {{with docLink "FILE" "Label"}} drops the block cleanly.

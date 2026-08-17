@@ -15,36 +15,48 @@ import (
 	"projectfile.org/projectfile/bridge/internal/pfmodel"
 )
 
-const filenameLLM = core.FileLLM
+// filenameAIPolicy is the DEFAULT on-disk name and the name the templates are
+// keyed by. A document renaming its own policy file (org.projectfile.llm.
+// filename) changes the output name only — the prose it renders is the same.
+const filenameAIPolicy = core.FileAIPolicy
 
 // aiPolicyLinkType is the links[].type value for a project's external AI
 // governance page — the escape hatch a project whose real policy is a
 // governance page uses instead of (or alongside) the declared fields.
 const aiPolicyLinkType = "ai-policy"
 
-// Bridge renders LLM.md — the project's stance on AI/LLM use — from
-// org.projectfile.llm. Absence of the namespace means NO DECLARED POLICY:
-// the bridge emits nothing and never invents a permissive default.
+// Bridge renders the AI policy file — the project's stance on AI/LLM use —
+// from org.projectfile.llm. Absence of the namespace means NO DECLARED
+// POLICY: the bridge emits nothing and never invents a permissive default.
 type Bridge struct{}
 
-func (Bridge) Name() string             { return "llm" }
-func (Bridge) Filename() string         { return filenameLLM }
-func (Bridge) Aliases() []string        { return []string{"AI.md"} }
-func (Bridge) Labels() (string, string) { return filenameLLM, "projectfile" }
+func (Bridge) Name() string { return "llm" }
 
-// Policy is Marker, not ScaffoldOnce: LLM.md is a projection of declared
-// fields, so flipping `attitude` MUST change the file on the next run. A
-// policy that became the maintainer's own document (ScaffoldOnce) would be
-// exactly the drift this bridge exists to kill.
+// Filename is the registry/CLI identity, so it is the DEFAULT name rather
+// than any one document's choice: the dispatcher resolves a bridge before it
+// has read a projectfile. Aliases cover the other spellings in the wild, so
+// `pf-bridge AI.md` finds this bridge whatever the project calls its file.
+func (Bridge) Filename() string         { return filenameAIPolicy }
+func (Bridge) Aliases() []string        { return []string{"AI.md", "AI-POLICY.md", "LLM.md"} }
+func (Bridge) Labels() (string, string) { return filenameAIPolicy, "projectfile" }
+
+// Policy is Marker, not ScaffoldOnce: the policy file is a projection of
+// declared fields, so flipping `attitude` MUST change the file on the next
+// run. A policy that became the maintainer's own document (ScaffoldOnce)
+// would be exactly the drift this bridge exists to kill.
 func (Bridge) Policy() core.Policy { return core.Policy{Marker: true} }
 
 func (Bridge) Exists(dir string) bool {
-	_, err := os.Stat(core.PathOrDefault(dir, filenameLLM, filenameLLM))
+	_, err := os.Stat(core.PathOrDefault(dir, filenameAIPolicy, filenameAIPolicy))
 	return err == nil
 }
 
-func (Bridge) FullPath(dir string, _ *projectfile.Document) string {
-	return core.PathOrDefault(dir, filenameLLM, filenameLLM)
+func (Bridge) FullPath(dir string, pf *projectfile.Document) string {
+	name := pfmodel.AIPolicyFilename(pf)
+	if name == "" {
+		name = filenameAIPolicy
+	}
+	return core.PathOrDefault(dir, filenameAIPolicy, name)
 }
 
 // RequiredFields is nil: an absent namespace is a valid, meaningful state
@@ -63,15 +75,21 @@ func (Bridge) Render(pf *projectfile.Document, opts core.Options) (core.Output, 
 	}
 	warnUnknownStances(ext)
 
+	outName := pfmodel.AIPolicyFilename(pf)
 	rows := buildActivityRows(ext)
+	useRows := buildProjectUseRows(ext)
 	signals := dedupSignals(ext.ContentSignals)
+	obligations := dedupSignals(ext.Obligations)
+	details := dedupSignals(ext.DiscloseDetails)
+	enforcement := dedupSignals(ext.Enforcement)
 	policyURL := pfmodel.LinkURL(pf, aiPolicyLinkType)
 	contact, contactSrc := pfmodel.ContactEmail(pf, projectfile.RoleCommunity)
 
-	emitDecisionTrace(ext, rows, signals, policyURL, contact, contactSrc)
+	emitDecisionTrace(ext, outName, rows, useRows, signals, enforcement, policyURL, contact, contactSrc)
 
 	return core.RenderLocalized(pf, core.LocalizedSpec{
-		Filename: filenameLLM,
+		Filename: outName,
+		Template: filenameAIPolicy,
 		Langs:    pfmodel.Languages(pf),
 		View: func(lang string) any {
 			strLang := core.ResolveLang(lang, pf)
@@ -81,23 +99,40 @@ func (Bridge) Render(pf *projectfile.Document, opts core.Options) (core.Output, 
 				PolicyURL:        policyURL,
 				Attitude:         ext.Attitude,
 				Autonomy:         ext.Autonomy,
+				AppliesTo:        ext.AppliesTo,
 				DiscloseRequired: ext.DiscloseRequired,
 				DiscloseTrailer:  ext.DiscloseTrailer,
+				DiscloseDetails:  details,
+				Obligations:      obligations,
+				IssueRequired:    ext.IssueRequired,
+				ExcludedLabels:   ext.ExcludedLabels,
+				Enforcement:      enforcement,
 				Rows:             rows,
+				ProjectUseRows:   useRows,
 				ContentSignals:   signals,
 				ContactEmail:     contact,
-				SupportFile:      core.RelLinkSibling(core.FileSupport, lang, filenameLLM),
+				SupportFile:      core.RelLinkSibling(core.FileSupport, lang, outName),
 			}
 		},
 	}, opts)
 }
 
-func emitDecisionTrace(ext *pfmodel.LLMExtension, rows []activityRow, signals []string, policyURL, contact, contactSrc string) {
+func emitDecisionTrace(ext *pfmodel.LLMExtension, outName string, rows []activityRow, useRows []projectUseRow, signals, enforcement []string, policyURL, contact, contactSrc string) {
+	genlog.Decision("filename", outName, "[org.projectfile.llm].filename", "default: "+filenameAIPolicy)
 	genlog.Decision("attitude", ext.Attitude, "[org.projectfile.llm].attitude", "")
 	genlog.Decision("autonomy", ext.Autonomy, "[org.projectfile.llm].autonomy", "default: any")
+	genlog.Decision("applies_to", ext.AppliesTo, "[org.projectfile.llm].applies-to", "default: everyone")
 	genlog.Decision("disclose_required", fmt.Sprintf("%v", ext.DiscloseRequired), "[org.projectfile.llm].disclose-required", "")
 	for _, r := range rows {
-		genlog.Decision("activity_override", r.Activity+" -> "+r.Stance, "[org.projectfile.llm]."+r.Activity, "differs from attitude")
+		genlog.Decision("activity_override", r.Activity+" -> "+r.Stance, "[org.projectfile.llm].activities."+r.Activity, "differs from attitude")
+	}
+	for _, r := range useRows {
+		genlog.Decision("project_use", r.Activity+" -> "+r.Autonomy, "[org.projectfile.llm].project-use."+r.Activity, "internal direction")
+	}
+	if len(enforcement) == 0 {
+		genlog.Decision("enforcement", "(unset, no consequence stated)", "[org.projectfile.llm].enforcement", "")
+	} else {
+		genlog.Decision("enforcement", strings.Join(enforcement, " → "), "[org.projectfile.llm].enforcement", "declared order is the escalation order")
 	}
 	if len(signals) == 0 {
 		genlog.Decision("content_signals", "(unset, section states the absence)", "[org.projectfile.llm].content-signals", "")

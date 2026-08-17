@@ -21,6 +21,7 @@ var docSlugs = map[string]string{
 	FileCodeOfConduct: "code-of-conduct",
 	FileSecurity:      "security",
 	FileDEI:           "dei",
+	FileAIPolicy:      "ai-policy",
 }
 
 // footerStrings is the per-language footer copy: Prefix is the
