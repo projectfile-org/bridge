@@ -148,7 +148,7 @@ func (Bridge) Render(pf *projectfile.Document, opts core.Options) (core.Output, 
 	emitDecisionTrace(pf, ext, sections, sectionsSrc, docsURL, bugsURL,
 		chatURL, cocURL, claURL, securityContact, commitStyle, workflow, versioning, styleGuideURL,
 		authorFollows, authorSites, projectSocials, forgeStars, hasFunding)
-	genlog.Decision("ai_policy_pointer", valOrDefault(aiPolicyName, "(no namespace, no pointer)"), "org.projectfile.llm", "")
+	genlog.Decision("ai_policy_pointer", valOrDefault(aiPolicyName, "(no namespace, no pointer)"), "org.projectfile.ai", "")
 	genlog.Decision("forge_label", valOrDefault(forgeLabel, "(unknown host, plain issues)"), "hostmatch on links[type=bugs]", "")
 
 	// Only three things vary per language here: the project's own display
@@ -212,7 +212,7 @@ func resolveURL(extVal string, pf *projectfile.Document, linkType string) string
 }
 
 // aiPolicyFile resolves the AI-policy cross-link for this render language,
-// or "" when the project declared no org.projectfile.llm namespace — the
+// or "" when the project declared no org.projectfile.ai namespace — the
 // template's {{with}} then drops the pointer line entirely. The name comes
 // from the document, so a project that renamed its policy file is linked to
 // the file it actually has.
@@ -317,7 +317,7 @@ var aiPolicyRowDetail = map[string]string{
 }
 
 // withAIPolicyRow appends the AI-policy pointer row to the Conventions rows when
-// the project declares org.projectfile.llm — an empty policyName adds no row.
+// the project declares org.projectfile.ai — an empty policyName adds no row.
 // The link target is the policy sibling for THIS render language, so the row
 // must be built per language — the base rows stay shared. strLang is the
 // render language already resolved to the project's default.

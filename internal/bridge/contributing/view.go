@@ -50,7 +50,7 @@ type contribView struct {
 	// ForgeStars the template falls back to a bare "Star the project".
 	StarsEnabled bool
 	// AIPolicyFile is the AI-policy cross-link for this render language, or ""
-	// when the project declared no org.projectfile.llm namespace. A pointer
+	// when the project declared no org.projectfile.ai namespace. A pointer
 	// only — the policy itself is stated once, by the ai-policy bridge.
 	AIPolicyFile string
 }

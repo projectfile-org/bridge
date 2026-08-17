@@ -203,11 +203,11 @@ type DEIExtension struct {
 	Metrics      map[string][]string `toml:"metrics" yaml:"metrics" json:"metrics"`
 }
 
-// LLMExtension binds `[org.projectfile.llm]` — the project's stance on AI/LLM
+// AIExtension binds `[org.projectfile.ai]` — the project's stance on AI/LLM
 // use, over three independent directions (INBOUND: what may come INTO the
 // project; INTERNAL: how the project itself uses AI; OUTBOUND: how the
 // project's own content may be consumed BY AI systems).
-// Absence of the namespace means NO DECLARED POLICY: GetLLMExtension returns
+// Absence of the namespace means NO DECLARED POLICY: GetAIExtension returns
 // (nil, nil) in that case, and the bridge MUST NOT render a permissive
 // default — there is no Enabled gate here, unlike DEIExtension, because a
 // policy namespace with no policy in it has no other meaning.
@@ -221,7 +221,7 @@ type DEIExtension struct {
 // `skills` sub-namespace is deliberately absent from this struct: the bridge
 // is a Renderer with no read-back path, so a field this bridge never writes
 // needs no typed shape.
-type LLMExtension struct {
+type AIExtension struct {
 	Filename         string                       `toml:"filename"           yaml:"filename"           json:"filename"`
 	Attitude         string                       `toml:"attitude"           yaml:"attitude"           json:"attitude"`
 	Autonomy         string                       `toml:"autonomy"           yaml:"autonomy"           json:"autonomy"`

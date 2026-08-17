@@ -110,15 +110,15 @@ func GetDEIExtension(doc *projectfile.Document) (*DEIExtension, error) {
 	return ext, nil
 }
 
-// llmDefaultAutonomy is the spec default when `autonomy` is unset — full
+// aiDefaultAutonomy is the spec default when `autonomy` is unset — full
 // autonomous-agent use is permitted, same as an absent per-activity override
 // defaulting to `attitude`.
-const llmDefaultAutonomy = "any"
+const aiDefaultAutonomy = "any"
 
-// llmDefaultAppliesTo is the spec default when `applies-to` is unset: the
+// aiDefaultAppliesTo is the spec default when `applies-to` is unset: the
 // policy binds everyone, maintainers included. An exemption nobody declared
 // is not one a consumer may render.
-const llmDefaultAppliesTo = "everyone"
+const aiDefaultAppliesTo = "everyone"
 
 // DefaultAIPolicyFile is the basename the policy renders to when the document
 // declares no `filename`. No standard exists — AI_POLICY.md, AI-POLICY.md,
@@ -135,24 +135,24 @@ func validAIPolicyFilename(name string) error {
 		return nil
 	}
 	if strings.ContainsAny(name, `/\`) || name == "." || name == ".." {
-		return fmt.Errorf("%s.filename %q is not a basename: declare a file name, not a path", LLMExtensionNS, name)
+		return fmt.Errorf("%s.filename %q is not a basename: declare a file name, not a path", AIExtensionNS, name)
 	}
 	return nil
 }
 
-// GetLLMExtension parses `org.projectfile.llm`. Returns (nil, nil) when the
+// GetAIExtension parses `org.projectfile.ai`. Returns (nil, nil) when the
 // namespace is absent — absence is not permission: an absent namespace means
 // NO DECLARED POLICY, and the caller MUST NOT treat nil as any particular
 // stance.
-func GetLLMExtension(doc *projectfile.Document) (*LLMExtension, error) {
-	m, present, err := lookupNS(doc, LLMExtensionNS)
+func GetAIExtension(doc *projectfile.Document) (*AIExtension, error) {
+	m, present, err := lookupNS(doc, AIExtensionNS)
 	if err != nil {
 		return nil, err
 	}
 	if !present {
 		return nil, nil
 	}
-	ext := &LLMExtension{
+	ext := &AIExtension{
 		Filename:         strVal(m, "filename"),
 		Attitude:         strVal(m, "attitude"),
 		Autonomy:         strVal(m, "autonomy"),
@@ -173,10 +173,10 @@ func GetLLMExtension(doc *projectfile.Document) (*LLMExtension, error) {
 		return nil, err
 	}
 	if ext.Autonomy == "" {
-		ext.Autonomy = llmDefaultAutonomy
+		ext.Autonomy = aiDefaultAutonomy
 	}
 	if ext.AppliesTo == "" {
-		ext.AppliesTo = llmDefaultAppliesTo
+		ext.AppliesTo = aiDefaultAppliesTo
 	}
 	return ext, nil
 }
@@ -187,7 +187,7 @@ func GetLLMExtension(doc *projectfile.Document) (*LLMExtension, error) {
 // resolves to "" here too: the ai-policy bridge fails loudly on it, and a
 // cross-link is not the place to state that error a second time.
 func AIPolicyFilename(doc *projectfile.Document) string {
-	ext, err := GetLLMExtension(doc)
+	ext, err := GetAIExtension(doc)
 	if err != nil || ext == nil {
 		return ""
 	}

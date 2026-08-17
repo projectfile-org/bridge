@@ -37,7 +37,7 @@ const (
 	SecurityExtensionNS         = "org.projectfile.security"
 	CodeOfConductExtensionNS    = "org.projectfile.code-of-conduct"
 	DEIExtensionNS              = "org.projectfile.dei"
-	LLMExtensionNS              = "org.projectfile.llm"
+	AIExtensionNS               = "org.projectfile.ai"
 	ContributingExtensionNS     = "org.projectfile.contributing"
 	CodeOwnersExtensionNS       = "org.projectfile.codeowners"
 	CLIExtensionNS              = "org.projectfile.cli"
@@ -152,7 +152,7 @@ func strListVal(m map[string]any, key string) []string {
 }
 
 // strMapVal reads a nested map of scalar strings, the shape an open-key
-// vocabulary takes (org.projectfile.llm activities). A non-string value is
+// vocabulary takes (org.projectfile.ai activities). A non-string value is
 // skipped rather than failing the parse: one mistyped entry must not cost the
 // reader the whole policy. Returns nil when the key is absent or not a map.
 func strMapVal(m map[string]any, key string) map[string]string {

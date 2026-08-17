@@ -6,7 +6,7 @@ SPDX-License-Identifier: MIT
 # AI Policy Generator
 
 `pf-bridge ai-policy` renders the project’s AI policy — `AI_POLICY.md` by default —
-from the `org.projectfile.llm` extension namespace.
+from the `org.projectfile.ai` extension namespace.
 
 > Source: `internal/bridge/aipolicy/` — bridge (`bridge.go`), view model
 > (`view.go`), embedded templates (`templates/AI_POLICY{,.es,.uk}.md.tmpl`).
@@ -40,7 +40,7 @@ separate headings and never derives one from another.
 ```yaml
 org:
   projectfile:
-    llm:
+    ai:
       filename: AI_POLICY.md       # OPTIONAL basename        (default as shown)
       attitude: allowed            # REQUIRED, the default for every activity
       autonomy: assisted           # any | assisted | none            (any)

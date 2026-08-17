@@ -36,7 +36,7 @@ const (
 // ── absence is not permission (the core contract) ───────────────────────────
 
 // TestRenderAbsentNamespaceEmitsNothing confirms a project that never declared
-// org.projectfile.llm gets no policy file — absence must never render as any
+// org.projectfile.ai gets no policy file — absence must never render as any
 // particular stance, permissive or otherwise.
 func TestRenderAbsentNamespaceEmitsNothing(t *testing.T) {
 	b := aipolicy.Bridge{}
@@ -439,10 +439,10 @@ func TestBridgePolicyMarker(t *testing.T) {
 	assert.False(t, aipolicy.Bridge{}.Policy().ScaffoldOnce, "the policy file is a projection, never scaffold-once")
 }
 
-// withLLM attaches an org.projectfile.llm extension to pf.
+// withLLM attaches an org.projectfile.ai extension to pf.
 func withLLM(pf *projectfile.Document, ext map[string]any) *projectfile.Document {
 	if len(ext) > 0 {
-		projectfile.SetExtension(pf, pfmodel.LLMExtensionNS, ext)
+		projectfile.SetExtension(pf, pfmodel.AIExtensionNS, ext)
 	}
 	return pf
 }

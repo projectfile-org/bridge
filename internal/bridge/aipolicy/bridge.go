@@ -16,7 +16,7 @@ import (
 )
 
 // filenameAIPolicy is the DEFAULT on-disk name and the name the templates are
-// keyed by. A document renaming its own policy file (org.projectfile.llm.
+// keyed by. A document renaming its own policy file (org.projectfile.ai.
 // filename) changes the output name only — the prose it renders is the same.
 const filenameAIPolicy = core.FileAIPolicy
 
@@ -26,7 +26,7 @@ const filenameAIPolicy = core.FileAIPolicy
 const aiPolicyLinkType = "ai-policy"
 
 // Bridge renders the AI policy file — the project's stance on AI/LLM use —
-// from org.projectfile.llm. Absence of the namespace means NO DECLARED
+// from org.projectfile.ai. Absence of the namespace means NO DECLARED
 // POLICY: the bridge emits nothing and never invents a permissive default.
 type Bridge struct{}
 
@@ -64,12 +64,12 @@ func (Bridge) FullPath(dir string, pf *projectfile.Document) string {
 func (Bridge) RequiredFields(_ *projectfile.Document) []core.Missing { return nil }
 
 func (Bridge) Render(pf *projectfile.Document, opts core.Options) (core.Output, error) {
-	ext, err := pfmodel.GetLLMExtension(pf)
+	ext, err := pfmodel.GetAIExtension(pf)
 	if err != nil {
 		return core.Output{}, err
 	}
 	if ext == nil {
-		genlog.Decision("namespace", "absent", "org.projectfile.llm",
+		genlog.Decision("namespace", "absent", "org.projectfile.ai",
 			"skipped — absence is not permission, never rendered as one")
 		return core.Output{Files: map[string][]byte{}}, nil
 	}
@@ -93,7 +93,7 @@ func (Bridge) Render(pf *projectfile.Document, opts core.Options) (core.Output, 
 		Langs:    pfmodel.Languages(pf),
 		View: func(lang string) any {
 			strLang := core.ResolveLang(lang, pf)
-			return llmView{
+			return policyView{
 				ProjectName:      pfmodel.DisplayNameForLang(pf, strLang),
 				Statement:        projectfile.ExtractLocalizedStringForLang(ext.Statement, strLang),
 				PolicyURL:        policyURL,
@@ -117,27 +117,27 @@ func (Bridge) Render(pf *projectfile.Document, opts core.Options) (core.Output, 
 	}, opts)
 }
 
-func emitDecisionTrace(ext *pfmodel.LLMExtension, outName string, rows []activityRow, useRows []projectUseRow, signals, enforcement []string, policyURL, contact, contactSrc string) {
-	genlog.Decision("filename", outName, "[org.projectfile.llm].filename", "default: "+filenameAIPolicy)
-	genlog.Decision("attitude", ext.Attitude, "[org.projectfile.llm].attitude", "")
-	genlog.Decision("autonomy", ext.Autonomy, "[org.projectfile.llm].autonomy", "default: any")
-	genlog.Decision("applies_to", ext.AppliesTo, "[org.projectfile.llm].applies-to", "default: everyone")
-	genlog.Decision("disclose_required", fmt.Sprintf("%v", ext.DiscloseRequired), "[org.projectfile.llm].disclose-required", "")
+func emitDecisionTrace(ext *pfmodel.AIExtension, outName string, rows []activityRow, useRows []projectUseRow, signals, enforcement []string, policyURL, contact, contactSrc string) {
+	genlog.Decision("filename", outName, "[org.projectfile.ai].filename", "default: "+filenameAIPolicy)
+	genlog.Decision("attitude", ext.Attitude, "[org.projectfile.ai].attitude", "")
+	genlog.Decision("autonomy", ext.Autonomy, "[org.projectfile.ai].autonomy", "default: any")
+	genlog.Decision("applies_to", ext.AppliesTo, "[org.projectfile.ai].applies-to", "default: everyone")
+	genlog.Decision("disclose_required", fmt.Sprintf("%v", ext.DiscloseRequired), "[org.projectfile.ai].disclose-required", "")
 	for _, r := range rows {
-		genlog.Decision("activity_override", r.Activity+" -> "+r.Stance, "[org.projectfile.llm].activities."+r.Activity, "differs from attitude")
+		genlog.Decision("activity_override", r.Activity+" -> "+r.Stance, "[org.projectfile.ai].activities."+r.Activity, "differs from attitude")
 	}
 	for _, r := range useRows {
-		genlog.Decision("project_use", r.Activity+" -> "+r.Autonomy, "[org.projectfile.llm].project-use."+r.Activity, "internal direction")
+		genlog.Decision("project_use", r.Activity+" -> "+r.Autonomy, "[org.projectfile.ai].project-use."+r.Activity, "internal direction")
 	}
 	if len(enforcement) == 0 {
-		genlog.Decision("enforcement", "(unset, no consequence stated)", "[org.projectfile.llm].enforcement", "")
+		genlog.Decision("enforcement", "(unset, no consequence stated)", "[org.projectfile.ai].enforcement", "")
 	} else {
-		genlog.Decision("enforcement", strings.Join(enforcement, " → "), "[org.projectfile.llm].enforcement", "declared order is the escalation order")
+		genlog.Decision("enforcement", strings.Join(enforcement, " → "), "[org.projectfile.ai].enforcement", "declared order is the escalation order")
 	}
 	if len(signals) == 0 {
-		genlog.Decision("content_signals", "(unset, section states the absence)", "[org.projectfile.llm].content-signals", "")
+		genlog.Decision("content_signals", "(unset, section states the absence)", "[org.projectfile.ai].content-signals", "")
 	} else {
-		genlog.Decision("content_signals", strings.Join(signals, ", "), "[org.projectfile.llm].content-signals", "")
+		genlog.Decision("content_signals", strings.Join(signals, ", "), "[org.projectfile.ai].content-signals", "")
 	}
 	genlog.Decision("policy_url", valOrUnset(policyURL), "links[type=ai-policy]", "")
 	genlog.Decision("contact", valOrUnset(contact), contactSrc, "people[roles=community]")

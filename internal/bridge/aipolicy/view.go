@@ -11,12 +11,12 @@ import (
 	"projectfile.org/projectfile/bridge/internal/pfmodel"
 )
 
-// llmView is the policy template data for one render. Every enum token
+// policyView is the policy template data for one render. Every enum token
 // (Attitude, Autonomy, AppliesTo, the row stances, Obligations, Enforcement,
 // ContentSignals entries) is data; its prose meaning lives in the template's
 // {{define}} blocks, one per language — Go decides WHICH tokens exist, the
 // template says what they mean.
-type llmView struct {
+type policyView struct {
 	ProjectName      string
 	Statement        string // "" omits the statement block
 	PolicyURL        string // "" omits the "Full policy" line
@@ -51,12 +51,12 @@ type projectUseRow struct {
 	Autonomy string // token from the same enum as Autonomy
 }
 
-// llmActivityOrder is the canonical declared order for known activity keys,
-// taken from the illustrative shape (spec/shapes/org.projectfile.llm.yaml) —
+// activityOrder is the canonical declared order for known activity keys,
+// taken from the illustrative shape (spec/shapes/org.projectfile.ai.yaml) —
 // so two renders of the same document never reorder around Go map iteration.
 // Unknown keys sort alphabetically after these (Determinism, ai-policy-generator.md).
 // The three families of the shape are kept in order: channel, content, task.
-var llmActivityOrder = []string{
+var activityOrder = []string{
 	"pull-requests", "commit-messages", "bug-reports", "discussions",
 	"code-review", "security-reports",
 	"code", "code-comments", "documentation", "translations", "prose",
@@ -65,22 +65,22 @@ var llmActivityOrder = []string{
 	"merges", "releases", "triage",
 }
 
-// llmKnownStances is the one closed enum `attitude` and every activity share
+// knownStances is the one closed enum `attitude` and every activity share
 // (spec change #1 — no attitude/activity derivation table, ever).
-var llmKnownStances = map[string]bool{
+var knownStances = map[string]bool{
 	"encouraged": true, "allowed": true, "neutral": true,
 	"discouraged": true, "prohibited": true,
 }
 
-// llmKnownAutonomy is the closed enum for the autonomy axis (spec change #2),
+// knownAutonomy is the closed enum for the autonomy axis (spec change #2),
 // shared by the document-level `autonomy` and every project-use entry.
-var llmKnownAutonomy = map[string]bool{"any": true, "assisted": true, "none": true}
+var knownAutonomy = map[string]bool{"any": true, "assisted": true, "none": true}
 
-// llmKnownAppliesTo is the closed enum for who the policy binds.
-var llmKnownAppliesTo = map[string]bool{"everyone": true, "contributors": true}
+// knownAppliesTo is the closed enum for who the policy binds.
+var knownAppliesTo = map[string]bool{"everyone": true, "contributors": true}
 
 // orderedActivityKeys returns the declared keys of an activity-keyed map in
-// render order: known keys in llmActivityOrder first, then unknown keys
+// render order: known keys in activityOrder first, then unknown keys
 // alphabetically. Map iteration order is random, and a random order fails
 // --check at random.
 func orderedActivityKeys(m map[string]string) []string {
@@ -89,7 +89,7 @@ func orderedActivityKeys(m map[string]string) []string {
 	}
 	keys := make([]string, 0, len(m))
 	seen := make(map[string]bool, len(m))
-	for _, key := range llmActivityOrder {
+	for _, key := range activityOrder {
 		if _, ok := m[key]; ok {
 			keys = append(keys, key)
 			seen[key] = true
@@ -109,7 +109,7 @@ func orderedActivityKeys(m map[string]string) []string {
 // stance DIFFERS from Attitude reaches the table. A project that spelled out
 // every activity identically to its attitude gets no table row at all — a row
 // is noise unless it says something the reader could not already assume.
-func buildActivityRows(ext *pfmodel.LLMExtension) []activityRow {
+func buildActivityRows(ext *pfmodel.AIExtension) []activityRow {
 	if ext == nil {
 		return nil
 	}
@@ -124,7 +124,7 @@ func buildActivityRows(ext *pfmodel.LLMExtension) []activityRow {
 
 // buildProjectUseRows resolves the INTERNAL table. No filter: a project that
 // says "we merge by hand" is saying it, not repeating a default.
-func buildProjectUseRows(ext *pfmodel.LLMExtension) []projectUseRow {
+func buildProjectUseRows(ext *pfmodel.AIExtension) []projectUseRow {
 	if ext == nil {
 		return nil
 	}
@@ -162,24 +162,24 @@ func dedupSignals(signals []string) []string {
 // on. Open-vocabulary fields (obligations, enforcement, content-signals,
 // activity KEYS) are deliberately not checked — an unknown value there is the
 // spec working as designed, not a mistake.
-func warnUnknownStances(ext *pfmodel.LLMExtension) {
-	if ext.Attitude != "" && !llmKnownStances[ext.Attitude] {
-		genlog.Warn("unrecognised org.projectfile.llm attitude value", "value", ext.Attitude)
+func warnUnknownStances(ext *pfmodel.AIExtension) {
+	if ext.Attitude != "" && !knownStances[ext.Attitude] {
+		genlog.Warn("unrecognised org.projectfile.ai attitude value", "value", ext.Attitude)
 	}
-	if !llmKnownAutonomy[ext.Autonomy] {
-		genlog.Warn("unrecognised org.projectfile.llm autonomy value", "value", ext.Autonomy)
+	if !knownAutonomy[ext.Autonomy] {
+		genlog.Warn("unrecognised org.projectfile.ai autonomy value", "value", ext.Autonomy)
 	}
-	if !llmKnownAppliesTo[ext.AppliesTo] {
-		genlog.Warn("unrecognised org.projectfile.llm applies-to value", "value", ext.AppliesTo)
+	if !knownAppliesTo[ext.AppliesTo] {
+		genlog.Warn("unrecognised org.projectfile.ai applies-to value", "value", ext.AppliesTo)
 	}
 	for key, v := range ext.Activities {
-		if !llmKnownStances[v] {
-			genlog.Warn("unrecognised org.projectfile.llm activity stance", "activity", key, "value", v)
+		if !knownStances[v] {
+			genlog.Warn("unrecognised org.projectfile.ai activity stance", "activity", key, "value", v)
 		}
 	}
 	for key, v := range ext.ProjectUse {
-		if !llmKnownAutonomy[v] {
-			genlog.Warn("unrecognised org.projectfile.llm project-use autonomy", "activity", key, "value", v)
+		if !knownAutonomy[v] {
+			genlog.Warn("unrecognised org.projectfile.ai project-use autonomy", "activity", key, "value", v)
 		}
 	}
 }

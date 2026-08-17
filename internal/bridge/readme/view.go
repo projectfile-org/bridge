@@ -318,7 +318,7 @@ var healthFilesFixed = []string{
 
 // healthFiles is the probe list for this document. Every name but the AI
 // policy is fixed; that one is whatever the project called it
-// (org.projectfile.llm.filename), so a renamed policy is still discovered and
+// (org.projectfile.ai.filename), so a renamed policy is still discovered and
 // still linked. A project with no namespace probes the default name — the
 // list has always been a file-exists probe, and a file on disk is a file on
 // disk whether or not the projectfile declares it.

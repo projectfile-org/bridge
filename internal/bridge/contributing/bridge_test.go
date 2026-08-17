@@ -470,12 +470,12 @@ func TestRenderUnknownForgeFallsBackToIssues(t *testing.T) {
 
 // ── Conventions LLM row ─────────────────────────────────────────────────────
 
-// TestRenderConventionsLLMRow: a declared org.projectfile.llm namespace adds a
+// TestRenderConventionsLLMRow: a declared org.projectfile.ai namespace adds a
 // Conventions row pointing at the LLM policy document.
 func TestRenderConventionsLLMRow(t *testing.T) {
 	b := contributing.Bridge{}
-	pf := &projectfile.Document{Identity: projectfile.Identity{Name: "llm-proj"}}
-	projectfile.SetExtension(pf, pfmodel.LLMExtensionNS, map[string]any{"attitude": "welcoming"})
+	pf := &projectfile.Document{Identity: projectfile.Identity{Name: "ai-proj"}}
+	projectfile.SetExtension(pf, pfmodel.AIExtensionNS, map[string]any{"attitude": "welcoming"})
 	out, err := b.Render(pf, core.Options{Offline: true})
 	require.NoError(t, err)
 	body := string(out.Files["CONTRIBUTING.md"])
@@ -486,7 +486,7 @@ func TestRenderConventionsLLMRow(t *testing.T) {
 // namespace, so a project with no LLM policy renders none.
 func TestRenderConventionsNoLLMRowWithoutNamespace(t *testing.T) {
 	b := contributing.Bridge{}
-	pf := &projectfile.Document{Identity: projectfile.Identity{Name: "llm-proj"}}
+	pf := &projectfile.Document{Identity: projectfile.Identity{Name: "ai-proj"}}
 	out, err := b.Render(pf, core.Options{Offline: true})
 	require.NoError(t, err)
 	body := string(out.Files["CONTRIBUTING.md"])
