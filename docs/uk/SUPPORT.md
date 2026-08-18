@@ -42,7 +42,7 @@ pf-cli-managed: yes
 
 Платна підтримка для Projectfile Bridges доступна:
 
-- [Від автора](https://dbuho.me)
+- [Підтримка від автора](https://dbuho.me)
 
 *Згенеровано з projectfile ([дізнатися як](https://projectfile.org/how-to/support))*
 <!-- textlint-enable -->

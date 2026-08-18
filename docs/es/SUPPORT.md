@@ -42,7 +42,7 @@ Este es un proyecto mantenido por la comunidad. Quienes lo mantienen responden c
 
 Hay soporte de pago disponible para Projectfile Bridges:
 
-- [Del autor](https://dbuho.me)
+- [Apoyo del autor](https://dbuho.me)
 
 *Generado desde projectfile ([saber cómo](https://projectfile.org/how-to/support))*
 <!-- textlint-enable -->
