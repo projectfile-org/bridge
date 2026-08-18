@@ -32,6 +32,12 @@ org:
         command: pf-bridge
         kind: binary
         path: dist/pf-bridge
+    ignores:
+      git:
+        include:
+          # Local-only Go workspace file: a worktree cannot see the workspace
+          # go.work one level above the repositories, so it writes its own.
+          - go.work
     build:
       args:
         GOPROXY: ""

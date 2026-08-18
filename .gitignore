@@ -17,6 +17,7 @@
 /dist/
 coverage.html
 coverage.out
+go.work
 reports/
 # <<< user-include
 
