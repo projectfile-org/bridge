@@ -362,10 +362,10 @@ type FragmentDocument struct {
 // the parent resolves the same way for a consumer who checked out this project
 // alone as for the author who keeps every project in one directory.
 //
-// Ref floats when empty: the refresh run reads the parent’s newest release tag
-// and records which tag it read in the cached copy. That recorded version is
-// what the assembled document names, so a heading states “inherited from
-// b19/ubuntu 1.0.0” — true forever — instead of claiming to be current.
+// Ref floats when empty: a generate run reads the parent’s newest release
+// tag, and the version it read is what the assembled document names, so a
+// heading states “inherited from b19/ubuntu 1.0.0” — true forever — instead
+// of claiming to be current.
 type FragmentParent struct {
 	URL string `toml:"url" yaml:"url" json:"url"`
 	Ref string `toml:"ref" yaml:"ref" json:"ref"`

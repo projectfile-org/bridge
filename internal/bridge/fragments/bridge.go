@@ -3,40 +3,38 @@
 // SPDX-License-Identifier: MIT
 
 // Package fragments is a derive-only Renderer that assembles Markdown
-// documents from docs/<name>.d/*.md fragment directories, plus one cached copy
-// per upstream parent. Each document declared under
+// documents from docs/<name>.d/*.md fragment directories, plus one section per
+// upstream parent. Each document declared under
 // org.projectfile.fragments.documents becomes one artefact (e.g.
 // docs/features.d → FEATURES.md). It replaces the former Ruby features-md
 // CLI, generalised to any number of assembled documents.
 //
-// Assembly reads local files only. Parents are forge URLs, and reading them is
-// a separate opt-in step (--refresh) that writes each parent's published
-// document into docs/<name>.d/.inherited/ with the version it was read at. That
-// split is what lets the drift gate run offline and deterministically while the
-// inherited text still names a real upstream version instead of implying it is
-// current.
+// Inherited sections carry no cache of their own: a writing run online reads
+// the parents' published documents straight off their newest release tag, and
+// every other run — offline, check, preview, dry-run, or a generate whose
+// fetch failed — reads the sections back out of the committed assembled
+// document. That split keeps the drift gate offline and byte-stable while the
+// inherited text still names a real upstream version; regenerating is how
+// upstream changes land.
 //
 // Documents localize per org.projectfile.i18n: the canonical file assembles
 // from docs/<name>.d/ as before, and each other declared language assembles
 // from docs/<lang>/<name>.d/ into docs/<lang>/<Out>. A language with no
-// translated fragments and no localized inherited copies renders nothing
-// under a localized name (warned). The inherited sections localize from the
-// parent's own docs/<lang>/<Out> — cached under docs/<lang>/<name>.d/
-// .inherited/ — and fall back to the canonical copy for a parent that
-// publishes no such language, since a child cannot translate text it does
-// not own.
+// translated fragments and no language-specific inherited sections renders
+// nothing under a localized name (warned). The inherited sections localize
+// from the parent's own docs/<lang>/<Out> and fall back to the canonical copy
+// for a parent that publishes no such language, since a child cannot translate
+// text it does not own.
 package fragments
 
 import (
 	"fmt"
-	"path"
 	"path/filepath"
 
 	"kiota.ch/projectfile/core/v2/pkg/genlog"
 	"kiota.ch/projectfile/core/v2/pkg/projectfile"
 	"projectfile.org/projectfile/bridge/internal/bridge/core"
 	"projectfile.org/projectfile/bridge/internal/pfmodel"
-	"projectfile.org/projectfile/bridge/internal/warn"
 )
 
 // templateName is the single structural template every document and every
@@ -90,8 +88,8 @@ func (Bridge) FullPath(dir string, _ *projectfile.Document) string {
 // Returns an empty Output (no-op) when neither yields documents — RunRender
 // then logs "bridge: fragments (no-op)".
 //
-// A document with no own AND no inherited fragments is skipped (no file
-// emitted): the markdown linter rejects an empty `# Title` section, so a
+// A document with no own fragments and no inherited sections is skipped (no
+// file emitted): the markdown linter rejects an empty `# Title` section, so a
 // declared-but-unpopulated shell (e.g. roadmap until docs/roadmap.d/ exists)
 // must produce nothing rather than a stub.
 func (Bridge) Render(pf *projectfile.Document, opts core.Options) (core.Output, error) {
@@ -108,41 +106,18 @@ func (Bridge) Render(pf *projectfile.Document, opts core.Options) (core.Output, 
 	reuse := core.REUSEHeader(pf, core.StyleHTML)
 	out := core.Output{Files: map[string][]byte{}}
 	for _, doc := range docs {
-		// Refreshed copies are emitted AND fed straight into the assembly, so one
-		// run cannot write a new copy while assembling from the previous one.
-		var refreshed map[string]inheritedCopy
-		var refreshedLocalized map[string]map[string]inheritedCopy
-		if opts.Refresh {
-			refreshed, refreshedLocalized = refreshParents(doc, opts, langs)
-			for name, copied := range refreshed {
-				rel := path.Join(doc.Dir, inheritedDir, name+".md")
-				out.Files[rel] = renderInherited(copied)
-				genlog.Plain("bridge: " + rel)
-			}
-			for lang, copies := range refreshedLocalized {
-				for name, copied := range copies {
-					rel := path.Join(localizedFragDir(doc.Dir, lang), inheritedDir, name+".md")
-					out.Files[rel] = renderInherited(copied)
-					genlog.Plain("bridge: " + rel)
-				}
-			}
-			warnStaleLocalized(opts.Dir, doc, refreshed, refreshedLocalized, langs)
-		}
-
-		own, inherited, err := loadDocument(opts.Dir, doc, refreshed)
+		own, err := loadFragments(opts.Dir, doc.Dir)
 		if err != nil {
 			return core.Output{}, fmt.Errorf("%s: %w", doc.Out, err)
 		}
-		if len(own) == 0 && len(inherited) == 0 {
+
+		canonical, variants := sectionsFor(opts.Dir, doc, opts, langs, defLang)
+		if len(own) == 0 && len(canonical) == 0 {
 			genlog.Plain(fmt.Sprintf("bridge: %s (skipped, no fragments)", doc.Out))
 			continue
 		}
 
-		// Variants resolve BEFORE any render: the cross-language bar names
-		// exactly the set that ships, in the canonical file too.
-		variants := resolveVariantLangs(opts.Dir, doc, inherited, refreshedLocalized, langs)
-
-		body, err := assembleDocument(opts.Dir, defLang, "", defLang, doc, own, inherited, variants, reuse)
+		body, err := assembleDocument(opts.Dir, defLang, "", defLang, doc, own, canonical, variants, reuse)
 		if err != nil {
 			return core.Output{}, fmt.Errorf("%s: %w", doc.Out, err)
 		}
@@ -162,31 +137,39 @@ func (Bridge) Render(pf *projectfile.Document, opts core.Options) (core.Output, 
 	return out, nil
 }
 
-// warnStaleLocalized reports a cached localized copy whose parent refresh
-// reached (so absence is upstream's choice, not an outage) yet produced no
-// localized copy for that language: nothing ever deletes the file, so the
-// variant would keep quoting a version upstream no longer publishes.
-func warnStaleLocalized(projectDir string, doc pfmodel.FragmentDocument, refreshed map[string]inheritedCopy, refreshedLocalized map[string]map[string]inheritedCopy, langs []string) {
-	if !docLocalizable(doc) || len(refreshed) == 0 {
-		return
+// sectionsFor resolves one document's inherited sections for the canonical
+// render and every variant. A writing run online fetches the parents'
+// published documents; every other run re-reads the sections verbatim from the
+// committed document, which keeps the drift gate offline and byte-stable. A
+// fetch that cannot read every declared parent degrades the whole document to
+// its committed sections — a forge outage preserves content instead of
+// deleting it, and never mixes fresh and stale sections in one file.
+func sectionsFor(projectDir string, doc pfmodel.FragmentDocument, opts core.Options, langs []string, defLang string) ([]inheritedEntry, []variantFragments) {
+	none := func(string) ([]inheritedEntry, bool) { return nil, false }
+	if len(doc.Parents) == 0 {
+		return nil, resolveVariantLangs(projectDir, doc, langs, none)
 	}
-	for _, lang := range langs {
-		cached, err := loadInherited(projectDir, localizedFragDir(doc.Dir, lang))
-		if err != nil {
-			continue
-		}
-		for name, copied := range cached {
-			if _, reached := refreshed[name]; !reached {
-				continue
-			}
-			if _, published := refreshedLocalized[lang][name]; published {
-				continue
-			}
-			warn.Record("fragments: parent no longer publishes this language, the cached localized copy is stale",
-				"parent", copied.Name, "lang", lang, "document", doc.Out,
-				"hint", "delete "+path.Join(localizedFragDir(doc.Dir, lang), inheritedDir, name+".md"))
+	if !opts.Offline && !opts.DryRun {
+		if copies, localized, ok := fetchParents(doc, langs); ok {
+			ordered := orderedCopies(copies)
+			return localizedInherited(ordered, defLang),
+				resolveVariantLangs(projectDir, doc, langs, func(lang string) ([]inheritedEntry, bool) {
+					merged := overCanonical(ordered, localized[lang], lang, doc.Out)
+					return localizedInherited(merged, lang), len(localized[lang]) > 0
+				})
 		}
 	}
+	canonical, _ := extractInherited(projectDir, doc.Out, localizedProjectHeading(doc.Title, doc.Out, defLang))
+	return canonical, resolveVariantLangs(projectDir, doc, langs, func(lang string) ([]inheritedEntry, bool) {
+		sections, existed := extractInherited(projectDir, core.LocalizedFilename(doc.Out, lang), localizedProjectHeading(doc.Title, doc.Out, lang))
+		if existed {
+			return sections, true
+		}
+		// No committed variant document: nest the canonical sections under
+		// localized headings — the offline edition of the fallback a parent
+		// that publishes no such language gets online.
+		return localizedFromCanonical(canonical, defLang, lang), false
+	})
 }
 
 // resolveDocuments applies the override-then-conventions precedence and
@@ -219,23 +202,6 @@ func resolveDocuments(pf *projectfile.Document) ([]pfmodel.FragmentDocument, err
 	return out, nil
 }
 
-// loadDocument reads one document's own fragments and its declared inherited
-// copies, folding in the copies a --refresh in this same run just read.
-func loadDocument(projectDir string, doc pfmodel.FragmentDocument, refreshed map[string]inheritedCopy) ([]Fragment, []inheritedCopy, error) {
-	own, err := loadFragments(projectDir, doc.Dir)
-	if err != nil {
-		return nil, nil, err
-	}
-	cached, err := loadInherited(projectDir, doc.Dir)
-	if err != nil {
-		return nil, nil, err
-	}
-	for name, copied := range refreshed {
-		cached[name] = copied
-	}
-	return own, orderedCopies(declaredOnly(cached, doc)), nil
-}
-
 // assembleDocument builds one artefact through the structural template: own
 // fragments under a Project section, then one section per parent. strLang
 // resolves the assembler's structural strings (the default language for the
@@ -243,14 +209,14 @@ func loadDocument(projectDir string, doc pfmodel.FragmentDocument, refreshed map
 // sentinel the cross-language bar keys off. Variants nest the SAME inherited
 // sections as the canonical file — they quote upstream, which publishes one
 // language, and a variant that dropped them would understate the project.
-func assembleDocument(projectDir, strLang, barLang, defLang string, doc pfmodel.FragmentDocument, own []Fragment, inherited []inheritedCopy, variants []variantFragments, reuse string) ([]byte, error) {
+func assembleDocument(projectDir, strLang, barLang, defLang string, doc pfmodel.FragmentDocument, own []Fragment, inherited []inheritedEntry, variants []variantFragments, reuse string) ([]byte, error) {
 	view := fragmentView{
 		REUSEHeader:      reuse,
 		Title:            localizedDocTitle(doc.Title, doc.Out, strLang),
 		HasProject:       len(own) > 0,
 		ProjectHeading:   localizedProjectHeading(doc.Title, doc.Out, strLang),
 		ProjectFragments: own,
-		Inherited:        localizedInherited(inherited, strLang),
+		Inherited:        inherited,
 	}
 	// core.Render resolves project-local template overrides under projectDir,
 	// then the embedded template — same dir the fragments were loaded from.

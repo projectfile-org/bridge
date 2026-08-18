@@ -23,12 +23,11 @@ import (
 // A language is a whole-document translation, same contract as the health
 // files: a locale dir with no fragments renders nothing under a localized
 // name, and the warning names the dir to create. Inherited sections localize
-// from the parent's own published docs/<lang>/<Out> — cached under the locale
-// variant of the inherited dir — and fall back to the canonical copy for a
-// parent that publishes no such language: the child cannot translate text it
-// does not own. The readme bridge's features block carries the reader-facing
-// fallback (English bullets plus a not-yet-translated note), so the two
-// halves together degrade honestly.
+// from the parent's own docs/<lang>/<Out> and fall back to the canonical copy
+// for a parent that publishes no such language: the child cannot translate
+// text it does not own. The readme bridge's features block carries the
+// reader-facing fallback (English bullets plus a not-yet-translated note), so
+// the two halves together degrade honestly.
 
 // localizedFragDir maps a document's fragment dir to its per-language
 // variant: docs/features.d + es → docs/es/features.d. Dirs outside docs/ have
@@ -48,18 +47,21 @@ func docLocalizable(doc pfmodel.FragmentDocument) bool {
 }
 
 // variantFragments is one declared language's render set: its own translated
-// fragments and the inherited copies that variant nests.
+// fragments and the inherited sections that variant nests.
 type variantFragments struct {
 	Lang      string
 	Fragments []Fragment
-	Inherited []inheritedCopy
+	Inherited []inheritedEntry
 }
 
 // resolveVariantLangs probes every declared language for content it can ship:
-// its own translated fragments, or inherited copies the parents publish in
-// that language. A language with neither renders nothing under a localized
-// name — never faked — and the warning names the dir to add.
-func resolveVariantLangs(projectDir string, doc pfmodel.FragmentDocument, inherited []inheritedCopy, refreshedLangs map[string]map[string]inheritedCopy, langs []string) []variantFragments {
+// its own translated fragments, or inherited sections specific to that
+// language. A language with neither renders nothing under a localized name —
+// never faked — and the warning names the dir to add. sectionsFor resolves a
+// language's inherited sections and reports whether any of them is specific to
+// the language; the source — live fetch or committed document — is the
+// caller's choice, existence is decided here and only here.
+func resolveVariantLangs(projectDir string, doc pfmodel.FragmentDocument, langs []string, sectionsFor func(lang string) ([]inheritedEntry, bool)) []variantFragments {
 	if len(langs) == 0 {
 		return nil
 	}
@@ -75,8 +77,8 @@ func resolveVariantLangs(projectDir string, doc pfmodel.FragmentDocument, inheri
 				"dir", localizedFragDir(doc.Dir, lang), "error", err.Error())
 			continue
 		}
-		localized := localizedCopies(projectDir, doc, lang, refreshedLangs[lang])
-		if len(frags) == 0 && len(localized) == 0 {
+		sections, localizedContent := sectionsFor(lang)
+		if len(frags) == 0 && !localizedContent {
 			genlog.Warn("no fragments for language — file skipped",
 				"file", core.LocalizedFilename(doc.Out, lang),
 				"lang", lang,
@@ -86,35 +88,16 @@ func resolveVariantLangs(projectDir string, doc pfmodel.FragmentDocument, inheri
 		out2 = append(out2, variantFragments{
 			Lang:      lang,
 			Fragments: frags,
-			Inherited: overCanonical(inherited, localized, lang, doc.Out),
+			Inherited: sections,
 		})
 	}
 	return out2
 }
 
-// localizedCopies reads one language's cached parent copies, folding in the
-// copies a --refresh in this same run just read and keeping only declared
-// parents. Existence lives here, before any fallback: a variant built only of
-// canonical bodies would be English under a localized name.
-func localizedCopies(projectDir string, doc pfmodel.FragmentDocument, lang string, refreshed map[string]inheritedCopy) map[string]inheritedCopy {
-	dir := localizedFragDir(doc.Dir, lang)
-	localized := map[string]inheritedCopy{}
-	if cached, err := loadInherited(projectDir, dir); err != nil {
-		genlog.Warn("fragments: unreadable localized inherited dir, falling back to canonical copies",
-			"dir", dir, "error", err.Error())
-	} else {
-		localized = cached
-	}
-	for name, copied := range refreshed {
-		localized[name] = copied
-	}
-	return declaredOnly(localized, doc)
-}
-
-// overCanonical layers one language's localized copies over the canonical
-// set: a parent that publishes the language reads translated, one that does
-// not falls back to the body it does publish — the child cannot translate
-// text it does not own.
+// overCanonical layers one language's fetched localized copies over the
+// fetched canonical set: a parent that publishes the language reads
+// translated, one that does not falls back to the body it does publish — the
+// child cannot translate text it does not own.
 func overCanonical(canonical []inheritedCopy, localized map[string]inheritedCopy, lang, document string) []inheritedCopy {
 	if len(canonical) == 0 && len(localized) == 0 {
 		return nil

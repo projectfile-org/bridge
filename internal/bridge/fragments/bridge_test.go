@@ -35,7 +35,18 @@ const (
 	outFeatures   = "FEATURES.md"
 	titleFeatures = "Features"
 	parentURL     = "https://example.test/b19/ubuntu"
+
+	// Committed-fixture literals repeated across tests (goconst).
+	headingInherited = "## Inherited from b19/ubuntu 1.0.0"
+	ownFeatureBody   = "### Own Feature\n\nOwn body."
+	parentFeatBody   = "### Parent Feature\n\nParent body."
 )
+
+// offlineOptions is how every parents-declaring test runs: no fetch, the
+// committed document is the only record of inherited content.
+func offlineOptions(dir string) core.Options {
+	return core.Options{Dir: dir, Offline: true}
+}
 
 func writeProjectfile(t *testing.T, dir, body string) {
 	t.Helper()
@@ -70,35 +81,32 @@ func docWithFragments(t *testing.T, dir string) *projectfile.Document {
 	return pf
 }
 
-// writeInherited writes one cached parent copy exactly as --refresh would, so
-// every assembly test runs offline. The provenance comment is what carries the
-// version into the section heading.
-func writeInherited(t *testing.T, projectDir, dir, cacheName, parent, ref, entry string) {
+// writeCommittedDoc writes one committed assembled document in the shape a
+// render leaves behind: SPDX header, optional textlint wrap (a localized
+// variant), H1, the project section's own bodies, then one block per
+// inherited section. Offline runs read their inherited sections back out of
+// exactly this file, so it is the fixture that replaces the former cache.
+func writeCommittedDoc(t *testing.T, projectDir, rel, h1, projectHeading string, own []string, sections [][2]string, wrap bool) {
 	t.Helper()
-	full := filepath.Join(projectDir, dir, ".inherited")
-	require.NoError(t, os.MkdirAll(full, 0o755))
-	content := "<!--\nSPDX-FileCopyrightText: 2026 Upstream\n" + spdxTag + ": " + spdxMIT + "\n-->\n\n" +
-		"<!-- pf-bridge:inherited name=\"" + parent + "\" url=\"https://example.test/" + parent +
-		"\" ref=\"" + ref + "\" commit=\"0123456789abcdef\" document=\"" + outFeatures + "\" -->\n\n" +
-		"### " + entry + "\n\nFrom parent.\n"
-	require.NoError(t, os.WriteFile(filepath.Join(full, cacheName+".md"), []byte(content), 0o644))
-}
-
-// writeInheritedLang writes one cached localized parent copy exactly as
-// --refresh would: under the locale variant of the fragment dir, with the
-// lang provenance attr and the textlint wrap that protects the on-disk prose.
-func writeInheritedLang(t *testing.T, projectDir, lang, cacheName, parent, ref, entry, body string) {
-	t.Helper()
-	full := filepath.Join(projectDir, "docs", lang, "features.d", ".inherited")
-	require.NoError(t, os.MkdirAll(full, 0o755))
-	document := "docs/" + lang + "/" + outFeatures
-	content := "<!--\nSPDX-FileCopyrightText: 2026 Upstream\n" + spdxTag + ": " + spdxMIT + "\n-->\n\n" +
-		"<!-- pf-bridge:inherited name=\"" + parent + "\" url=\"https://example.test/" + parent +
-		"\" ref=\"" + ref + "\" commit=\"0123456789abcdef\" document=\"" + document + "\" lang=\"" + lang + "\" -->\n\n" +
-		"<!-- textlint-disable terminology,common-misspellings -->\n\n" +
-		"### " + entry + "\n\n" + body + "\n\n" +
-		"<!-- textlint-enable -->\n"
-	require.NoError(t, os.WriteFile(filepath.Join(full, cacheName+".md"), []byte(content), 0o644))
+	full := filepath.Join(projectDir, rel)
+	require.NoError(t, os.MkdirAll(filepath.Dir(full), 0o755))
+	var b strings.Builder
+	b.WriteString("<!--\nSPDX-FileCopyrightText: 2026 Tester\n" + spdxTag + ": " + spdxMIT + "\n-->\n\n")
+	if wrap {
+		b.WriteString("<!-- textlint-disable terminology,common-misspellings -->\n\n")
+	}
+	b.WriteString("# " + h1 + "\n")
+	for _, body := range own {
+		b.WriteString("\n" + projectHeading + "\n\n" + body + "\n")
+	}
+	for _, s := range sections {
+		b.WriteString("\n" + s[0] + "\n\n" + s[1] + "\n")
+	}
+	content := strings.TrimRight(b.String(), "\n") + "\n"
+	if wrap {
+		content = strings.TrimRight(content, "\n") + "\n\n<!-- textlint-enable -->\n"
+	}
+	require.NoError(t, os.WriteFile(full, []byte(content), 0o644))
 }
 
 // parentsBlock declares URL parents inside a document, matching the shape a
@@ -149,9 +157,9 @@ func TestRenderDeterministicOrder(t *testing.T) {
 		writeFragment(t, dir, "docs/features.d", n, n, n)
 	}
 	pf := docWithFragments(t, dir)
-	out1, err := fragments.Bridge{}.Render(pf, core.Options{Dir: dir})
+	out1, err := fragments.Bridge{}.Render(pf, offlineOptions(dir))
 	require.NoError(t, err)
-	out2, err := fragments.Bridge{}.Render(pf, core.Options{Dir: dir})
+	out2, err := fragments.Bridge{}.Render(pf, offlineOptions(dir))
 	require.NoError(t, err)
 	assert.Equal(t, out1.Files[outFeatures], out2.Files[outFeatures])
 
@@ -163,34 +171,38 @@ func TestRenderDeterministicOrder(t *testing.T) {
 	assert.Less(t, idxM, idxZ, "fragments must appear in sorted (alpha,mid,zeta) order")
 }
 
-// TestRenderInheritsCachedParent asserts a cached parent copy lands in its own
-// section, and that the heading names the version the copy was read at — the
-// claim that stays true after upstream moves on.
-func TestRenderInheritsCachedParent(t *testing.T) {
+// TestRenderInheritsCommittedSection asserts an inherited section read back
+// out of the committed document lands verbatim in the reassembly, heading
+// included — the heading is the only provenance left, and it still names the
+// version the section was fetched at.
+func TestRenderInheritsCommittedSection(t *testing.T) {
 	child := t.TempDir()
 	body := "    fragments:\n      documents:\n        - dir: docs/features.d\n" +
 		"          out: FEATURES.md\n          title: Features\n" +
 		parentsBlock(parentURL)
 	writeProjectfile(t, child, body)
 	writeFragment(t, child, "docs/features.d", "child-feat", "Child Feature", "From child.")
-	writeInherited(t, child, "docs/features.d", "b19-ubuntu", "b19/ubuntu", "1.0.0", "Parent Feature")
+	writeCommittedDoc(t, child, outFeatures, "Features", "## Project Features",
+		[]string{"### Child Feature\n\nFrom child."},
+		[][2]string{{headingInherited, "### Parent Feature\n\nFrom parent."}},
+		false)
 
-	out, err := fragments.Bridge{}.Render(docWithFragments(t, child), core.Options{Dir: child})
+	out, err := fragments.Bridge{}.Render(docWithFragments(t, child), offlineOptions(child))
 	require.NoError(t, err)
 	got := string(out.Files[outFeatures])
 	assert.Contains(t, got, "## Project Features")
 	assert.Contains(t, got, "### Child Feature")
-	assert.Contains(t, got, "## Inherited from b19/ubuntu 1.0.0")
+	assert.Contains(t, got, headingInherited)
 	assert.Contains(t, got, "### Parent Feature")
-	// The parent's own SPDX header stays in the cache file, not in the assembly.
+	// Only the document's own SPDX header survives — no comment-based storage.
 	assert.Equal(t, 1, strings.Count(got, "<!--"), "only the document SPDX header survives")
 }
 
-// TestRenderParentWithoutCacheIsQuiet covers the state every project starts in:
-// a parent is declared, --refresh has never run, so there is nothing to inherit.
-// That must render the own fragments and no empty section, never an error —
-// assembly reads local files only and knows nothing about reaching upstream.
-func TestRenderParentWithoutCacheIsQuiet(t *testing.T) {
+// TestRenderParentWithoutCommittedDocIsQuiet covers the state a project starts
+// in: a parent is declared but nothing was ever generated online, so there is
+// no committed document to read sections from. That must render the own
+// fragments and no empty section, never an error.
+func TestRenderParentWithoutCommittedDocIsQuiet(t *testing.T) {
 	child := t.TempDir()
 	body := "    fragments:\n      documents:\n        - dir: docs/features.d\n" +
 		"          out: FEATURES.md\n          title: Features\n" +
@@ -198,16 +210,17 @@ func TestRenderParentWithoutCacheIsQuiet(t *testing.T) {
 	writeProjectfile(t, child, body)
 	writeFragment(t, child, "docs/features.d", "child-feat", "Child Feature", "From child.")
 
-	out, err := fragments.Bridge{}.Render(docWithFragments(t, child), core.Options{Dir: child})
+	out, err := fragments.Bridge{}.Render(docWithFragments(t, child), offlineOptions(child))
 	require.NoError(t, err)
 	got := string(out.Files[outFeatures])
 	assert.Contains(t, got, "### Child Feature")
 	assert.NotContains(t, got, "## Inherited")
 }
 
-// TestRenderInheritedOrderIsDeterministic verifies several parents render in
-// cache-filename order — NOT declaration order — so two runs on one tree
-// produce identical bytes, the property the drift gate compares against.
+// TestRenderInheritedOrderIsDeterministic verifies several committed sections
+// re-render in committed order — the order the last online generate wrote —
+// so two offline runs on one tree produce identical bytes, the property the
+// drift gate compares against.
 func TestRenderInheritedOrderIsDeterministic(t *testing.T) {
 	child := t.TempDir()
 	body := "    fragments:\n      documents:\n        - dir: docs/features.d\n" +
@@ -215,13 +228,18 @@ func TestRenderInheritedOrderIsDeterministic(t *testing.T) {
 		parentsBlock("ssh://git@example.test/b19/zeta.git", "ssh://git@example.test/b19/alpha.git")
 	writeProjectfile(t, child, body)
 	writeFragment(t, child, "docs/features.d", "own", "Own Feature", "Own body.")
-	writeInherited(t, child, "docs/features.d", "b19-zeta", "b19/zeta", "2.0.0", "Zeta Feature")
-	writeInherited(t, child, "docs/features.d", "b19-alpha", "b19/alpha", "1.0.0", "Alpha Feature")
+	writeCommittedDoc(t, child, outFeatures, "Features", "## Project Features",
+		[]string{ownFeatureBody},
+		[][2]string{
+			{"## Inherited from b19/alpha 1.0.0", "### Alpha Feature\n\nAlpha body."},
+			{"## Inherited from b19/zeta 2.0.0", "### Zeta Feature\n\nZeta body."},
+		},
+		false)
 
 	pf := docWithFragments(t, child)
-	first, err := fragments.Bridge{}.Render(pf, core.Options{Dir: child})
+	first, err := fragments.Bridge{}.Render(pf, offlineOptions(child))
 	require.NoError(t, err)
-	second, err := fragments.Bridge{}.Render(pf, core.Options{Dir: child})
+	second, err := fragments.Bridge{}.Render(pf, offlineOptions(child))
 	require.NoError(t, err)
 	assert.Equal(t, first.Files[outFeatures], second.Files[outFeatures])
 
@@ -259,7 +277,7 @@ func TestRenderNoDocumentsIsNoOp(t *testing.T) {
 }
 
 // TestRenderEmptyDocumentIsSkipped verifies a declared document whose dir is
-// absent (no own fragments) AND has no parents (no inherited fragments) is
+// absent (no own fragments) AND has no parents (no inherited sections) is
 // skipped — no file emitted. Regression for the bare `# Title` stub that
 // failed markdownlint (empty section + missing final newline).
 func TestRenderEmptyDocumentIsSkipped(t *testing.T) {
@@ -289,26 +307,30 @@ func TestRenderHasSingleTrailingNewline(t *testing.T) {
 	assert.False(t, strings.HasSuffix(got, "\n\n"), "file must not end with a blank line")
 }
 
-// TestRenderIgnoresUndeclaredCachedCopy verifies the projectfile stays the
-// authority on who this project inherits from: a copy left behind by a parent
-// that was dropped from the list must not keep appearing, since nothing else
-// ever removes the file.
-func TestRenderIgnoresUndeclaredCachedCopy(t *testing.T) {
+// TestRenderOfflinePreservesUndeclaredSection pins the preservation rule: an
+// offline run cannot know which parent a committed section belongs to, so it
+// keeps every committed section verbatim — the next online generate is what
+// drops a section whose parent is no longer declared.
+func TestRenderOfflinePreservesUndeclaredSection(t *testing.T) {
 	child := t.TempDir()
 	body := "    fragments:\n      documents:\n        - dir: docs/features.d\n" +
 		"          out: FEATURES.md\n          title: Features\n" +
 		parentsBlock("ssh://git@example.test/b19/ubuntu.git")
 	writeProjectfile(t, child, body)
 	writeFragment(t, child, "docs/features.d", "own", "Own Feature", "Own body.")
-	writeInherited(t, child, "docs/features.d", "b19-ubuntu", "b19/ubuntu", "1.0.0", "Kept Feature")
-	writeInherited(t, child, "docs/features.d", "b19-dropped", "b19/dropped", "1.0.0", "Dropped Feature")
+	writeCommittedDoc(t, child, outFeatures, "Features", "## Project Features",
+		[]string{ownFeatureBody},
+		[][2]string{
+			{headingInherited, "### Kept Feature\n\nKept body."},
+			{"## Inherited from b19/dropped 1.0.0", "### Dropped Feature\n\nDropped body."},
+		},
+		false)
 
-	out, err := fragments.Bridge{}.Render(docWithFragments(t, child), core.Options{Dir: child})
+	out, err := fragments.Bridge{}.Render(docWithFragments(t, child), offlineOptions(child))
 	require.NoError(t, err)
 	got := string(out.Files[outFeatures])
 	assert.Contains(t, got, "### Kept Feature")
-	assert.NotContains(t, got, "### Dropped Feature")
-	assert.NotContains(t, got, "b19/dropped")
+	assert.Contains(t, got, "### Dropped Feature", "offline preserves what is committed, undeclared or not")
 }
 
 // TestRenderNoMultipleBlankLinesBetweenSections verifies the boundary
@@ -325,9 +347,12 @@ func TestRenderNoMultipleBlankLinesBetweenSections(t *testing.T) {
 		parentsBlock(parentURL)
 	writeProjectfile(t, child, body)
 	writeFragment(t, child, "docs/features.d", "child-feat", "Child Feature", "From child.")
-	writeInherited(t, child, "docs/features.d", "b19-ubuntu", "b19/ubuntu", "1.0.0", "Parent Feature")
+	writeCommittedDoc(t, child, outFeatures, "Features", "## Project Features",
+		[]string{"### Child Feature\n\nFrom child."},
+		[][2]string{{headingInherited, "### Parent Feature\n\nFrom parent."}},
+		false)
 
-	out, err := fragments.Bridge{}.Render(docWithFragments(t, child), core.Options{Dir: child})
+	out, err := fragments.Bridge{}.Render(docWithFragments(t, child), offlineOptions(child))
 	require.NoError(t, err)
 	got := string(out.Files[outFeatures])
 	assert.NotContains(t, got, "\n\n\n", "no run of multiple consecutive blank lines (MD012)")
@@ -407,37 +432,42 @@ func conventionsDoc(t *testing.T, dir string, shells []map[string]any, parents [
 // TestRenderConventionsDefaultsWithParents is the primary conventions path:
 // shells come from conventions, parents from the project (flat list shared
 // across docs). Verifies the bridge synthesises documents and assembles each
-// one from its own fragments plus the cached copies under its dir.
+// one from its own fragments plus the committed sections of its own output.
 func TestRenderConventionsDefaultsWithParents(t *testing.T) {
 	child := t.TempDir()
 	writeFragment(t, child, "docs/features.d", "child-feat", "Child Feature", "Child body.")
-	writeInherited(t, child, "docs/features.d", "b19-ubuntu", "b19/ubuntu", "1.0.0", "Parent Feature")
+	writeCommittedDoc(t, child, outFeatures, "Features", "## Project Features",
+		[]string{"### Child Feature\n\nChild body."},
+		[][2]string{{headingInherited, parentFeatBody}},
+		false)
 
 	doc := conventionsDoc(t, child,
 		[]map[string]any{shellMap("docs/features.d", outFeatures, titleFeatures)},
 		[]string{parentURL})
 
-	out, err := fragments.Bridge{}.Render(doc, core.Options{Dir: child})
+	out, err := fragments.Bridge{}.Render(doc, offlineOptions(child))
 	require.NoError(t, err)
 	got := string(out.Files[outFeatures])
 	assert.Contains(t, got, "# Features")
 	assert.Contains(t, got, "## Project Features")
 	assert.Contains(t, got, "### Child Feature")
-	assert.Contains(t, got, "## Inherited from b19/ubuntu 1.0.0")
+	assert.Contains(t, got, headingInherited)
 	assert.Contains(t, got, "### Parent Feature")
 }
 
 // TestRenderConventionsMultipleShellsSharedParents verifies the flat parents
 // list applies to EVERY shell (features and roadmap share one list), and that a
-// shell with neither own fragments nor a cached copy produces no file — empty
-// documents are skipped rather than emitted as a bare-title stub (the markdown
-// linter rejects empty sections). Each document caches under its OWN dir, so
-// the features copy never leaks into the roadmap.
+// shell with neither own fragments nor committed sections produces no file —
+// empty documents are skipped rather than emitted as a bare-title stub (the
+// markdown linter rejects empty sections).
 func TestRenderConventionsMultipleShellsSharedParents(t *testing.T) {
 	child := t.TempDir()
 	// Only docs/features.d exists; docs/roadmap.d is absent on disk.
 	writeFragment(t, child, "docs/features.d", "f", "Feat", "body")
-	writeInherited(t, child, "docs/features.d", "b19-ubuntu", "b19/ubuntu", "1.0.0", "Parent Feature")
+	writeCommittedDoc(t, child, outFeatures, "Features", "## Project Features",
+		[]string{"### Feat\n\nbody"},
+		[][2]string{{headingInherited, parentFeatBody}},
+		false)
 	doc := conventionsDoc(t, child,
 		[]map[string]any{
 			shellMap("docs/features.d", outFeatures, titleFeatures),
@@ -445,7 +475,7 @@ func TestRenderConventionsMultipleShellsSharedParents(t *testing.T) {
 		},
 		[]string{parentURL})
 
-	out, err := fragments.Bridge{}.Render(doc, core.Options{Dir: child})
+	out, err := fragments.Bridge{}.Render(doc, offlineOptions(child))
 	require.NoError(t, err)
 	assert.Contains(t, out.Files, outFeatures, "features shell with a real dir must produce a file")
 	assert.NotContains(t, out.Files, "ROADMAP.md", "empty shell must not emit a stub file")
@@ -569,11 +599,11 @@ func TestRenderStripsFragmentTextlintDirectives(t *testing.T) {
 	assert.NotContains(t, root, "textlint-")
 }
 
-// TestRenderLocalizedVariantsNestInherited pins the fallback: a parent that
-// publishes no Spanish document still appears in the Spanish variant under a
-// localized heading — the child cannot translate text it does not own, so the
-// canonical copy is nested verbatim.
-func TestRenderLocalizedVariantsNestInherited(t *testing.T) {
+// TestRenderLocalizedVariantPreservesCommittedSections pins verbatim
+// preservation for variants offline: the committed Spanish document's own
+// inherited section — localized heading, canonical body, whatever the last
+// online generate wrote — re-renders exactly as committed.
+func TestRenderLocalizedVariantPreservesCommittedSections(t *testing.T) {
 	child := t.TempDir()
 	body := i18nBlock("es") +
 		"    fragments:\n      documents:\n        - dir: docs/features.d\n" +
@@ -582,9 +612,16 @@ func TestRenderLocalizedVariantsNestInherited(t *testing.T) {
 	writeProjectfile(t, child, body)
 	writeFragment(t, child, "docs/features.d", "own", "Own Feature", "Own body.")
 	writeFragment(t, child, "docs/es/features.d", "own", "Característica Propia", "Cuerpo propio.")
-	writeInherited(t, child, "docs/features.d", "b19-ubuntu", "b19/ubuntu", "1.0.0", "Parent Feature")
+	writeCommittedDoc(t, child, outFeatures, "Features", "## Project Features",
+		[]string{ownFeatureBody},
+		[][2]string{{headingInherited, parentFeatBody}},
+		false)
+	writeCommittedDoc(t, child, "docs/es/"+outFeatures, "Características", "## Características del proyecto",
+		[]string{"### Característica Propia\n\nCuerpo propio."},
+		[][2]string{{"## Heredado de b19/ubuntu 1.0.0", parentFeatBody}},
+		true)
 
-	out, err := fragments.Bridge{}.Render(docWithFragments(t, child), core.Options{Dir: child})
+	out, err := fragments.Bridge{}.Render(docWithFragments(t, child), offlineOptions(child))
 	require.NoError(t, err)
 	es := string(out.Files["docs/es/FEATURES.md"])
 	assert.Contains(t, es, "## Heredado de b19/ubuntu 1.0.0")
@@ -592,11 +629,12 @@ func TestRenderLocalizedVariantsNestInherited(t *testing.T) {
 	assert.Contains(t, es, "### Característica Propia")
 }
 
-// TestRenderLocalizedVariantUsesParentTranslation is the core of inherited
-// localization: a parent copy cached under docs/es/features.d/.inherited/
-// renders its translated entries in the Spanish variant, while the canonical
-// file keeps nesting the canonical copy — one cache, two renders, no leak.
-func TestRenderLocalizedVariantUsesParentTranslation(t *testing.T) {
+// TestRenderVariantWithoutCommittedDocNestsCanonicalWithLocalizedHeadings
+// covers a translated-fragments variant that has no committed variant
+// document: offline it nests the canonical sections under localized
+// headings — the same fallback a parent that publishes no such language gets
+// online.
+func TestRenderVariantWithoutCommittedDocNestsCanonicalWithLocalizedHeadings(t *testing.T) {
 	child := t.TempDir()
 	body := i18nBlock("es") +
 		"    fragments:\n      documents:\n        - dir: docs/features.d\n" +
@@ -605,19 +643,18 @@ func TestRenderLocalizedVariantUsesParentTranslation(t *testing.T) {
 	writeProjectfile(t, child, body)
 	writeFragment(t, child, "docs/features.d", "own", "Own Feature", "Own body.")
 	writeFragment(t, child, "docs/es/features.d", "own", "Característica Propia", "Cuerpo propio.")
-	writeInherited(t, child, "docs/features.d", "b19-ubuntu", "b19/ubuntu", "1.0.0", "Parent Feature")
-	writeInheritedLang(t, child, "es", "b19-ubuntu", "b19/ubuntu", "1.0.0", "Característica del Padre", "Cuerpo del padre.")
+	writeCommittedDoc(t, child, outFeatures, "Features", "## Project Features",
+		[]string{ownFeatureBody},
+		[][2]string{{headingInherited, parentFeatBody}},
+		false)
+	// No committed docs/es/FEATURES.md — the variant has fragments only.
 
-	out, err := fragments.Bridge{}.Render(docWithFragments(t, child), core.Options{Dir: child})
+	out, err := fragments.Bridge{}.Render(docWithFragments(t, child), offlineOptions(child))
 	require.NoError(t, err)
 	es := string(out.Files["docs/es/FEATURES.md"])
 	assert.Contains(t, es, "## Heredado de b19/ubuntu 1.0.0")
-	assert.Contains(t, es, "### Característica del Padre")
-	assert.Contains(t, es, "Cuerpo del padre.")
-	assert.NotContains(t, es, "### Parent Feature", "variant must not nest the canonical body it has a translation for")
-	root := string(out.Files[outFeatures])
-	assert.Contains(t, root, "### Parent Feature", "canonical file keeps the canonical copy")
-	assert.NotContains(t, root, "Característica del Padre")
+	assert.Contains(t, es, "### Parent Feature", "canonical body, the child cannot translate it")
+	assert.Contains(t, es, "### Característica Propia")
 }
 
 // TestRenderSkipsLanguageWithoutFragments pins the missing-translation
@@ -660,8 +697,8 @@ func TestRenderUnilingualProjectIsByteStable(t *testing.T) {
 }
 
 // TestRenderVariantRequiresContent pins the skip rule for a language with
-// nothing to ship: no own translated fragments and no localized inherited
-// copies renders nothing under a localized name, never a heading-only stub —
+// nothing to ship: no own translated fragments and no language-specific
+// content renders nothing under a localized name, never a heading-only stub —
 // while the inherited-only canonical file still renders.
 func TestRenderVariantRequiresContent(t *testing.T) {
 	child := t.TempDir()
@@ -670,61 +707,15 @@ func TestRenderVariantRequiresContent(t *testing.T) {
 		"          out: FEATURES.md\n          title: Features\n" +
 		parentsBlock(parentURL)
 	writeProjectfile(t, child, body)
-	writeInherited(t, child, "docs/features.d", "b19-ubuntu", "b19/ubuntu", "1.0.0", "Parent Feature")
+	writeCommittedDoc(t, child, outFeatures, "Features", "## Project Features",
+		nil,
+		[][2]string{{headingInherited, parentFeatBody}},
+		false)
 
-	out, err := fragments.Bridge{}.Render(docWithFragments(t, child), core.Options{Dir: child})
+	out, err := fragments.Bridge{}.Render(docWithFragments(t, child), offlineOptions(child))
 	require.NoError(t, err)
 	assert.Contains(t, out.Files, outFeatures, "inherited-only canonical file still renders")
-	assert.NotContains(t, out.Files, "docs/es/FEATURES.md", "no own fragments and no localized copies → no variant")
-}
-
-// TestRenderInheritedOnlyVariantFromParentTranslation covers the
-// inherited-only project (own default-language set empty): the parent's
-// localized cached copies alone grow the variant, because the translation is
-// the parent's own published document, not a translation this project owns.
-func TestRenderInheritedOnlyVariantFromParentTranslation(t *testing.T) {
-	child := t.TempDir()
-	body := i18nBlock("es") +
-		"    fragments:\n      documents:\n        - dir: docs/features.d\n" +
-		"          out: FEATURES.md\n          title: Features\n" +
-		parentsBlock(parentURL)
-	writeProjectfile(t, child, body)
-	writeInherited(t, child, "docs/features.d", "b19-ubuntu", "b19/ubuntu", "1.0.0", "Parent Feature")
-	writeInheritedLang(t, child, "es", "b19-ubuntu", "b19/ubuntu", "1.0.0", "Característica del Padre", "Cuerpo del padre.")
-
-	out, err := fragments.Bridge{}.Render(docWithFragments(t, child), core.Options{Dir: child})
-	require.NoError(t, err)
-	es := string(out.Files["docs/es/FEATURES.md"])
-	assert.Contains(t, es, "### Característica del Padre")
-	assert.NotContains(t, es, "### Parent Feature")
-	assert.NotContains(t, es, "## Características del proyecto", "no own fragments → no empty project section")
-	// The bar names the shipped variant even though the project owns none of it.
-	root := string(out.Files[outFeatures])
-	assert.Contains(t, root, "[Español](docs/es/FEATURES.md)")
-}
-
-// TestRenderVariantIgnoresUndeclaredLocalizedCopy extends the
-// projectfile-is-authority rule to the locale caches: a localized copy whose
-// parent is no longer declared must not keep appearing in the variant.
-func TestRenderVariantIgnoresUndeclaredLocalizedCopy(t *testing.T) {
-	child := t.TempDir()
-	body := i18nBlock("es") +
-		"    fragments:\n      documents:\n        - dir: docs/features.d\n" +
-		"          out: FEATURES.md\n          title: Features\n" +
-		parentsBlock("ssh://git@example.test/b19/ubuntu.git")
-	writeProjectfile(t, child, body)
-	writeFragment(t, child, "docs/features.d", "own", "Own Feature", "Own body.")
-	writeFragment(t, child, "docs/es/features.d", "own", "Característica Propia", "Cuerpo propio.")
-	writeInherited(t, child, "docs/features.d", "b19-ubuntu", "b19/ubuntu", "1.0.0", "Kept Feature")
-	writeInheritedLang(t, child, "es", "b19-ubuntu", "b19/ubuntu", "1.0.0", "Característica Mantenida", "Cuerpo.")
-	writeInheritedLang(t, child, "es", "b19-dropped", "b19/dropped", "1.0.0", "Característica Eliminada", "Cuerpo.")
-
-	out, err := fragments.Bridge{}.Render(docWithFragments(t, child), core.Options{Dir: child})
-	require.NoError(t, err)
-	es := string(out.Files["docs/es/FEATURES.md"])
-	assert.Contains(t, es, "### Característica Mantenida")
-	assert.NotContains(t, es, "b19/dropped")
-	assert.NotContains(t, es, "Característica Eliminada")
+	assert.NotContains(t, out.Files, "docs/es/FEATURES.md", "no own fragments and no localized content → no variant")
 }
 
 // TestRenderNonLocalizableDocumentSkipsVariants pins the convention gate: a

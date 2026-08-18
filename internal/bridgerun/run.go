@@ -57,7 +57,6 @@ var (
 	bridgeNoDiff         bool
 	bridgeFailOnDrift    bool
 	bridgeList           bool
-	bridgeRefresh        bool
 	bridgeReuseCanonical bool
 )
 
@@ -126,8 +125,6 @@ func Main(binName string) {
 		"under --check, report drift without the unified diff of what changed")
 	root.Flags().BoolVar(&bridgeFailOnDrift, "fail-on-drift", false,
 		"under --check, exit non-zero on drift instead of warning; also "+EnvFailOnDrift+"=1")
-	root.Flags().BoolVar(&bridgeRefresh, "refresh", false,
-		"re-read the upstream documents this project inherits and rewrite the cached copies (fragments bridge only); with --check, report how far behind they are")
 	root.Flags().BoolVar(&bridgeReuseCanonical, "reuse-canonical", false,
 		"keep LICENSES/<id>.txt at the canonical SPDX text (no copyright holder/year substitution; license bridge only)")
 	root.Flags().BoolVar(&bridgeList, "list", false,
@@ -226,7 +223,6 @@ func runBridgeLocked(b core.Bridge, mode core.Mode, dir, pfPath string, cmd *cob
 		Diff:           !bridgeNoDiff,
 		WarnOnly:       !failOnDrift(),
 		Offline:        rootflags.Offline(),
-		Refresh:        bridgeRefresh,
 		ReuseCanonical: bridgeReuseCanonical,
 		Stderr:         cmd.ErrOrStderr(),
 	}
@@ -527,7 +523,6 @@ func runAllBridgeOne(b core.Bridge, mode core.Mode, dir, pfPath string, cmd *cob
 		Diff:           !bridgeNoDiff,
 		WarnOnly:       !failOnDrift(),
 		Offline:        rootflags.Offline(),
-		Refresh:        bridgeRefresh,
 		ReuseCanonical: bridgeReuseCanonical,
 		Stderr:         cmd.ErrOrStderr(),
 	}

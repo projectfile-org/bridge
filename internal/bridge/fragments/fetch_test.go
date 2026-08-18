@@ -7,8 +7,6 @@ package fragments
 import (
 	"archive/tar"
 	"bytes"
-	"os"
-	"path/filepath"
 	"strings"
 	"testing"
 
@@ -37,8 +35,8 @@ func upstreamDoc(bodyLines ...string) string {
 		"# Features\n\n## Project Features\n\n" + strings.Join(bodyLines, "\n") + "\n"
 }
 
-// TestSplitSPDXKeepsUpstreamHeader verifies the parent's REUSE header comes
-// back whole: it licenses the text being vendored, so the cache file keeps it.
+// TestSplitSPDXKeepsUpstreamHeader verifies the parent's REUSE header is
+// separated intact: the refusal to nest unlicensed text keys off it.
 func TestSplitSPDXKeepsUpstreamHeader(t *testing.T) {
 	header, body := splitSPDX(upstreamDoc("### One", "", "Body."))
 	assert.Contains(t, header, spdxTag+": "+spdxMIT)
@@ -72,9 +70,9 @@ func TestNormalizeInheritedDropsH1AndH2(t *testing.T) {
 }
 
 // TestNormalizeInheritedStripsTextlintWrap verifies the pair a parent's
-// published localized document carries does not survive into the copy: the
-// cache file re-wraps itself and assembly wraps the whole variant, so a pair
-// that nested would double-wrap and mis-scope the disable.
+// published localized document carries does not survive into the copy:
+// assembly wraps the whole variant, so a pair that nested would double-wrap
+// and mis-scope the disable.
 func TestNormalizeInheritedStripsTextlintWrap(t *testing.T) {
 	got := normalizeInherited("<!-- textlint-disable terminology,common-misspellings -->\n\n### Entrada\n\nCuerpo.\n\n<!-- textlint-enable -->\n")
 	assert.NotContains(t, got, "textlint-")
@@ -94,64 +92,6 @@ func TestNormalizeInheritedKeepsFencedHashes(t *testing.T) {
 	assert.Contains(t, got, "make install")
 }
 
-// TestRoundTripsProvenance verifies a rendered cache file parses back into the
-// same copy — the provenance is what carries the version into the heading, so a
-// write the reader cannot read would silently drop the version.
-func TestRoundTripsProvenance(t *testing.T) {
-	dir := t.TempDir()
-	want := inheritedCopy{
-		Name:     testParent,
-		URL:      testParentURL,
-		Ref:      testRef,
-		Commit:   "db0ef9b031b82d578410a6f3ec14e51e971049f2",
-		Document: "FEATURES.md",
-		SPDX:     "<!--\nSPDX-FileCopyrightText: 2026 Upstream\n" + spdxTag + ": " + spdxMIT + "\n-->",
-		Body:     "### Entry\n\nBody.",
-	}
-	path := filepath.Join(dir, "b19-ubuntu.md")
-	require.NoError(t, os.WriteFile(path, renderInherited(want), 0o644))
-
-	got, err := parseInherited(path)
-	require.NoError(t, err)
-	assert.Equal(t, want.Name, got.Name)
-	assert.Equal(t, want.Ref, got.Ref)
-	assert.Equal(t, want.Commit, got.Commit)
-	assert.Equal(t, want.Document, got.Document)
-	assert.Equal(t, want.Body, got.Body)
-	assert.Contains(t, got.SPDX, spdxTag+": "+spdxMIT)
-	assert.Equal(t, "## Inherited from b19/ubuntu 1.0.0", got.Heading())
-}
-
-// TestRoundTripsLocalizedProvenance verifies a translated cache file round-trips:
-// the lang attr reaches the parsed copy, the on-disk textlint wrap protects the
-// file's prose but never leaks into the assembled Body.
-func TestRoundTripsLocalizedProvenance(t *testing.T) {
-	dir := t.TempDir()
-	want := inheritedCopy{
-		Name:     testParent,
-		URL:      testParentURL,
-		Ref:      testRef,
-		Commit:   "db0ef9b031b82d578410a6f3ec14e51e971049f2",
-		Document: "docs/es/FEATURES.md",
-		SPDX:     "<!--\nSPDX-FileCopyrightText: 2026 Upstream\n" + spdxTag + ": " + spdxMIT + "\n-->",
-		Body:     "### Entrada\n\nCuerpo.",
-		Lang:     "es",
-	}
-	path := filepath.Join(dir, "b19-ubuntu.md")
-	require.NoError(t, os.WriteFile(path, renderInherited(want), 0o644))
-
-	raw, err := os.ReadFile(path)
-	require.NoError(t, err)
-	assert.Contains(t, string(raw), "textlint-disable", "the on-disk copy is linted, so it carries the wrap")
-
-	got, err := parseInherited(path)
-	require.NoError(t, err)
-	assert.Equal(t, want.Lang, got.Lang)
-	assert.Equal(t, want.Document, got.Document)
-	assert.Equal(t, want.Body, got.Body)
-	assert.NotContains(t, got.Body, "textlint-", "the wrap is storage pragma, stripped on read")
-}
-
 // TestHeadingFallsBackToCommit verifies a parent that publishes no tags is
 // identified by commit rather than by a branch name that would read like a
 // version it never released.
@@ -166,29 +106,6 @@ func TestHeadingFallsBackToCommit(t *testing.T) {
 func TestHeadingPrefersTheParentTitle(t *testing.T) {
 	c := inheritedCopy{Name: testParent, Title: testParentTitle, Ref: testRef}
 	assert.Equal(t, "## Inherited from B19/Ubuntu 1.0.0", c.Heading())
-}
-
-// TestTitleSurvivesTheCachedCopy verifies the title reaches assembly through
-// the provenance comment. Assembly reads local files only, so a title that did
-// not round-trip would be lost on every run but the refresh that fetched it.
-func TestTitleSurvivesTheCachedCopy(t *testing.T) {
-	dir := t.TempDir()
-	want := inheritedCopy{
-		Name:     testParent,
-		Title:    testParentTitle,
-		URL:      testParentURL,
-		Ref:      testRef,
-		Document: "FEATURES.md",
-		SPDX:     "<!--\nSPDX-FileCopyrightText: 2026 Upstream\n" + spdxTag + ": " + spdxMIT + "\n-->",
-		Body:     "### Entry\n\nBody.",
-	}
-	path := filepath.Join(dir, "b19-ubuntu.md")
-	require.NoError(t, os.WriteFile(path, renderInherited(want), 0o644))
-
-	got, err := parseInherited(path)
-	require.NoError(t, err)
-	assert.Equal(t, want.Title, got.Title)
-	assert.Equal(t, "## Inherited from B19/Ubuntu 1.0.0", got.Heading())
 }
 
 // TestIdentityTitleReadsEveryEncoding verifies the title is read from each

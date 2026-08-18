@@ -42,13 +42,6 @@ type Options struct {
 	// (literal placeholders) instead of substituting the resolved copyright
 	// holder/year. License-bridge only; ignored by other bridges.
 	ReuseCanonical bool
-	// Refresh lets a bridge re-read the upstream sources it vendors. Fragments
-	// only: parents are forge URLs, and their published documents are cached in
-	// the repository so ordinary runs (and the drift gate) stay offline and
-	// deterministic. Without this flag nothing reaches the network; with it, the
-	// cached copies are re-read and rewritten. Combined with Check it answers
-	// "has upstream moved since we last looked?" without writing anything.
-	Refresh bool
 	// Check turns the run into a DRIFT GATE: nothing is written, and a
 	// generated file that no longer matches what the projectfile would produce
 	// is reported and fails the command. Without it, --force is the only way to

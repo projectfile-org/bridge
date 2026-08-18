@@ -81,15 +81,14 @@ func deriveFingerprint(gpgKey, gpgKeyURL string, opts core.Options) (fingerprint
 	return "", ""
 }
 
-// deriveFromURL fetches an armored key (cache first unless Refresh), parses the
-// fingerprint, and caches it on success. An empty result with nil error means
-// the cache held nothing and no network source was available.
+// deriveFromURL fetches an armored key (cache first — a fingerprint is
+// immutable, so a cached one is never stale), parses the fingerprint, and
+// caches it on success. An empty result with nil error means the cache held
+// nothing and no network source was available.
 func deriveFromURL(keyURL string, opts core.Options) (string, error) {
 	key := cacheKeyURL(keyURL)
-	if !opts.Refresh {
-		if fp := loadCachedFingerprint(key); fp != "" {
-			return fp, nil
-		}
+	if fp := loadCachedFingerprint(key); fp != "" {
+		return fp, nil
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), pgpFetchTimeout)

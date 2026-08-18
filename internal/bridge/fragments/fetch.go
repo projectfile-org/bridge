@@ -26,7 +26,7 @@ import (
 )
 
 // Every crossing to a forge is bounded: a parent whose host hangs must slow one
-// refresh by seconds, never stall the docs build.
+// generate by seconds, never stall the docs build.
 const gitTimeout = 30 * time.Second
 
 // headingRE matches the H1 and H2 headings a parent document owns. They are
@@ -58,26 +58,22 @@ const (
 // — so the first encoding present wins.
 var projectfileNames = []string{pfYAML, pfTOML, pfJSON}
 
-// refreshParents reads every declared parent's published document and returns
-// the copies, keyed by cache filename so the caller can both write them and
-// assemble from them in the same run — plus, per declared language, the
-// parent's localized document read at the same ref.
+// fetchParents reads every declared parent's published document and returns
+// the copies keyed by parent, plus, per declared language, the parent's
+// localized document read at the same ref. The boolean says whether EVERY
+// declared parent was read: one unreachable parent keeps the run honest for
+// the whole document — the caller then preserves the committed sections
+// rather than mix fresh and stale content in one file.
 //
-// A parent that cannot be reached is warned and skipped, never fatal: the copy
-// already committed stays on disk untouched, so a forge outage degrades to
-// "documents are as fresh as last time" instead of a broken build.
-func refreshParents(doc pfmodel.FragmentDocument, opts core.Options, langs []string) (map[string]inheritedCopy, map[string]map[string]inheritedCopy) {
-	if opts.Offline {
-		genlog.Warn("fragments: offline, keeping the cached parent copies", "document", doc.Out, "parents", len(doc.Parents))
-		return nil, nil
-	}
-
+// A parent that publishes no such document is an absence, not a failure.
+func fetchParents(doc pfmodel.FragmentDocument, langs []string) (map[string]inheritedCopy, map[string]map[string]inheritedCopy, bool) {
 	fetchLangs := langs
 	if !docLocalizable(doc) {
 		fetchLangs = nil
 	}
 	copies := map[string]inheritedCopy{}
 	localized := map[string]map[string]inheritedCopy{}
+	ok := true
 	for _, parent := range doc.Parents {
 		copied, translated, err := fetchParent(context.Background(), parent, doc.Out, fetchLangs)
 		switch {
@@ -86,8 +82,9 @@ func refreshParents(doc pfmodel.FragmentDocument, opts core.Options, langs []str
 				"parent", parent.URL, "document", doc.Out)
 			continue
 		case err != nil:
-			warn.Record("fragments: parent refresh failed, keeping the cached copy",
+			warn.Record("fragments: parent unreachable, keeping the committed sections",
 				"parent", parent.URL, "document", doc.Out, "error", err.Error())
+			ok = false
 			continue
 		}
 		copies[slug(copied.Name)] = copied
@@ -97,24 +94,25 @@ func refreshParents(doc pfmodel.FragmentDocument, opts core.Options, langs []str
 			}
 			localized[lang][slug(lc.Name)] = lc
 		}
-		genlog.Info("fragments: refreshed parent",
+		genlog.Info("fragments: fetched parent",
 			"parent", copied.Name, "ref", copied.Ref, "commit", shortCommit(copied.Commit),
 			"document", doc.Out, "languages", len(translated))
 	}
-	return copies, localized
+	return copies, localized, ok
 }
 
 // fetchParent resolves which version of the parent to read, downloads that one
 // document, and reduces it to the entries a child nests — then reads the
 // parent's localized document for each declared language at the same ref. The
 // parent's SPDX header travels with every copy — it is the licence of the text
-// being vendored, so it is kept verbatim rather than replaced by this
+// being nested, so it is kept verbatim rather than replaced by this
 // project's own.
 //
 // Everything goes over git, the transport these repositories already use: no
 // forge API, no raw-file URL that differs per forge kind, and a private parent
-// resolves with the credentials the developer already has.
-func fetchParent(ctx context.Context, parent pfmodel.FragmentParent, document string, langs []string) (inheritedCopy, map[string]inheritedCopy, error) {
+// resolves with the credentials the developer already has. A var so tests can
+// stub the forge away.
+var fetchParent = func(ctx context.Context, parent pfmodel.FragmentParent, document string, langs []string) (inheritedCopy, map[string]inheritedCopy, error) {
 	if err := validateRepoURL(parent.URL); err != nil {
 		return inheritedCopy{}, nil, err
 	}
@@ -171,12 +169,12 @@ func fetchTranslations(ctx context.Context, parent pfmodel.FragmentParent, canon
 				"parent", parent.URL, "document", core.LocalizedFilename(document, lang))
 			continue
 		case err != nil:
-			warn.Record("fragments: localized parent refresh failed, variant falls back to the canonical copy",
+			warn.Record("fragments: localized parent fetch failed, variant falls back to the canonical copy",
 				"parent", parent.URL, "document", core.LocalizedFilename(document, lang), "lang", lang, "error", err.Error())
 			continue
 		}
 		out[lang] = cop
-		genlog.Info("fragments: refreshed localized parent copy",
+		genlog.Info("fragments: fetched localized parent copy",
 			"parent", cop.Name, "lang", lang, "ref", cop.Ref, "document", cop.Document)
 	}
 	return out
@@ -337,7 +335,7 @@ func archiveRef(ref string) string {
 }
 
 // fetchDocument asks the remote for ONE path at one ref. `git archive --remote`
-// transfers just that path, so refreshing a document costs no clone.
+// transfers just that path, so fetching a document costs no clone.
 func fetchDocument(ctx context.Context, repoURL, ref, document string) (string, error) {
 	out, err := runGit(ctx, "archive", "--format=tar", "--remote="+repoURL, ref, document)
 	if err != nil {
@@ -387,7 +385,7 @@ func gitLsRemote(ctx context.Context, repoURL string, args ...string) (string, e
 }
 
 // runGit runs one bounded git command and returns its stdout. Credential
-// prompting is disabled: a refresh that blocks on a password would hang a build
+// prompting is disabled: a fetch that blocks on a password would hang a build
 // with no output explaining why.
 func runGit(ctx context.Context, argv ...string) (string, error) {
 	ctx, cancel := context.WithTimeout(ctx, gitTimeout)
