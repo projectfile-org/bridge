@@ -159,8 +159,9 @@ func (Bridge) Render(pf *projectfile.Document, opts core.Options) (core.Output, 
 	// else — URLs, contacts, the follow/star blocks — is language
 	// independent and resolved once above.
 	return core.RenderLocalized(pf, core.LocalizedSpec{
-		Filename: filenameContributing,
-		Langs:    pfmodel.Languages(pf),
+		Filename:  filenameContributing,
+		Langs:     pfmodel.Languages(pf),
+		HowToLink: ext.HowToLink,
 		View: func(lang string) any {
 			// strLang resolves the render sentinel to the default language for
 			// string resolution; the raw sentinel is kept for the sibling-file

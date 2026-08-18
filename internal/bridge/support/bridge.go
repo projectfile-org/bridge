@@ -78,8 +78,9 @@ func (Bridge) Render(pf *projectfile.Document, opts core.Options) (core.Output, 
 	emitDecisionTrace(pf, ext, beforeLinks, rows, paidSupport, statusPageURL, responseTime, responseTimeSrc)
 
 	return core.RenderLocalized(pf, core.LocalizedSpec{
-		Filename: filenameSupport,
-		Langs:    pfmodel.Languages(pf),
+		Filename:  filenameSupport,
+		Langs:     pfmodel.Languages(pf),
+		HowToLink: ext.HowToLink,
 		View: func(lang string) any {
 			// strLang is the concrete tag for string resolution: the render
 			// sentinel "" maps to the default language so a non-English-default

@@ -77,8 +77,9 @@ func GetCodeOfConductExtension(doc *projectfile.Document) (*CodeOfConductExtensi
 		return nil, nil
 	}
 	return &CodeOfConductExtension{
-		Covenant: strVal(m, "covenant"),
-		Scope:    strVal(m, "scope"),
+		Covenant:  strVal(m, "covenant"),
+		Scope:     strVal(m, "scope"),
+		HowToLink: boolVal(m, "how-to-link"),
 	}, nil
 }
 
@@ -98,6 +99,7 @@ func GetDEIExtension(doc *projectfile.Document) (*DEIExtension, error) {
 		Enabled:      boolVal(m, "enabled"),
 		Scope:        strVal(m, "scope"),
 		LastReviewed: strVal(m, "last-reviewed"),
+		HowToLink:    boolVal(m, "how-to-link"),
 	}
 	// metrics is an open map<string, []string>. Unknown keys are accepted
 	// (peaceful cohabitation); the bridge renders any metric it recognizes.
@@ -168,6 +170,7 @@ func GetAIExtension(doc *projectfile.Document) (*AIExtension, error) {
 		ContentSignals:   strListVal(m, "content-signals"),
 		Activities:       strMapVal(m, "activities"),
 		ProjectUse:       strMapVal(m, "project-use"),
+		HowToLink:        boolVal(m, "how-to-link"),
 	}
 	if err := validAIPolicyFilename(ext.Filename); err != nil {
 		return nil, err
@@ -215,6 +218,7 @@ func GetContributingExtension(doc *projectfile.Document) (*ContributingExtension
 		CoCURL:            strVal(m, "coc-url"),
 		RecommendToFollow: projectfile.ParseToggle(m["recommend-to-follow"]),
 		RecommendToStar:   projectfile.ParseToggle(m["recommend-to-star"]),
+		HowToLink:         boolVal(m, "how-to-link"),
 	}, nil
 }
 
@@ -230,6 +234,7 @@ func GetSupportExtension(doc *projectfile.Document) (*SupportExtension, error) {
 	}
 	ext := &SupportExtension{
 		ResponseTime: strVal(m, "response-time"),
+		HowToLink:    boolVal(m, "how-to-link"),
 	}
 	if items, ok := m["eol"].([]any); ok {
 		for _, item := range items {
@@ -264,6 +269,7 @@ func GetSecurityExtension(doc *projectfile.Document) (*SecurityExtension, error)
 		GPGKey:            strVal(m, "gpg-key"),
 		GPGFingerprint:    strVal(m, "gpg-fingerprint"),
 		BugBountyURL:      strVal(m, "bug-bounty-url"),
+		HowToLink:         boolVal(m, "how-to-link"),
 	}, nil
 }
 

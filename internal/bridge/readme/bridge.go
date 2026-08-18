@@ -150,7 +150,9 @@ func (Bridge) renderLang(pf *projectfile.Document, ext *pfmodel.ReadmeExtension,
 			body = append(body, '\n')
 		}
 	}
-	body = append(body, []byte("\n\n"+core.GeneratedFooter(filenameReadme, data.StrLang)+"\n")...)
+	if ext != nil && ext.HowToLink {
+		body = append(body, []byte("\n\n"+core.GeneratedFooter(filenameReadme, data.StrLang)+"\n")...)
+	}
 	body = core.WrapLocalizedTextlint(body, data.StrLang)
 	out := append([]byte(core.ManagedREUSEHeader(pf)), body...)
 	return core.CollapseBlankLines(out), nil

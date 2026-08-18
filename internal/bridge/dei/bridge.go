@@ -62,8 +62,9 @@ func (Bridge) Render(pf *projectfile.Document, opts core.Options) (core.Output, 
 	emitDecisionTrace(ext, contact, contactSrc)
 
 	return core.RenderLocalized(pf, core.LocalizedSpec{
-		Filename: filenameDEI,
-		Langs:    pfmodel.Languages(pf),
+		Filename:  filenameDEI,
+		Langs:     pfmodel.Languages(pf),
+		HowToLink: ext.HowToLink,
 		View: func(lang string) any {
 			strLang := core.ResolveLang(lang, pf)
 			return deiView{

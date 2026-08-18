@@ -182,12 +182,14 @@ type SecurityExtension struct {
 	GPGKey            string   `toml:"gpg-key"            yaml:"gpg-key"            json:"gpg-key"`
 	GPGFingerprint    string   `toml:"gpg-fingerprint"    yaml:"gpg-fingerprint"    json:"gpg-fingerprint"`
 	BugBountyURL      string   `toml:"bug-bounty-url"     yaml:"bug-bounty-url"     json:"bug-bounty-url"`
+	HowToLink         bool     `toml:"how-to-link"        yaml:"how-to-link"        json:"how-to-link"`
 }
 
 // CodeOfConductExtension binds `[org.projectfile.code-of-conduct]`.
 type CodeOfConductExtension struct {
-	Covenant string `toml:"covenant" yaml:"covenant" json:"covenant"`
-	Scope    string `toml:"scope"    yaml:"scope"    json:"scope"`
+	Covenant  string `toml:"covenant"    yaml:"covenant"    json:"covenant"`
+	Scope     string `toml:"scope"       yaml:"scope"       json:"scope"`
+	HowToLink bool   `toml:"how-to-link" yaml:"how-to-link" json:"how-to-link"`
 }
 
 // DEIExtension binds `[org.projectfile.dei]` — the CHAOSS / badging DEI.md
@@ -201,6 +203,7 @@ type DEIExtension struct {
 	Scope        string              `toml:"scope"   yaml:"scope"   json:"scope"`
 	LastReviewed string              `toml:"last-reviewed" yaml:"last-reviewed" json:"last-reviewed"`
 	Metrics      map[string][]string `toml:"metrics" yaml:"metrics" json:"metrics"`
+	HowToLink    bool                `toml:"how-to-link" yaml:"how-to-link" json:"how-to-link"`
 }
 
 // AIExtension binds `[org.projectfile.ai]` — the project's stance on AI/LLM
@@ -237,6 +240,7 @@ type AIExtension struct {
 	ContentSignals   []string                     `toml:"content-signals"    yaml:"content-signals"    json:"content-signals"`
 	Activities       map[string]string            `toml:"activities"         yaml:"activities"         json:"activities"`
 	ProjectUse       map[string]string            `toml:"project-use"        yaml:"project-use"        json:"project-use"`
+	HowToLink        bool                         `toml:"how-to-link"        yaml:"how-to-link"        json:"how-to-link"`
 }
 
 // ContributingExtension binds `[org.projectfile.contributing]`.
@@ -247,6 +251,7 @@ type ContributingExtension struct {
 	CoCURL            string             `toml:"coc-url"  yaml:"coc-url"  json:"coc-url"`
 	RecommendToFollow projectfile.Toggle `toml:"recommend-to-follow" yaml:"recommend-to-follow" json:"recommend-to-follow"`
 	RecommendToStar   projectfile.Toggle `toml:"recommend-to-star"   yaml:"recommend-to-star"   json:"recommend-to-star"`
+	HowToLink         bool               `toml:"how-to-link"         yaml:"how-to-link"         json:"how-to-link"`
 }
 
 // SupportExtension binds `[org.projectfile.support]`. Community support URLs
@@ -255,6 +260,7 @@ type ContributingExtension struct {
 type SupportExtension struct {
 	ResponseTime string     `toml:"response-time" yaml:"response-time" json:"response-time"`
 	EOL          []EOLEntry `toml:"eol"           yaml:"eol"           json:"eol"`
+	HowToLink    bool       `toml:"how-to-link"   yaml:"how-to-link"   json:"how-to-link"`
 }
 
 // EOLEntry carries an end-of-life date for a version series.
@@ -376,10 +382,11 @@ type FragmentParent struct {
 // `docker pull foo` in one fenced block invites a reader to run both. One group
 // per artifact keeps each with its own lead-in sentence and its own fence.
 type ReadmeExtension struct {
-	Blocks   []string
-	Extras   []ReadmeExtra
-	Shields  []Shield
-	Sections map[string][]ReadmeSectionGroup
+	Blocks    []string
+	Extras    []ReadmeExtra
+	Shields   []Shield
+	Sections  map[string][]ReadmeSectionGroup
+	HowToLink bool
 }
 
 // ReadmeExtra is an inline content block referenced by name in Blocks.

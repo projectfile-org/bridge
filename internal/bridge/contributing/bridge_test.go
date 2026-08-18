@@ -155,6 +155,23 @@ func TestRenderCarriesTheSentinel(t *testing.T) {
 	assert.True(t, core.HasMarker(body), "the header must read as managed")
 }
 
+// ── how-to-link footer toggle ───────────────────────────────────────────────
+
+func TestHowToLinkOffByDefault(t *testing.T) {
+	out, err := contributing.Bridge{}.Render(docWithSourceCodeLinks(), core.Options{Offline: true})
+	require.NoError(t, err)
+	assert.NotContains(t, string(out.Files["CONTRIBUTING.md"]), "Generated from projectfile",
+		"the footer must be opt-in, not on by default")
+}
+
+func TestHowToLinkEnabled(t *testing.T) {
+	pf := withContributing(docWithSourceCodeLinks(), map[string]any{"how-to-link": true})
+	out, err := contributing.Bridge{}.Render(pf, core.Options{Offline: true})
+	require.NoError(t, err)
+	assert.Contains(t, string(out.Files["CONTRIBUTING.md"]), "Generated from projectfile",
+		"how-to-link: true must restore the footer")
+}
+
 // withContributing attaches an org.projectfile.contributing extension to pf.
 func withContributing(pf *projectfile.Document, ext map[string]any) *projectfile.Document {
 	if len(ext) > 0 {

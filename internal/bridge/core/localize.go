@@ -266,6 +266,10 @@ type LocalizedSpec struct {
 	// View returns the template data for one language, called once per
 	// rendered language so localized-strings resolve in that language.
 	View func(lang string) any
+	// HowToLink gates the "Generated from projectfile (learn how)" footer.
+	// Off by default — the caller sets it from its own namespace's
+	// how-to-link field (e.g. [org.projectfile.contributing].how-to-link).
+	HowToLink bool
 }
 
 // RenderLocalized renders the canonical file plus one variant per declared
@@ -312,7 +316,10 @@ func RenderLocalized(pf *projectfile.Document, spec LocalizedSpec, opts Options)
 		// The footer's how-to slug follows the CANONICAL name, not the one the
 		// project chose: a renamed file is the same document and earns the
 		// same how-to, where the output name would only miss the map.
-		body = append(body, []byte("\n\n"+GeneratedFooter(tmplBase, ResolveLang(lang, pf))+"\n")...)
+		// Off by default — HowToLink opts in per document type.
+		if spec.HowToLink {
+			body = append(body, []byte("\n\n"+GeneratedFooter(tmplBase, ResolveLang(lang, pf))+"\n")...)
+		}
 		// ResolveLang maps the canonical render sentinel ("" ) to the default
 		// language, so a Spanish-default project's Spanish root file is wrapped
 		// while its docs/en/ variant is not. Wraps after the language bar so the

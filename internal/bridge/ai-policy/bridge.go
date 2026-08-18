@@ -90,9 +90,10 @@ func (Bridge) Render(pf *projectfile.Document, opts core.Options) (core.Output, 
 	emitDecisionTrace(ext, outName, rows, defaultActivities, useRows, signals, enforcement, policyURL, contact, contactSrc)
 
 	return core.RenderLocalized(pf, core.LocalizedSpec{
-		Filename: outName,
-		Template: filenameAIPolicy,
-		Langs:    pfmodel.Languages(pf),
+		Filename:  outName,
+		Template:  filenameAIPolicy,
+		Langs:     pfmodel.Languages(pf),
+		HowToLink: ext.HowToLink,
 		View: func(lang string) any {
 			strLang := core.ResolveLang(lang, pf)
 			return policyView{

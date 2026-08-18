@@ -76,6 +76,7 @@ func (Bridge) Render(pf *projectfile.Document, opts core.Options) (core.Output, 
 	// against the project's declared intent.
 	covenant := covenantContributorCovenant
 	scope := "project-and-spaces"
+	howToLink := false
 	if ext, _ := pfmodel.GetCodeOfConductExtension(pf); ext != nil {
 		if ext.Covenant != "" {
 			covenant = ext.Covenant
@@ -83,6 +84,7 @@ func (Bridge) Render(pf *projectfile.Document, opts core.Options) (core.Output, 
 		if ext.Scope != "" {
 			scope = ext.Scope
 		}
+		howToLink = ext.HowToLink
 	}
 	if covenant != covenantContributorCovenant {
 		return core.Output{}, fmt.Errorf("CODE_OF_CONDUCT.md: unsupported covenant %q — only %q ships a template; for other covenants point a links[type=conduct-full-text] entry at your own text", covenant, covenantContributorCovenant)
@@ -92,8 +94,9 @@ func (Bridge) Render(pf *projectfile.Document, opts core.Options) (core.Output, 
 	genlog.Decision("covenant", covenant, "[org.projectfile.code-of-conduct].covenant", "default")
 	genlog.Decision("scope", scope, "[org.projectfile.code-of-conduct].scope", "default")
 	return core.RenderLocalized(pf, core.LocalizedSpec{
-		Filename: filenameCOC,
-		Langs:    pfmodel.Languages(pf),
+		Filename:  filenameCOC,
+		Langs:     pfmodel.Languages(pf),
+		HowToLink: howToLink,
 		View: func(lang string) any {
 			strLang := core.ResolveLang(lang, pf)
 			return cocView{

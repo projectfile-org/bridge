@@ -106,8 +106,9 @@ func (Bridge) Render(pf *projectfile.Document, opts core.Options) (core.Output, 
 	emitDecisionTrace(contact, contactSrc, ext, window, windowSrc, gpgKeyURL, len(acknowledged), fp, fpSrc)
 
 	return core.RenderLocalized(pf, core.LocalizedSpec{
-		Filename: filenameSecurity,
-		Langs:    pfmodel.Languages(pf),
+		Filename:  filenameSecurity,
+		Langs:     pfmodel.Languages(pf),
+		HowToLink: ext.HowToLink,
 		View: func(lang string) any {
 			strLang := core.ResolveLang(lang, pf)
 			return securityView{
