@@ -85,7 +85,7 @@ This section guides you through submitting an enhancement suggestion for Project
 <!-- omit in toc -->
 ### How Do I Submit a Good Enhancement Suggestion?
 
-Enhancement suggestions are tracked as Codeberg Issues.
+Enhancement suggestions are tracked as [Codeberg Issues](https://codeberg.org/projectfile/bridge/issues).
 
 - Use a **clear and descriptive title** for the issue to identify the suggestion.
 - Provide a **step-by-step description of the suggested enhancement** in as much detail as possible.
@@ -97,9 +97,13 @@ Enhancement suggestions are tracked as Codeberg Issues.
 - **Workflow:** git-flow
 - **Commits:** [Conventional Commits](https://www.conventionalcommits.org/)
 - **Versioning:** [Semantic Versioning](https://semver.org/)
+- **AI Policy:** [Read our AI policy](AI_POLICY.md)
 
 ## Improving The Documentation
 
-Documentation lives at [/docs](/docs). Fixes, improvements, and new sections are all welcome — open a pull request against the documentation source.
+Documentation lives at [/docs](/docs).
+Fixes, improvements, and new sections are all welcome — open a pull request against the documentation source.
 
-*Generated from projectfile ([learn how](https://projectfile.org/how-to/contributing))*
+## See also
+
+- [Projectfile Specification](https://projectfile.org)

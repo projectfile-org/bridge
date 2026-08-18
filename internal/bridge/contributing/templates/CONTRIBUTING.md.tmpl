@@ -114,7 +114,7 @@ This section guides you through submitting an enhancement suggestion for {{$.Pro
 <!-- omit in toc -->
 ### How Do I Submit a Good Enhancement Suggestion?
 
-Enhancement suggestions are tracked as{{if $.ForgeLabel}} {{$.ForgeLabel}} Issues{{else if $.BugsURL}} [issues]({{$.BugsURL}}){{else}} issues{{end}}.
+Enhancement suggestions are tracked as{{if $.ForgeLabel}}{{if $.BugsURL}} [{{$.ForgeLabel}} Issues]({{$.BugsURL}}){{else}} {{$.ForgeLabel}} Issues{{end}}{{else if $.BugsURL}} [issues]({{$.BugsURL}}){{else}} issues{{end}}.
 
 - Use a **clear and descriptive title** for the issue to identify the suggestion.
 - Provide a **step-by-step description of the suggested enhancement** in as much detail as possible.
@@ -124,7 +124,8 @@ Enhancement suggestions are tracked as{{if $.ForgeLabel}} {{$.ForgeLabel}} Issue
 {{end}}
 {{if eq . "docs"}}{{if $.DocsURL}}## Improving The Documentation
 
-Documentation lives at [{{$.DocsURL}}]({{$.DocsURL}}). Fixes, improvements, and new sections are all welcome — open a pull request against the documentation source.
+Documentation lives at [{{$.DocsURL}}]({{$.DocsURL}}).
+Fixes, improvements, and new sections are all welcome — open a pull request against the documentation source.
 
 {{end}}{{end}}
 {{if eq . "overview"}}## Overview

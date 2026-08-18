@@ -98,10 +98,13 @@ pf-cli-managed: yes
 - **Workflow:** git-flow
 - **Commits:** [Conventional Commits](https://www.conventionalcommits.org/)
 - **Versioning:** [Semantic Versioning](https://semver.org/)
+- **AI Policy:** [Прочитайте нашу політику щодо ШІ](AI_POLICY.md)
 
 ## Покращення документації
 
 Документація розміщена за адресою [/docs](/docs). Виправлення, покращення та нові розділи вітаються — відкрийте запит на злиття до джерел документації.
 
-*Згенеровано з projectfile ([дізнатися як](https://projectfile.org/how-to/contributing))*
+## See also
+
+- [Специфікація Projectfile](https://projectfile.org)
 <!-- textlint-enable -->

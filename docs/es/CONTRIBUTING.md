@@ -98,10 +98,13 @@ Las propuestas de mejora se gestionan como Issues de Codeberg.
 - **Workflow:** git-flow
 - **Commits:** [Conventional Commits](https://www.conventionalcommits.org/)
 - **Versioning:** [Semantic Versioning](https://semver.org/)
+- **AI Policy:** [Lee nuestra política sobre IA y LLM](AI_POLICY.md)
 
 ## Mejorar la documentación
 
 La documentación está en [/docs](/docs). Correcciones, mejoras y secciones nuevas son bienvenidas: abre una solicitud de incorporación contra las fuentes de la documentación.
 
-*Generado desde projectfile ([saber cómo](https://projectfile.org/how-to/contributing))*
+## See also
+
+- [Especificación de Projectfile](https://projectfile.org)
 <!-- textlint-enable -->
