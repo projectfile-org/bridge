@@ -46,6 +46,8 @@ docker pull ghcr.io/damian-buho/projectfile/bridge:latest
 docker pull docker.io/damianbuho/projectfile-bridge:latest
 ```
 
+Stable releases also publish `X.Y.Z`, `X.Y` and `X` tags — pull the precision you want to pin.
+
 If the registries above are unreachable, pull from the origin instead:
 
 ### Pull from Kiota
@@ -83,9 +85,12 @@ Pipeline entry points:
 - [Security policy](SECURITY.md)
 - [Getting support](SUPPORT.md)
 - [Code of Conduct](CODE_OF_CONDUCT.md)
+- [AI and LLM Policy](AI_POLICY.md)
+
+## Links
+
+- [Projectfile Specification](https://projectfile.org)
 
 ## License
 
 This project is licensed under MIT — see the [LICENSE](LICENSE) file for details.
-
-*Generated from projectfile ([learn how](https://projectfile.org/how-to/readme))*

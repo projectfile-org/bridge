@@ -48,6 +48,8 @@ docker pull ghcr.io/damian-buho/projectfile/bridge:latest
 docker pull docker.io/damianbuho/projectfile-bridge:latest
 ```
 
+Стабільні випуски також публікують теґи `X.Y.Z`, `X.Y` і `X` — завантажте той рівень точності, який хочете зафіксувати.
+
 Якщо наведені вище реєстри недоступні, завантажте з джерела:
 
 ### Завантажити з Kiota
@@ -85,10 +87,14 @@ pf-bridge all
 - [Політика безпеки](SECURITY.md)
 - [Як отримати підтримку](SUPPORT.md)
 - [Кодекс поведінки](CODE_OF_CONDUCT.md)
+- [Політика щодо ШІ та LLM](AI_POLICY.md)
+
+## Посилання
+
+- [Специфікація Projectfile](https://projectfile.org)
 
 ## Ліцензія
 
 Цей проєкт ліцензовано на умовах MIT — див. файл [LICENSE](LICENSE) для подробиць.
 
-*Згенеровано з projectfile ([дізнатися як](https://projectfile.org/how-to/readme))*
 <!-- textlint-enable -->

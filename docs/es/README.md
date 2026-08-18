@@ -48,6 +48,8 @@ docker pull ghcr.io/damian-buho/projectfile/bridge:latest
 docker pull docker.io/damianbuho/projectfile-bridge:latest
 ```
 
+Las versiones estables también publican las etiquetas `X.Y.Z`, `X.Y` y `X`: descarga el nivel de precisión que quieras fijar.
+
 Si los registros anteriores no están disponibles, descarga desde el origen:
 
 ### Descargar de Kiota
@@ -85,10 +87,14 @@ Puntos de entrada de la canalización:
 - [Política de seguridad](SECURITY.md)
 - [Cómo obtener ayuda](SUPPORT.md)
 - [Código de conducta](CODE_OF_CONDUCT.md)
+- [Política sobre IA y LLM](AI_POLICY.md)
+
+## Enlaces
+
+- [Especificación de Projectfile](https://projectfile.org)
 
 ## Licencia
 
 Este proyecto se publica bajo la licencia MIT — consulta el archivo [LICENSE](LICENSE) para más detalles.
 
-*Generado desde projectfile ([saber cómo](https://projectfile.org/how-to/readme))*
 <!-- textlint-enable -->
