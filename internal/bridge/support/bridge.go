@@ -16,14 +16,16 @@ import (
 
 const filenameSupport = core.FileSupport
 
-// Bridge renders SUPPORT.md from links[] and [org.projectfile.support].
+// Bridge renders SUPPORT.md from links[] and [org.projectfile.support]. It
+// carries the pf-cli-managed sentinel every generated file carries, and
+// regenerates freely as long as that sentinel survives.
 type Bridge struct{}
 
 func (Bridge) Name() string             { return "support" }
 func (Bridge) Filename() string         { return filenameSupport }
 func (Bridge) Aliases() []string        { return nil }
 func (Bridge) Labels() (string, string) { return filenameSupport, "projectfile" }
-func (Bridge) Policy() core.Policy      { return core.Policy{ScaffoldOnce: true} }
+func (Bridge) Policy() core.Policy      { return core.Policy{Marker: true} }
 
 func (Bridge) Exists(dir string) bool {
 	_, err := os.Stat(core.PathOrDefault(dir, filenameSupport, filenameSupport))

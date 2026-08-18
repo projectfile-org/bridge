@@ -112,7 +112,7 @@ func Main(binName string) {
 		RunE:          runBridge,
 	}
 	root.Flags().BoolVarP(&bridgeForce, "force", "f", false,
-		"overwrite even if the file lacks the pf-cli marker or is scaffold-once; on a two-way bridge, rewrite the file even when every field already agrees")
+		"overwrite even if the file lacks the pf-cli marker; on a two-way bridge, rewrite the file even when every field already agrees")
 	root.Flags().BoolVarP(&bridgeDryRun, "dry-run", "n", false,
 		"show what would change without writing")
 	root.Flags().BoolVar(&bridgeNoCreate, "no-create", false,
@@ -381,14 +381,10 @@ func pickBridgeTarget() (string, error) {
 }
 
 func policySummary(p core.Policy) string {
-	switch {
-	case p.ScaffoldOnce:
-		return "renderer — scaffold-once (refuses overwrite without --force)"
-	case p.Marker:
+	if p.Marker {
 		return "renderer — managed (overwrites in place with pf-cli marker)"
-	default:
-		return "renderer — overwrite-always"
 	}
+	return "renderer — overwrite-always"
 }
 
 // fillRequiredFields drives the bubbletea fill-mode prompt over the bridge's

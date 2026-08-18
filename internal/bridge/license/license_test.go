@@ -291,7 +291,8 @@ func TestBridgeName(t *testing.T) {
 	assert.Equal(t, "license", b.Name())
 }
 
-func TestBridgePolicyScaffoldOnce(t *testing.T) {
+func TestBridgePolicyAlwaysOverwrites(t *testing.T) {
 	b := license.Bridge{}
-	assert.True(t, b.Policy().ScaffoldOnce, "LICENSE must use ScaffoldOnce policy")
+	assert.Equal(t, core.Policy{}, b.Policy(),
+		"LICENSE must have no write gate — it cannot host the pf-cli marker")
 }

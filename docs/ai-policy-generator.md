@@ -137,10 +137,10 @@ Three rendering rules carry the design:
 | Gate | namespace absent → empty `Output`, existing file never deleted |
 | Localization | `core.RenderLocalized` + `LocalizedSpec`, `docs/<lang>/<filename>` |
 
-`Marker`, not `ScaffoldOnce`: the file is a projection of declared fields, so
-flipping `attitude` MUST change the file on the next run. `CONTRIBUTING.md` is
-`ScaffoldOnce` because it becomes the maintainer’s document; a policy that
-became the maintainer’s document would be the drift this bridge exists to kill.
+`Marker`: the file is a projection of declared fields, so flipping `attitude`
+MUST change the file on the next run as long as the pf-cli-managed sentinel
+survives. A policy file that became the maintainer’s hand-edited document,
+untracked by its sentinel, would be the drift this bridge exists to kill.
 
 ### The filename is data, the prose is not
 

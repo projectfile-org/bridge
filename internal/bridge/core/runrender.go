@@ -122,10 +122,6 @@ func writeOutput(dir string, out Output, policy Policy, opts Options) error {
 			// fall through with status=created
 		case readErr != nil:
 			return fmt.Errorf("read existing %s: %w", rel, readErr)
-		case policy.ScaffoldOnce && !opts.Force:
-			genlog.Warn("refused (scaffold-once)", "file", rel, "hint", "re-run with --force to overwrite")
-			refusals++
-			continue
 		case policy.Marker && !HasMarker(existing) && !opts.Force:
 			genlog.Warn("refused (hand-edited)", "file", rel, "hint", "re-run with --force to overwrite")
 			refusals++

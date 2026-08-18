@@ -51,17 +51,16 @@ type Output struct {
 	Files map[string][]byte
 }
 
-// Policy controls the dispatcher's overwrite behaviour. At most one of
-// Marker/ScaffoldOnce should be set; both unset means the dispatcher always
-// overwrites (used for pure-data files with no user-edit expectation).
+// Policy controls the dispatcher's overwrite behaviour. Marker unset means
+// the dispatcher always overwrites (used for pure-data files with no
+// user-edit expectation).
 type Policy struct {
 	// Marker requires the pf-cli-managed sentinel in any existing file
-	// before overwriting (--force bypasses).
+	// before overwriting (--force bypasses): the sentinel's presence means
+	// the file is still pf-cli's to regenerate, and the dispatcher overwrites
+	// it freely; its absence means a human detached it by removing the
+	// comment, and the dispatcher leaves it alone.
 	Marker bool
-	// ScaffoldOnce refuses to touch the file once it exists, regardless of
-	// marker (--force bypasses). For legal artefacts (LICENSE) and files
-	// that become the user's after first scaffold (CONTRIBUTING.md).
-	ScaffoldOnce bool
 }
 
 // RequiredFieldsBridge is an optional capability for either Syncer or

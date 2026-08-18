@@ -436,7 +436,6 @@ func TestBridgeAliases(t *testing.T) {
 
 func TestBridgePolicyMarker(t *testing.T) {
 	assert.True(t, aipolicy.Bridge{}.Policy().Marker, "the policy file must use the Marker policy")
-	assert.False(t, aipolicy.Bridge{}.Policy().ScaffoldOnce, "the policy file is a projection, never scaffold-once")
 }
 
 // withLLM attaches an org.projectfile.ai extension to pf.

@@ -70,37 +70,6 @@ func TestRunRenderDryRunDoesNotWrite(t *testing.T) {
 	assert.True(t, os.IsNotExist(err), "dry-run must not create the file")
 }
 
-func TestRunRenderScaffoldOnceRefuses(t *testing.T) {
-	dir := t.TempDir()
-	target := filepath.Join(dir, testStubTXT)
-	require.NoError(t, os.WriteFile(target, []byte("original"), 0o644))
-
-	r := &stubRenderer{
-		filename: testStubTXT,
-		policy:   core.Policy{ScaffoldOnce: true},
-		content:  []byte("new"),
-	}
-	err := core.RunRender(r, &projectfile.Document{}, core.Options{Dir: dir})
-	assert.Error(t, err, "scaffold-once must refuse to overwrite without --force")
-	data, _ := os.ReadFile(target)
-	assert.Equal(t, "original", string(data))
-}
-
-func TestRunRenderScaffoldOnceForceAllowed(t *testing.T) {
-	dir := t.TempDir()
-	target := filepath.Join(dir, testStubTXT)
-	require.NoError(t, os.WriteFile(target, []byte("original"), 0o644))
-
-	r := &stubRenderer{
-		filename: testStubTXT,
-		policy:   core.Policy{ScaffoldOnce: true},
-		content:  []byte("new"),
-	}
-	require.NoError(t, core.RunRender(r, &projectfile.Document{}, core.Options{Dir: dir, Force: true}))
-	data, _ := os.ReadFile(target)
-	assert.Equal(t, "new", string(data))
-}
-
 func TestRunRenderMarkerRefusesHandEdited(t *testing.T) {
 	dir := t.TempDir()
 	target := filepath.Join(dir, testStubTXT)

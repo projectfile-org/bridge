@@ -25,6 +25,10 @@ const (
 	testGitHub            = "github"
 	testAuthor            = "testauthor"
 	testSourceCode        = "source-code"
+	testAIProject         = "ai-proj"
+	testAIAttitude        = "attitude"
+	testAIWelcoming       = "welcoming"
+	testBugs              = "bugs"
 )
 
 func docWithSourceCodeLinks(urls ...string) *projectfile.Document {
@@ -134,14 +138,14 @@ func TestBridgeFilename(t *testing.T) {
 	assert.Equal(t, "CONTRIBUTING.md", contributing.Bridge{}.Filename())
 }
 
-func TestBridgePolicyScaffoldOnce(t *testing.T) {
-	assert.True(t, contributing.Bridge{}.Policy().ScaffoldOnce,
-		"CONTRIBUTING.md must use ScaffoldOnce policy")
+func TestBridgePolicyMarker(t *testing.T) {
+	assert.True(t, contributing.Bridge{}.Policy().Marker,
+		"CONTRIBUTING.md must use Marker policy")
 }
 
-// TestRenderCarriesTheSentinel pins the rule for a file the write gate never
-// overwrites on its own: the sentinel is a warning to the human reader, so a
-// scaffold-once artefact carries it exactly like a marker-policy one.
+// TestRenderCarriesTheSentinel pins the rule that every generated file
+// carries the sentinel: the marker is what lets the dispatcher tell a
+// still-managed file from a hand-edited one on the next run.
 func TestRenderCarriesTheSentinel(t *testing.T) {
 	out, err := contributing.Bridge{}.Render(docWithSourceCodeLinks(), core.Options{Offline: true})
 	require.NoError(t, err)
@@ -394,33 +398,27 @@ func TestRenderConventionsCommitsDefault(t *testing.T) {
 // ── Docs-improvement URL ────────────────────────────────────────────────────
 
 // docWithDocsInclude is the shape every m6e consumer has after the merge: the
-// specification article contributed by m6e/core under type=documentation, plus
-// an issues repository and mirror links.
+// specification article contributed by m6e/core under type=documentation.
 func docWithDocsInclude() *projectfile.Document {
 	return &projectfile.Document{
 		Identity: projectfile.Identity{Name: "docs-proj"},
 		Links: []projectfile.Link{
 			{Type: "documentation", URL: "https://projectfile.org"},
 		},
-		Repositories: []projectfile.Repository{{
-			Issues: true,
-			Role:   "mirror",
-			Type:   "git",
-			URL:    "ssh://git@codeberg.org/d9t/thing.git",
-		}},
 	}
 }
 
 // TestRenderDocsURLSkipsSpecArticle: the specification article the shared
 // m6e include merges under type=documentation is not THIS project's
-// documentation — the section must point at the forge's docs tree instead.
+// documentation — the section must fall back to the static fleet-wide
+// "/docs" path instead.
 func TestRenderDocsURLSkipsSpecArticle(t *testing.T) {
 	b := contributing.Bridge{}
 	out, err := b.Render(docWithDocsInclude(), core.Options{Offline: true})
 	require.NoError(t, err)
 	body := string(out.Files["CONTRIBUTING.md"])
-	assert.Contains(t, body, "Documentation lives at [https://codeberg.org/d9t/thing/docs](https://codeberg.org/d9t/thing/docs)",
-		"the docs section must derive the forge docs tree from the issues repository")
+	assert.Contains(t, body, "Documentation lives at [/docs](/docs)",
+		"the docs section must fall back to the static fleet-wide docs path")
 	assert.NotContains(t, body, "https://projectfile.org)",
 		"the specification article must not stand in as the project's documentation")
 }
@@ -445,13 +443,13 @@ func TestRenderNamesTheForgeIssues(t *testing.T) {
 	b := contributing.Bridge{}
 	pf := &projectfile.Document{
 		Identity: projectfile.Identity{Name: "tracker-proj"},
-		Links:    []projectfile.Link{{Type: "bugs", URL: "https://codeberg.org/d9t/thing/issues"}},
+		Links:    []projectfile.Link{{Type: testBugs, URL: "https://codeberg.org/d9t/thing/issues"}},
 	}
 	out, err := b.Render(pf, core.Options{Offline: true})
 	require.NoError(t, err)
 	body := string(out.Files["CONTRIBUTING.md"])
 	assert.Contains(t, body, "We use [Codeberg Issues](https://codeberg.org/d9t/thing/issues) to track bugs and errors.")
-	assert.Contains(t, body, "Enhancement suggestions are tracked as Codeberg Issues.")
+	assert.Contains(t, body, "Enhancement suggestions are tracked as [Codeberg Issues](https://codeberg.org/d9t/thing/issues).")
 }
 
 // TestRenderUnknownForgeFallsBackToIssues: an unrecognized tracker host keeps
@@ -460,7 +458,7 @@ func TestRenderUnknownForgeFallsBackToIssues(t *testing.T) {
 	b := contributing.Bridge{}
 	pf := &projectfile.Document{
 		Identity: projectfile.Identity{Name: "tracker-proj"},
-		Links:    []projectfile.Link{{Type: "bugs", URL: "https://bugs.example.com"}},
+		Links:    []projectfile.Link{{Type: testBugs, URL: "https://bugs.example.com"}},
 	}
 	out, err := b.Render(pf, core.Options{Offline: true})
 	require.NoError(t, err)
@@ -474,8 +472,8 @@ func TestRenderUnknownForgeFallsBackToIssues(t *testing.T) {
 // Conventions row pointing at the LLM policy document.
 func TestRenderConventionsLLMRow(t *testing.T) {
 	b := contributing.Bridge{}
-	pf := &projectfile.Document{Identity: projectfile.Identity{Name: "ai-proj"}}
-	projectfile.SetExtension(pf, pfmodel.AIExtensionNS, map[string]any{"attitude": "welcoming"})
+	pf := &projectfile.Document{Identity: projectfile.Identity{Name: testAIProject}}
+	projectfile.SetExtension(pf, pfmodel.AIExtensionNS, map[string]any{testAIAttitude: testAIWelcoming})
 	out, err := b.Render(pf, core.Options{Offline: true})
 	require.NoError(t, err)
 	body := string(out.Files["CONTRIBUTING.md"])
@@ -486,9 +484,38 @@ func TestRenderConventionsLLMRow(t *testing.T) {
 // namespace, so a project with no LLM policy renders none.
 func TestRenderConventionsNoLLMRowWithoutNamespace(t *testing.T) {
 	b := contributing.Bridge{}
-	pf := &projectfile.Document{Identity: projectfile.Identity{Name: "ai-proj"}}
+	pf := &projectfile.Document{Identity: projectfile.Identity{Name: testAIProject}}
 	out, err := b.Render(pf, core.Options{Offline: true})
 	require.NoError(t, err)
 	body := string(out.Files["CONTRIBUTING.md"])
 	assert.NotContains(t, body, "AI Policy:")
+}
+
+// TestRenderAIPolicyNoDuplicateFooter: when Conventions renders (the
+// default), the trailing "AI and LLM policy" line must not repeat the
+// pointer the Conventions row already gives.
+func TestRenderAIPolicyNoDuplicateFooter(t *testing.T) {
+	b := contributing.Bridge{}
+	pf := &projectfile.Document{Identity: projectfile.Identity{Name: testAIProject}}
+	projectfile.SetExtension(pf, pfmodel.AIExtensionNS, map[string]any{testAIAttitude: testAIWelcoming})
+	out, err := b.Render(pf, core.Options{Offline: true})
+	require.NoError(t, err)
+	body := string(out.Files["CONTRIBUTING.md"])
+	assert.Contains(t, body, "**AI Policy:** [Read our AI policy](AI_POLICY.md)")
+	assert.NotContains(t, body, "AI and LLM policy")
+}
+
+// TestRenderAIPolicyFooterFallsBackWithoutConventions: a project that omits
+// the Conventions section loses the row that would otherwise carry the
+// pointer, so the footer stays as the only place it appears.
+func TestRenderAIPolicyFooterFallsBackWithoutConventions(t *testing.T) {
+	b := contributing.Bridge{}
+	pf := withContributing(&projectfile.Document{Identity: projectfile.Identity{Name: testAIProject}},
+		map[string]any{"sections": []string{"question", testBugs}})
+	projectfile.SetExtension(pf, pfmodel.AIExtensionNS, map[string]any{testAIAttitude: testAIWelcoming})
+	out, err := b.Render(pf, core.Options{Offline: true})
+	require.NoError(t, err)
+	body := string(out.Files["CONTRIBUTING.md"])
+	assert.NotContains(t, body, "AI Policy:")
+	assert.Contains(t, body, "AI and LLM policy")
 }

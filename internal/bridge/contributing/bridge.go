@@ -25,17 +25,18 @@ const (
 	socialMastodon       = "mastodon"
 )
 
-// Bridge renders CONTRIBUTING.md as a scaffold-once artefact: the file is the
-// user's after creation, so no run overwrites it without --force. It still
-// carries the pf-cli-managed sentinel every generated file carries — that line
-// warns a reader before they edit, which --force is exactly what defeats.
+// Bridge renders CONTRIBUTING.md as a marker-managed artefact: it carries the
+// pf-cli-managed sentinel every generated file carries, and regenerates
+// freely as long as that sentinel survives. Removing the sentinel — or
+// passing --force — is how a maintainer detaches the file from further
+// regeneration.
 type Bridge struct{}
 
 func (Bridge) Name() string             { return "contributing" }
 func (Bridge) Filename() string         { return filenameContributing }
 func (Bridge) Aliases() []string        { return nil }
 func (Bridge) Labels() (string, string) { return filenameContributing, "projectfile" }
-func (Bridge) Policy() core.Policy      { return core.Policy{ScaffoldOnce: true} }
+func (Bridge) Policy() core.Policy      { return core.Policy{Marker: true} }
 
 // defaultSections matches the spec's documented default list.
 var defaultSections = []string{
@@ -68,6 +69,7 @@ func (Bridge) Render(pf *projectfile.Document, opts core.Options) (core.Output, 
 		sections = defaultSections
 		sectionsSrc = "default"
 	}
+	hasConventions := slices.Contains(sections, "conventions")
 
 	// Resolve conventions (commit-style, workflow, versioning, style-guide-url).
 	conv, _ := pfmodel.GetConventionsExtension(pf)
@@ -83,7 +85,7 @@ func (Bridge) Render(pf *projectfile.Document, opts core.Options) (core.Output, 
 	// Resolve URLs: links[] first, extension fields override. The docs URL
 	// skips the fleet-wide spec article and falls back to the forge's docs
 	// tree — see docsSectionURL.
-	docsURL := docsSectionURL(pfmodel.LinkURL(pf, "documentation"), pf)
+	docsURL := docsSectionURL(pfmodel.LinkURL(pf, "documentation"))
 	bugsURL := pfmodel.LinkURL(pf, "bugs")
 	newIssueURL := deriveNewIssueURL(bugsURL)
 	forgeLabel := hostmatch.ResolveLabel(bugsURL)
@@ -195,7 +197,7 @@ func (Bridge) Render(pf *projectfile.Document, opts core.Options) (core.Output, 
 				Conventions:          withAIPolicyRow(conventionRows, aiPolicyName, lang, strLang),
 				ForgeStars:           forgeStars,
 				StarsEnabled:         starsEnabled,
-				AIPolicyFile:         aiPolicyFile(aiPolicyName, lang),
+				AIPolicyFile:         aiPolicyFile(aiPolicyName, lang, hasConventions),
 			}
 		},
 	}, opts)
@@ -212,12 +214,14 @@ func resolveURL(extVal string, pf *projectfile.Document, linkType string) string
 }
 
 // aiPolicyFile resolves the AI-policy cross-link for this render language,
-// or "" when the project declared no org.projectfile.ai namespace — the
-// template's {{with}} then drops the pointer line entirely. The name comes
-// from the document, so a project that renamed its policy file is linked to
-// the file it actually has.
-func aiPolicyFile(policyName, lang string) string {
-	if policyName == "" {
+// or "" when the project declared no org.projectfile.ai namespace, or when
+// the Conventions section already carries the same pointer via
+// withAIPolicyRow — restating it in the footer would be the drift this
+// suite exists to kill. The template's {{with}} then drops the pointer line
+// entirely. The name comes from the document, so a project that renamed its
+// policy file is linked to the file it actually has.
+func aiPolicyFile(policyName, lang string, hasConventions bool) string {
+	if policyName == "" || hasConventions {
 		return ""
 	}
 	return core.RelLinkSibling(policyName, lang, core.FileContributing)
@@ -243,69 +247,21 @@ func deriveNewIssueURL(bugsURL string) string {
 // skip it and point at the project's own docs instead.
 const specArticleHost = "projectfile.org"
 
-// docsPathSuffix is where every project in this fleet keeps its in-repo
-// documentation; appended to the forge repository URL.
+// docsPathSuffix is the static fallback for the "Improving The Documentation"
+// section: every project in this fleet keeps its in-repo documentation at
+// this repo-relative path, so a project needs no explicit links[] entry to
+// get a working link — it renders the same on every forge mirror.
 const docsPathSuffix = "/docs"
 
 // docsSectionURL resolves the URL the "Improving The Documentation" section
-// points at. The section invites pull requests against the documentation
-// SOURCE, which is the repository's docs tree on the forge — a declared
-// links[type=documentation] entry is kept only when the project owns it (the
-// spec article include does not qualify), and the forge docs tree is the
-// fallback for everything else. Returns "" when neither resolves.
-func docsSectionURL(declared string, pf *projectfile.Document) string {
+// points at. A declared links[type=documentation] entry wins when the
+// project owns it (the spec article include does not qualify); otherwise the
+// section falls back to the static fleet-wide docs path.
+func docsSectionURL(declared string) string {
 	if declared != "" && !strings.Contains(declared, specArticleHost) {
 		return declared
 	}
-	if pf == nil {
-		return declared
-	}
-	for _, repo := range []*projectfile.Repository{
-		pfmodel.IssuesRepository(pf), pfmodel.PrimaryRepository(pf),
-	} {
-		if web := repoWebURL(repoURL2(repo)); web != "" {
-			return web + docsPathSuffix
-		}
-	}
-	// Last resort: the preferred source-code mirror — preferred-first is
-	// LinkByType's own §5.11 selection rule.
-	if source := pfmodel.LinkByType(pf, "source-code"); source != nil {
-		if web := repoWebURL(source.URL); web != "" {
-			return web + docsPathSuffix
-		}
-	}
-	return declared
-}
-
-// repoURL2 nil-guards a repository pointer for the ladder above.
-func repoURL2(repo *projectfile.Repository) string {
-	if repo == nil {
-		return ""
-	}
-	return repo.URL
-}
-
-// repoWebURL normalizes any repository transport to its https web form:
-// ssh://git@host/owner/repo.git and the scp-style git@host:owner/repo.git both
-// become https://host/owner/repo. Returns "" for anything unparseable.
-func repoWebURL(raw string) string {
-	if raw == "" {
-		return ""
-	}
-	if strings.HasPrefix(raw, "http://") || strings.HasPrefix(raw, "https://") {
-		return strings.TrimSuffix(strings.TrimSuffix(raw, "/"), ".git")
-	}
-	if !strings.Contains(raw, "://") {
-		if at := strings.Index(raw, "@"); at >= 0 {
-			raw = raw[at+1:]
-		}
-		raw = "ssh://" + strings.Replace(raw, ":", "/", 1)
-	}
-	u, err := url.Parse(raw)
-	if err != nil || u.Host == "" || u.Path == "" {
-		return ""
-	}
-	return "https://" + u.Host + strings.TrimSuffix(strings.TrimSuffix(u.Path, "/"), ".git")
+	return docsPathSuffix
 }
 
 // aiPolicyRowDetail is the Conventions row link text for the AI policy, per render

@@ -40,12 +40,13 @@ func (Bridge) Labels() (string, string) { return filenameLicense, "projectfile" 
 // Describe answers the dispatcher probe: the licence bridge writes a tree,
 // not the one file its Filename names.
 func (Bridge) Describe() string {
-	return filenameLicense + " + LICENSES/<spdx>.txt (one-way render, scaffold-once)"
+	return filenameLicense + " + LICENSES/<spdx>.txt (one-way render, always overwrite)"
 }
 
 func (Bridge) Policy() core.Policy {
-	// Legal artefact — refuse to touch an existing LICENSE unless --force.
-	return core.Policy{ScaffoldOnce: true}
+	// Legal artefact carries no comment syntax to host the pf-cli marker, so
+	// it gets no write-gate: every run regenerates it from license.spdx.
+	return core.Policy{}
 }
 
 func (Bridge) Exists(dir string) bool {

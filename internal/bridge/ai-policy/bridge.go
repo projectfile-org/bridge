@@ -40,10 +40,11 @@ func (Bridge) Filename() string         { return filenameAIPolicy }
 func (Bridge) Aliases() []string        { return []string{"AI.md", "AI-POLICY.md", "LLM.md"} }
 func (Bridge) Labels() (string, string) { return filenameAIPolicy, "projectfile" }
 
-// Policy is Marker, not ScaffoldOnce: the policy file is a projection of
-// declared fields, so flipping `attitude` MUST change the file on the next
-// run. A policy that became the maintainer's own document (ScaffoldOnce)
-// would be exactly the drift this bridge exists to kill.
+// Policy is Marker: the policy file is a projection of declared fields, so
+// flipping `attitude` MUST change the file on the next run as long as the
+// pf-cli-managed sentinel survives. A policy that became the maintainer's
+// own hand-edited document would be exactly the drift this bridge exists to
+// kill.
 func (Bridge) Policy() core.Policy { return core.Policy{Marker: true} }
 
 func (Bridge) Exists(dir string) bool {

@@ -31,7 +31,7 @@ func (Bridge) Labels() (string, string) { return filenameFundingJSON, "projectfi
 
 // Policy uses no marker — JSON does not support comments, and funding.json is
 // a pure-data artefact that should always reflect the projectfile source of
-// truth. ScaffoldOnce is also unset: the dispatcher always overwrites.
+// truth: the dispatcher always overwrites.
 func (Bridge) Policy() core.Policy { return core.Policy{} }
 
 func (Bridge) Exists(dir string) bool {

@@ -350,10 +350,10 @@ Every generated artefact opens with the same two-part header, composed in
   between the tags, `pf-cli-managed: yes` folded in as its last line.
 
 **Every generated file carries the sentinel, whatever its policy.** The line
-warns a human not to edit what the next run overwrites; that warning is needed
-even where the write gate is `ScaffoldOnce` rather than `Marker`, so
-`RenderLocalized` folds it into every file it writes and no bridge decides.
-A template that emitted its own marker line is the bug this replaced —
+warns a human not to edit what the next run overwrites regardless of the
+`Marker` write gate, so `RenderLocalized` folds it into every file it writes
+and no bridge decides. A template that emitted its own marker line is the bug
+this replaced —
 `SUPPORT.md` carried one and `CONTRIBUTING.md` did not, on identical policies.
 `core.MarkerHTML` survives for `HasMarker` only: files generated before the
 fold still read as managed.
