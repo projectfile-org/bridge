@@ -44,5 +44,4 @@ Hay soporte de pago disponible para Projectfile Bridges:
 
 - [Apoyo del autor](https://dbuho.me)
 
-*Generado desde projectfile ([saber cómo](https://projectfile.org/how-to/support))*
 <!-- textlint-enable -->

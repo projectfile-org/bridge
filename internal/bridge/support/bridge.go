@@ -81,7 +81,6 @@ func (Bridge) Render(pf *projectfile.Document, opts core.Options) (core.Output, 
 		Filename:  filenameSupport,
 		Langs:     pfmodel.Languages(pf),
 		HowToLink: ext.HowToLink,
-		SeeAlso:   func(lang string) []core.SeeAlsoLink { return core.SeeAlsoFor(pf, "support", lang) },
 		View: func(lang string) any {
 			// strLang is the concrete tag for string resolution: the render
 			// sentinel "" maps to the default language so a non-English-default
