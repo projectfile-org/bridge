@@ -79,6 +79,21 @@ func TestNormalizeInheritedStripsTextlintWrap(t *testing.T) {
 	assert.Contains(t, got, "### Entrada")
 }
 
+// TestNormalizeInheritedDropsLanguageBar verifies the cross-language bar a
+// multi-language parent publishes above its H1 does not survive into the
+// nested body: the child builds its own bar, and the parent's carries the
+// PARENT's relative link paths.
+func TestNormalizeInheritedDropsLanguageBar(t *testing.T) {
+	_, body := splitSPDX(upstreamDoc("### Entry", "", "Body."))
+	got := normalizeInherited("[Español](docs/es/FEATURES.md) · [Українська](docs/uk/FEATURES.md)\n\n" + body)
+	assert.NotContains(t, got, "docs/es/FEATURES.md", "the parent's bar must not nest")
+	assert.NotContains(t, got, " · ", "no separator-only line survives")
+	assert.Contains(t, got, "### Entry")
+	// A single-link bar (a parent shipping exactly one other language) drops too.
+	got = normalizeInherited("[Español](docs/es/FEATURES.md)\n\n" + body)
+	assert.NotContains(t, got, "docs/es/FEATURES.md")
+}
+
 // TestNormalizeInheritedKeepsFencedHashes is the regression that matters for
 // documents with shell examples: a comment inside a fence starts with "# " too,
 // and dropping those lines would silently rewrite the parent's code samples.

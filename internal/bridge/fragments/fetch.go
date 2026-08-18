@@ -35,6 +35,13 @@ const gitTimeout = 30 * time.Second
 // the readme bridge also scrapes, so the level is load-bearing.
 var headingRE = regexp.MustCompile(`^#{1,2} `)
 
+// languageBarRE matches a whole-line cross-language bar
+// (`[Español](docs/es/FEATURES.md) · [Українська](docs/uk/FEATURES.md)`). A
+// parent that ships several languages carries one above its H1; the child
+// builds its own bar, so the parent's never nests — a leaked bar would point
+// at the PARENT's relative paths from inside the child's document.
+var languageBarRE = regexp.MustCompile(`^(\[[^\]]+\]\([^)]+\))( · \[[^\]]+\]\([^)]+\))*$`)
+
 // errNotPublished marks the one failure that is not a problem: the parent does
 // not publish this document at all. Every project declares the same shells
 // (features, roadmap, …) while most parents publish only some of them, so this
@@ -497,6 +504,8 @@ func normalizeInherited(raw string) string {
 		case strings.HasPrefix(trimmed, "~~~"):
 			fence = "~~~"
 		case headingRE.MatchString(line):
+			continue
+		case languageBarRE.MatchString(line):
 			continue
 		}
 		kept = append(kept, line)
