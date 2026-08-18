@@ -155,6 +155,46 @@ func TestRenderCarriesTheSentinel(t *testing.T) {
 	assert.True(t, core.HasMarker(body), "the header must read as managed")
 }
 
+// ── See also section ─────────────────────────────────────────────────────────
+
+// TestSeeAlsoAbsentWithNoTaggedLinks pins the gate: See also is entirely
+// project-authored, so a project with no links[] carrying the "contributing"
+// tag grows no orphan "## See also" heading.
+func TestSeeAlsoAbsentWithNoTaggedLinks(t *testing.T) {
+	out, err := contributing.Bridge{}.Render(docWithSourceCodeLinks(), core.Options{Offline: true})
+	require.NoError(t, err)
+	assert.NotContains(t, string(out.Files["CONTRIBUTING.md"]), "## See also")
+}
+
+// TestSeeAlsoListsLinksTaggedForThisDocument is the user-facing contract:
+// links:
+//   - label: ...
+//     tags: [contributing]
+//
+// surfaces in CONTRIBUTING.md's See also section; a link tagged for a
+// different document does not.
+func TestSeeAlsoListsLinksTaggedForThisDocument(t *testing.T) {
+	pf := docWithSourceCodeLinks()
+	pf.Links = append(pf.Links,
+		projectfile.Link{
+			Type:  "docs",
+			URL:   "https://example.org/style-guide",
+			Label: &projectfile.LocalizedString{Bare: "Our style guide"},
+			Extra: map[string]any{"tags": []any{"contributing"}},
+		},
+		projectfile.Link{
+			Type:  "chat",
+			URL:   "https://example.org/chat",
+			Extra: map[string]any{"tags": []any{"support"}},
+		},
+	)
+	out, err := contributing.Bridge{}.Render(pf, core.Options{Offline: true})
+	require.NoError(t, err)
+	body := string(out.Files["CONTRIBUTING.md"])
+	assert.Contains(t, body, "## See also\n\n- [Our style guide](https://example.org/style-guide)\n")
+	assert.NotContains(t, body, "example.org/chat", "a link tagged support must not leak into CONTRIBUTING.md")
+}
+
 // ── how-to-link footer toggle ───────────────────────────────────────────────
 
 func TestHowToLinkOffByDefault(t *testing.T) {

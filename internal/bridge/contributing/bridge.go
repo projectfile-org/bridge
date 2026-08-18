@@ -162,6 +162,7 @@ func (Bridge) Render(pf *projectfile.Document, opts core.Options) (core.Output, 
 		Filename:  filenameContributing,
 		Langs:     pfmodel.Languages(pf),
 		HowToLink: ext.HowToLink,
+		SeeAlso:   func(lang string) []core.SeeAlsoLink { return core.SeeAlsoFor(pf, "contributing", lang) },
 		View: func(lang string) any {
 			// strLang resolves the render sentinel to the default language for
 			// string resolution; the raw sentinel is kept for the sibling-file

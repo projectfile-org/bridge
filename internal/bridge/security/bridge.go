@@ -109,6 +109,7 @@ func (Bridge) Render(pf *projectfile.Document, opts core.Options) (core.Output, 
 		Filename:  filenameSecurity,
 		Langs:     pfmodel.Languages(pf),
 		HowToLink: ext.HowToLink,
+		SeeAlso:   func(lang string) []core.SeeAlsoLink { return core.SeeAlsoFor(pf, "security", lang) },
 		View: func(lang string) any {
 			strLang := core.ResolveLang(lang, pf)
 			return securityView{

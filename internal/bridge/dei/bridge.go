@@ -65,6 +65,7 @@ func (Bridge) Render(pf *projectfile.Document, opts core.Options) (core.Output, 
 		Filename:  filenameDEI,
 		Langs:     pfmodel.Languages(pf),
 		HowToLink: ext.HowToLink,
+		SeeAlso:   func(lang string) []core.SeeAlsoLink { return core.SeeAlsoFor(pf, "dei", lang) },
 		View: func(lang string) any {
 			strLang := core.ResolveLang(lang, pf)
 			return deiView{

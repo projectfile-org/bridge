@@ -97,6 +97,7 @@ func (Bridge) Render(pf *projectfile.Document, opts core.Options) (core.Output, 
 		Filename:  filenameCOC,
 		Langs:     pfmodel.Languages(pf),
 		HowToLink: howToLink,
+		SeeAlso:   func(lang string) []core.SeeAlsoLink { return core.SeeAlsoFor(pf, "coc", lang) },
 		View: func(lang string) any {
 			strLang := core.ResolveLang(lang, pf)
 			return cocView{

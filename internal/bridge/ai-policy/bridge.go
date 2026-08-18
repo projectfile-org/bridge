@@ -94,6 +94,7 @@ func (Bridge) Render(pf *projectfile.Document, opts core.Options) (core.Output, 
 		Template:  filenameAIPolicy,
 		Langs:     pfmodel.Languages(pf),
 		HowToLink: ext.HowToLink,
+		SeeAlso:   func(lang string) []core.SeeAlsoLink { return core.SeeAlsoFor(pf, "ai-policy", lang) },
 		View: func(lang string) any {
 			strLang := core.ResolveLang(lang, pf)
 			return policyView{

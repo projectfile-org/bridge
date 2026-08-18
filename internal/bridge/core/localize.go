@@ -266,6 +266,11 @@ type LocalizedSpec struct {
 	// View returns the template data for one language, called once per
 	// rendered language so localized-strings resolve in that language.
 	View func(lang string) any
+	// SeeAlso returns the project-authored "See also" links for one rendered
+	// language (nil, or a nil func, means no section — no orphan heading).
+	// Called once per language because a link's label may itself be
+	// localized. Typically SeeAlsoFor(pf, <bridge Name()>, lang).
+	SeeAlso func(lang string) []SeeAlsoLink
 	// HowToLink gates the "Generated from projectfile (learn how)" footer.
 	// Off by default — the caller sets it from its own namespace's
 	// how-to-link field (e.g. [org.projectfile.contributing].how-to-link).
@@ -309,6 +314,14 @@ func RenderLocalized(pf *projectfile.Document, spec LocalizedSpec, opts Options)
 		}
 		genlog.Decision("rendered", LocalizedFilename(spec.Filename, lang), tmpl, "lang="+langLabel(lang, defLang))
 		body = InsertLanguageBar(body, spec.Filename, lang, defLang, translated)
+		// See-also comes before the footer: it is document content (cross-
+		// references), the footer is trailing meta-prose about the generator.
+		if spec.SeeAlso != nil {
+			if block := RenderSeeAlso(spec.SeeAlso(lang)); block != nil {
+				body = append(body, []byte("\n\n")...)
+				body = append(body, block...)
+			}
+		}
 		// The footer is appended before the textlint wrap so its localized
 		// copy sits inside the terminology-disable block for non-English. The
 		// trailing \n keeps the single-newline contract (MD047) for the
