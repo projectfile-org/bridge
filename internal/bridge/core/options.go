@@ -33,6 +33,11 @@ type Options struct {
 	DryRun   bool
 	NoCreate bool
 	Offline  bool
+	// Preview prints each rendered file to stdout instead of writing it —
+	// for trying out template output without touching disk. Renderer-only:
+	// a Syncer has no in-memory rendered bytes to show, so it falls back to
+	// its normal --dry-run summary.
+	Preview bool
 	// ReuseCanonical keeps LICENSES/<id>.txt at the canonical SPDX text
 	// (literal placeholders) instead of substituting the resolved copyright
 	// holder/year. License-bridge only; ignored by other bridges.

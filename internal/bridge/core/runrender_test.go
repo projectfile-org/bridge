@@ -5,6 +5,7 @@
 package core_test
 
 import (
+	"io"
 	"os"
 	"path/filepath"
 	"testing"
@@ -16,7 +17,11 @@ import (
 	"projectfile.org/projectfile/bridge/internal/bridge/core"
 )
 
-const testStubTXT = "STUB.txt"
+const (
+	testStubTXT = "STUB.txt"
+	testFileA   = "A.txt"
+	testFileB   = "B.txt"
+)
 
 // ── Stub Renderer ────────────────────────────────────────────────────────────
 
@@ -70,6 +75,71 @@ func TestRunRenderDryRunDoesNotWrite(t *testing.T) {
 	assert.True(t, os.IsNotExist(err), "dry-run must not create the file")
 }
 
+// captureStdout redirects os.Stdout for the duration of fn and returns
+// everything written to it.
+func captureStdout(t *testing.T, fn func()) string {
+	t.Helper()
+	r, w, err := os.Pipe()
+	require.NoError(t, err)
+	orig := os.Stdout
+	os.Stdout = w
+	defer func() { os.Stdout = orig }()
+
+	fn()
+
+	require.NoError(t, w.Close())
+	out, err := io.ReadAll(r)
+	require.NoError(t, err)
+	return string(out)
+}
+
+func TestRunRenderPreviewDoesNotWrite(t *testing.T) {
+	dir := t.TempDir()
+	r := &stubRenderer{filename: testStubTXT, content: []byte("hello")}
+	out := captureStdout(t, func() {
+		require.NoError(t, core.RunRender(r, &projectfile.Document{}, core.Options{Dir: dir, Preview: true}))
+	})
+	assert.Equal(t, "hello", out)
+	_, err := os.Stat(filepath.Join(dir, testStubTXT))
+	assert.True(t, os.IsNotExist(err), "preview must not create the file")
+}
+
+// TestRunRenderPreviewBypassesPolicyGate pins the point of --preview: it shows
+// what a render WOULD produce regardless of whether the write gate would
+// refuse it, so trying out a template never requires clearing --force first.
+func TestRunRenderPreviewBypassesPolicyGate(t *testing.T) {
+	dir := t.TempDir()
+	target := filepath.Join(dir, testStubTXT)
+	require.NoError(t, os.WriteFile(target, []byte("hand-edited, no marker"), 0o644))
+
+	r := &stubRenderer{
+		filename: testStubTXT,
+		policy:   core.Policy{Marker: true},
+		content:  []byte("would-be generated content"),
+	}
+	out := captureStdout(t, func() {
+		require.NoError(t, core.RunRender(r, &projectfile.Document{}, core.Options{Dir: dir, Preview: true}))
+	})
+	assert.Equal(t, "would-be generated content", out)
+	data, _ := os.ReadFile(target)
+	assert.Equal(t, "hand-edited, no marker", string(data), "preview must not touch the existing file")
+}
+
+func TestRunRenderPreviewMultiFileHeaders(t *testing.T) {
+	dir := t.TempDir()
+	r := &stubRenderer{
+		filename: testFileA,
+		files: map[string][]byte{
+			testFileA: []byte("content-a"),
+			testFileB: []byte("content-b"),
+		},
+	}
+	out := captureStdout(t, func() {
+		require.NoError(t, core.RunRender(r, &projectfile.Document{}, core.Options{Dir: dir, Preview: true}))
+	})
+	assert.Equal(t, "--- A.txt ---\ncontent-a--- B.txt ---\ncontent-b", out)
+}
+
 func TestRunRenderMarkerRefusesHandEdited(t *testing.T) {
 	dir := t.TempDir()
 	target := filepath.Join(dir, testStubTXT)
@@ -117,19 +187,19 @@ func TestRunRenderMarkerForceOverridesCheck(t *testing.T) {
 func TestRunRenderMultiFile(t *testing.T) {
 	dir := t.TempDir()
 	r := &stubRenderer{
-		filename: "A.txt",
+		filename: testFileA,
 		files: map[string][]byte{
-			"A.txt": []byte("content-a"),
-			"B.txt": []byte("content-b"),
+			testFileA: []byte("content-a"),
+			testFileB: []byte("content-b"),
 		},
 	}
 	require.NoError(t, core.RunRender(r, &projectfile.Document{}, core.Options{Dir: dir}))
 
-	a, err := os.ReadFile(filepath.Join(dir, "A.txt"))
+	a, err := os.ReadFile(filepath.Join(dir, testFileA))
 	require.NoError(t, err)
 	assert.Equal(t, "content-a", string(a))
 
-	b, err := os.ReadFile(filepath.Join(dir, "B.txt"))
+	b, err := os.ReadFile(filepath.Join(dir, testFileB))
 	require.NoError(t, err)
 	assert.Equal(t, "content-b", string(b))
 }

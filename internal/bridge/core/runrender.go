@@ -37,10 +37,37 @@ func RunRender(r Renderer, pf *projectfile.Document, opts Options) error {
 		genlog.Plain("bridge: " + r.Filename() + " (no-op)")
 		return nil
 	}
+	if opts.Preview {
+		return previewOutput(out)
+	}
 	if opts.Check {
 		return checkOutput(opts.Dir, out, opts)
 	}
 	return writeOutput(opts.Dir, out, r.Policy(), opts)
+}
+
+// previewOutput prints every rendered file to stdout instead of writing it —
+// the write-gate policy and any existing on-disk copy are irrelevant here,
+// since nothing is touched. A single-file render prints bare; a multi-file
+// render (e.g. LICENSE's LICENSES/<id>.txt fan-out) prints a path header
+// before each file so the files stay distinguishable in the stream.
+func previewOutput(out Output) error {
+	names := make([]string, 0, len(out.Files))
+	for k := range out.Files {
+		names = append(names, k)
+	}
+	sort.Strings(names)
+
+	multi := len(names) > 1
+	for _, rel := range names {
+		if multi {
+			fmt.Printf("--- %s ---\n", rel)
+		}
+		if _, err := os.Stdout.Write(out.Files[rel]); err != nil {
+			return fmt.Errorf("preview %s: %w", rel, err)
+		}
+	}
+	return nil
 }
 
 // checkOutput compares each rendered file against the copy on disk and reports

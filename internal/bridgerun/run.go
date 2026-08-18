@@ -51,6 +51,7 @@ func readMerged(dir string) (*projectfile.Document, error) {
 var (
 	bridgeForce          bool
 	bridgeDryRun         bool
+	bridgePreview        bool
 	bridgeNoCreate       bool
 	bridgeCheck          bool
 	bridgeNoDiff         bool
@@ -115,6 +116,8 @@ func Main(binName string) {
 		"overwrite even if the file lacks the pf-cli marker; on a two-way bridge, rewrite the file even when every field already agrees")
 	root.Flags().BoolVarP(&bridgeDryRun, "dry-run", "n", false,
 		"show what would change without writing")
+	root.Flags().BoolVar(&bridgePreview, "preview", false,
+		"print the rendered file(s) to stdout instead of writing (renderers only; syncers fall back to --dry-run)")
 	root.Flags().BoolVar(&bridgeNoCreate, "no-create", false,
 		"do not create target file if it does not exist (syncers only)")
 	root.Flags().BoolVar(&bridgeCheck, "check", false,
@@ -213,11 +216,13 @@ func runBridgeLocked(b core.Bridge, mode core.Mode, dir, pfPath string, cmd *cob
 		PFPath: pfPath,
 		Mode:   mode,
 		Force:  bridgeForce,
-		// --check never writes, so it carries DryRun into every path that
-		// gates on it (RunSync's persist step, writeOutput's status lines).
-		DryRun:         bridgeDryRun || bridgeCheck,
+		// --check and --preview never write, so both carry DryRun into every
+		// path that gates on it (RunSync's persist step, writeOutput's status
+		// lines) even though the renderer preview path returns before reaching it.
+		DryRun:         bridgeDryRun || bridgeCheck || bridgePreview,
 		NoCreate:       bridgeNoCreate,
 		Check:          bridgeCheck,
+		Preview:        bridgePreview,
 		Diff:           !bridgeNoDiff,
 		WarnOnly:       !failOnDrift(),
 		Offline:        rootflags.Offline(),
@@ -249,6 +254,9 @@ func runBridgeLocked(b core.Bridge, mode core.Mode, dir, pfPath string, cmd *cob
 }
 
 func runBridgeSync(syn core.Syncer, pf *projectfile.Document, opts core.Options) error {
+	if opts.Preview {
+		genlog.Warn("--preview is renderer-only; showing dry-run summary instead", "file", syn.Filename())
+	}
 	res, err := core.RunSync(syn, pf, opts)
 	if err != nil {
 		return err
@@ -509,11 +517,13 @@ func runAllBridgeOne(b core.Bridge, mode core.Mode, dir, pfPath string, cmd *cob
 		PFPath: pfPath,
 		Mode:   mode,
 		Force:  bridgeForce,
-		// --check never writes, so it carries DryRun into every path that
-		// gates on it (RunSync's persist step, writeOutput's status lines).
-		DryRun:         bridgeDryRun || bridgeCheck,
+		// --check and --preview never write, so both carry DryRun into every
+		// path that gates on it (RunSync's persist step, writeOutput's status
+		// lines) even though the renderer preview path returns before reaching it.
+		DryRun:         bridgeDryRun || bridgeCheck || bridgePreview,
 		NoCreate:       bridgeNoCreate,
 		Check:          bridgeCheck,
+		Preview:        bridgePreview,
 		Diff:           !bridgeNoDiff,
 		WarnOnly:       !failOnDrift(),
 		Offline:        rootflags.Offline(),
