@@ -230,7 +230,7 @@ What makes the lenient default safe is that a warning is no longer quiet:
 Do not "fix" a drift warning by muting it. `--check` reporting nothing when a
 file has drifted is the failure mode both halves exist to prevent.
 
-### Fragment inheritance (`--refresh`)
+### Fragment inheritance
 
 `internal/bridge/fragments/` assembles `docs/<name>.d/*.md` into one document
 (`FEATURES.md`, `ROADMAP.md`, …) and nests what upstream projects publish under
@@ -240,32 +240,33 @@ every consumer who checked out one project alone.
 
 Two rules hold the design together:
 
-- **Assembly is local and offline.** Each parent’s published document is cached
-  in the repository under `docs/<name>.d/.inherited/<owner>-<repo>.md` and
-  committed — one copy per declared language under the locale variant of that
-  path. An ordinary run and the drift gate read those files and nothing
-  else, so `--check` never needs a network and two runs always agree.
-- **`--refresh` is the only step that reaches a forge.** It resolves each
-  parent’s newest release tag (`git ls-remote --sort=-v:refname`, so Git orders
-  the versions), fetches the canonical path plus each declared language’s
-  `docs/<lang>/<Out>` at that one ref with `git archive --remote`, and rewrites
-  the caches. Everything goes over Git — the transport these repositories
-  already use — so there is no forge API, no per-forge raw-URL table, and a
-  private parent resolves with the developer’s own credentials.
-  `--refresh --check` answers “has upstream moved?” without writing.
+- **Generate fetches; everything else re-reads.** A writing run online reads
+  each parent’s published document live and nests it — the committed assembled
+  document is the only record of inherited content. Offline runs, and the
+  check, preview and dry-run forms, re-read the inherited sections verbatim
+  out of that committed document, so the drift gate never needs a network and
+  two offline runs always agree.
+- **All parents or none, per document.** The fetch resolves each parent’s
+  newest release tag (`git ls-remote --sort=-v:refname`, so Git orders the
+  versions) and reads the canonical path plus each declared language’s
+  `docs/<lang>/<Out>` at that one ref with `git archive --remote`. One
+  unreachable parent keeps the whole document on its committed sections — a
+  forge outage preserves content instead of deleting it, and fresh and stale
+  sections never mix in one file. Everything goes over Git — the transport
+  these repositories already use — so there is no forge API, no per-forge
+  raw-URL table, and a private parent resolves with the developer’s own
+  credentials.
 
 Why a version, not a hash pin: the heading states `## Inherited from B19/Ubuntu
 1.0.0`, and that claim stays true however far upstream moves afterwards. An
 anonymous “Inherited Features” is what goes stale. Refs float by default, and
-the tag actually read is recorded in the cached copy’s `pf-bridge:inherited`
-comment — that recorded value is what the heading prints.
+the tag actually read is the one the heading prints.
 
 The parent is named by its own `identity.title`, read at the same ref as the
-document and recorded in that same comment. A heading is prose, and `owner/repo`
-is a path: every prose linter downstream reads `b19/ubuntu` as a misspelling of
-the product, which failed `documentation-passes-lint` in every consumer at once.
-A parent that publishes no title, and a copy cached before this existed, fall
-back to `owner/repo`.
+document. A heading is prose, and `owner/repo` is a path: every prose linter
+downstream reads `b19/ubuntu` as a misspelling of the product, which failed
+`documentation-passes-lint` in every consumer at once. A parent that publishes
+no title falls back to `owner/repo`.
 
 Three behaviours are load-bearing and easy to break:
 
@@ -274,21 +275,21 @@ Three behaviours are load-bearing and easy to break:
 - The parent’s H1/H2 headings are dropped so its H3 entries nest — the level the
   readme bridge scrapes. Fenced blocks are exempt, or a `# comment` inside a
   shell example would be eaten.
-- The projectfile stays the authority on who a project inherits from: a cached
-  copy whose parent is no longer declared is ignored and reported, because
-  nothing else would ever remove that file.
+- The offline re-reader keys on H2 boundaries: the localized “Project …”
+  heading is skipped, every other H2 is one parent section captured verbatim.
+  That layout is the contract between assembly and the offline run — the
+  round-trip test pins it byte for byte.
 
-A parent that cannot be reached warns and keeps the committed copy. Refusing to
-vendor a document with no SPDX header is deliberate — the alternative is an
-unlicensed file in this repository over a fault upstream owns.
+A parent that cannot be reached warns and keeps the committed sections.
+Refusing to nest a document with no SPDX header is deliberate — the
+alternative is unlicensed text in this repository over a fault upstream owns.
 
 Two things bite when adding a parent:
 
-- **The vendored copy is linted by the consumer, not by upstream.** Prose that
+- **The nested text is linted by the consumer, not by upstream.** Prose that
   passes upstream can fail this project’s textlint or markdownlint. Fix it in
-  the parent and cut a release — refresh reads the newest release TAG, so an
-  unreleased fix on the parent’s `main` never reaches a child. Editing the
-  cached copy is pointless; the next refresh overwrites it.
+  the parent and cut a release — generate reads the newest release TAG, so an
+  unreleased fix on the parent’s `main` never reaches a child.
 - **GitHub cannot serve a parent.** It disables `upload-archive`, so `git
   archive --remote` fails there with “operation not supported by protocol”.
   Point parents at a forge that serves it (kiota.ch, Codeberg), not at a GitHub
@@ -378,22 +379,19 @@ fragment DIRECTORY, not a template: each declared language reads
 `docs/<lang>/<name>.d/*.md` and assembles `docs/<lang>/<Out>`, keeping the
 canonical file byte-stable for single-language projects (bar and terminology
 wrap are no-ops without variants). The skip rule carries over — a language
-with neither translated fragments nor localized inherited copies warns with
-the path to add and renders nothing under a localized name. Structural
-strings (title, "Project …", "Inherited from …") localize from the Go table
-in `internal/bridge/fragments/strings.go`, the same shape core’s
+with neither translated fragments nor language-specific inherited content
+warns with the path to add and renders nothing under a localized name.
+Structural strings (title, "Project …", "Inherited from …") localize from the
+Go table in `internal/bridge/fragments/strings.go`, the same shape core’s
 `footerStrings` uses — five keys do not justify a YAML catalog. Inherited
 sections localize from the parent’s own `docs/<lang>/<Out>`, fetched at the
-same ref as the canonical copy and cached under
-`docs/<lang>/<name>.d/.inherited/` (provenance `lang` attr; the on-disk copy
-carries the textlint wrap, stripped on read so it never nests inside the
-variant’s whole-file wrap). A parent publishing no such language falls back
-to its canonical copy in that variant — the child cannot translate text it
-does not own — and a refresh that finds a cached localized copy whose parent
-dropped the language warns with the file to delete. Inherited-only documents
-grow variants from localized inherited copies alone. The readme’s features
-block prefers the same-language document and falls back to the canonical one
-with the localized `features.untranslated` note.
+same ref as the canonical copy; a parent publishing no such language falls
+back to its canonical copy in that variant — the child cannot translate text
+it does not own. Offline, a variant whose committed document does not exist
+nests the canonical sections under localized headings. Inherited-only
+documents grow variants from the parent’s localized document alone. The
+readme’s features block prefers the same-language document and falls back to
+the canonical one with the localized `features.untranslated` note.
 
 **Layout.** The locale lives in the directory, not the filename: the canonical
 (default-language) file renders at the repository root, and each other
