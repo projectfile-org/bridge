@@ -364,7 +364,7 @@ func translatableLangs(filename string, langs []string, dir string) []string {
 
 var (
 	multiBlankRe   = regexp.MustCompile(`\n{3,}`)
-	trailingBlanks = regexp.MustCompile(`\n+\z`)
+	trailingBlanks = regexp.MustCompile(`\n*\z`)
 )
 
 // CollapseBlankLines normalizes generated markdown: runs of blank lines

@@ -115,4 +115,5 @@ func TestLocalizedSiblingStaysInLanguage(t *testing.T) {
 // now goes through.
 func TestCollapseBlankLines(t *testing.T) {
 	assert.Equal(t, "a\n\nb\n", string(core.CollapseBlankLines([]byte("a\n\n\n\nb\n\n\n"))))
+	assert.Equal(t, "a\n", string(core.CollapseBlankLines([]byte("a"))), "a body with zero trailing newlines still gets one")
 }
