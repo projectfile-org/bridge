@@ -26,6 +26,7 @@
 package ocisinks
 
 import (
+	"slices"
 	"strings"
 
 	"kiota.ch/projectfile/core/v2/pkg/genlog"
@@ -58,6 +59,12 @@ const legacyRefTemplate = "/${path}:${tag}"
 // A sink whose template survives composition only half-resolved is DROPPED, not
 // written: a reference that silently lost a segment is a push to the wrong
 // repository, and a README advertising it would send readers there too.
+//
+// That drop is a WARNING only when the project reaches some OTHER destination.
+// A project whose sinks ALL fail to compose declares no image parts at all — it
+// has no container build, the fleet-wide sinks fragment simply does not apply to
+// it, and warning about a registry it was never going to push to is noise on
+// every library in the fleet.
 func Refs(pf *projectfile.Document) map[string]any {
 	if pf == nil {
 		return nil
@@ -71,6 +78,7 @@ func Refs(pf *projectfile.Document) map[string]any {
 		return nil
 	}
 	out := make(map[string]any, len(declared))
+	var dropped []unresolvedSink
 	for name, entry := range declared {
 		tmpl, ok := entry[pfmodel.SinkRefKey].(string)
 		if !ok || tmpl == "" {
@@ -80,18 +88,36 @@ func Refs(pf *projectfile.Document) map[string]any {
 		}
 		ref, resolved := interp.ExpandIn(pf, tmpl, pfmodel.ImageExtensionNS)
 		if !resolved {
-			genlog.Warn("derive: sink ref left unresolved — entry dropped", "sink", name,
-				"template", tmpl, "composed", ref,
-				"remedy", "declare the missing part under "+pfmodel.ImageExtensionNS)
+			dropped = append(dropped, unresolvedSink{name: name, tmpl: tmpl, partial: ref})
 			continue
 		}
 		genlog.Decision("sink_ref", ref, name, "template="+tmpl)
 		out[name] = composed(entry, ref)
 	}
 	if len(out) == 0 {
+		genlog.Decision("sink_ref", "(none)", pfmodel.SinksExtensionNS,
+			"no image part declared — project publishes no container image")
 		return nil
 	}
+	warnUnresolved(dropped)
 	return out
+}
+
+// unresolvedSink is one entry held back until the whole set is composed, because
+// what a failed composition MEANS depends on the others: alone among successes it
+// is a misdeclared part, and as the whole set it is a project with no image.
+type unresolvedSink struct{ name, tmpl, partial string }
+
+// warnUnresolved reports the entries that lost a segment while their siblings
+// composed. Sorted by sink name so a regenerated log diffs against the last one
+// instead of reshuffling.
+func warnUnresolved(dropped []unresolvedSink) {
+	slices.SortFunc(dropped, func(a, b unresolvedSink) int { return strings.Compare(a.name, b.name) })
+	for _, d := range dropped {
+		genlog.Warn("derive: sink ref left unresolved — entry dropped", "sink", d.name,
+			"template", d.tmpl, "composed", d.partial,
+			"remedy", "declare the missing part under "+pfmodel.ImageExtensionNS)
+	}
 }
 
 // declaredSinks reads the sinks namespace as the author wrote it. An entry that

@@ -5,10 +5,13 @@
 package ocisinks_test
 
 import (
+	"bytes"
+	"os"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"kiota.ch/projectfile/core/v2/pkg/genlog"
 	"kiota.ch/projectfile/core/v2/pkg/projectfile"
 	"projectfile.org/projectfile/bridge/internal/derive/ocisinks"
 	"projectfile.org/projectfile/bridge/internal/pfmodel"
@@ -22,6 +25,7 @@ const (
 	nameKiota   = "kiota"
 	nameGHCR    = "ghcr"
 	keyRegistry = "registry"
+	keyOrg      = "org"
 	// b19Ref is what the fixture parts compose to. The path already carries the
 	// project's own org, so a destination adds only what IT forces.
 	b19Ref = "/b19/ubuntu:latest"
@@ -35,7 +39,7 @@ const (
 // a sink template composes from.
 func parts() map[string]any {
 	return map[string]any{
-		"org":  "b19",
+		keyOrg: "b19",
 		"name": "${identity.name}",
 		"path": "${org}/${name}",
 		"tag":  "latest",
@@ -145,6 +149,49 @@ func TestMatrixPlaceholderSurvivesComposition(t *testing.T) {
 		refOf(t, ocisinks.Refs(doc), "ecr"))
 }
 
+// A library on the fleet-wide sinks fragment reaches NO destination, and that is
+// not a defect to report: it declares no image parts because it builds no image.
+// Every sink drops, the subtree is empty, and the run stays silent — otherwise
+// every non-container project warns once per destination per generated file.
+func TestProjectWithNoImageWarnsAboutNoSink(t *testing.T) {
+	doc := docWith("org.projectfile", "core", map[string]any{
+		pfmodel.ImageExtensionNS: map[string]any{keyOrg: "projectfile"},
+		pfmodel.SinksExtensionNS: map[string]any{
+			nameGHCR:  map[string]any{keyRef: refGHCR},
+			nameKiota: map[string]any{keyRef: "kiota.ch/${path}:${tag}"},
+		},
+	})
+
+	var log bytes.Buffer
+	genlog.SetOutput(&log)
+	defer genlog.SetOutput(os.Stderr)
+
+	assert.Empty(t, ocisinks.Refs(doc))
+	assert.NotContains(t, log.String(), "unresolved")
+}
+
+// One sink losing a segment while its siblings compose IS a defect: the project
+// publishes images, so a dropped destination is one it meant to reach. Docker
+// Hub names ${flatpath}, which this project never declared.
+func TestOneBrokenSinkAmongWorkingOnesWarns(t *testing.T) {
+	doc := docWithParts(map[string]any{
+		pfmodel.SinksExtensionNS: map[string]any{
+			nameGHCR:    map[string]any{keyRef: refGHCR},
+			"dockerhub": map[string]any{keyRef: "docker.io/damianbuho/${flatpath}:${tag}"},
+		},
+	})
+
+	var log bytes.Buffer
+	genlog.SetOutput(&log)
+	defer genlog.SetOutput(os.Stderr)
+
+	refs := ocisinks.Refs(doc)
+
+	assert.Len(t, refs, 1)
+	assert.Contains(t, refs, nameGHCR)
+	assert.Contains(t, log.String(), "dockerhub")
+}
+
 // A half-resolved ref is REFUSED, not written. A reference that silently lost a
 // segment is a push to the wrong repository, and a README advertising it would
 // send readers there too.
@@ -249,7 +296,7 @@ func TestRefsIsIdempotent(t *testing.T) {
 func TestInventedPartsComposeWithNoCodeChange(t *testing.T) {
 	doc := docWith("org.b19", "ubuntu", map[string]any{
 		pfmodel.ImageExtensionNS: map[string]any{
-			"org": "b19", "name": "${identity.name}", "tag": "latest",
+			keyOrg: "b19", "name": "${identity.name}", "tag": "latest",
 			"arch": "arm64", "vibe": "unhinged",
 			"path": "${arch}/${vibe}~${org}--${name}",
 		},
