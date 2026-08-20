@@ -316,9 +316,8 @@ func resolveRef(ctx context.Context, repoURL, want string) (ref, commit string, 
 		return strings.TrimPrefix(name, "refs/tags/"), sha, nil
 	}
 
-	// No tags published: read the default branch and identify the copy by its
-	// commit. The heading then states a commit instead of a version, which is
-	// the honest thing to say about a project that never released.
+	// No tags published: read the default branch. The copy's provenance keeps
+	// the commit (the logs print it); the heading names the parent only.
 	genlog.Warn("fragments: parent publishes no tags, reading the default branch", "parent", repoURL)
 	out, err = gitLsRemote(ctx, repoURL, "HEAD")
 	if err != nil {

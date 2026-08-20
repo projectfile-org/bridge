@@ -13,9 +13,10 @@
 // the parents' published documents straight off their newest release tag, and
 // every other run — offline, check, preview, dry-run, or a generate whose
 // fetch failed — reads the sections back out of the committed assembled
-// document. That split keeps the drift gate offline and byte-stable while the
-// inherited text still names a real upstream version; regenerating is how
-// upstream changes land.
+// document. That split keeps the drift gate offline and byte-stable; the
+// section heading names the parent only, never the version it was read at —
+// a version there rewrites every child document on each parent release.
+// Regenerating is how upstream changes land.
 //
 // Documents localize per org.projectfile.i18n: the canonical file assembles
 // from docs/<name>.d/ as before, and each other declared language assembles

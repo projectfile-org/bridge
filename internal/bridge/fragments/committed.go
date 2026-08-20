@@ -88,8 +88,7 @@ func extractInherited(projectDir, out, projectHeading string) ([]inheritedEntry,
 func localizedFromCanonical(sections []inheritedEntry, defLang, lang string) []inheritedEntry {
 	out := make([]inheritedEntry, 0, len(sections))
 	for _, s := range sections {
-		name, ref := parseInheritedHeading(s.Heading, defLang)
-		cop := inheritedCopy{Title: name, Ref: ref}
+		cop := inheritedCopy{Title: parseInheritedHeading(s.Heading, defLang)}
 		out = append(out, inheritedEntry{
 			Heading: localizedInheritedHeading(cop, lang),
 			Body:    s.Body,
@@ -99,26 +98,17 @@ func localizedFromCanonical(sections []inheritedEntry, defLang, lang string) []i
 }
 
 // parseInheritedHeading splits a canonical section heading back into the
-// parent's display name and the ref it was read at. The heading was rendered
-// from one of defLang's inherited formats ("Inherited from %s %s"); splitting
-// the remainder at the LAST space round-trips both shapes — a name-only
-// heading yields an empty ref, and "name ref" re-joins to the same string.
-func parseInheritedHeading(heading, defLang string) (name, ref string) {
+// parent's display name. The heading was rendered from defLang's plain
+// inherited format ("Inherited from %s"), so the whole remainder is the name —
+// a multi-word title round-trips. A heading an older bridge wrote with a
+// trailing version keeps it in the name until the next online generate
+// rewrites the committed document.
+func parseInheritedHeading(heading, defLang string) string {
 	text := strings.TrimSpace(strings.TrimPrefix(strings.TrimSpace(heading), "##"))
-	for _, key := range []string{keyInheritedRef, keyInheritedCommit, keyInheritedPlain} {
-		format, ok := fragmentString(defLang, key)
-		if !ok {
-			continue
-		}
-		prefix := format[:strings.IndexByte(format, '%')]
-		if !strings.HasPrefix(text, prefix) {
-			continue
-		}
-		rest := strings.TrimSpace(strings.TrimPrefix(text, prefix))
-		if cut := strings.LastIndexByte(rest, ' '); cut > 0 {
-			return rest[:cut], rest[cut+1:]
-		}
-		return rest, ""
+	format, ok := fragmentString(defLang, keyInheritedPlain)
+	if !ok {
+		return text
 	}
-	return text, ""
+	prefix := format[:strings.IndexByte(format, '%')]
+	return strings.TrimSpace(strings.TrimPrefix(text, prefix))
 }

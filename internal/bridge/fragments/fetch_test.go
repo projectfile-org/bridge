@@ -107,20 +107,21 @@ func TestNormalizeInheritedKeepsFencedHashes(t *testing.T) {
 	assert.Contains(t, got, "make install")
 }
 
-// TestHeadingFallsBackToCommit verifies a parent that publishes no tags is
-// identified by commit rather than by a branch name that would read like a
-// version it never released.
-func TestHeadingFallsBackToCommit(t *testing.T) {
-	c := inheritedCopy{Name: testParent, Commit: "db0ef9b031b82d5"}
-	assert.Equal(t, "## Inherited from b19/ubuntu db0ef9b", c.Heading())
-}
+// TestHeadingNamesParentOnly pins the churn rule: the heading names the parent
+// and nothing else — a ref or commit there would rewrite every child document
+// on each parent release while the inherited list itself rarely changes. The
+// parent's own title wins over owner/repo (a heading is prose; a path reads to
+// a prose linter as a misspelling of the product it points at), and a
+// multi-word title survives whole.
+func TestHeadingNamesParentOnly(t *testing.T) {
+	c := inheritedCopy{Name: testParent, Title: testParentTitle, Ref: testRef, Commit: "db0ef9b031b82d5"}
+	assert.Equal(t, "## Inherited from B19/Ubuntu", c.Heading())
 
-// TestHeadingPrefersTheParentTitle verifies a heading names the parent the way
-// the parent names itself. owner/repo is a path, and reads to a prose linter as
-// a misspelling of the product it points at.
-func TestHeadingPrefersTheParentTitle(t *testing.T) {
-	c := inheritedCopy{Name: testParent, Title: testParentTitle, Ref: testRef}
-	assert.Equal(t, "## Inherited from B19/Ubuntu 1.0.0", c.Heading())
+	untitled := inheritedCopy{Name: testParent, Ref: testRef}
+	assert.Equal(t, "## Inherited from b19/ubuntu", untitled.Heading())
+
+	multiword := inheritedCopy{Title: "B19 Ubuntu Base", Ref: testRef}
+	assert.Equal(t, "## Inherited from B19 Ubuntu Base", multiword.Heading())
 }
 
 // TestIdentityTitleReadsEveryEncoding verifies the title is read from each

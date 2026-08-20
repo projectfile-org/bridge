@@ -37,7 +37,7 @@ const (
 	parentURL     = "https://example.test/b19/ubuntu"
 
 	// Committed-fixture literals repeated across tests (goconst).
-	headingInherited = "## Inherited from b19/ubuntu 1.0.0"
+	headingInherited = "## Inherited from b19/ubuntu"
 	ownFeatureBody   = "### Own Feature\n\nOwn body."
 	parentFeatBody   = "### Parent Feature\n\nParent body."
 )
@@ -173,8 +173,8 @@ func TestRenderDeterministicOrder(t *testing.T) {
 
 // TestRenderInheritsCommittedSection asserts an inherited section read back
 // out of the committed document lands verbatim in the reassembly, heading
-// included — the heading is the only provenance left, and it still names the
-// version the section was fetched at.
+// included — the heading names the parent only, and which version a fetch
+// read lives in the logs, never the document.
 func TestRenderInheritsCommittedSection(t *testing.T) {
 	child := t.TempDir()
 	body := "    fragments:\n      documents:\n        - dir: docs/features.d\n" +
@@ -231,8 +231,8 @@ func TestRenderInheritedOrderIsDeterministic(t *testing.T) {
 	writeCommittedDoc(t, child, outFeatures, "Features", "## Project Features",
 		[]string{ownFeatureBody},
 		[][2]string{
-			{"## Inherited from b19/alpha 1.0.0", "### Alpha Feature\n\nAlpha body."},
-			{"## Inherited from b19/zeta 2.0.0", "### Zeta Feature\n\nZeta body."},
+			{"## Inherited from b19/alpha", "### Alpha Feature\n\nAlpha body."},
+			{"## Inherited from b19/zeta", "### Zeta Feature\n\nZeta body."},
 		},
 		false)
 
@@ -322,7 +322,7 @@ func TestRenderOfflinePreservesUndeclaredSection(t *testing.T) {
 		[]string{ownFeatureBody},
 		[][2]string{
 			{headingInherited, "### Kept Feature\n\nKept body."},
-			{"## Inherited from b19/dropped 1.0.0", "### Dropped Feature\n\nDropped body."},
+			{"## Inherited from b19/dropped", "### Dropped Feature\n\nDropped body."},
 		},
 		false)
 
@@ -357,7 +357,7 @@ func TestRenderNoMultipleBlankLinesBetweenSections(t *testing.T) {
 	got := string(out.Files[outFeatures])
 	assert.NotContains(t, got, "\n\n\n", "no run of multiple consecutive blank lines (MD012)")
 	// The section boundary itself must keep exactly one blank line.
-	assert.Contains(t, got, "From child.\n\n## Inherited from b19/ubuntu 1.0.0")
+	assert.Contains(t, got, "From child.\n\n## Inherited from b19/ubuntu")
 }
 
 // TestFilenameUsesNoH1Fallback verifies a fragment with no H1 uses its
@@ -618,13 +618,13 @@ func TestRenderLocalizedVariantPreservesCommittedSections(t *testing.T) {
 		false)
 	writeCommittedDoc(t, child, "docs/es/"+outFeatures, "Características", "## Características del proyecto",
 		[]string{"### Característica Propia\n\nCuerpo propio."},
-		[][2]string{{"## Heredado de b19/ubuntu 1.0.0", parentFeatBody}},
+		[][2]string{{"## Heredado de b19/ubuntu", parentFeatBody}},
 		true)
 
 	out, err := fragments.Bridge{}.Render(docWithFragments(t, child), offlineOptions(child))
 	require.NoError(t, err)
 	es := string(out.Files["docs/es/FEATURES.md"])
-	assert.Contains(t, es, "## Heredado de b19/ubuntu 1.0.0")
+	assert.Contains(t, es, "## Heredado de b19/ubuntu")
 	assert.Contains(t, es, "### Parent Feature")
 	assert.Contains(t, es, "### Característica Propia")
 }
@@ -652,7 +652,7 @@ func TestRenderVariantWithoutCommittedDocNestsCanonicalWithLocalizedHeadings(t *
 	out, err := fragments.Bridge{}.Render(docWithFragments(t, child), offlineOptions(child))
 	require.NoError(t, err)
 	es := string(out.Files["docs/es/FEATURES.md"])
-	assert.Contains(t, es, "## Heredado de b19/ubuntu 1.0.0")
+	assert.Contains(t, es, "## Heredado de b19/ubuntu")
 	assert.Contains(t, es, "### Parent Feature", "canonical body, the child cannot translate it")
 	assert.Contains(t, es, "### Característica Propia")
 }

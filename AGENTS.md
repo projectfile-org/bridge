@@ -257,10 +257,12 @@ Two rules hold the design together:
   raw-URL table, and a private parent resolves with the developer’s own
   credentials.
 
-Why a version, not a hash pin: the heading states `## Inherited from B19/Ubuntu
-1.0.0`, and that claim stays true however far upstream moves afterwards. An
-anonymous “Inherited Features” is what goes stale. Refs float by default, and
-the tag actually read is the one the heading prints.
+Why no version in the heading: the fetch still resolves and records the tag it
+read, but printing it would rewrite every child’s FEATURES.md and README.md on
+each parent release while the inherited list itself rarely changes — the fleet
+logged 150 commits that changed nothing but the version. The parent’s title
+scopes the claim (“Inherited from B19/Ubuntu”, not an anonymous “Inherited
+Features”); the tag actually read is the one the logs print.
 
 The parent is named by its own `identity.title`, read at the same ref as the
 document. A heading is prose, and `owner/repo` is a path: every prose linter

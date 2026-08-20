@@ -15,8 +15,8 @@ import (
 // not prose, so — unlike the health files — there is no translated template:
 // one structural template serves every language and only the strings the
 // assembler itself contributes (the document title, the section headings)
-// localize. Five keys do not justify a YAML catalog, so the strings live in a
-// Go map, the same shape core's GeneratedFooter footerStrings uses.
+// localize. A handful of keys does not justify a YAML catalog, so the strings
+// live in a Go map, the same shape core's GeneratedFooter footerStrings uses.
 //
 // Keys whose suffix is derived, never hand-written: `title.<stem>` where stem
 // is the document's out filename lowercased without extension (FEATURES.md →
@@ -25,35 +25,27 @@ import (
 
 // Catalog key constants — one home per key, used by every language map.
 const (
-	keyProjectHeading  = "project.heading"
-	keyInheritedRef    = "inherited.ref"
-	keyInheritedCommit = "inherited.commit"
-	keyInheritedPlain  = "inherited.plain"
-	keyTitlePrefix     = "title."
+	keyProjectHeading = "project.heading"
+	keyInheritedPlain = "inherited.plain"
+	keyTitlePrefix    = "title."
 )
 
 // fragmentsStrings maps lang → key → format string.
 var fragmentsStrings = map[string]map[string]string{
 	"en": {
 		keyProjectHeading:           "Project %s",
-		keyInheritedRef:             "Inherited from %s %s",
-		keyInheritedCommit:          "Inherited from %s %s",
 		keyInheritedPlain:           "Inherited from %s",
 		keyTitlePrefix + "features": "Features",
 		keyTitlePrefix + "roadmap":  "Roadmap",
 	},
 	"es": {
 		keyProjectHeading:           "%s del proyecto",
-		keyInheritedRef:             "Heredado de %s %s",
-		keyInheritedCommit:          "Heredado de %s %s",
 		keyInheritedPlain:           "Heredado de %s",
 		keyTitlePrefix + "features": "Características",
 		keyTitlePrefix + "roadmap":  "Hoja de ruta",
 	},
 	"uk": {
 		keyProjectHeading:           "%s проєкту",
-		keyInheritedRef:             "Успадковано від %s %s",
-		keyInheritedCommit:          "Успадковано від %s %s",
 		keyInheritedPlain:           "Успадковано від %s",
 		keyTitlePrefix + "features": "Можливості",
 		keyTitlePrefix + "roadmap":  "Дорожня карта",
@@ -95,23 +87,12 @@ func localizedProjectHeading(title, out, lang string) string {
 }
 
 // localizedInheritedHeading resolves a parent section heading for lang. The
-// English shape stays the fallback so a copy whose provenance grows a new
-// variant still renders a heading.
+// heading names the parent only — never a version, which would rewrite every
+// child document on each parent release. The English shape stays the fallback
+// so a copy that resolves nothing still renders a heading.
 func localizedInheritedHeading(c inheritedCopy, lang string) string {
-	name := c.displayName()
-	switch {
-	case c.Ref != "":
-		if v, ok := fragmentString(lang, "inherited.ref"); ok {
-			return "## " + fmt.Sprintf(v, name, c.Ref)
-		}
-	case c.Commit != "":
-		if v, ok := fragmentString(lang, "inherited.commit"); ok {
-			return "## " + fmt.Sprintf(v, name, shortCommit(c.Commit))
-		}
-	default:
-		if v, ok := fragmentString(lang, "inherited.plain"); ok {
-			return "## " + fmt.Sprintf(v, name)
-		}
+	if v, ok := fragmentString(lang, keyInheritedPlain); ok {
+		return "## " + fmt.Sprintf(v, c.displayName())
 	}
 	return c.Heading()
 }

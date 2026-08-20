@@ -8,9 +8,9 @@ package fragments
 // template renders the SPDX header, the H1 Title, the Project section, then
 // one section per parent. Each own fragment carries its demoted H3 title;
 // each inherited section carries its parent's H3 entries in one block, under
-// a heading that names the parent and the version it was read at. Title,
-// ProjectHeading and each inherited Heading arrive pre-localized for the
-// render language — the template stays structural for every language.
+// a heading that names the parent. Title, ProjectHeading and each inherited
+// Heading arrive pre-localized for the render language — the template stays
+// structural for every language.
 type fragmentView struct {
 	REUSEHeader      string
 	Title            string

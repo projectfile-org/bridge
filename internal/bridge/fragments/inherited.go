@@ -22,18 +22,12 @@ type inheritedCopy struct {
 	Lang     string // language the Body is translated into; empty when canonical
 }
 
-// Heading is the H2 the copy renders under. It names the version, so the claim
-// is "these were B19/Ubuntu 1.0.0's features" — which stays true whatever
-// upstream does next — rather than an anonymous "inherited", which does not.
+// Heading is the H2 the copy renders under. It names the parent only: a
+// version here rewrites every child document on every parent release while
+// the inherited list itself rarely changes. Which version was read stays in
+// Ref/Commit, for the logs.
 func (c inheritedCopy) Heading() string {
-	switch {
-	case c.Ref != "":
-		return "## Inherited from " + c.displayName() + " " + c.Ref
-	case c.Commit != "":
-		return "## Inherited from " + c.displayName() + " " + shortCommit(c.Commit)
-	default:
-		return "## Inherited from " + c.displayName()
-	}
+	return "## Inherited from " + c.displayName()
 }
 
 // displayName is what a heading calls the parent. The parent's own title is

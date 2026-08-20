@@ -101,13 +101,14 @@ func TestLiveFetchRendersFetchedSectionsAndReplacesCommitted(t *testing.T) {
 	out, err := Bridge{}.Render(doc, core.Options{Dir: dir})
 	require.NoError(t, err)
 	root := string(out.Files[outFeaturesName])
-	assert.Contains(t, root, "## Inherited from B19/Ubuntu 2.0.0", "live heading names the fetched version")
+	assert.Contains(t, root, "## Inherited from B19/Ubuntu", "live heading names the parent, not the fetched version")
+	assert.NotContains(t, root, itestRef, "the fetched ref stays in the logs, out of the document")
 	assert.Contains(t, root, "### Fetched Feature")
 	assert.NotContains(t, root, "Stale Feature", "a successful fetch replaces the committed sections")
 	es := string(out.Files["docs/es/FEATURES.md"])
-	assert.Contains(t, es, "## Heredado de B19/Ubuntu 2.0.0")
+	assert.Contains(t, es, "## Heredado de B19/Ubuntu")
 	uk := string(out.Files["docs/uk/FEATURES.md"])
-	assert.Contains(t, uk, "## Успадковано від B19/Ubuntu 2.0.0")
+	assert.Contains(t, uk, "## Успадковано від B19/Ubuntu")
 }
 
 // TestLiveFetchFailureKeepsCommittedSections: an unreachable parent must

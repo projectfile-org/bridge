@@ -141,12 +141,12 @@ func TestFeaturesBlockSeparatesInherited(t *testing.T) {
 	dir := t.TempDir()
 	writeFile(t, dir, "FEATURES.md",
 		"# Features\n\n## Project features\n\n### Own feature\n\n"+
-			"## Inherited from B19/Ubuntu 1.0.0\n\n### Persistent APT cache\n\n### Non-root by default\n")
+			"## Inherited from B19/Ubuntu\n\n### Persistent APT cache\n\n### Non-root by default\n")
 	pf := minimalDoc(t)
 	body := renderDoc(t, dir, pf)
 
 	assert.Contains(t, body, "- Own feature")
-	assert.Contains(t, body, "### Inherited from B19/Ubuntu 1.0.0")
+	assert.Contains(t, body, "### Inherited from B19/Ubuntu")
 	assert.Contains(t, body, "- Persistent APT cache")
 	assert.Less(t, strings.Index(body, "- Own feature"), strings.Index(body, "### Inherited from"),
 		"project features render before the inherited subheader")
@@ -159,11 +159,11 @@ func TestParseFeatureSectionsLocalizedHeadings(t *testing.T) {
 	dir := t.TempDir()
 	writeFile(t, dir, "FEATURES.md",
 		"# Características\n\n## Características del proyecto\n\n### Propia\n\n"+
-			"## Heredado de B19/Ubuntu 1.0.0\n\n### Caché APT\n")
+			"## Heredado de B19/Ubuntu\n\n### Caché APT\n")
 	parsed := parseFeatureSections(dir, "FEATURES.md")
 	assert.Equal(t, []string{"Propia"}, parsed.Project)
 	require.Len(t, parsed.Inherited, 1)
-	assert.Equal(t, "Heredado de B19/Ubuntu 1.0.0", parsed.Inherited[0].Heading)
+	assert.Equal(t, "Heredado de B19/Ubuntu", parsed.Inherited[0].Heading)
 	assert.Equal(t, []string{"Caché APT"}, parsed.Inherited[0].Items)
 }
 
