@@ -84,6 +84,20 @@ func TestRenderFilenameWithPathRejected(t *testing.T) {
 	assert.Contains(t, err.Error(), "not a basename")
 }
 
+// TestRenderProjectNameLineTextlintDisabled confirms the line carrying the
+// project name sits inside a full textlint disable: a name like "Mastodon
+// Streaming API" forms "API’s", correct prose the terminology rule rejects.
+func TestRenderProjectNameLineTextlintDisabled(t *testing.T) {
+	b := aipolicy.Bridge{}
+	pf := withLLM(&projectfile.Document{Identity: projectfile.Identity{Name: "Mastodon Streaming API"}},
+		map[string]any{testAttitude: testAllowed})
+	out, err := b.Render(pf, core.Options{Offline: true})
+	require.NoError(t, err)
+	body := string(out.Files[testFile])
+	assert.Contains(t, body, "<!-- textlint-disable -->\nThis document states Mastodon Streaming API’s policy")
+	assert.Contains(t, body, "repository.\n<!-- textlint-enable -->")
+}
+
 // ── activity table: only overrides reach it ──────────────────────────────────
 
 // TestRenderActivityEqualToAttitudeNoRow confirms an activity whose declared
