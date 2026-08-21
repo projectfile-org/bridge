@@ -882,21 +882,21 @@ Example render:
 
 ## Related projects
 
-The `related` block renders a headingless bar of sibling-project links right
-after the badges — the navigational slot where a reader looks for neighbours.
-It is driven entirely by the spec’s top-level `links[]`: any entry that carries
-the advisory `tags: [related]` joins the bar. There is no separate list and no
-config block under `org.projectfile.readme`. Entries order by
-[priority](#priority) within the bar (higher first), falling back to document
-order.
+The `related` block renders a bar of sibling-project links right after the
+badges — the navigational slot where a reader looks for neighbours — under a
+localized leading label (`related.title` in the message catalog). It is driven
+entirely by the spec’s top-level `links[]`: any entry that carries the advisory
+`tags: [related]` joins the bar. There is no separate list and no config block
+under `org.projectfile.readme`. Entries order by [priority](#priority) within
+the bar (higher first), falling back to document order.
 
 ```yaml
 links:
-  - type: source-code                 # keeps its real type
+  - type: sibling                   # NOT source-code — see the last bullet
     url: https://codeberg.org/projectfile/cli
     label: Projectfile CLI
-    tags: [related]                   # opts into the bar
-  - type: source-code
+    tags: [related]                 # opts into the bar
+  - type: sibling
     url: https://codeberg.org/projectfile/core
     label: Projectfile Core
     tags: [related]
@@ -905,18 +905,27 @@ links:
 renders, immediately after the badges:
 
 ```markdown
-[Projectfile CLI](https://codeberg.org/projectfile/cli) | [Projectfile Core](https://codeberg.org/projectfile/core)
+Related projects: [Projectfile CLI](https://codeberg.org/projectfile/cli) | [Projectfile Core](https://codeberg.org/projectfile/core)
 ```
 
 - A tagged link keeps its real `type` — `tags` is an additional key the spec
     preserves on round-trip (§139), so the link stays discoverable by type
     elsewhere (a forge bridge, CITATION) while also surfacing as a sibling.
+- An entry whose URL equals the project’s own derived
+    `org.projectfile.forge.remotes.kiota.url` is **the project itself** and is
+    dropped: a namespace-metadata include ships one sibling list to every
+    project in the collection, and no readme links to its own repository.
 - A tagged link is **excluded** from the regular Links section, so a sibling
     appears once, not twice. An untagged `source-code` mirror still lists under
     Links as usual.
 - Each entry’s label falls back from `link.label` to the catalog entry for its
-    `type`, then to the raw `type` — the same chain the Links section uses, so a
-    sibling reads identically in both places.
+    `type`, then to the raw `type` — the same chain the Links section uses.
+- A fleet-injected sibling list (a namespace `metadata` include) must use a
+    type other than `source-code`, e.g. `sibling`: include links merge AHEAD of
+    the project’s own `links[]`, and the forge-remotes derivation counts every
+    `source-code` link as the project’s own forge — a `source-code`-typed
+    sibling list would hijack the `kiota` slug and corrupt the last-commit
+    badge.
 - With no tagged link the block renders empty and is silently dropped, like
     every probe-driven block.
 

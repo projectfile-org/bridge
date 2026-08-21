@@ -34,6 +34,7 @@ roadmap.body: Consulta la [%[1]s](%[2]s) para ver lo que viene.
 configuration.title: Configuración
 configuration.body: Consulta [%[1]s](%[2]s) para ver todos los ajustes.
 policies.title: Políticas
+related.title: Proyectos relacionados
 links.title: Enlaces
 funding.title: Financiación
 funding.body: Consulta [%[1]s](%[2]s) si quieres apoyar este proyecto.

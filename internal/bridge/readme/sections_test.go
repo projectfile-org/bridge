@@ -12,6 +12,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"kiota.ch/projectfile/core/v2/pkg/projectfile"
+	"projectfile.org/projectfile/bridge/internal/bridge/core"
 	"projectfile.org/projectfile/bridge/internal/pfmodel"
 )
 
@@ -689,7 +690,7 @@ func TestRelatedBarRendersAfterBadges(t *testing.T) {
 		relatedLink("F5M/Tor", "https://kiota.ch/f5m/tor"),
 	}
 	out := renderDoc(t, t.TempDir(), pf)
-	assert.Contains(t, out, "[F5M/I2P](https://kiota.ch/f5m/i2p) | [F5M/Tor](https://kiota.ch/f5m/tor)")
+	assert.Contains(t, out, "Related projects: [F5M/I2P](https://kiota.ch/f5m/i2p) | [F5M/Tor](https://kiota.ch/f5m/tor)")
 	// The bar lands before the license section (the navigational slot).
 	barIdx := index(out, "[F5M/I2P]")
 	licenseIdx := index(out, "## License")
@@ -703,6 +704,7 @@ func TestRelatedBarSkippedWhenNoTaggedLinks(t *testing.T) {
 	pf.Links = []projectfile.Link{{Type: linkTypeSourceCode, URL: urlExampleRepo}}
 	out := renderDoc(t, t.TempDir(), pf)
 	assert.NotContains(t, out, "F5M/I2P")
+	assert.NotContains(t, out, "Related projects")
 }
 
 // TestRelatedLinkExcludedFromLinksBlock: a link tagged `related` renders in the
@@ -762,6 +764,46 @@ func TestRelatedLinksPriorityOrdersBar(t *testing.T) {
 	thirdIdx := index(out, "[Third]")
 	assert.Less(t, barIdx, firstIdx, "pinned sibling renders before the default-priority ones")
 	assert.Less(t, firstIdx, thirdIdx, "equal-priority siblings keep declaration order")
+}
+
+// TestRelatedBarExcludesSelf: a sibling whose URL is the project's own forge
+// home — the derived org.projectfile.forge.remotes.kiota.url the badges and
+// this bar share — is the project itself, and the bar drops it rather than
+// linking a README to its own repository.
+func TestRelatedBarExcludesSelf(t *testing.T) {
+	pf := minimalDoc(t)
+	pf.Extensions = map[string]any{
+		"org.projectfile.forge": map[string]any{
+			"remotes": map[string]any{
+				"kiota": map[string]any{"url": "https://kiota.ch/f5m/tor"},
+			},
+		},
+	}
+	pf.Links = []projectfile.Link{
+		relatedLink("Tor", "https://kiota.ch/f5m/tor"),
+		relatedLink("I2P", "https://kiota.ch/f5m/i2p"),
+		relatedLink("Knot", "https://kiota.ch/f5m/knot"),
+	}
+	out := renderDoc(t, t.TempDir(), pf)
+	assert.NotContains(t, out, "[Tor](", "the project never links to itself")
+	assert.Contains(t, out, "Related projects: [I2P](https://kiota.ch/f5m/i2p) | [Knot](https://kiota.ch/f5m/knot)",
+		"dropping the self entry leaves one clean separator between the survivors")
+}
+
+// TestRelatedTitleLocalized: the bar's leading label resolves through the
+// catalog in each render language, like every other block string.
+func TestRelatedTitleLocalized(t *testing.T) {
+	pf := minimalDoc(t)
+	pf.Links = []projectfile.Link{relatedLink("I2P", "https://kiota.ch/f5m/i2p")}
+	pf.Extensions = map[string]any{
+		pfmodel.I18NExtensionNS: map[string]any{
+			keyLanguages: []any{"es"},
+		},
+	}
+	out, err := Bridge{}.Render(pf, core.Options{Dir: t.TempDir(), Mode: modeWrite, Force: true})
+	require.NoError(t, err)
+	assert.Contains(t, string(out.Files[filenameReadme]), "Related projects: [I2P]")
+	assert.Contains(t, string(out.Files["docs/es/README.md"]), "Proyectos relacionados: [I2P]")
 }
 
 // TestLinkGroupsPriorityOrdersWithinBucket: priority orders links WITHIN a

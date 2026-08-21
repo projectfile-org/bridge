@@ -1,3 +1,6 @@
+{{- /* A sibling whose URL is this project’s own forge home is the project itself. */ -}}
+{{- $self := pf "org.projectfile.forge.remotes.kiota.url"}}
+{{- $first := true}}
 {{- with relatedLinks}}
-{{range $i, $l := .}}{{if $i}} | {{end}}[{{.Label}}]({{.URL}}){{end}}
+{{t "related.title"}}: {{range $l := .}}{{if ne $l.URL $self}}{{if not $first}} | {{end}}[{{$l.Label}}]({{$l.URL}}){{$first = false}}{{end}}{{end}}
 {{end -}}
