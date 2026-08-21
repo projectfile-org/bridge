@@ -331,8 +331,11 @@ func mapSupportSource(pkg *Document, pf *projectfile.Document) core.FieldMapper 
 }
 
 func mapSupportDocs(pkg *Document, pf *projectfile.Document) core.FieldMapper {
+	// Tag-gated like pyproject's Documentation slot: an include can union "a
+	// piece of documentation" onto every project; only the main-documentation
+	// entry is THE project's docs.
 	return mapSupportURL(
-		"support.docs", "links[type=documentation]",
+		"support.docs", "links[type=documentation,tag=main-documentation]",
 		func() string {
 			if pkg.Support == nil {
 				return ""
@@ -340,8 +343,8 @@ func mapSupportDocs(pkg *Document, pf *projectfile.Document) core.FieldMapper {
 			return pkg.Support.Docs
 		},
 		func(v string) { ensureSupport(pkg); pkg.Support.Docs = v },
-		func() string { return pfmodel.LinkURL(pf, projectfile.LinkDocumentation) },
-		func(v string) { pfmodel.SetLink(pf, projectfile.LinkDocumentation, v, true) },
+		func() string { return pfmodel.MainDocumentationURL(pf) },
+		func(v string) { pfmodel.SetMainDocumentationURL(pf, v, true) },
 	)
 }
 

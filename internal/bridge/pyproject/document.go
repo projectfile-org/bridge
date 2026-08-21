@@ -18,9 +18,17 @@ var Filename = "pyproject.toml"
 // file (top-level keys: project, build-system, tool, dependency-groups, ...);
 // Write paints the typed `project` onto Rest, so foreign tables round-trip
 // untouched.
+//
+// `Source` holds the exact bytes Read loaded; Write splices the re-rendered
+// [project] zone into them, so comments and formatting elsewhere in the file
+// survive a sync byte for byte. `ReuseHeader` is the REUSE/SPDX block
+// buildMappers computes from the projectfile; Write gap-fills it at the top of
+// the file when the leading comment block carries no SPDX tags.
 type Document struct {
-	Project Project             `toml:"project,omitempty"`
-	Rest    *rawdoc.OrderedTOML `toml:"-"`
+	Project     Project             `toml:"project,omitempty"`
+	Rest        *rawdoc.OrderedTOML `toml:"-"`
+	Source      []byte              `toml:"-"`
+	ReuseHeader string              `toml:"-"`
 }
 
 // Project mirrors the PEP 621 [project] table. Field tags are spelled exactly

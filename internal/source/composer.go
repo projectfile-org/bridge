@@ -10,6 +10,7 @@ import (
 
 	"kiota.ch/projectfile/core/v2/pkg/projectfile"
 	"projectfile.org/projectfile/bridge/internal/bridge/composer"
+	"projectfile.org/projectfile/bridge/internal/pfmodel"
 )
 
 type ComposerSource struct{}
@@ -66,7 +67,11 @@ func (ComposerSource) Extract(dir string) (*Partial, error) {
 			p.Links = append(p.Links, projectfile.Link{Type: projectfile.LinkBugs, URL: doc.Support.Issues})
 		}
 		if doc.Support.Docs != "" {
-			p.Links = append(p.Links, projectfile.Link{Type: projectfile.LinkDocumentation, URL: doc.Support.Docs})
+			// Tagged so the composer bridge's reverse direction recognises it
+			// as the project's main documentation, not just reading material.
+			docs := projectfile.Link{Type: projectfile.LinkDocumentation, URL: doc.Support.Docs}
+			pfmodel.SetLinkTags(&docs, []string{pfmodel.TagMainDocumentation}, true)
+			p.Links = append(p.Links, docs)
 		}
 	}
 

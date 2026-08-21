@@ -31,7 +31,8 @@ func Exists(dir string) bool {
 // top-level key order + foreign tables into Document.Rest. Both views are
 // populated for every successful read — Write paints the typed [project]
 // table onto the raw canvas so [build-system], [tool.*], [dependency-groups]
-// survive a round-trip.
+// survive a round-trip. The source bytes are kept too: Write splices the
+// re-rendered [project] zone into them, preserving comments go-toml drops.
 func Read(dir string) (*Document, error) {
 	path := FullPath(dir)
 	data, err := os.ReadFile(path) // #nosec G304 -- known filename under user-provided dir
@@ -49,6 +50,7 @@ func Read(dir string) (*Document, error) {
 		return nil, fmt.Errorf("parse %s raw view: %w", path, err)
 	}
 	doc.Rest = rest
+	doc.Source = data
 
 	return doc, nil
 }

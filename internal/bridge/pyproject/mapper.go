@@ -43,6 +43,10 @@ func buildMappers(py *Document, pf *projectfile.Document) core.MapperList {
 		dyn[strings.ToLower(k)] = true
 	}
 
+	// Stash the REUSE/SPDX block on the doc so Write can gap-fill the file
+	// header. BuildMappers is the only place the driver has pf in scope.
+	py.ReuseHeader = core.REUSEHeader(pf, core.StyleHash)
+
 	return core.MapperList{
 		mapName(py, pf, dyn),
 		mapVersion(py, pf, dyn),
@@ -532,11 +536,14 @@ func mapURLRepository(py *Document, pf *projectfile.Document) core.FieldMapper {
 }
 
 func mapURLDocumentation(py *Document, pf *projectfile.Document) core.FieldMapper {
+	// Tag-gated: an include can union "a piece of documentation" (the shared
+	// specification site) onto every project; only the main-documentation
+	// entry is THE project's docs, so the type alone must not select it.
 	return mapURLString(
 		py, pf,
-		"Documentation", []string{"documentation"}, "links[type=documentation]",
-		func() string { return pfmodel.LinkURL(pf, projectfile.LinkDocumentation) },
-		func(v string) { pfmodel.SetLink(pf, projectfile.LinkDocumentation, v, true) },
+		"Documentation", []string{"documentation"}, "links[type=documentation,tag=main-documentation]",
+		func() string { return pfmodel.MainDocumentationURL(pf) },
+		func(v string) { pfmodel.SetMainDocumentationURL(pf, v, true) },
 	)
 }
 

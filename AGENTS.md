@@ -361,6 +361,23 @@ this replaced —
 `core.MarkerHTML` survives for `HasMarker` only: files generated before the
 fold still read as managed.
 
+**Synced (two-way) files keep the user’s header instead of stamping one.**
+`pyproject.toml` is hand-edited as often as synced, so its writer splices the
+re-rendered `[project]` zone into the original bytes — the header, foreign
+tables and their comments survive byte for byte — and only GAP-FILLS the
+REUSE header when the leading comment block carries no SPDX tags. A header
+that is already there, hand-written or stale, always wins untouched: the
+projectfile is not authoritative for the file’s rights-holder.
+
+**A single documentation slot selects by tag, never by type.** An include can
+union “a piece of documentation” onto every project (the shared spec site in
+`m6e/core/conventions.yaml`), so `links[type=documentation]` alone cannot say
+which URL is THE project’s docs. Consumers that own one documentation slot —
+pyproject’s `[project.urls]` Documentation, composer’s `support.docs` — go
+through `pfmodel.MainDocumentationURL`/`SetMainDocumentationURL`, which
+select and stamp the `main-documentation` tag. Listing bridges (SUPPORT.md)
+keep type-based selection: they list every piece of documentation on purpose.
+
 ## Localized community health files
 
 `org.projectfile.i18n` is the **document-level** localization declaration. Two

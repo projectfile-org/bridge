@@ -13,6 +13,8 @@ func (d *Document) Clone() *Document {
 	cp := *d
 	cp.Project = cloneProject(d.Project)
 	cp.Rest = d.Rest.Clone()
+	// Source rides the shallow copy on purpose: the bytes are never mutated,
+	// only spliced into, so every clone may share one buffer.
 	return &cp
 }
 

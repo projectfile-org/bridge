@@ -53,6 +53,76 @@ const (
 // apart from the host-capability vocabulary a hostname settles.
 const TagSupport = "support"
 
+// TagMainDocumentation marks the links[type=documentation] entry that IS the
+// project's main rendered documentation. A documentation link without it is "a
+// piece of documentation" — the shared specification site every project
+// inherits through an include, a related book — so a consumer that owns ONE
+// documentation slot (pyproject's [project.urls] Documentation, composer's
+// support.docs) selects by this tag, never by type alone.
+const TagMainDocumentation = "main-documentation"
+
+// MainDocumentationURL returns the URL of the project's main documentation —
+// the first links[type=documentation] entry carrying TagMainDocumentation, ""
+// when none does. Untagged documentation links are deliberately invisible
+// here: they are supplementary reading, not the entry point.
+func MainDocumentationURL(doc *projectfile.Document) string {
+	for _, l := range LinksByType(doc, projectfile.LinkDocumentation) {
+		if LinkHasTag(l, TagMainDocumentation) {
+			return l.URL
+		}
+	}
+	return ""
+}
+
+// SetMainDocumentationURL writes url into the main documentation entry: a
+// documentation link already carrying the URL only gains the tag (curated tags
+// are merged, never dropped), the main-tagged entry takes the URL under
+// SetLink's gap/force semantics, and a document with neither gains a fresh
+// tagged entry. Returns true when the document was mutated.
+func SetMainDocumentationURL(doc *projectfile.Document, url string, force bool) bool {
+	if doc == nil || url == "" {
+		return false
+	}
+	for i := range doc.Links {
+		l := &doc.Links[i]
+		if l.Type != projectfile.LinkDocumentation || l.URL != url {
+			continue
+		}
+		if LinkHasTag(*l, TagMainDocumentation) {
+			return false
+		}
+		return SetLinkTags(l, mergeTag(LinkTags(*l), TagMainDocumentation), true)
+	}
+	for i := range doc.Links {
+		l := &doc.Links[i]
+		if l.Type != projectfile.LinkDocumentation || !LinkHasTag(*l, TagMainDocumentation) {
+			continue
+		}
+		if l.URL == url {
+			return false
+		}
+		if l.URL != "" && !force {
+			return false
+		}
+		l.URL = url
+		return true
+	}
+	entry := projectfile.Link{Type: projectfile.LinkDocumentation, URL: url}
+	SetLinkTags(&entry, []string{TagMainDocumentation}, true)
+	doc.Links = append(doc.Links, entry)
+	return true
+}
+
+// mergeTag unions a tag list with one more tag, keeping declaration order.
+func mergeTag(tags []string, tag string) []string {
+	for _, t := range tags {
+		if t == tag {
+			return tags
+		}
+	}
+	return append(append([]string{}, tags...), tag)
+}
+
 // LinkTags returns the capabilities a link declares through the spec's §139
 // additional-key channel (l.Extra). A tag says what the mirror AFFORDS —
 // `public`, `badges`, `ci` — which is what lets a shared fragment address a
