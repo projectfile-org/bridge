@@ -36,6 +36,8 @@ const (
 	extKeyNPM         = "npm"
 	extKeyDocker      = "docker"
 	extKeyContainer   = "container"
+	extKeyTextlint    = "textlint"
+	extKeyFd          = "fd"
 )
 
 // Bridge implements core.Renderer for one ignore filename. One instance
@@ -43,6 +45,7 @@ const (
 type Bridge struct {
 	filename string
 	extKey   string
+	optIn    bool
 }
 
 func (b Bridge) Name() string             { return b.extKey + "-ignore" }
@@ -75,6 +78,13 @@ func (b Bridge) Render(pf *projectfile.Document, _ core.Options) (core.Output, e
 		return core.Output{}, err
 	}
 	if !ext.Generates(b.extKey) {
+		return core.Output{}, nil
+	}
+	// An opt-in target stays silent until its sub-namespace exists. A Renderer
+	// CREATES files (unlike a Syncer, which has an Exists gate), so a universal
+	// new target would drop one carrying nothing but the `extra` fan-out into
+	// every project in the fleet and turn every drift gate red at once.
+	if b.optIn && overrideFor(b.extKey, ext) == nil {
 		return core.Output{}, nil
 	}
 	body := assemble(pf, b.filename, b.extKey, ext)
@@ -185,8 +195,14 @@ func sortDedup(body []byte) []byte {
 	}
 	flush()
 
-	sort.Strings(negated)
-	result = append(result, negated...)
+	if len(negated) > 0 {
+		// The body's own trailing newline would otherwise split the block in two.
+		for len(result) > 0 && strings.TrimSpace(result[len(result)-1]) == "" {
+			result = result[:len(result)-1]
+		}
+		sort.Strings(negated)
+		result = append(result, negated...)
+	}
 
 	return []byte(strings.Join(result, "\n"))
 }
@@ -224,6 +240,10 @@ func overrideFor(extKey string, ext *pfmodel.IgnoresExtension) *pfmodel.IgnoreTa
 		return ext.Claude
 	case extKeyContainer:
 		return ext.Container
+	case extKeyTextlint:
+		return ext.Textlint
+	case extKeyFd:
+		return ext.Fd
 	}
 	return nil
 }

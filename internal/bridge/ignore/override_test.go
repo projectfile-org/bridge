@@ -24,6 +24,7 @@ const (
 	testFilenameDocker    = ".dockerignore"
 	testFilenameGitignore = ".gitignore"
 	testReports           = "reports/"
+	testEnv               = ".env"
 	testInclude           = "include"
 )
 
@@ -152,11 +153,11 @@ func TestAssembleExcludeDropsInheritedPattern(t *testing.T) {
 func TestAssembleExcludeReachesExtra(t *testing.T) {
 	pf := &projectfile.Document{Identity: projectfile.Identity{Name: "p"}}
 	ext := &pfmodel.IgnoresExtension{
-		Extra:  []string{".env", testSecrets},
-		Claude: &pfmodel.IgnoreTargetOverride{Include: []string{testGit}, Exclude: []string{".env"}},
+		Extra:  []string{testEnv, testSecrets},
+		Claude: &pfmodel.IgnoreTargetOverride{Include: []string{testGit}, Exclude: []string{testEnv}},
 	}
 	body := string(assemble(pf, ".claudeignore", testExtClaude, ext))
-	assert.NotContains(t, body, ".env")
+	assert.NotContains(t, body, testEnv)
 	assert.Contains(t, body, testSecrets)
 }
 
@@ -182,6 +183,8 @@ func TestAssembleNegationFollowsItsPattern(t *testing.T) {
 	body := string(assemble(pf, testFilenameGitignore, extKeyGit, ext))
 	assert.Greater(t, strings.Index(body, "!dist/keep.txt"), strings.Index(body, "dist/\n"),
 		"a re-include emitted above its pattern is inert")
+	block := body[strings.Index(body, "# >>> user-include"):strings.Index(body, "# <<< user-include")]
+	assert.NotContains(t, block, "\n\n", "no blank line may split the block")
 }
 
 // An explicit generate list is authoritative: an unlisted target emits nothing.
@@ -217,4 +220,41 @@ func TestRenderGenerateAbsentMeansAll(t *testing.T) {
 	out, err := Bridge{filename: testFilenameDocker, extKey: extKeyDocker}.Render(doc, core.Options{})
 	assert.NoError(t, err)
 	assert.Len(t, out.Files, 1)
+}
+
+// An opt-in target emits nothing until its sub-namespace exists — otherwise a
+// new row here would create the file in every project in the fleet.
+func TestRenderOptInSilentWithoutNamespace(t *testing.T) {
+	doc := &projectfile.Document{
+		Identity: projectfile.Identity{Name: "p"},
+		Extensions: map[string]any{
+			pfmodel.IgnoresExtensionNS: map[string]any{"extra": []any{testEnv}},
+		},
+	}
+	out, err := Bridge{filename: ".textlintignore", extKey: extKeyTextlint, optIn: true}.Render(doc, core.Options{})
+	assert.NoError(t, err)
+	assert.Empty(t, out.Files, "extra alone must not conjure an opt-in file")
+}
+
+// Declaring the sub-namespace turns the target on, and extra rides along.
+func TestRenderOptInEmitsOnceDeclared(t *testing.T) {
+	doc := &projectfile.Document{
+		Identity: projectfile.Identity{Name: "p"},
+		Extensions: map[string]any{
+			pfmodel.IgnoresExtensionNS: map[string]any{
+				"extra":        []any{testEnv},
+				extKeyTextlint: []any{"LICENSES/"},
+				extKeyFd:       []any{"LICENSES/"},
+			},
+		},
+	}
+	out, err := Bridge{filename: ".textlintignore", extKey: extKeyTextlint, optIn: true}.Render(doc, core.Options{})
+	assert.NoError(t, err)
+	body := string(out.Files[".textlintignore"])
+	assert.Contains(t, body, "LICENSES/")
+	assert.Contains(t, body, testEnv)
+
+	fd, err := Bridge{filename: ".fdignore", extKey: extKeyFd, optIn: true}.Render(doc, core.Options{})
+	assert.NoError(t, err)
+	assert.Contains(t, string(fd.Files[".fdignore"]), "LICENSES/")
 }

@@ -69,6 +69,8 @@ type IgnoresExtension struct {
 	Claude    *IgnoreTargetOverride `toml:"claude"    yaml:"claude"    json:"claude"`
 	Container *IgnoreTargetOverride `toml:"container" yaml:"container" json:"container"`
 	Yamllint  *IgnoreTargetOverride `toml:"yamllint"  yaml:"yamllint"  json:"yamllint"`
+	Textlint  *IgnoreTargetOverride `toml:"textlint"  yaml:"textlint"  json:"textlint"`
+	Fd        *IgnoreTargetOverride `toml:"fd"        yaml:"fd"        json:"fd"`
 }
 
 type IgnoreTargetOverride struct {

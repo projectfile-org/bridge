@@ -38,6 +38,12 @@ func GetIgnoresExtension(doc *projectfile.Document) (*IgnoresExtension, error) {
 	if v, ok := m["yamllint"]; ok {
 		ext.Yamllint = parseIgnoreTargetOverride(v)
 	}
+	if v, ok := m["textlint"]; ok {
+		ext.Textlint = parseIgnoreTargetOverride(v)
+	}
+	if v, ok := m["fd"]; ok {
+		ext.Fd = parseIgnoreTargetOverride(v)
+	}
 	return ext, nil
 }
 
