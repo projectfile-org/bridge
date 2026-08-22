@@ -4,7 +4,11 @@
 
 package pfmodel
 
-import "kiota.ch/projectfile/core/v2/pkg/projectfile"
+import (
+	"strings"
+
+	"kiota.ch/projectfile/core/v2/pkg/projectfile"
+)
 
 // The typed shapes of bridge-owned projectfile extension namespaces. Each
 // binds one org.projectfile.* namespace to a Go struct the matching bridge
@@ -70,6 +74,38 @@ type IgnoresExtension struct {
 type IgnoreTargetOverride struct {
 	Include []string `toml:"include" yaml:"include" json:"include"`
 	Exclude []string `toml:"exclude" yaml:"exclude" json:"exclude"`
+}
+
+// Patterns is Include with Exclude applied — what the target actually emits.
+func (o *IgnoreTargetOverride) Patterns() []string {
+	if o == nil {
+		return nil
+	}
+	return o.Filter(o.Include)
+}
+
+// Filter drops every pattern this target excludes, matched verbatim. It is the
+// ONLY way to lose an inherited pattern: `includes:` deep-merge UNIONS lists
+// (core dedupSlice), so a language fragment's entry is otherwise permanent
+// downstream, and a `!pattern` re-include cannot express "never emit this".
+// Applied to the shared `extra` list too, so one target can opt out of a
+// fan-out that belongs everywhere else.
+func (o *IgnoreTargetOverride) Filter(patterns []string) []string {
+	if o == nil || len(o.Exclude) == 0 {
+		return patterns
+	}
+	drop := make(map[string]bool, len(o.Exclude))
+	for _, e := range o.Exclude {
+		drop[strings.TrimSpace(e)] = true
+	}
+	kept := make([]string, 0, len(patterns))
+	for _, p := range patterns {
+		if drop[strings.TrimSpace(p)] {
+			continue
+		}
+		kept = append(kept, p)
+	}
+	return kept
 }
 
 // AttributesExtension binds `org.projectfile.attributes` — the .gitattributes

@@ -162,3 +162,24 @@ func TestRenderGenerateOptIn(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Len(t, out.Files, 1)
 }
+
+// The yamllint target honours exclude like every flat-file target: a project
+// that DOES want vendor/ linted drops the inherited pattern.
+func TestRenderExcludeDropsInheritedPattern(t *testing.T) {
+	pf := &projectfile.Document{
+		Identity: projectfile.Identity{Name: "p"},
+		Extensions: map[string]any{
+			pfmodel.IgnoresExtensionNS: map[string]any{
+				extKeyYamllint: map[string]any{
+					testInclude: []any{testVendor, testNodeMods},
+					"exclude":   []any{testVendor},
+				},
+			},
+		},
+	}
+	out, err := Bridge{filename: filenameYamllint}.Render(pf, core.Options{})
+	assert.NoError(t, err)
+	body := string(out.Files[filenameYamllint])
+	assert.NotContains(t, body, testVendor)
+	assert.Contains(t, body, testNodeMods)
+}

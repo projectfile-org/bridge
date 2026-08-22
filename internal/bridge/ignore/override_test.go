@@ -129,3 +129,41 @@ func TestRenderEmptyOutput(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Empty(t, out.Files)
 }
+
+// exclude SUBTRACTS: the only way to drop a pattern an m6e language fragment
+// injected, since `includes:` deep-merge unions lists and never replaces them.
+func TestAssembleExcludeDropsInheritedPattern(t *testing.T) {
+	pf := &projectfile.Document{Identity: projectfile.Identity{Name: "p"}}
+	ext := &pfmodel.IgnoresExtension{
+		Git: &pfmodel.IgnoreTargetOverride{
+			Include: []string{"/dist/", testReports},
+			Exclude: []string{"/dist/"},
+		},
+	}
+	body := string(assemble(pf, testFilenameGitignore, extKeyGit, ext))
+	assert.NotContains(t, body, "/dist/")
+	assert.Contains(t, body, testReports)
+}
+
+// `extra` fans out to every target, so a target's exclude must reach it too —
+// otherwise one file can never opt out of a pattern that belongs everywhere else.
+func TestAssembleExcludeReachesExtra(t *testing.T) {
+	pf := &projectfile.Document{Identity: projectfile.Identity{Name: "p"}}
+	ext := &pfmodel.IgnoresExtension{
+		Extra:  []string{".env", testSecrets},
+		Claude: &pfmodel.IgnoreTargetOverride{Include: []string{testGit}, Exclude: []string{".env"}},
+	}
+	body := string(assemble(pf, ".claudeignore", testExtClaude, ext))
+	assert.NotContains(t, body, ".env")
+	assert.Contains(t, body, testSecrets)
+}
+
+// An exclude naming nothing present is inert, not an error.
+func TestAssembleExcludeUnmatchedIsInert(t *testing.T) {
+	pf := &projectfile.Document{Identity: projectfile.Identity{Name: "p"}}
+	ext := &pfmodel.IgnoresExtension{
+		Git: &pfmodel.IgnoreTargetOverride{Include: []string{testReports}, Exclude: []string{"nothing/"}},
+	}
+	body := string(assemble(pf, testFilenameGitignore, extKeyGit, ext))
+	assert.Contains(t, body, testReports)
+}

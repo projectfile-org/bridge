@@ -8,10 +8,11 @@
 // auto-yamllint uses a project `.yamllint` INSTEAD OF the image default.
 //
 // The exclude patterns are read from the same namespace as every other
-// ignore target — org.projectfile.ignores.yamllint.include — so they fan out
-// identically to git/docker/npm/claude/container (defaults live in
-// m6e/core/conventions.yaml and per-language m6e includes, deep-merged into
-// the project document before this bridge runs).
+// ignore target — org.projectfile.ignores.yamllint.include, minus anything
+// its .exclude drops — so they fan out identically to
+// git/docker/npm/claude/container (defaults live in m6e/core/traits/yaml.yaml
+// and per-language m6e includes, deep-merged into the project document before
+// this bridge runs).
 //
 // Why this is its own package (not a row in bridge/ignore):
 //   - yamllint's `ignore:` REPLACES (not merges) the inherited block on
@@ -101,7 +102,7 @@ func (b Bridge) Render(pf *projectfile.Document, _ core.Options) (core.Output, e
 	if !enabledFor(ext.Generate) {
 		return core.Output{}, nil
 	}
-	includes := ext.Yamllint.Include
+	includes := ext.Yamllint.Patterns()
 	if len(includes) == 0 {
 		return core.Output{}, nil
 	}

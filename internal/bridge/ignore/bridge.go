@@ -91,11 +91,16 @@ func (b Bridge) Render(pf *projectfile.Document, _ core.Options) (core.Output, e
 func assemble(pf *projectfile.Document, filename, extKey string, ext *pfmodel.IgnoresExtension) []byte {
 	var content bytes.Buffer
 
-	if inc := includesFor(extKey, ext); len(inc) > 0 {
+	o := overrideFor(extKey, ext)
+	if inc := o.Patterns(); len(inc) > 0 {
 		writeBlock(&content, "user-include", []byte(strings.Join(inc, "\n")+"\n"))
 	}
-	if ext != nil && len(ext.Extra) > 0 {
-		writeBlock(&content, "user-extra", []byte(strings.Join(ext.Extra, "\n")+"\n"))
+	if ext != nil {
+		// `extra` fans out to every target, so the target's own exclude is its
+		// only way out of an entry that belongs everywhere else.
+		if extra := o.Filter(ext.Extra); len(extra) > 0 {
+			writeBlock(&content, "user-extra", []byte(strings.Join(extra, "\n")+"\n"))
+		}
 	}
 
 	if content.Len() == 0 {
@@ -205,9 +210,5 @@ func overrideFor(extKey string, ext *pfmodel.IgnoresExtension) *pfmodel.IgnoreTa
 }
 
 func includesFor(extKey string, ext *pfmodel.IgnoresExtension) []string {
-	o := overrideFor(extKey, ext)
-	if o == nil {
-		return nil
-	}
-	return o.Include
+	return overrideFor(extKey, ext).Patterns()
 }
