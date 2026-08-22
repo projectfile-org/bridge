@@ -34,6 +34,8 @@ const (
 	stackNode         = "node"
 	extKeyGit         = "git"
 	extKeyNPM         = "npm"
+	extKeyDocker      = "docker"
+	extKeyContainer   = "container"
 )
 
 // Bridge implements core.Renderer for one ignore filename. One instance
@@ -71,6 +73,9 @@ func (b Bridge) Render(pf *projectfile.Document, _ core.Options) (core.Output, e
 	ext, err := pfmodel.GetIgnoresExtension(pf)
 	if err != nil {
 		return core.Output{}, err
+	}
+	if !ext.Generates(b.extKey) {
+		return core.Output{}, nil
 	}
 	body := assemble(pf, b.filename, b.extKey, ext)
 	if len(body) == 0 {
@@ -211,13 +216,13 @@ func overrideFor(extKey string, ext *pfmodel.IgnoresExtension) *pfmodel.IgnoreTa
 	switch extKey {
 	case extKeyGit:
 		return ext.Git
-	case "docker":
+	case extKeyDocker:
 		return ext.Docker
 	case extKeyNPM:
 		return ext.Npm
 	case extKeyClaude:
 		return ext.Claude
-	case "container":
+	case extKeyContainer:
 		return ext.Container
 	}
 	return nil

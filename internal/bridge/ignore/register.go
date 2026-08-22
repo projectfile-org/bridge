@@ -24,8 +24,8 @@ var targets = []struct {
 	extKey   string
 }{
 	{filename: filenameGitignore, extKey: extKeyGit},
-	{filename: ".dockerignore", extKey: "docker"},
-	{filename: ".containerignore", extKey: "container"},
+	{filename: ".dockerignore", extKey: extKeyDocker},
+	{filename: ".containerignore", extKey: extKeyContainer},
 	{filename: ".npmignore", extKey: extKeyNPM},
 	{filename: ".claudeignore", extKey: extKeyClaude},
 }

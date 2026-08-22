@@ -20,7 +20,8 @@ const (
 	testSecrets           = ".secrets/"
 	testGit               = ".git"
 	testExtClaude         = "claude"
-	testExtContainer      = "container"
+	testExtContainer      = extKeyContainer
+	testFilenameDocker    = ".dockerignore"
 	testFilenameGitignore = ".gitignore"
 	testReports           = "reports/"
 	testInclude           = "include"
@@ -181,4 +182,39 @@ func TestAssembleNegationFollowsItsPattern(t *testing.T) {
 	body := string(assemble(pf, testFilenameGitignore, extKeyGit, ext))
 	assert.Greater(t, strings.Index(body, "!dist/keep.txt"), strings.Index(body, "dist/\n"),
 		"a re-include emitted above its pattern is inert")
+}
+
+// An explicit generate list is authoritative: an unlisted target emits nothing.
+func TestRenderGenerateListIsAuthoritative(t *testing.T) {
+	doc := &projectfile.Document{
+		Identity: projectfile.Identity{Name: "p"},
+		Extensions: map[string]any{
+			pfmodel.IgnoresExtensionNS: map[string]any{
+				"generate":   []any{extKeyGit},
+				extKeyGit:    []any{testReports},
+				extKeyDocker: []any{testReports},
+			},
+		},
+	}
+	git, err := Bridge{filename: testFilenameGitignore, extKey: extKeyGit}.Render(doc, core.Options{})
+	assert.NoError(t, err)
+	assert.Len(t, git.Files, 1)
+
+	docker, err := Bridge{filename: testFilenameDocker, extKey: extKeyDocker}.Render(doc, core.Options{})
+	assert.NoError(t, err)
+	assert.Empty(t, docker.Files)
+}
+
+// An absent generate list means every target generates — no project has to
+// enumerate the files it already gets.
+func TestRenderGenerateAbsentMeansAll(t *testing.T) {
+	doc := &projectfile.Document{
+		Identity: projectfile.Identity{Name: "p"},
+		Extensions: map[string]any{
+			pfmodel.IgnoresExtensionNS: map[string]any{extKeyDocker: []any{testReports}},
+		},
+	}
+	out, err := Bridge{filename: testFilenameDocker, extKey: extKeyDocker}.Render(doc, core.Options{})
+	assert.NoError(t, err)
+	assert.Len(t, out.Files, 1)
 }

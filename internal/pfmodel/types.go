@@ -76,6 +76,22 @@ type IgnoreTargetOverride struct {
 	Exclude []string `toml:"exclude" yaml:"exclude" json:"exclude"`
 }
 
+// Generates reports whether target should be emitted. An explicit `generate`
+// list is authoritative: only the targets it names are written. An absent list
+// means every target generates — the default, so no project has to enumerate
+// the files it already gets.
+func (e *IgnoresExtension) Generates(target string) bool {
+	if e == nil || len(e.Generate) == 0 {
+		return true
+	}
+	for _, g := range e.Generate {
+		if g == target {
+			return true
+		}
+	}
+	return false
+}
+
 // Patterns is Include with Exclude applied — what the target actually emits.
 func (o *IgnoreTargetOverride) Patterns() []string {
 	if o == nil {

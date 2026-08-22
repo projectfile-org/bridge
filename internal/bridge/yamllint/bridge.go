@@ -99,7 +99,7 @@ func (b Bridge) Render(pf *projectfile.Document, _ core.Options) (core.Output, e
 	}
 	// `generate` opts a project out of yamllint generation. Unset means
 	// "generate" — the default.
-	if !enabledFor(ext.Generate) {
+	if !ext.Generates(extKeyYamllint) {
 		return core.Output{}, nil
 	}
 	includes := ext.Yamllint.Patterns()
@@ -108,21 +108,6 @@ func (b Bridge) Render(pf *projectfile.Document, _ core.Options) (core.Output, e
 	}
 	body := assemble(pf, includes)
 	return core.Output{Files: map[string][]byte{b.filename: body}}, nil
-}
-
-// enabledFor reports whether yamllint should generate. An explicit `generate`
-// list is authoritative: only the listed targets generate. An absent list
-// means yamllint generates whenever the yamllint sub-namespace is present.
-func enabledFor(generate []string) bool {
-	if len(generate) == 0 {
-		return true
-	}
-	for _, g := range generate {
-		if g == extKeyYamllint {
-			return true
-		}
-	}
-	return false
 }
 
 // assemble builds the byte body of `.yamllint`. Layout:
