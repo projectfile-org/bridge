@@ -4,10 +4,11 @@
 
 // Package ignore is the key-driven bridge family. One Bridge per ignore
 // filename (.gitignore, .dockerignore, .npmignore, .claudeignore,
-// .containerignore); each one assembles a body purely from the
-// org.projectfile.ignores namespace — per-target include lists plus the
-// top-level extra list. No embedded snippet tree, no stack lookups: every
-// pattern lives in the projectfile (and the m6e includes that feed it).
+// .containerignore, .textlintignore, .fdignore); each one assembles a body
+// purely from the org.projectfile.ignores namespace — per-target include
+// lists, minus that target's excludes, plus the top-level extra list. No
+// embedded snippet tree, no stack lookups: every pattern lives in the
+// projectfile (and the m6e includes that feed it).
 //
 // Suppressed vulnerability IDs (CVE/GHSA) are NOT handled here — they live in
 // the tool-agnostic org.projectfile.vulnerabilities namespace and fan out to
@@ -220,7 +221,7 @@ func trimTrailingBlanks(body []byte) []byte {
 
 // overrideFor returns the per-target include/exclude overrides. The
 // pfmodel.IgnoresExtension struct carries one typed slot per registered
-// target (git, docker, npm, claude, container); explicit named fields are kept
+// target (git, docker, npm, claude, container, textlint, fd); explicit named fields are kept
 // (over a map) to mirror the rest of the struct and stay greppable.
 // Vulnerability IDs are NOT handled here — they live in
 // org.projectfile.vulnerabilities (see bridge/vulnerabilities) and fan out to
