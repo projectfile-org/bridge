@@ -5,6 +5,7 @@
 package ignore
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -166,4 +167,18 @@ func TestAssembleExcludeUnmatchedIsInert(t *testing.T) {
 	}
 	body := string(assemble(pf, testFilenameGitignore, extKeyGit, ext))
 	assert.Contains(t, body, testReports)
+}
+
+// A re-include must follow the pattern it answers: these files resolve
+// last-match-wins, and "!" sorts below every letter.
+func TestAssembleNegationFollowsItsPattern(t *testing.T) {
+	pf := &projectfile.Document{Identity: projectfile.Identity{Name: "p"}}
+	ext := &pfmodel.IgnoresExtension{
+		Git: &pfmodel.IgnoreTargetOverride{
+			Include: []string{"dist/", "!dist/keep.txt", testReports},
+		},
+	}
+	body := string(assemble(pf, testFilenameGitignore, extKeyGit, ext))
+	assert.Greater(t, strings.Index(body, "!dist/keep.txt"), strings.Index(body, "dist/\n"),
+		"a re-include emitted above its pattern is inert")
 }

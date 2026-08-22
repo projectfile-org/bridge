@@ -125,6 +125,11 @@ func writeBlock(buf *bytes.Buffer, label string, body []byte) {
 // sortDedup sorts non-comment, non-blank lines within a block body and
 // removes duplicates. Comment lines and blank lines are preserved in their
 // original position relative to the content that follows them.
+//
+// Re-includes (`!pattern`) are held back and emitted after everything else.
+// Every consumer of these files resolves LAST match wins, and `!` sorts below
+// every letter, so a sorted-in-place re-include lands above the pattern it
+// answers and silently does nothing.
 func sortDedup(body []byte) []byte {
 	lines := strings.Split(string(body), "\n")
 
@@ -133,15 +138,21 @@ func sortDedup(body []byte) []byte {
 	var result []string
 	var comments []string
 	var content []string
+	var negated []string
 	seen := make(map[string]bool)
 
 	flush := func() {
 		sort.Strings(content)
 		for _, line := range content {
-			if !seen[line] {
-				seen[line] = true
-				result = append(result, line)
+			if seen[line] {
+				continue
 			}
+			seen[line] = true
+			if strings.HasPrefix(line, "!") {
+				negated = append(negated, line)
+				continue
+			}
+			result = append(result, line)
 		}
 		content = content[:0]
 	}
@@ -168,6 +179,9 @@ func sortDedup(body []byte) []byte {
 		result = append(result, comments...)
 	}
 	flush()
+
+	sort.Strings(negated)
+	result = append(result, negated...)
 
 	return []byte(strings.Join(result, "\n"))
 }
