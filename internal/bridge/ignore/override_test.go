@@ -78,28 +78,28 @@ func TestAssembleContainerIncludeApplied(t *testing.T) {
 	assert.Contains(t, body, testMd)
 }
 
-// Undeclared container: mirrors docker: verbatim. buildah build reads
+// Undeclared docker: mirrors container: verbatim. buildah build reads
 // .containerignore INSTEAD of .dockerignore when both exist (never merges
-// them), so an unset container namespace must not fall back to nothing.
-func TestAssembleContainerFallsBackToDocker(t *testing.T) {
+// them), so the deferred file must not fall back to nothing.
+func TestAssembleDockerFallsBackToContainer(t *testing.T) {
 	pf := &projectfile.Document{Identity: projectfile.Identity{Name: "p"}}
 	ext := &pfmodel.IgnoresExtension{
-		Docker: &pfmodel.IgnoreTargetOverride{Include: []string{testGit, testMd}, Exclude: []string{testMd}},
+		Container: &pfmodel.IgnoreTargetOverride{Include: []string{testGit, testMd}, Exclude: []string{testMd}},
 	}
-	assert.Equal(t, ext.Docker, overrideFor(extKeyContainer, ext))
-	body := string(assemble(pf, ".containerignore", testExtContainer, ext))
+	assert.Equal(t, ext.Container, overrideFor(extKeyDocker, ext))
+	body := string(assemble(pf, testFilenameDocker, extKeyDocker, ext))
 	assert.Contains(t, body, testGit)
 	assert.NotContains(t, body, testMd)
 }
 
-// A declared container: (even include-only) takes over completely — no
-// merging with docker:, matching how every other target already behaves.
-func TestAssembleContainerDeclaredOverridesDocker(t *testing.T) {
+// A declared docker: (even include-only) takes over completely — no
+// merging with container:, matching how every other target already behaves.
+func TestAssembleDockerDeclaredOverridesContainer(t *testing.T) {
 	ext := &pfmodel.IgnoresExtension{
-		Docker:    &pfmodel.IgnoreTargetOverride{Include: []string{"docker-only/"}},
-		Container: &pfmodel.IgnoreTargetOverride{Include: []string{testGit}},
+		Container: &pfmodel.IgnoreTargetOverride{Include: []string{"container-only/"}},
+		Docker:    &pfmodel.IgnoreTargetOverride{Include: []string{testGit}},
 	}
-	assert.Equal(t, []string{testGit}, includesFor(extKeyContainer, ext))
+	assert.Equal(t, []string{testGit}, includesFor(extKeyDocker, ext))
 }
 
 // GetIgnoresExtension must parse the npm/claude/container sub-tables off the extension.

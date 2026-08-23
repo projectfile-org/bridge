@@ -227,11 +227,13 @@ func trimTrailingBlanks(body []byte) []byte {
 // org.projectfile.vulnerabilities (see bridge/vulnerabilities) and fan out to
 // scanner ignore files tool-agnostically.
 //
-// container mirrors docker unless a project declares its own
-// [org.projectfile.ignores.container]: buildah build reads .containerignore
+// docker mirrors container unless a project declares its own
+// [org.projectfile.ignores.docker]: container is the canonical namespace —
+// .dockerignore is the deferred/legacy name, same as the .container/
+// directory superseded .docker/. buildah build reads .containerignore
 // INSTEAD of .dockerignore when both exist (never merges them), so the two
-// must carry equivalent excludes or the buildah build plane silently loses
-// every pattern m6e's docker: conventions add.
+// must carry equivalent excludes or a docker/buildx build silently loses
+// every pattern m6e's container: conventions add.
 func overrideFor(extKey string, ext *pfmodel.IgnoresExtension) *pfmodel.IgnoreTargetOverride {
 	if ext == nil {
 		return nil
@@ -240,16 +242,16 @@ func overrideFor(extKey string, ext *pfmodel.IgnoresExtension) *pfmodel.IgnoreTa
 	case extKeyGit:
 		return ext.Git
 	case extKeyDocker:
-		return ext.Docker
+		if ext.Docker != nil {
+			return ext.Docker
+		}
+		return ext.Container
 	case extKeyNPM:
 		return ext.Npm
 	case extKeyClaude:
 		return ext.Claude
 	case extKeyContainer:
-		if ext.Container != nil {
-			return ext.Container
-		}
-		return ext.Docker
+		return ext.Container
 	case extKeyTextlint:
 		return ext.Textlint
 	case extKeyFd:
