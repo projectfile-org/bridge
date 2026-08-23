@@ -66,10 +66,12 @@ const (
 // the display name the readme's per-destination install subsections show.
 // Every other key an author writes is theirs — a template may name it and
 // nothing here interprets it.
+// `ref` addresses any image; `selfref` addresses only this project's own artifact.
 const (
-	SinkRefKey   = "ref"
-	SinkRoleKey  = "role"
-	SinkLabelKey = "label"
+	SinkRefKey     = "ref"
+	SinkSelfRefKey = "selfref"
+	SinkRoleKey    = "role"
+	SinkLabelKey   = "label"
 
 	// SinkRolePrimary is the role an entry carries when it declares none: the
 	// ordinary destination, as opposed to the fallback a reader is told to try

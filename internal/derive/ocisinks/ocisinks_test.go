@@ -20,6 +20,7 @@ import (
 // Fixture literals shared across the table, declared once (goconst).
 const (
 	keyRef      = "ref"
+	keySelfRef  = "selfref"
 	keyRole     = "role"
 	hostKiota   = "kiota.ch"
 	nameKiota   = "kiota"
@@ -307,4 +308,49 @@ func TestInventedPartsComposeWithNoCodeChange(t *testing.T) {
 
 	assert.Equal(t, "registry.example.test/arm64/unhinged~b19--ubuntu#latest",
 		refOf(t, ocisinks.Refs(doc), "weird"))
+}
+
+// The own-artifact plane reads `selfref` when the project declares one, so a
+// destination whose literal account already spells the project's org stops
+// repeating it.
+func TestSelfRefComposesTheOwnArtifact(t *testing.T) {
+	doc := docWithParts(map[string]any{
+		pfmodel.SinksExtensionNS: map[string]any{
+			nameGHCR: map[string]any{
+				keyRef:     refGHCR,
+				keySelfRef: "ghcr.io/damian-buho/${name}:${tag}",
+			},
+		},
+	})
+
+	assert.Equal(t, "ghcr.io/damian-buho/ubuntu:latest", refOf(t, ocisinks.Refs(doc), nameGHCR))
+}
+
+// An entry with no `selfref` composes from `ref`, which is every project on the
+// fleet and must stay byte-identical.
+func TestRefAnswersWhenNoSelfRefIsDeclared(t *testing.T) {
+	doc := docWithParts(map[string]any{
+		pfmodel.SinksExtensionNS: map[string]any{
+			nameGHCR: map[string]any{keyRef: refGHCR},
+		},
+	})
+
+	assert.Equal(t, "ghcr.io/damian-buho"+b19Ref, refOf(t, ocisinks.Refs(doc), nameGHCR))
+}
+
+// `selfref` is spent during composition and removed, so no consumer can read the
+// template back out of the composed view and compose one reference twice.
+func TestSelfRefIsRemovedFromTheComposedEntry(t *testing.T) {
+	doc := docWithParts(map[string]any{
+		pfmodel.SinksExtensionNS: map[string]any{
+			nameGHCR: map[string]any{
+				keyRef:     refGHCR,
+				keySelfRef: "ghcr.io/damian-buho/${name}:${tag}",
+			},
+		},
+	})
+
+	ghcr, ok := ocisinks.Refs(doc)[nameGHCR].(map[string]any)
+	require.True(t, ok)
+	assert.NotContains(t, ghcr, keySelfRef)
 }

@@ -80,8 +80,8 @@ func Refs(pf *projectfile.Document) map[string]any {
 	out := make(map[string]any, len(declared))
 	var dropped []unresolvedSink
 	for name, entry := range declared {
-		tmpl, ok := entry[pfmodel.SinkRefKey].(string)
-		if !ok || tmpl == "" {
+		tmpl := selfTemplate(entry)
+		if tmpl == "" {
 			genlog.Warn("derive: sink declares no ref template — entry dropped", "sink", name,
 				"remedy", "declare "+pfmodel.SinkRefKey+" on the entry")
 			continue
@@ -101,6 +101,15 @@ func Refs(pf *projectfile.Document) map[string]any {
 	}
 	warnUnresolved(dropped)
 	return out
+}
+
+// selfTemplate composes this project's OWN artifact: `selfref`, else `ref`.
+func selfTemplate(entry map[string]any) string {
+	if self, ok := entry[pfmodel.SinkSelfRefKey].(string); ok && self != "" {
+		return self
+	}
+	ref, _ := entry[pfmodel.SinkRefKey].(string)
+	return ref
 }
 
 // unresolvedSink is one entry held back until the whole set is composed, because
@@ -150,7 +159,8 @@ func declaredSinks(pf *projectfile.Document) map[string]map[string]any {
 // with the composed reference written over the template.
 //
 // `ref` replaces the template rather than sitting beside it — two spellings of
-// one reference would drift the moment a sink moved.
+// one reference would drift the moment a sink moved. `selfref` is dropped for the
+// same reason — `ref` already holds its answer.
 //
 // `role` is the one key this package still supplies, and it is addressability
 // rather than shape: a bare `{}` projection admits no trailing field, so a
@@ -164,6 +174,7 @@ func composed(entry map[string]any, ref string) map[string]any {
 		m[k] = v
 	}
 	m[pfmodel.SinkRefKey] = ref
+	delete(m, pfmodel.SinkSelfRefKey)
 	if role, ok := m[pfmodel.SinkRoleKey].(string); !ok || role == "" {
 		m[pfmodel.SinkRoleKey] = pfmodel.SinkRolePrimary
 	}
