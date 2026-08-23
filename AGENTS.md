@@ -299,10 +299,33 @@ Two things bite when adding a parent:
 
 ### Fan-out verbs
 
-`pf-bridge all` (sync every file bridge) and `pf-bridge check` (the same sweep
-with `--check` forced, writing nothing) are built into the dispatcher — there is
-no `pf-bridge-check` binary, because check is a MODE every bridge already has.
-`pf-bridge check <name>…` narrows it; `--all` spells the default explicitly.
+`pf-bridge all` (sync every file bridge) and `pf-bridge check` (writing nothing)
+are built into the dispatcher — there is no `pf-bridge-check` binary, because
+check is a MODE every bridge already has.
+
+The two verbs choose their set differently, and the difference is the point:
+
+| verb | set | source |
+| --- | --- | --- |
+| `all`, `to all`, `from all` | every installed file bridge | PATH |
+| `check` | the bridges the PROJECT declares | `org.projectfile.ci.tools` rows spelling `pf-bridge … --check` |
+| `check <name>…` | only those | the command line |
+| `check --all` | every installed file bridge | PATH |
+
+A PATH sweep answers the wrong question for a gate. Every consumer of the m6e
+fragments inherits ignore patterns, a release config and yamllint rules, so a
+sweep renders `.yamllint`, `.containerignore` and `.releaserc.yaml` for projects
+that maintain none of them and calls each one drift — while `funding` fails
+outright on a project that declares no sponsors. The CI manifest already names
+the exact set (`internal/declared` reads it), so the gate verifies what the
+project derives and the whole thing costs the CI plane ONE container instead of
+one per bridge. A project with no such rows falls back to the PATH sweep, which
+keeps the tool useful outside a projectfile-driven fleet.
+
+A declared row naming a bridge this install does not carry is warned and
+skipped, never fatal — a bridge reaches the fleet in two steps (publish the
+tool, rebuild the image), and a project legitimately declares a check its image
+cannot run yet.
 
 **Every flag typed after a fan-out verb is forwarded to each child.** It was not
 always: the child argv was rebuilt from scratch, so `pf-bridge all --check`

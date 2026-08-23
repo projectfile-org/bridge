@@ -20,13 +20,17 @@ import (
 	"path/filepath"
 	"slices"
 	"sort"
+	"strconv"
 	"strings"
 	"syscall"
 	"time"
 
 	"github.com/mattn/go-isatty"
 
+	"kiota.ch/projectfile/core/v2/pkg/genlog"
+	"kiota.ch/projectfile/core/v2/pkg/projectfile"
 	"projectfile.org/projectfile/bridge/internal/buildinfo"
+	"projectfile.org/projectfile/bridge/internal/declared"
 	"projectfile.org/projectfile/bridge/internal/describe"
 	"projectfile.org/projectfile/bridge/internal/warn"
 )
@@ -43,8 +47,11 @@ const (
 	cmdCheck = "check"
 	// flagCheck is what cmdCheck forces into every child's argv.
 	flagCheck = "--check"
-	// flagAll spells cmdCheck's "every bridge" default explicitly.
+	// flagAll asks cmdCheck for the PATH sweep instead of the declared set.
 	flagAll = "--all"
+	// flagOffline is the include-resolution flag this dispatcher reads for its
+	// own document read; every other flag it only forwards.
+	flagOffline = "--offline"
 	// dirTo / dirFrom are the direction prepositions of the per-bridge grammar.
 	// The dispatcher only has to recognise them: the child re-parses its own.
 	dirTo   = "to"
@@ -128,14 +135,101 @@ func runAll(args []string) error {
 }
 
 // runCheckAll implements `pf-bridge check [--all|<name>...] [flags]`: the same
-// fan-out with --check forced on. Naming bridges narrows it; naming none (or
-// --all) checks every installed one.
+// fan-out with --check forced on.
+//
+// With no names it checks what the PROJECT declares — the `pf-bridge … --check`
+// rows of its org.projectfile.ci.tools manifest — not what happens to be
+// installed. The two sets are not the same: every consumer inherits ignore
+// patterns, a release config and yamllint rules from the shared m6e fragments,
+// so a PATH sweep renders `.yamllint`, `.containerignore` and `.releaserc.yaml`
+// for projects that maintain none of them and reports each as drift. It also
+// costs the CI plane one container per bridge; this way the whole gate is one
+// `pf-bridge check`.
+//
+// Naming bridges narrows it to those; `--all` asks for the PATH sweep
+// explicitly, and a project that declares no checks falls back to it.
 func runCheckAll(args []string) error {
 	names, flags := splitNamesFlags(args)
 	if !slices.Contains(flags, flagCheck) {
 		flags = append(flags, flagCheck)
 	}
+	if len(names) == 0 && !slices.Contains(args, flagAll) && !slices.Contains(args, cmdAll) {
+		if children := declaredChildren(flags); len(children) > 0 {
+			return runChildren(children)
+		}
+	}
 	return fanout("", names, flags)
+}
+
+// declaredChildren resolves the project's declared checks into child
+// invocations. Returns nil — the caller then sweeps PATH — when the document
+// cannot be read or declares no bridge check at all, so the tool keeps working
+// outside a projectfile-driven fleet.
+//
+// A declared row naming a bridge this install does not carry is WARNED and
+// skipped, never fatal: a bridge reaches the fleet in two steps (publish the
+// tool, rebuild the image every project runs), and between them a project
+// legitimately declares a check its image cannot run yet.
+func declaredChildren(flags []string) []child {
+	runs, err := declared.Checks(".", readOpts(flags))
+	if err != nil {
+		warn.Record("declared checks unavailable — checking every installed bridge",
+			"error", err.Error())
+		return nil
+	}
+	children := make([]child, 0, len(runs))
+	for _, r := range runs {
+		if toolBinaries[r.Name] || isDispatcherVerb(r.Name) {
+			warn.Record("skipped: not a file bridge", "tool", r.Tool, "name", r.Name)
+			continue
+		}
+		if _, err := exec.LookPath(prefix + r.Name); err != nil {
+			warn.Record("skipped: declared bridge is not installed",
+				"tool", r.Tool, "binary", prefix+r.Name)
+			continue
+		}
+		children = append(children, child{name: r.Name, args: mergeFlags(r.Args, flags)})
+	}
+	if len(children) > 0 {
+		genlog.Decision("check_set", strconv.Itoa(len(children))+" declared bridge(s)",
+			"org.projectfile.ci.tools", "--all checks every installed bridge instead")
+	}
+	return children
+}
+
+// isDispatcherVerb reports whether name addresses this dispatcher instead of a
+// bridge — the guard that stops a manifest row spelled `pf-bridge all --check`
+// (or a future aggregate row) from fanning out into this process again.
+func isDispatcherVerb(name string) bool {
+	switch name {
+	case cmdAll, cmdCheck, dirTo, dirFrom:
+		return true
+	}
+	return false
+}
+
+// mergeFlags appends the flags typed on the command line to the ones the
+// manifest row already carries, dropping duplicates so a child never sees
+// `--check --check`.
+func mergeFlags(rowArgs, flags []string) []string {
+	out := slices.Clone(rowArgs)
+	for _, f := range flags {
+		if !slices.Contains(out, f) {
+			out = append(out, f)
+		}
+	}
+	return out
+}
+
+// readOpts mirrors the include-resolution flags the children parse with cobra,
+// for the ONE read this dispatcher does itself. Only --offline is honoured:
+// it is the flag that decides whether a resolution may touch the network, and
+// a check sweep on a runner without egress must not hang on an include fetch.
+func readOpts(flags []string) projectfile.ReadOptions {
+	return projectfile.ReadOptions{
+		Offline: slices.Contains(flags, flagOffline),
+		FailOn:  projectfile.FailOnError,
+	}
 }
 
 // splitNamesFlags separates positional bridge names from flags, dropping the
@@ -156,13 +250,16 @@ func splitNamesFlags(args []string) (names, flags []string) {
 	return names, flags
 }
 
+// child is one resolved invocation: the bridge name (→ pf-bridge-<name>) and
+// the complete argv tail it runs with.
+type child struct {
+	name string
+	args []string
+}
+
 // fanout runs one bridge binary per name (or every installed file bridge when
 // names is empty), each driven with the `all` target so multi-file bridges run
 // their whole set too.
-//
-// Children inherit a warnings directory: each hands its ledger back instead of
-// printing a summary of its own, so a 20-bridge sweep ends in ONE block naming
-// every finding rather than 20 blocks the reader has to reassemble.
 func fanout(mode string, names, flags []string) error {
 	if len(names) == 0 {
 		for _, n := range discover() {
@@ -171,7 +268,31 @@ func fanout(mode string, names, flags []string) error {
 			}
 		}
 	}
-	if len(names) == 0 {
+
+	children := make([]child, 0, len(names))
+	for _, name := range names {
+		if toolBinaries[name] {
+			warn.Record("skipped: not a file bridge", "name", name)
+			continue
+		}
+		args := []string{}
+		if mode != "" {
+			args = append(args, mode)
+		}
+		args = append(args, cmdAll)
+		args = append(args, flags...)
+		children = append(children, child{name: name, args: args})
+	}
+	return runChildren(children)
+}
+
+// runChildren execs each resolved child in order, one process per bridge.
+//
+// Children inherit a warnings directory: each hands its ledger back instead of
+// printing a summary of its own, so a 20-bridge sweep ends in ONE block naming
+// every finding rather than 20 blocks the reader has to reassemble.
+func runChildren(children []child) error {
+	if len(children) == 0 {
 		return errors.New("no pf-bridge-* file-bridge binaries found on PATH")
 	}
 
@@ -186,33 +307,18 @@ func fanout(mode string, names, flags []string) error {
 		env = append(env, warn.EnvDir+"="+dir)
 	}
 
-	var ran, failed int
-	for _, name := range names {
-		if toolBinaries[name] {
-			warn.Record("skipped: not a file bridge", "name", name)
-			continue
-		}
-		subArgs := []string{}
-		if mode != "" {
-			subArgs = append(subArgs, mode)
-		}
-		subArgs = append(subArgs, cmdAll)
-		subArgs = append(subArgs, flags...)
-
-		cmd := exec.Command(prefix+name, subArgs...) // #nosec G702,G204 -- name resolved via PATH discovery on a fixed prefix; dispatching is this command's job
+	var failed int
+	for _, c := range children {
+		cmd := exec.Command(prefix+c.name, c.args...) // #nosec G702,G204 -- name resolved via PATH discovery on a fixed prefix; dispatching is this command's job
 		cmd.Stdout, cmd.Stderr, cmd.Stdin = os.Stdout, os.Stderr, os.Stdin
 		cmd.Env = env
-		ran++
 		if err := cmd.Run(); err != nil {
-			fmt.Fprintf(os.Stderr, "pf-bridge: %s%s failed: %s\n", prefix, name, err)
+			fmt.Fprintf(os.Stderr, "pf-bridge: %s%s failed: %s\n", prefix, c.name, err)
 			failed++
 		}
 	}
-	if ran == 0 {
-		return errors.New("no pf-bridge-* file-bridge binaries found on PATH")
-	}
 	if failed > 0 {
-		return fmt.Errorf("%d/%d bridge binaries failed", failed, ran)
+		return fmt.Errorf("%d/%d bridge binaries failed", failed, len(children))
 	}
 	return nil
 }
@@ -351,8 +457,9 @@ func usage(w *os.File) {
 	fmt.Fprintf(w, "Usage:\n")
 	fmt.Fprintf(w, "  pf-bridge <name> [args]   run the pf-bridge-<name> binary (e.g. readme, npm, forge)\n")
 	fmt.Fprintf(w, "  pf-bridge all             sync every installed file bridge\n")
-	fmt.Fprintf(w, "  pf-bridge check           check every installed file bridge for drift, write nothing\n")
+	fmt.Fprintf(w, "  pf-bridge check           check the bridges this project declares for drift, write nothing\n")
 	fmt.Fprintf(w, "  pf-bridge check <name>…   check only the named bridges\n")
+	fmt.Fprintf(w, "  pf-bridge check --all     check every INSTALLED bridge, declared or not\n")
 	fmt.Fprintf(w, "  pf-bridge to all          write pf → every external file\n")
 	fmt.Fprintf(w, "  pf-bridge from all        read every external file → pf\n")
 	fmt.Fprintf(w, "  pf-bridge --list          list installed bridges with a one-line description\n\n")

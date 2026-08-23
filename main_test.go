@@ -17,6 +17,9 @@ import (
 // bridgeName is a stand-in bridge for the grammar cases below.
 const bridgeName = "readme"
 
+// noDiffFlag is a stand-in forwarded flag.
+const noDiffFlag = "--no-diff"
+
 // Stand-in names shared across the discovery and grammar cases.
 const (
 	npmName   = "npm"
@@ -129,9 +132,9 @@ func TestSplitNamesFlags(t *testing.T) {
 		},
 		{
 			name:      "names and flags mix in any order",
-			args:      []string{"--no-diff", bridgeName, "--fail-on-drift"},
+			args:      []string{noDiffFlag, bridgeName, "--fail-on-drift"},
 			wantNames: []string{bridgeName},
-			wantFlags: []string{"--no-diff", "--fail-on-drift"},
+			wantFlags: []string{noDiffFlag, "--fail-on-drift"},
 		},
 		{
 			name:      "direction keywords address the dispatcher, not a child",
@@ -155,4 +158,43 @@ func TestSplitNamesFlags(t *testing.T) {
 			assert.Equal(t, tc.wantFlags, flags)
 		})
 	}
+}
+
+// mergeFlags puts the command line after what the manifest row already spells,
+// and a flag stated on both sides must reach the child once.
+func TestMergeFlags(t *testing.T) {
+	cases := []struct {
+		name    string
+		rowArgs []string
+		flags   []string
+		want    []string
+	}{
+		{
+			name:    "the forced --check is not repeated",
+			rowArgs: []string{".gitignore", flagCheck},
+			flags:   []string{flagCheck},
+			want:    []string{".gitignore", flagCheck},
+		},
+		{
+			name:    "typed flags append to the row",
+			rowArgs: []string{flagCheck},
+			flags:   []string{flagCheck, noDiffFlag},
+			want:    []string{flagCheck, noDiffFlag},
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			assert.Equal(t, tc.want, mergeFlags(tc.rowArgs, tc.flags))
+		})
+	}
+}
+
+// A manifest row addressing the dispatcher instead of a bridge would fan out
+// into this process again — the one shape the declared sweep must refuse.
+func TestIsDispatcherVerb(t *testing.T) {
+	for _, verb := range []string{cmdAll, cmdCheck, dirTo, dirFrom} {
+		assert.True(t, isDispatcherVerb(verb), verb)
+	}
+	assert.False(t, isDispatcherVerb(bridgeName))
 }
