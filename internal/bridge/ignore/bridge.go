@@ -226,6 +226,12 @@ func trimTrailingBlanks(body []byte) []byte {
 // Vulnerability IDs are NOT handled here — they live in
 // org.projectfile.vulnerabilities (see bridge/vulnerabilities) and fan out to
 // scanner ignore files tool-agnostically.
+//
+// container mirrors docker unless a project declares its own
+// [org.projectfile.ignores.container]: buildah build reads .containerignore
+// INSTEAD of .dockerignore when both exist (never merges them), so the two
+// must carry equivalent excludes or the buildah build plane silently loses
+// every pattern m6e's docker: conventions add.
 func overrideFor(extKey string, ext *pfmodel.IgnoresExtension) *pfmodel.IgnoreTargetOverride {
 	if ext == nil {
 		return nil
@@ -240,7 +246,10 @@ func overrideFor(extKey string, ext *pfmodel.IgnoresExtension) *pfmodel.IgnoreTa
 	case extKeyClaude:
 		return ext.Claude
 	case extKeyContainer:
-		return ext.Container
+		if ext.Container != nil {
+			return ext.Container
+		}
+		return ext.Docker
 	case extKeyTextlint:
 		return ext.Textlint
 	case extKeyFd:

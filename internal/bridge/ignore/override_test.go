@@ -26,6 +26,7 @@ const (
 	testReports           = "reports/"
 	testEnv               = ".env"
 	testInclude           = "include"
+	testMd                = "*.md"
 )
 
 // npm and claude now have typed override slots; overrideFor must resolve them.
@@ -70,11 +71,35 @@ func TestAssembleClaudeIncludeApplied(t *testing.T) {
 func TestAssembleContainerIncludeApplied(t *testing.T) {
 	pf := &projectfile.Document{Identity: projectfile.Identity{Name: "p"}}
 	ext := &pfmodel.IgnoresExtension{
-		Container: &pfmodel.IgnoreTargetOverride{Include: []string{testGit, "*.md"}},
+		Container: &pfmodel.IgnoreTargetOverride{Include: []string{testGit, testMd}},
 	}
 	body := string(assemble(pf, ".containerignore", testExtContainer, ext))
 	assert.Contains(t, body, testGit)
-	assert.Contains(t, body, "*.md")
+	assert.Contains(t, body, testMd)
+}
+
+// Undeclared container: mirrors docker: verbatim. buildah build reads
+// .containerignore INSTEAD of .dockerignore when both exist (never merges
+// them), so an unset container namespace must not fall back to nothing.
+func TestAssembleContainerFallsBackToDocker(t *testing.T) {
+	pf := &projectfile.Document{Identity: projectfile.Identity{Name: "p"}}
+	ext := &pfmodel.IgnoresExtension{
+		Docker: &pfmodel.IgnoreTargetOverride{Include: []string{testGit, testMd}, Exclude: []string{testMd}},
+	}
+	assert.Equal(t, ext.Docker, overrideFor(extKeyContainer, ext))
+	body := string(assemble(pf, ".containerignore", testExtContainer, ext))
+	assert.Contains(t, body, testGit)
+	assert.NotContains(t, body, testMd)
+}
+
+// A declared container: (even include-only) takes over completely — no
+// merging with docker:, matching how every other target already behaves.
+func TestAssembleContainerDeclaredOverridesDocker(t *testing.T) {
+	ext := &pfmodel.IgnoresExtension{
+		Docker:    &pfmodel.IgnoreTargetOverride{Include: []string{"docker-only/"}},
+		Container: &pfmodel.IgnoreTargetOverride{Include: []string{testGit}},
+	}
+	assert.Equal(t, []string{testGit}, includesFor(extKeyContainer, ext))
 }
 
 // GetIgnoresExtension must parse the npm/claude/container sub-tables off the extension.
