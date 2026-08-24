@@ -17,7 +17,7 @@ import (
 
 	"github.com/dlclark/regexp2"
 	"github.com/santhosh-tekuri/jsonschema/v6"
-	"gopkg.in/yaml.v3"
+	"go.yaml.in/yaml/v3"
 )
 
 //go:embed schema/v1.2.0.json

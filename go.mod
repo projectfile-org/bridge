@@ -18,8 +18,8 @@ require (
 	github.com/santhosh-tekuri/jsonschema/v6 v6.0.3
 	github.com/spf13/cobra v1.10.2
 	github.com/stretchr/testify v1.12.1
-	gopkg.in/yaml.v3 v3.0.1
-	kiota.ch/projectfile/core/v2 v2.9.4
+	go.yaml.in/yaml/v3 v3.0.5
+	kiota.ch/projectfile/core/v2 v2.9.5
 )
 
 require (
@@ -44,10 +44,8 @@ require (
 	github.com/muesli/cancelreader v0.2.2 // indirect
 	github.com/muesli/termenv v0.16.0 // indirect
 	github.com/rivo/uniseg v0.4.7 // indirect
-	github.com/rogpeppe/go-internal v1.16.0 // indirect
 	github.com/spf13/pflag v1.0.10 // indirect
 	github.com/xo/terminfo v1.0.0 // indirect
-	go.yaml.in/yaml/v3 v3.0.5 // indirect
 	golang.org/x/crypto v0.54.0 // indirect
 	golang.org/x/exp v0.0.0-20260820142414-ca536658362e // indirect
 	golang.org/x/sys v0.47.0 // indirect

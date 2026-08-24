@@ -9,7 +9,7 @@ import (
 	"fmt"
 	"os"
 
-	"gopkg.in/yaml.v3"
+	"go.yaml.in/yaml/v3"
 
 	"kiota.ch/projectfile/core/v2/pkg/genlog"
 	"kiota.ch/projectfile/core/v2/pkg/projectfile"

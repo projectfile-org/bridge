@@ -9,7 +9,7 @@ import (
 	"fmt"
 	"sort"
 
-	"gopkg.in/yaml.v3"
+	"go.yaml.in/yaml/v3"
 )
 
 // Rule is a single line from rules.yaml. Exactly one of File/Glob/Dir is set.
