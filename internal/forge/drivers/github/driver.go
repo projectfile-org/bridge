@@ -53,10 +53,10 @@ func New(opts core.HTTPOptions) core.Client {
 func (d *driver) Kind() string { return string(hostmatch.KindGitHub) }
 
 // Owner parses a GitHub repo URL into (owner, repo). Trailing ".git" is
-// trimmed because users frequently copy clone URLs. Returns an error when
-// the URL doesn't have at least two non-empty path segments.
+// trimmed because users frequently copy clone URLs. Accepts ssh:// and
+// scp-style git@host:owner/repo.git URLs.
 func (d *driver) Owner(repoURL string) (owner, repo string, err error) {
-	u, err := url.Parse(repoURL)
+	u, err := url.Parse(hostmatch.ScpToSSH(repoURL))
 	if err != nil {
 		return "", "", fmt.Errorf("parse %q: %w", repoURL, err)
 	}

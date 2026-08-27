@@ -111,8 +111,9 @@ var Rules = []Rule{
 
 // Resolve returns the Rule matching the repo URL plus the lowercased host
 // (handy for token lookup). When no rule matches, returns (nil, "").
+// Accepts ssh:// and scp-style git@host:owner/repo.git URLs.
 func Resolve(repoURL string) (*Rule, string) {
-	u, err := url.Parse(repoURL)
+	u, err := url.Parse(ScpToSSH(repoURL))
 	if err != nil || u.Host == "" {
 		return nil, ""
 	}
@@ -123,6 +124,22 @@ func Resolve(repoURL string) (*Rule, string) {
 		}
 	}
 	return nil, host
+}
+
+// ScpToSSH normalizes scp-style URLs (git@github.com:owner/repo.git) to
+// ssh:// form so url.Parse extracts the host correctly. URLs already
+// carrying a scheme are returned unchanged. Exported for use by forge
+// drivers that parse repo URLs.
+func ScpToSSH(raw string) string {
+	if strings.Contains(raw, "://") {
+		return raw
+	}
+	// scp-style: drop the user (if any), then promote the `:` separator to
+	// a path separator so net/url sees an ordinary authority.
+	if at := strings.Index(raw, "@"); at >= 0 {
+		raw = raw[at+1:]
+	}
+	return "ssh://" + strings.Replace(raw, ":", "/", 1)
 }
 
 // ResolveKind is the cheap "what driver should handle this" lookup. Returns

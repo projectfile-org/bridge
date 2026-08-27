@@ -64,21 +64,23 @@ var forgeCmd = &cobra.Command{
 }
 
 var forgePushCmd = &cobra.Command{
-	Use:   "push [directory]",
+	Use:   "push [forge] [directory]",
 	Short: "Push description/homepage/topics from projectfile to each forge",
 	Long: "For every entry in top-level repositories[] (role != archive),\n" +
 		"compare the projectfile's identity fields against the forge's current\n" +
-		"state and push the per-field delta. Idempotent: a second run is a no-op.",
-	Args: cobra.RangeArgs(0, 1),
+		"state and push the per-field delta. Idempotent: a second run is a no-op.\n" +
+		"\n" +
+		"Optional [forge] restricts to repos on a single forge (matched by host\n" +
+		"substring, e.g. 'github', 'codeberg', 'kiota'). If the first arg is a\n" +
+		"directory that contains a projectfile, it is used as [directory] instead\n" +
+		"and every forge runs.",
+	Args: cobra.RangeArgs(0, 2),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		if rootflags.Offline() {
 			return errors.New("forge push requires network access; remove --offline to proceed")
 		}
 
-		dir := "."
-		if len(args) > 0 {
-			dir = args[0]
-		}
+		forge, dir := parsePushArgs(args)
 
 		pf, _, err := projectfile.ReadWithOptions(dir, rootflags.ReadOpts())
 		if err != nil {
@@ -94,6 +96,7 @@ var forgePushCmd = &cobra.Command{
 			DryRun: forgePushDryRun,
 			Repos:  forgePushRepos,
 			Fields: forgePushFields,
+			Forge:  forge,
 			Resolve: forgecore.NewResolver(forgecore.HTTPOptions{
 				Timeout:         forgePushTimeout,
 				UserAgent:       "pf-cli/" + buildinfo.Version,
@@ -189,6 +192,32 @@ func Main(binName string) {
 		fmt.Fprintf(os.Stderr, "Error: %s\n", err)
 		os.Exit(1)
 	}
+}
+
+// parsePushArgs disambiguates the optional [forge] and [directory]
+// positionals. If the first arg is a directory containing a projectfile,
+// it is used as [directory] and every forge runs. Otherwise the first
+// arg is the forge filter and the second (if any) is the directory.
+func parsePushArgs(args []string) (forge, dir string) {
+	if len(args) == 0 {
+		return "", "."
+	}
+	if isProjectfileDir(args[0]) {
+		return "", args[0]
+	}
+	forge = args[0]
+	if len(args) > 1 {
+		dir = args[1]
+	} else {
+		dir = "."
+	}
+	return forge, dir
+}
+
+// isProjectfileDir reports whether dir contains a readable projectfile.
+func isProjectfileDir(dir string) bool {
+	_, _, err := projectfile.ReadWithOptions(dir, rootflags.ReadOpts())
+	return err == nil
 }
 
 // resolveListKind mirrors forge/core.resolveKind: the extension's per-host

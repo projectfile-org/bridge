@@ -51,6 +51,10 @@ type PushOptions struct {
 	// Fields restricts which fields the diff considers. Empty = AllFields.
 	Fields []string
 
+	// Forge restricts the run to a single forge kind (e.g. "github",
+	// "gitlab", "forgejo"). Empty = every forge kind runs.
+	Forge string
+
 	// Resolve looks up the driver for a forge kind. Tests inject a stub;
 	// the command wires the real registry.
 	Resolve Registry
@@ -89,6 +93,7 @@ func Push(ctx context.Context, pf *projectfile.Document, opts PushOptions) (Push
 	desired := buildDesiredSnapshot(pf)
 	allowField := buildFieldFilter(opts.Fields, ext)
 	repoFilter := buildRepoFilter(opts.Repos)
+	forgeFilter := buildForgeFilter(opts.Forge)
 
 	out := PushResult{DryRun: opts.DryRun}
 
@@ -102,7 +107,7 @@ func Push(ctx context.Context, pf *projectfile.Document, opts PushOptions) (Push
 	}
 
 	for _, repo := range repos {
-		rr := processRepo(ctx, repo, desired, allowField, repoFilter, ext, opts)
+		rr := processRepo(ctx, repo, desired, allowField, repoFilter, forgeFilter, ext, opts)
 		out.Repos = append(out.Repos, rr)
 	}
 	return out, nil
@@ -116,6 +121,7 @@ func processRepo(
 	desired Snapshot,
 	allowField func(string) bool,
 	repoFilter func(string) bool,
+	forgeFilter func(string) bool,
 	ext *pfmodel.ForgeExtension,
 	opts PushOptions,
 ) RepoResult {
@@ -151,6 +157,13 @@ func processRepo(
 		return rr
 	}
 	rr.Kind = kind
+
+	if !forgeFilter(host) {
+		genlog.Info("forge push: skip (not in --forge filter)", "url", repo.URL, "host", host)
+		rr.Skipped = true
+		rr.Reason = "not in --forge filter"
+		return rr
+	}
 
 	if ext != nil && ext.Hosts != nil {
 		if allow, ok := ext.Hosts[host]; ok && !allow {
@@ -326,6 +339,19 @@ func buildRepoFilter(repos []string) func(string) bool {
 		set[r] = true
 	}
 	return func(url string) bool { return set[url] }
+}
+
+// buildForgeFilter turns the --forge CLI flag into a host-matching
+// predicate. Empty flag means "every forge allowed"; otherwise the repo's
+// host must contain the filter substring (case-insensitive), so 'github'
+// matches github.com, 'codeberg' matches codeberg.org, 'kiota' matches
+// kiota.ch.
+func buildForgeFilter(forge string) func(string) bool {
+	if forge == "" {
+		return func(string) bool { return true }
+	}
+	needle := strings.ToLower(forge)
+	return func(host string) bool { return strings.Contains(strings.ToLower(host), needle) }
 }
 
 // diffWithFilter runs Diff but honours the per-field allow predicate and

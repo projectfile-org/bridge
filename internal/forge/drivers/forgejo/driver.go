@@ -46,8 +46,9 @@ func (d *driver) Kind() string { return string(hostmatch.KindForgejo) }
 
 // Owner splits the URL path into the (owner, repo) tuple. Forgejo / Gitea
 // don't support nested groups so the path is always exactly two segments.
+// Accepts ssh:// and scp-style git@host:owner/repo.git URLs.
 func (d *driver) Owner(repoURL string) (owner, repo string, err error) {
-	u, err := url.Parse(repoURL)
+	u, err := url.Parse(hostmatch.ScpToSSH(repoURL))
 	if err != nil {
 		return "", "", fmt.Errorf("parse %q: %w", repoURL, err)
 	}

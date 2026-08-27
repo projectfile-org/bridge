@@ -43,9 +43,10 @@ func (d *driver) Kind() string { return string(hostmatch.KindGitLab) }
 // Owner returns the full URL-encoded project path. GitLab supports nested
 // groups (group/subgroup/.../project), all of which join with '/' as the
 // API's `:id` segment. We keep the raw path here and let the request
-// helper PathEscape it once at request time.
+// helper PathEscape it once at request time. Accepts ssh:// and scp-style
+// git@host:owner/repo.git URLs.
 func (d *driver) Owner(repoURL string) (owner, repo string, err error) {
-	u, err := url.Parse(repoURL)
+	u, err := url.Parse(hostmatch.ScpToSSH(repoURL))
 	if err != nil {
 		return "", "", fmt.Errorf("parse %q: %w", repoURL, err)
 	}

@@ -18,6 +18,8 @@ const (
 	urlCodeberg   = "https://codeberg.org/me/proj"
 	urlGitea      = "https://gitea.com/me/proj"
 	urlSourcehut  = "https://git.sr.ht/~user/repo"
+	urlSSHGitHub  = "ssh://git@github.com/me/proj.git"
+	urlSSHGitLab  = "ssh://git@gitlab.com/me/proj.git"
 )
 
 func TestResolve(t *testing.T) {
@@ -39,6 +41,11 @@ func TestResolve(t *testing.T) {
 		{"unknown host", "https://example.com/me/proj", KindUnknown},
 		{"empty url", "", KindUnknown},
 		{"bad url", "://not-a-url", KindUnknown},
+		{"scp-style github", "git@github.com:me/proj.git", KindGitHub},
+		{"scp-style gitlab", "git@gitlab.com:me/proj.git", KindGitLab},
+		{"scp-style codeberg", "git@codeberg.org:me/proj.git", KindForgejo},
+		{"ssh:// github", urlSSHGitHub, KindGitHub},
+		{"ssh:// gitlab", urlSSHGitLab, KindGitLab},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
@@ -141,5 +148,28 @@ func TestCapabilitiesReturnsCopy(t *testing.T) {
 	got[0] = "mutated"
 	if again := Capabilities(urlGitHub); again[0] != pfmodel.TagPublic {
 		t.Fatalf("rule table was mutated through a returned slice: %v", again)
+	}
+}
+
+func TestScpToSSH(t *testing.T) {
+	cases := []struct {
+		name string
+		in   string
+		want string
+	}{
+		{"ssh:// unchanged", urlSSHGitHub, urlSSHGitHub},
+		{"https:// unchanged", "https://github.com/me/proj.git", "https://github.com/me/proj.git"},
+		{"scp-style github", "git@github.com:me/proj.git", "ssh://github.com/me/proj.git"},
+		{"scp-style gitlab", "git@gitlab.com:me/proj.git", "ssh://gitlab.com/me/proj.git"},
+		{"scp-style no user", "host.example.com:owner/repo.git", "ssh://host.example.com/owner/repo.git"},
+		{"empty", "", "ssh://"},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			got := ScpToSSH(c.in)
+			if got != c.want {
+				t.Fatalf("ScpToSSH(%q) = %q, want %q", c.in, got, c.want)
+			}
+		})
 	}
 }

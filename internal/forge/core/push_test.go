@@ -18,10 +18,13 @@ import (
 // expected repetition across table-driven cases.
 const (
 	testRepoGitHub = "https://github.com/me/proj"
+	testRepoGitLab = "https://gitlab.com/me/proj"
 	testKindGitHub = "github"
 	testKindGitLab = "gitlab"
 	testToken      = "tok"
 	testForgejo    = "forgejo"
+	testForgeKinds = "kinds"
+	testForgeSkip  = "not in --forge filter"
 )
 
 // stubToken is the TokenLookup stub the push tests share; returns a fixed
@@ -237,7 +240,7 @@ func TestPush_MissingTokenSkipped(t *testing.T) {
 
 func TestPush_HomepageSkippedOnGitLab(t *testing.T) {
 	pf := newPF("X", "https://example.org", nil,
-		[]projectfile.Repository{{URL: "https://gitlab.com/me/proj"}})
+		[]projectfile.Repository{{URL: testRepoGitLab}})
 	fc := &fakeClient{kind: testKindGitLab}
 	opts := PushOptions{
 		Resolve:     func(string) Client { return fc },
@@ -304,7 +307,7 @@ func TestPush_KindsOverride_SelfHostedForgejo(t *testing.T) {
 	// declares it as forgejo and push should route through the forgejo driver.
 	pf := newPF("X", "", nil, []projectfile.Repository{{URL: "https://code.example.com/me/proj"}})
 	projectfile.SetExtension(pf, pfmodel.ForgeExtensionNS, map[string]any{
-		"kinds": map[string]any{"code.example.com": testForgejo},
+		testForgeKinds: map[string]any{"code.example.com": testForgejo},
 	})
 	fc := &fakeClient{kind: testForgejo}
 	var resolvedKind string
@@ -338,7 +341,7 @@ func TestPush_KindsOverride_BeatsHostmatch(t *testing.T) {
 	// "forgejo" (pathological but legal — user knows best).
 	pf := newPF("X", "", nil, []projectfile.Repository{{URL: testRepoGitHub}})
 	projectfile.SetExtension(pf, pfmodel.ForgeExtensionNS, map[string]any{
-		"kinds": map[string]any{CanonicalGitHub: testForgejo},
+		testForgeKinds: map[string]any{CanonicalGitHub: testForgejo},
 	})
 	fc := &fakeClient{kind: testForgejo}
 	var resolvedKind string
@@ -373,6 +376,105 @@ func TestPush_UnsupportedHost_NoOverride(t *testing.T) {
 	}
 	if !strings.Contains(res.Repos[0].Reason, "code.example.com") {
 		t.Fatalf("skip reason should name the host and the extension key: %q", res.Repos[0].Reason)
+	}
+}
+
+func TestPush_ForgeFilter(t *testing.T) {
+	// Two repos on different forges; --forge=github should skip the gitlab one.
+	pf := newPF("X", "", nil, []projectfile.Repository{
+		{URL: testRepoGitHub},
+		{URL: "https://gitlab.com/me/proj"},
+	})
+	fc := &fakeClient{kind: testKindGitHub}
+	opts := PushOptions{
+		Forge:       testKindGitHub,
+		Resolve:     func(string) Client { return fc },
+		TokenLookup: stubToken,
+	}
+	res, err := Push(context.Background(), pf, opts)
+	if err != nil {
+		t.Fatalf("Push: %v", err)
+	}
+	if fc.applyCount != 1 {
+		t.Fatalf("apply called %d times, want 1 (only github)", fc.applyCount)
+	}
+	if !res.Repos[1].Skipped || res.Repos[1].Reason != testForgeSkip {
+		t.Fatalf("expected gitlab repo skipped by --forge filter, got %+v", res.Repos[1])
+	}
+}
+
+func TestPush_ForgeFilter_NoMatch(t *testing.T) {
+	// --forge=forgejo against a github repo: everything is skipped.
+	pf := newPF("X", "", nil, []projectfile.Repository{{URL: testRepoGitHub}})
+	fc := &fakeClient{kind: testKindGitHub}
+	opts := PushOptions{
+		Forge:       testForgejo,
+		Resolve:     func(string) Client { return fc },
+		TokenLookup: stubToken,
+	}
+	res, err := Push(context.Background(), pf, opts)
+	if err != nil {
+		t.Fatalf("Push: %v", err)
+	}
+	if fc.applyCount != 0 {
+		t.Fatalf("apply called %d times, want 0", fc.applyCount)
+	}
+	if !res.Repos[0].Skipped {
+		t.Fatalf("expected skip, got %+v", res.Repos[0])
+	}
+}
+
+func TestPush_ForgeFilter_HostSubstring(t *testing.T) {
+	// --forge=kiota matches kiota.ch, skips github.com and codeberg.org.
+	// kiota.ch is a self-hosted Forgejo declared via extension override.
+	pf := newPF("X", "", nil, []projectfile.Repository{
+		{URL: "https://kiota.ch/o9s/alertmanager"},
+		{URL: testRepoGitHub},
+		{URL: "https://codeberg.org/o9s/alertmanager"},
+	})
+	projectfile.SetExtension(pf, pfmodel.ForgeExtensionNS, map[string]any{
+		testForgeKinds: map[string]any{"kiota.ch": testForgejo},
+	})
+	opts := PushOptions{
+		Forge:       "kiota",
+		Resolve:     func(string) Client { return &fakeClient{kind: testForgejo} },
+		TokenLookup: stubToken,
+	}
+	res, err := Push(context.Background(), pf, opts)
+	if err != nil {
+		t.Fatalf("Push: %v", err)
+	}
+	if res.Repos[0].Skipped {
+		t.Fatalf("kiota.ch should not be skipped: %+v", res.Repos[0])
+	}
+	if !res.Repos[1].Skipped || res.Repos[1].Reason != testForgeSkip {
+		t.Fatalf("github should be skipped by --forge=kiota, got %+v", res.Repos[1])
+	}
+	if !res.Repos[2].Skipped || res.Repos[2].Reason != testForgeSkip {
+		t.Fatalf("codeberg should be skipped by --forge=kiota, got %+v", res.Repos[2])
+	}
+}
+
+func TestPush_ForgeFilter_EmptyRunsAll(t *testing.T) {
+	// Empty --forge (default) runs every repo regardless of kind.
+	pf := newPF("X", "", nil, []projectfile.Repository{
+		{URL: testRepoGitHub},
+		{URL: "https://gitlab.com/me/proj"},
+	})
+	var resolvedKinds []string
+	opts := PushOptions{
+		Resolve: func(k string) Client {
+			resolvedKinds = append(resolvedKinds, k)
+			return &fakeClient{kind: k}
+		},
+		TokenLookup: stubToken,
+	}
+	_, err := Push(context.Background(), pf, opts)
+	if err != nil {
+		t.Fatalf("Push: %v", err)
+	}
+	if len(resolvedKinds) != 2 {
+		t.Fatalf("expected 2 driver lookups, got %d: %v", len(resolvedKinds), resolvedKinds)
 	}
 }
 

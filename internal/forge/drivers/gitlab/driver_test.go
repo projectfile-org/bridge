@@ -31,6 +31,17 @@ func TestOwner_NestedGroup(t *testing.T) {
 	}
 }
 
+func TestOwner_ScpStyle(t *testing.T) {
+	d := &driver{}
+	o, r, err := d.Owner("git@gitlab.com:me/proj.git")
+	if err != nil {
+		t.Fatalf("Owner: %v", err)
+	}
+	if o != "me" || r != "proj" {
+		t.Fatalf("got (%q,%q), want (me, proj)", o, r)
+	}
+}
+
 func TestFetchAndApply(t *testing.T) {
 	var (
 		gotPath  string

@@ -29,6 +29,8 @@ func TestOwner(t *testing.T) {
 		{"https://github.com/me/proj", "me", "proj"}, //nolint:goconst // test-fixture repetition is the point of a table-driven test
 		{"https://github.com/me/proj/", "me", "proj"},
 		{"https://github.com/me/proj.git", "me", "proj"},
+		{"scp-style git@github.com:me/proj.git", "me", "proj"},
+		{"ssh://git@github.com/me/proj.git", "me", "proj"},
 	}
 	for _, c := range cases {
 		o, r, err := d.Owner(c.url)
