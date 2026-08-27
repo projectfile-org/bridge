@@ -66,6 +66,7 @@ artifact.kind.binary: Виконуваний файл
 artifact.kind.package: Пакет
 artifact.kind.service: Служба
 artifact.kind.website: Вебсайт
+artifact.kind.ssh: SSH-сервер
 artifact.kind.archive: Архів
 artifact.kind.module: Модуль
 

@@ -74,6 +74,7 @@ artifact.kind.binary: Executable
 artifact.kind.package: Package
 artifact.kind.service: Service
 artifact.kind.website: Website
+artifact.kind.ssh: SSH server
 artifact.kind.archive: Archive
 artifact.kind.module: Module
 

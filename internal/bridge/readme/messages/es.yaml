@@ -66,6 +66,7 @@ artifact.kind.binary: Ejecutable
 artifact.kind.package: Paquete
 artifact.kind.service: Servicio
 artifact.kind.website: Sitio web
+artifact.kind.ssh: Servidor SSH
 artifact.kind.archive: Archivo comprimido
 artifact.kind.module: Módulo
 
