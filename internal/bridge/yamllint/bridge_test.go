@@ -43,16 +43,17 @@ func TestGetIgnoresExtensionYamllint(t *testing.T) {
 // banner with Marker, fleet rules, and an ignore block carrying the entries.
 func TestAssembleIncludeApplied(t *testing.T) {
 	pf := &projectfile.Document{Identity: projectfile.Identity{Name: "p"}}
-	body := string(assemble(pf, []string{testGithub, testForgejo, testVendor}))
+	body := string(assemble(pf, []string{testGithub, testForgejo, testVendor}, 120))
 	// Document-start first.
 	assert.True(t, strings.HasPrefix(body, "---\n"))
 	// Banner + marker present.
 	assert.Contains(t, body, core.Marker)
 	assert.Contains(t, body, "org.projectfile.ignores.yamllint")
-	// Fleet rule block mirrored.
+	// Base ruleset, plus the declared width and nothing else.
 	assert.Contains(t, body, "extends: default")
-	assert.Contains(t, body, "max-spaces-inside: 1")
 	assert.Contains(t, body, "max: 120")
+	assert.NotContains(t, body, "max-spaces-inside",
+		"braces is an undeclared opinion — it must not reach the generated config")
 	// Ignore block carries all three entries, sorted (forgejo, github, vendor).
 	assert.Contains(t, body, "ignore: |\n")
 	assert.Contains(t, body, "  "+testForgejo)
@@ -65,7 +66,7 @@ func TestAssembleDedupSort(t *testing.T) {
 	pf := &projectfile.Document{Identity: projectfile.Identity{Name: "p"}}
 	body := string(assemble(pf, []string{
 		testGithub, testForgejo, testGithub, testForgejo, testVendor,
-	}))
+	}, 0))
 	// Each pattern appears exactly once.
 	assert.Equal(t, 1, strings.Count(body, "  "+testForgejo))
 	assert.Equal(t, 1, strings.Count(body, "  "+testGithub))
@@ -182,4 +183,34 @@ func TestRenderExcludeDropsInheritedPattern(t *testing.T) {
 	body := string(out.Files[filenameYamllint])
 	assert.NotContains(t, body, testVendor)
 	assert.Contains(t, body, testNodeMods)
+}
+
+// An undeclared line-length emits no rules block at all, so yamllint's own
+// default stands and the bridge asserts nothing the document did not say.
+func TestAssembleNoLineLengthNoRules(t *testing.T) {
+	pf := &projectfile.Document{Identity: projectfile.Identity{Name: "p"}}
+	body := string(assemble(pf, []string{testForgejo}, 0))
+	assert.Contains(t, body, "extends: default")
+	assert.NotContains(t, body, "rules:")
+	assert.NotContains(t, body, "line-length")
+}
+
+// Render threads org.projectfile.conventions.code-style.line-length into the
+// generated config, so the width is declared once and never held here.
+func TestRenderLineLengthFromConventions(t *testing.T) {
+	b := Bridge{filename: filenameYamllint}
+	pf := &projectfile.Document{
+		Identity: projectfile.Identity{Name: "p"},
+		Extensions: map[string]any{
+			pfmodel.IgnoresExtensionNS: map[string]any{
+				extKeyYamllint: map[string]any{testInclude: []any{testForgejo}},
+			},
+			pfmodel.ConventionsExtensionNS: map[string]any{
+				"code-style": map[string]any{"line-length": 100},
+			},
+		},
+	}
+	out, err := b.Render(pf, core.Options{})
+	assert.NoError(t, err)
+	assert.Contains(t, string(out.Files[filenameYamllint]), "max: 100")
 }

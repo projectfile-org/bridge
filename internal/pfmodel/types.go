@@ -346,7 +346,15 @@ type ConventionsExtension struct {
 	Workflow      string
 	Versioning    string
 	StyleGuideURL string
+	CodeStyle     CodeStyle
 	Languages     map[string]LangConventions
+}
+
+// CodeStyle holds the tool-agnostic source-formatting conventions. One
+// declaration feeds every generator with a notion of line width, so yamllint,
+// markdownlint and .editorconfig can never disagree on the number.
+type CodeStyle struct {
+	LineLength int
 }
 
 // LangConventions holds per-stack-tag convention overrides.

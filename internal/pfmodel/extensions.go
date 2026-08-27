@@ -16,6 +16,10 @@ import (
 // into core internals.
 const keyCommitStyle = "commit-style"
 
+// keyCodeStyle holds the tool-agnostic source-formatting sub-table. Named
+// here so the per-language scan below never mistakes it for a stack tag.
+const keyCodeStyle = "code-style"
+
 // GetAcknowledgementsExtension parses `org.projectfile.acknowledgements`.
 // Returns (nil, nil) when absent — the readme's acknowledgements block drops
 // itself for a project that declares no credits.
@@ -327,9 +331,11 @@ func GetConventionsExtension(doc *projectfile.Document) (*ConventionsExtension, 
 		Workflow:      strVal(m, "workflow"),
 		Versioning:    strVal(m, "versioning"),
 		StyleGuideURL: strVal(m, "style-guide-url"),
+		CodeStyle:     codeStyle(m),
 	}
 	for k, v := range m {
-		if k == keyCommitStyle || k == "workflow" || k == "versioning" || k == "style-guide-url" {
+		if k == keyCommitStyle || k == "workflow" || k == "versioning" ||
+			k == "style-guide-url" || k == keyCodeStyle {
 			continue
 		}
 		sub, ok := v.(map[string]any)
@@ -344,6 +350,17 @@ func GetConventionsExtension(doc *projectfile.Document) (*ConventionsExtension, 
 		}
 	}
 	return ext, nil
+}
+
+// codeStyle parses the `code-style` sub-table. A missing table or a missing
+// line-length leaves LineLength at 0, which every consumer reads as "not
+// declared" and answers with the tool's own default.
+func codeStyle(m map[string]any) CodeStyle {
+	sub, ok := m[keyCodeStyle].(map[string]any)
+	if !ok {
+		return CodeStyle{}
+	}
+	return CodeStyle{LineLength: intVal(sub, "line-length")}
 }
 
 // ConventionsStyleGuideURL resolves the effective style-guide-url for a

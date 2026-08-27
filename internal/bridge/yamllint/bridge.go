@@ -19,7 +19,8 @@
 //     `extends:` (empirically verified). A generated config that sets
 //     `ignore:` to the project's excludes alone would silently drop the
 //     image-default ignores (vendor, node_modules). So every pattern must be
-//     re-emitted here, and the fleet rule block with it.
+//     re-emitted here — which is why the language fragments declare their own
+//     vendored trees rather than leaning on the image backstop.
 //   - bridge/ignore's assembler writes one pattern per line under a
 //     `# >>> user-include` banner; yamllint needs a YAML `ignore: |` block
 //     plus `extends:`/`rules:`. Forcing them into one assembler would break
@@ -44,23 +45,13 @@ const (
 	extKeyYamllint   = "yamllint"
 )
 
-// fleetRules mirrors the fleet-wide yamllint policy from
-// d9t/python-tools/.container/user/app/.config/yamllint/config. Kept here as
-// a constant (not `extends: /app/...`) so the generated config works on the
-// host too, outside the b19 image (where B19_HOME=/app would not resolve).
-// yamllint's `extends:` would FileNotFoundError a path-extends otherwise.
-// Update BOTH places when the fleet default changes.
-const fleetRules = `extends: default
-rules:
-  # Inline-map secrets shorthand: { run: m6e-secret-random }, { value: CHANGEME }.
-  # The projectfile convention writes one space inside the braces; the default
-  # (0) would reject 35+ projectfiles.
-  braces:
-    max-spaces-inside: 1
-  line-length:
-    level: warning
-    max: 120
-`
+// baseRules is all this bridge asserts on its own: yamllint's `default`
+// ruleset and nothing else. Every deviation is DECLARED in the projectfile —
+// pf-bridge ships to any consumer and holds no style opinion of its own.
+// Kept as a constant (not `extends: /app/...`) so the generated config works
+// on the host too, outside the b19 image (where B19_HOME=/app would not
+// resolve); yamllint would FileNotFoundError a path-extends otherwise.
+const baseRules = "extends: default\n"
 
 // Bridge implements core.Renderer for the project `.yamllint` config.
 type Bridge struct {
@@ -106,7 +97,17 @@ func (b Bridge) Render(pf *projectfile.Document, _ core.Options) (core.Output, e
 	if len(includes) == 0 {
 		return core.Output{}, nil
 	}
-	body := assemble(pf, includes)
+	// The line width is tool-agnostic and lives with the other cross-cutting
+	// conventions, so yamllint carries no number of its own.
+	conv, err := pfmodel.GetConventionsExtension(pf)
+	if err != nil {
+		return core.Output{}, err
+	}
+	lineLength := 0
+	if conv != nil {
+		lineLength = conv.CodeStyle.LineLength
+	}
+	body := assemble(pf, includes, lineLength)
 	return core.Output{Files: map[string][]byte{b.filename: body}}, nil
 }
 
@@ -116,22 +117,34 @@ func (b Bridge) Render(pf *projectfile.Document, _ core.Options) (core.Output, e
 //     projectfile.yaml convention)
 //  2. REUSE header (SPDX-FileCopyrightText + SPDX-License-Identifier)
 //  3. banner (incl. Marker) pointing at org.projectfile.ignores.yamllint
-//  4. fleet rule block (mirrors the image default)
+//  4. base rule block (`extends: default`) plus any DECLARED rule override
 //  5. `ignore:|` block: sorted, de-duplicated includes
 //
 // Every ignore pattern traces back to a user-declared entry in the
 // projectfile (or an m6e include that fed it) — nothing is emitted without
 // provenance.
-func assemble(pf *projectfile.Document, includes []string) []byte {
+func assemble(pf *projectfile.Document, includes []string, lineLength int) []byte {
 	entries := sortDedup(includes)
 
 	var buf bytes.Buffer
 	buf.WriteString(core.YAMLDocStart)
 	buf.WriteString(core.REUSEHeader(pf, core.StyleHash))
 	buf.WriteString(yamllintBanner())
-	buf.WriteString(fleetRules)
+	buf.WriteString(baseRules)
+	buf.WriteString(writeRules(lineLength))
 	buf.WriteString(writeIgnore(entries))
 	return buf.Bytes()
+}
+
+// writeRules emits the `rules:` block for the declared overrides. Only the
+// agnostic line width is expressible today, so an undeclared (0) width emits
+// nothing and yamllint's own default stands. `level: warning` keeps a long
+// line reported but non-gating — the width is a convention, not a gate.
+func writeRules(lineLength int) string {
+	if lineLength <= 0 {
+		return ""
+	}
+	return fmt.Sprintf("rules:\n  line-length:\n    level: warning\n    max: %d\n", lineLength)
 }
 
 // sortDedup returns the includes sorted and de-duplicated, so output is
