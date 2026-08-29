@@ -59,9 +59,8 @@ org:
                 - darwin
           needs:
             build-binaries: true
-            gsa: true
             source-is-ready: true
-        binaries-released:
+        gsa:
           matrix:
             axes:
               GOARCH:
@@ -72,6 +71,22 @@ org:
                 - darwin
           needs:
             binaries-built: true
+            auto-gsa: true
+        binaries-ready:
+          needs:
+            binaries-built: true
+            gsa: true
+        binaries-released:
+          matrix:
+            axes:
+              GOARCH:
+                - amd64
+                - arm64
+              GOOS:
+                - linux
+                - darwin
+          needs:
+            binaries-ready: true
             forgejo-release: true
             gh-release: true
           when:
