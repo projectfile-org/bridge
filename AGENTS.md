@@ -160,7 +160,7 @@ only the COORDINATES — this project’s `image.basename` and `image.tag`. That
 split is what lets the same composer answer “where do I push this project” here
 and “where does this project’s BASE image live” in `pf-cli sink ref`, where the
 coordinates name a foreign project. The reader lives in core for the same
-reason: cli, bridge and ci-resolver must not each own a list of the destinations.
+reason: cli, bridge and pf-ci must not each own a list of the destinations.
 
 `Refs()` feeds **`AddVirtual`, not `Apply`**. That split is load-bearing: `Apply`
 proposes changes the caller PERSISTS, and the fleet’s sink entries arrive through

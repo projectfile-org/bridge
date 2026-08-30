@@ -273,7 +273,7 @@ func sectionText(def string, byLang map[string]string, lang string) string {
 	return def
 }
 
-// expandAxes substitutes the `{AXIS}` matrix placeholders m6e and ci-resolver
+// expandAxes substitutes the `{AXIS}` matrix placeholders m6e and pf-ci
 // both replace per cell, fanning each line out to one per cell. A base image
 // built once per Ubuntu series carries `{B19_UBUNTU_SERIES}` inside its
 // published image path, and a reader choosing a series needs to see every one.
@@ -314,7 +314,7 @@ func expandAxes(lines []string, axes map[string][]string) []string {
 // the ~130 single-image projects.
 //
 // YAML scalar values are coerced to their STRING form: a matrix declared as
-// `B19_LLVM_SERIES: [22, 21]` carries INTEGER items, and ci-resolver/m6e
+// `B19_LLVM_SERIES: [22, 21]` carries INTEGER items, and pf-ci/m6e
 // substitute them as plain tokens — so the README must do the same to fill the
 // matching `{B19_LLVM_SERIES}` placeholder. Without this the integer axes were
 // silently dropped and the placeholder survived into the published README.
@@ -354,7 +354,7 @@ func ciSubtree(doc *projectfile.Document) map[string]any {
 }
 
 // scalarToString renders a YAML scalar (the shape an untyped decoder yields) as
-// the plain token m6e/ci-resolver substitute per matrix cell. Strings pass
+// the plain token m6e/pf-ci substitute per matrix cell. Strings pass
 // through; numbers and bools take their natural form (22, 8.5, true); anything
 // composite or nil is not a matrix value and returns "" so the caller drops it.
 func scalarToString(v any) string {

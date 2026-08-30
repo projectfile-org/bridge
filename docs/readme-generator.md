@@ -278,7 +278,7 @@ Two sources of several values, either of which works:
 1. **Several matching artifacts** — `{kind=image}` on a project declaring two
     image artifacts.
 1. **A `{AXIS}` matrix placeholder** inside a resolved value, expanded against
-    `org.projectfile.ci.matrix.axes` — the same substitution m6e and ci-resolver
+    `org.projectfile.ci.matrix.axes` — the same substitution m6e and pf-ci
     perform when building. Only axes the document *declares* are substituted, so
     a shell brace (`docker inspect --format '{{.Id}}'`) is left alone. YAML
     scalar axis values are coerced to their string form, so an integer axis

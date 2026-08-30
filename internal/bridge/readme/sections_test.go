@@ -234,7 +234,7 @@ func TestSeriesImageFansOutFromAxisList(t *testing.T) {
 }
 
 // TestSeriesImageFansOutFromAxisPlaceholder: the same series project may instead
-// carry the `{AXIS}` placeholder m6e and ci-resolver substitute per cell — the
+// carry the `{AXIS}` placeholder m6e and pf-ci substitute per cell — the
 // spelling `ci.image` already uses. Both routes must produce the same lines.
 func TestSeriesImageFansOutFromAxisPlaceholder(t *testing.T) {
 	pf := minimalDoc(t)
@@ -277,7 +277,7 @@ func TestUndeclaredBraceSurvives(t *testing.T) {
 }
 
 // TestIntegerAxisValuesAreCoerced: YAML decodes a bare `B19_LLVM_SERIES: [22, 21]`
-// as INTEGER items, but ci-resolver/m6e substitute the plain token "22"/"21" per
+// as INTEGER items, but pf-ci/m6e substitute the plain token "22"/"21" per
 // cell. The README must coerce the same way or the {AXIS} placeholder survives
 // into the published pull line — which is exactly the bug that left b19/llvm's
 // README showing `llvm-{B19_LLVM_SERIES}` while b19/php (quoted strings) resolved.
