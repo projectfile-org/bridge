@@ -112,11 +112,12 @@ func (Bridge) Render(pf *projectfile.Document, opts core.Options) (core.Output, 
 			return core.Output{}, fmt.Errorf("%s: %w", doc.Out, err)
 		}
 
-		canonical, variants := sectionsFor(opts.Dir, doc, opts, langs, defLang)
+		canonical, resolveVariants := sectionsFor(opts.Dir, doc, opts, langs, defLang)
 		if len(own) == 0 && len(canonical) == 0 {
 			genlog.Plain(fmt.Sprintf("bridge: %s (skipped, no fragments)", doc.Out))
 			continue
 		}
+		variants := resolveVariants()
 
 		body, err := assembleDocument(opts.Dir, defLang, "", defLang, doc, own, canonical, variants, reuse)
 		if err != nil {
@@ -139,38 +140,49 @@ func (Bridge) Render(pf *projectfile.Document, opts core.Options) (core.Output, 
 }
 
 // sectionsFor resolves one document's inherited sections for the canonical
-// render and every variant. A writing run online fetches the parents'
-// published documents; every other run re-reads the sections verbatim from the
-// committed document, which keeps the drift gate offline and byte-stable. A
-// fetch that cannot read every declared parent degrades the whole document to
-// its committed sections — a forge outage preserves content instead of
-// deleting it, and never mixes fresh and stale sections in one file.
-func sectionsFor(projectDir string, doc pfmodel.FragmentDocument, opts core.Options, langs []string, defLang string) ([]inheritedEntry, []variantFragments) {
+// render, and returns a closure that resolves every variant lazily. A writing
+// run online fetches the parents' published documents; every other run
+// re-reads the sections verbatim from the committed document, which keeps the
+// drift gate offline and byte-stable. A fetch that cannot read every declared
+// parent degrades the whole document to its committed sections — a forge
+// outage preserves content instead of deleting it, and never mixes fresh and
+// stale sections in one file.
+//
+// The variant resolver is returned unevaluated rather than run here: it is
+// the only path that logs "no fragments for language", and a caller must
+// know the document actually has canonical content (own fragments or
+// inherited sections) before that warning means anything. Evaluating it
+// eagerly would warn about missing translations for a document that is not
+// declared in any language — Render skips those silently.
+func sectionsFor(projectDir string, doc pfmodel.FragmentDocument, opts core.Options, langs []string, defLang string) ([]inheritedEntry, func() []variantFragments) {
 	none := func(string) ([]inheritedEntry, bool) { return nil, false }
 	if len(doc.Parents) == 0 {
-		return nil, resolveVariantLangs(projectDir, doc, langs, none)
+		return nil, func() []variantFragments { return resolveVariantLangs(projectDir, doc, langs, none) }
 	}
 	if !opts.Offline && !opts.DryRun {
 		if copies, localized, ok := fetchParents(doc, langs); ok {
 			ordered := orderedCopies(copies)
-			return localizedInherited(ordered, defLang),
-				resolveVariantLangs(projectDir, doc, langs, func(lang string) ([]inheritedEntry, bool) {
+			return localizedInherited(ordered, defLang), func() []variantFragments {
+				return resolveVariantLangs(projectDir, doc, langs, func(lang string) ([]inheritedEntry, bool) {
 					merged := overCanonical(ordered, localized[lang], lang, doc.Out)
 					return localizedInherited(merged, lang), len(localized[lang]) > 0
 				})
+			}
 		}
 	}
 	canonical, _ := extractInherited(projectDir, doc.Out, localizedProjectHeading(doc.Title, doc.Out, defLang))
-	return canonical, resolveVariantLangs(projectDir, doc, langs, func(lang string) ([]inheritedEntry, bool) {
-		sections, existed := extractInherited(projectDir, core.LocalizedFilename(doc.Out, lang), localizedProjectHeading(doc.Title, doc.Out, lang))
-		if existed {
-			return sections, true
-		}
-		// No committed variant document: nest the canonical sections under
-		// localized headings — the offline edition of the fallback a parent
-		// that publishes no such language gets online.
-		return localizedFromCanonical(canonical, defLang, lang), false
-	})
+	return canonical, func() []variantFragments {
+		return resolveVariantLangs(projectDir, doc, langs, func(lang string) ([]inheritedEntry, bool) {
+			sections, existed := extractInherited(projectDir, core.LocalizedFilename(doc.Out, lang), localizedProjectHeading(doc.Title, doc.Out, lang))
+			if existed {
+				return sections, true
+			}
+			// No committed variant document: nest the canonical sections under
+			// localized headings — the offline edition of the fallback a parent
+			// that publishes no such language gets online.
+			return localizedFromCanonical(canonical, defLang, lang), false
+		})
+	}
 }
 
 // resolveDocuments applies the override-then-conventions precedence and

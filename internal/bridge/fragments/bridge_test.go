@@ -5,6 +5,7 @@
 package fragments_test
 
 import (
+	"bytes"
 	"os"
 	"path/filepath"
 	"strings"
@@ -13,6 +14,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"kiota.ch/projectfile/core/v2/pkg/genlog"
 	"kiota.ch/projectfile/core/v2/pkg/projectfile"
 	"projectfile.org/projectfile/bridge/internal/bridge/core"
 	"projectfile.org/projectfile/bridge/internal/bridge/fragments"
@@ -479,6 +481,36 @@ func TestRenderConventionsMultipleShellsSharedParents(t *testing.T) {
 	require.NoError(t, err)
 	assert.Contains(t, out.Files, outFeatures, "features shell with a real dir must produce a file")
 	assert.NotContains(t, out.Files, "ROADMAP.md", "empty shell must not emit a stub file")
+}
+
+// TestRenderEmptyShellWarnsNothing pins the b19/ubuntu regression: a shell
+// with no fragments in ANY declared language (own or canonical) is a whole
+// document nobody has started, not a per-language translation gap. It must
+// skip silently like the unilingual case — never fire "no fragments for
+// language" for the declared locales, which used to happen because the
+// warning ran before Render checked whether the document had any content to
+// render at all.
+func TestRenderEmptyShellWarnsNothing(t *testing.T) {
+	dir := t.TempDir()
+	writeProjectfile(t, dir,
+		i18nBlock("es", "uk")+
+			"    fragments:\n      documents:\n"+
+			"        - {dir: docs/features.d, out: FEATURES.md, title: Features}\n"+
+			"        - {dir: docs/roadmap.d, out: ROADMAP.md, title: Roadmap}")
+	writeFragment(t, dir, "docs/features.d", "alpha", "Alpha Feature", "Alpha body.")
+	// No docs/roadmap.d, no docs/es/roadmap.d, no docs/uk/roadmap.d anywhere.
+
+	var log bytes.Buffer
+	genlog.SetOutput(&log)
+	defer genlog.SetOutput(os.Stderr)
+
+	out, err := fragments.Bridge{}.Render(docWithFragments(t, dir), offlineOptions(dir))
+	require.NoError(t, err)
+	assert.NotContains(t, out.Files, "ROADMAP.md", "empty shell must not emit a stub file")
+	// FEATURES.md genuinely renders and lacks es/uk translations, so it still
+	// warns — only the untouched ROADMAP.md shell must stay silent.
+	assert.NotContains(t, log.String(), "docs/es/roadmap.d")
+	assert.NotContains(t, log.String(), "docs/uk/roadmap.d")
 }
 
 // TestRenderOverrideWinsOverConventions verifies an explicit
