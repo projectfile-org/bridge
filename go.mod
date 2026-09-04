@@ -4,7 +4,7 @@
 
 module projectfile.org/projectfile/bridge
 
-go 1.26.6
+go 1.26.7
 
 require (
 	github.com/ProtonMail/go-crypto v1.4.1
