@@ -3,8 +3,6 @@
 #
 # SPDX-License-Identifier: MIT
 $schema: https://projectfile.org/schema/v1.json
-copyright:
-  year: 2026
 identity:
   created: "2026-07-07"
   name: bridge
@@ -25,7 +23,71 @@ includes:
   - .makefile/library/traits/go-binary.yaml
   - https://kiota.ch/damian-buho/metadata/raw/branch/main/include.yaml
   - https://kiota.ch/projectfile/metadata/raw/branch/main/include.yaml
+keywords:
+  - pf-bridge
+  - projectfile
+  - forge
+  - codegen
+  - scaffolding
+  - go
+  - cli
 kind: SoftwareSourceCode
+license:
+  covers: project
+  spdx: ""
+links:
+  - label:
+      en: Projectfile Bridges on Codeberg
+      es: Projectfile Bridges en Codeberg
+      uk: Projectfile Bridges на Codeberg
+    tags:
+      - public
+      - badges
+      - badges-gitea
+    type: source-code
+    url: https://codeberg.org/projectfile/bridge
+  - label:
+      en: Projectfile Bridges on GitHub
+      es: Projectfile Bridges en GitHub
+      uk: Projectfile Bridges на GitHub
+    tags:
+      - public
+      - badges
+      - badges-github
+    type: source-code
+    url: https://github.com/damian-buho/projectfile-bridge
+  - label:
+      en: Projectfile Bridges on kiota.ch
+      es: Projectfile Bridges en kiota.ch
+      uk: Projectfile Bridges на kiota.ch
+    preferred: true
+    tags:
+      - ci
+    type: source-code
+    url: https://kiota.ch/projectfile/bridge
+  - label:
+      en: Issues on Codeberg
+      es: Incidencias en Codeberg
+      uk: Задачі на Codeberg
+    tags:
+      - support
+    type: bugs
+    url: https://codeberg.org/projectfile/bridge/issues
+  - label:
+      en: Documentation
+      es: Documentación
+      uk: Документація
+    preferred: true
+    type: documentation
+    url: /docs
+  - label:
+      en: Issues on GitHub
+      es: Incidencias en GitHub
+      uk: Задачі на GitHub
+    tags:
+      - support
+    type: bugs
+    url: https://github.com/damian-buho/projectfile-bridge/issues
 org:
   projectfile:
     artifacts:
@@ -39,12 +101,7 @@ org:
           # Local-only Go workspace file: a worktree cannot see the workspace
           # go.work one level above the repositories, so it writes its own.
           - go.work
-    build:
-      args:
-        GOPROXY: ""
     ci:
-      env:
-        GOPROXY: https://kiota.ch/api/packages/projectfile/go,direct
       forgejo:
         credentials:
           FORGEJO_TOKEN: ${{ secrets.RELEASE_TOKEN }}
@@ -109,69 +166,5 @@ repositories:
     role: origin
     type: git
     url: ssh://git@kiota.ch/projectfile/bridge.git
-links:
-  - label:
-      en: Projectfile Bridges on Codeberg
-      es: Projectfile Bridges en Codeberg
-      uk: Projectfile Bridges на Codeberg
-    tags:
-      - public
-      - badges
-      - badges-gitea
-    type: source-code
-    url: https://codeberg.org/projectfile/bridge
-  - label:
-      en: Projectfile Bridges on GitHub
-      es: Projectfile Bridges en GitHub
-      uk: Projectfile Bridges на GitHub
-    tags:
-      - public
-      - badges
-      - badges-github
-    type: source-code
-    url: https://github.com/damian-buho/projectfile-bridge
-  - label:
-      en: Projectfile Bridges on kiota.ch
-      es: Projectfile Bridges en kiota.ch
-      uk: Projectfile Bridges на kiota.ch
-    preferred: true
-    tags:
-      - ci
-    type: source-code
-    url: https://kiota.ch/projectfile/bridge
-  - label:
-      en: Issues on Codeberg
-      es: Incidencias en Codeberg
-      uk: Задачі на Codeberg
-    tags:
-      - support
-    type: bugs
-    url: https://codeberg.org/projectfile/bridge/issues
-  - label:
-      en: Documentation
-      es: Documentación
-      uk: Документація
-    preferred: true
-    type: documentation
-    url: /docs
-  - label:
-      en: Issues on GitHub
-      es: Incidencias en GitHub
-      uk: Задачі на GitHub
-    tags:
-      - support
-    type: bugs
-    url: https://github.com/damian-buho/projectfile-bridge/issues
-keywords:
-  - pf-bridge
-  - projectfile
-  - forge
-  - codegen
-  - scaffolding
-  - go
-  - cli
 technologies:
   - go
-license:
-  covers: project
-  spdx: "MIT"
