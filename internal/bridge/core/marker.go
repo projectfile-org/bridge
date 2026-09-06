@@ -31,6 +31,10 @@ const MarkerHTML = "<!-- pf-cli-managed: yes -->"
 // managed. No other bridge uses this form.
 const MarkerInner = "pf-cli-managed: yes"
 
+// MarkerSlash is the sentinel for JS/JSONC dialects (audit-ci.jsonc), whose
+// `#` is not a comment leader.
+const MarkerSlash = "// pf-cli-managed: yes"
+
 // YAMLDocStart is the YAML document-start marker emitted at the very top of
 // every pf-cli-written YAML file. yamllint's default config (rule
 // document-start: {present: true}) rejects a YAML document missing one.
@@ -52,7 +56,7 @@ func HasMarker(data []byte) bool {
 	scanner := bufio.NewScanner(bytes.NewReader(data))
 	for i := 0; i < markerScanLines && scanner.Scan(); i++ {
 		line := strings.TrimSpace(scanner.Text())
-		if line == Marker || line == MarkerHTML || line == MarkerInner {
+		if line == Marker || line == MarkerHTML || line == MarkerInner || line == MarkerSlash {
 			return true
 		}
 	}

@@ -94,6 +94,20 @@ func TestRenderAllFormats(t *testing.T) {
 		// An entry with no reason emits no reason line.
 		assert.NotContains(t, body, `reason = ""`)
 	})
+
+	t.Run(scannerAuditCI, func(t *testing.T) {
+		b := Bridge{scanner: scannerAuditCI, filename: "audit-ci.jsonc"}
+		out, err := b.Render(doc, core.Options{})
+		assert.NoError(t, err)
+		body := string(out.Files["audit-ci.jsonc"])
+		assert.Contains(t, body, core.MarkerSlash)
+		assert.Contains(t, body, `"low": true`)
+		assert.Contains(t, body, `"CVE-2026-46320"`)
+		assert.Contains(t, body, "// unfixable kernel headers")
+		assert.Contains(t, body, `"CVE-2025-40190"`)
+		// `#` never leaks into the JSONC header; only `//` comments.
+		assert.NotContains(t, body, "\n#")
+	})
 }
 
 // Dedup + sort is stable regardless of input order or duplicates.
@@ -119,7 +133,7 @@ func TestRenderEmptySuppressesNoFile(t *testing.T) {
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
-			for _, s := range []string{scannerTrivy, scannerGrype, scannerOSV} {
+			for _, s := range []string{scannerTrivy, scannerGrype, scannerOSV, scannerAuditCI} {
 				b := Bridge{scanner: s, filename: s}
 				out, err := b.Render(c.doc, core.Options{})
 				assert.NoError(t, err)

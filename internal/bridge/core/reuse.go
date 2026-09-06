@@ -26,6 +26,10 @@ const (
 	// StyleHTML emits a single multi-line HTML comment — for Markdown
 	// documents where `#` would render as an H1 heading.
 	StyleHTML
+
+	// StyleSlash wraps each line with `//` — for JSONC (audit-ci.jsonc),
+	// whose grammar has no `#` comment.
+	StyleSlash
 )
 
 // defaultSPDX is the fallback SPDX expression when pf.License.Spdx is empty.
@@ -48,6 +52,12 @@ func REUSEHeader(pf *projectfile.Document, style CommentStyle) string {
 		}
 		fmt.Fprintf(&b, "SPDX-License-Identifier: %s\n", spdx)
 		b.WriteString("-->\n")
+	case StyleSlash:
+		for _, c := range copyrights {
+			fmt.Fprintf(&b, "// SPDX-FileCopyrightText: %s\n", c)
+		}
+		b.WriteString("//\n")
+		fmt.Fprintf(&b, "// SPDX-License-Identifier: %s\n", spdx)
 	default:
 		for _, c := range copyrights {
 			fmt.Fprintf(&b, "# SPDX-FileCopyrightText: %s\n", c)

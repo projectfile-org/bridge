@@ -59,6 +59,18 @@ func TestREUSEHeaderHTMLIsOneCompactComment(t *testing.T) {
 		got)
 }
 
+// TestREUSEHeaderSlashSeparatesTagGroups pins the `//` dialect (JSONC) the
+// same way TestREUSEHeaderHashSeparatesTagGroups pins `#`.
+func TestREUSEHeaderSlashSeparatesTagGroups(t *testing.T) {
+	t.Parallel()
+
+	got := REUSEHeader(headerDoc(), StyleSlash)
+
+	assert.Equal(t,
+		"// "+copyrightLine(holder)+"\n//\n// "+spdxLicenseLine("MIT")+"\n\n",
+		got)
+}
+
 // TestManagedREUSEHeaderFoldsSentinel pins the one-comment Markdown header for
 // a Marker-policy artefact: the sentinel is the comment's last line, and the
 // result still reads as managed.

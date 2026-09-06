@@ -14,7 +14,8 @@ import (
 //
 // scanner is the extKey matched against `generate` (opt-out list) and selects
 // the render format. filename is the canonical on-disk name grype/osv
-// auto-discover from the cwd (and trivy is fed via --ignorefile by auto-trivy).
+// auto-discover from the cwd (trivy is fed via --ignorefile, audit-ci via
+// --config, both by their wrapper).
 var targets = []struct {
 	scanner  string
 	filename string
@@ -22,6 +23,7 @@ var targets = []struct {
 	{scanner: scannerTrivy, filename: ".trivyignore"},
 	{scanner: scannerGrype, filename: ".grype.yaml"},
 	{scanner: scannerOSV, filename: "osv-scanner.toml"},
+	{scanner: scannerAuditCI, filename: "audit-ci.jsonc"},
 }
 
 func init() {

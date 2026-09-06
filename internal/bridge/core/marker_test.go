@@ -33,6 +33,7 @@ func TestHasMarkerRecognizesAllForms(t *testing.T) {
 		{Marker + "\nbody\n", true},
 		{MarkerHTML + "\nbody\n", true},
 		{MarkerInner + "\nbody\n", true},
+		{MarkerSlash + "\nbody\n", true},
 		{mergedHeader, true},
 		{"no marker here at all\n", false},
 		{"", false},
