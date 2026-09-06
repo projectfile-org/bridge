@@ -6,23 +6,18 @@
 
 set -eu
 
-# install-binary.sh — the m6e-only local install: build the host-native pf-bridge
-# dispatcher + every per-bridge binary (reusing build-binaries.sh, which defaults
-# GOOS/GOARCH to the host and drops the unsuffixed dist/* copies) and drop the whole
-# set into ~/.local/bin so the dispatcher finds its siblings on PATH. Self-contained
-# on purpose: a build-binaries tool homes on ONE CI node (binaries-built), so routing
-# the install through the DAG would multi-home it AND gate the install on
-# source-is-ready — this quick, ungated build mirrors the old install-local instead.
-# The names are enumerated from cmd/ (the same source build-binaries walks) so a
-# suffixed cross-compile is never mistaken for an install target. The forge lowerings
-# prune this tool (they release artifacts).
+# install-binary.sh — build every pf-bridge binary host-native and install the set into ~/.local/bin.
 
 dst="${HOME}/.local/bin"
+
+# Host-native cell — the one build-binaries.sh itself defaults to with no GOOS/GOARCH set.
+hostos="$(go env GOHOSTOS)"
+hostarch="$(go env GOHOSTARCH)"
 
 log() { printf '[install-binary] %s\n' "$*" >&2; }
 
 install_one() { # $1 = binary basename
-	bin="dist/$1"
+	bin="dist/$1-${hostos}-${hostarch}"
 	if [ ! -f "${bin}" ]; then
 		log "missing ${bin} after build"
 		exit 1
