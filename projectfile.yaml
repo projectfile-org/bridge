@@ -34,7 +34,7 @@ keywords:
 kind: SoftwareSourceCode
 license:
   covers: project
-  spdx: ""
+  spdx: "MIT"
 links:
   - label:
       en: Projectfile Bridges on Codeberg
