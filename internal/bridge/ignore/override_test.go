@@ -24,6 +24,7 @@ const (
 	testFilenameDocker    = ".dockerignore"
 	testFilenameGitignore = ".gitignore"
 	testReports           = "reports/"
+	testDist              = "dist/"
 	testEnv               = ".env"
 	testInclude           = "include"
 	testMd                = "*.md"
@@ -202,7 +203,7 @@ func TestAssembleNegationFollowsItsPattern(t *testing.T) {
 	pf := &projectfile.Document{Identity: projectfile.Identity{Name: "p"}}
 	ext := &pfmodel.IgnoresExtension{
 		Git: &pfmodel.IgnoreTargetOverride{
-			Include: []string{"dist/", "!dist/keep.txt", testReports},
+			Include: []string{testDist, "!dist/keep.txt", testReports},
 		},
 	}
 	body := string(assemble(pf, testFilenameGitignore, extKeyGit, ext))
