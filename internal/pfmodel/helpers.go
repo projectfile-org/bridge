@@ -58,6 +58,8 @@ const (
 	// template says `${path}` where it would otherwise spell the whole address.
 	SinksExtensionNS = "org.projectfile.sinks"
 	ImageExtensionNS = "org.projectfile.image"
+	// PublishExtensionNS routes each forge’s pipeline to the sinks it pushes to.
+	PublishExtensionNS = "org.projectfile.publish"
 )
 
 // Keys a sink entry carries. `ref` is the template, and `role` is what makes an
@@ -72,6 +74,8 @@ const (
 	SinkSelfRefKey = "selfref"
 	SinkRoleKey    = "role"
 	SinkLabelKey   = "label"
+	// PublishPushKey is the sink-name list a publish route pushes to.
+	PublishPushKey = "push"
 
 	// SinkRolePrimary is the role an entry carries when it declares none: the
 	// ordinary destination, as opposed to the fallback a reader is told to try

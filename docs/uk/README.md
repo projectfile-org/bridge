@@ -30,7 +30,6 @@ pf-bridge проєктує projectfile на файли, forge-майданчик
 
 - **Виконуваний файл** `pf-bridge`
 - **Образ контейнера** `ghcr.io/damian-buho/projectfile/bridge:latest`
-- **Образ контейнера** `docker.io/damianbuho/projectfile-bridge:latest`
 
 ## Встановлення
 
@@ -40,12 +39,6 @@ pf-bridge проєктує projectfile на файли, forge-майданчик
 
 ```sh
 docker pull ghcr.io/damian-buho/projectfile/bridge:latest
-```
-
-### Завантажити з DockerHub
-
-```sh
-docker pull docker.io/damianbuho/projectfile-bridge:latest
 ```
 
 Стабільні випуски також публікують теґи `X.Y.Z`, `X.Y` і `X` — завантажте той рівень точності, який хочете зафіксувати.

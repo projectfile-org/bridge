@@ -33,6 +33,9 @@ const (
 	// refGHCR is the entry the fleet declares: a host, a forced account, then the
 	// project's own path. Every segment is literal text in the template.
 	refGHCR = "ghcr.io/damian-buho/${path}:${tag}"
+	// refKiota is the origin’s own shape: the host, then the project’s own path.
+	refKiota      = "kiota.ch/${path}:${tag}"
+	nameDockerHub = "dockerhub"
 )
 
 // parts is the image vocabulary the shared container fragment declares for every
@@ -159,7 +162,7 @@ func TestProjectWithNoImageWarnsAboutNoSink(t *testing.T) {
 		pfmodel.ImageExtensionNS: map[string]any{keyOrg: "projectfile"},
 		pfmodel.SinksExtensionNS: map[string]any{
 			nameGHCR:  map[string]any{keyRef: refGHCR},
-			nameKiota: map[string]any{keyRef: "kiota.ch/${path}:${tag}"},
+			nameKiota: map[string]any{keyRef: refKiota},
 		},
 	})
 
@@ -177,8 +180,8 @@ func TestProjectWithNoImageWarnsAboutNoSink(t *testing.T) {
 func TestOneBrokenSinkAmongWorkingOnesWarns(t *testing.T) {
 	doc := docWithParts(map[string]any{
 		pfmodel.SinksExtensionNS: map[string]any{
-			nameGHCR:    map[string]any{keyRef: refGHCR},
-			"dockerhub": map[string]any{keyRef: "docker.io/damianbuho/${flatpath}:${tag}"},
+			nameGHCR:      map[string]any{keyRef: refGHCR},
+			nameDockerHub: map[string]any{keyRef: "docker.io/damianbuho/${flatpath}:${tag}"},
 		},
 	})
 
@@ -190,7 +193,7 @@ func TestOneBrokenSinkAmongWorkingOnesWarns(t *testing.T) {
 
 	assert.Len(t, refs, 1)
 	assert.Contains(t, refs, nameGHCR)
-	assert.Contains(t, log.String(), "dockerhub")
+	assert.Contains(t, log.String(), nameDockerHub)
 }
 
 // A half-resolved ref is REFUSED, not written. A reference that silently lost a
@@ -215,7 +218,7 @@ func TestRoleAndPriorityMakeEntriesAddressable(t *testing.T) {
 	doc := docWithParts(map[string]any{
 		pfmodel.SinksExtensionNS: map[string]any{
 			nameKiota: map[string]any{
-				keyRef: "kiota.ch/${path}:${tag}", keyRole: "fallback", "priority": 10,
+				keyRef: refKiota, keyRole: "fallback", "priority": 10,
 			},
 			nameGHCR: map[string]any{keyRef: refGHCR, "priority": 90},
 		},
@@ -353,4 +356,59 @@ func TestSelfRefIsRemovedFromTheComposedEntry(t *testing.T) {
 	ghcr, ok := ocisinks.Refs(doc)[nameGHCR].(map[string]any)
 	require.True(t, ok)
 	assert.NotContains(t, ghcr, keySelfRef)
+}
+
+// A sink no publish route pushes to holds no image, so the readme must not send
+// a reader there. The fleet declares the grammar once; a project opts in by route.
+func TestUnroutedSinkIsDropped(t *testing.T) {
+	doc := docWithParts(map[string]any{
+		pfmodel.SinksExtensionNS: map[string]any{
+			nameKiota:     map[string]any{keyRef: refKiota},
+			nameGHCR:      map[string]any{keyRef: refGHCR},
+			nameDockerHub: map[string]any{keyRef: "docker.io/damianbuho/${flatpath}:${tag}"},
+		},
+		pfmodel.PublishExtensionNS: map[string]any{
+			"kiota":  map[string]any{pfmodel.PublishPushKey: []any{nameKiota}, "pull": nameKiota},
+			"github": map[string]any{pfmodel.PublishPushKey: []any{nameGHCR}, "pull": nameGHCR},
+		},
+	})
+
+	refs := ocisinks.Refs(doc)
+
+	assert.Len(t, refs, 2)
+	assert.Equal(t, hostKiota+b19Ref, refOf(t, refs, nameKiota))
+	assert.Equal(t, "ghcr.io/damian-buho"+b19Ref, refOf(t, refs, nameGHCR))
+	assert.NotContains(t, refs, nameDockerHub, "unrouted sink must not be advertised")
+}
+
+// The route is the opt-in: naming the sink on a push list brings it back.
+func TestRoutedSinkIsKept(t *testing.T) {
+	doc := docWithParts(map[string]any{
+		pfmodel.SinksExtensionNS: map[string]any{
+			nameKiota:     map[string]any{keyRef: refKiota},
+			nameDockerHub: map[string]any{keyRef: "docker.io/damianbuho/${path}:${tag}"},
+		},
+		pfmodel.PublishExtensionNS: map[string]any{
+			"kiota": map[string]any{pfmodel.PublishPushKey: []any{nameKiota, nameDockerHub}},
+		},
+	})
+
+	refs := ocisinks.Refs(doc)
+
+	assert.Len(t, refs, 2)
+	assert.Equal(t, "docker.io/damianbuho"+b19Ref, refOf(t, refs, nameDockerHub))
+}
+
+// No publish namespace at all: every declared sink is listed, as before.
+func TestNoPublishNamespaceListsEverySink(t *testing.T) {
+	doc := docWithParts(map[string]any{
+		pfmodel.SinksExtensionNS: map[string]any{
+			nameKiota: map[string]any{keyRef: refKiota},
+			nameGHCR:  map[string]any{keyRef: refGHCR},
+		},
+	})
+
+	refs := ocisinks.Refs(doc)
+
+	assert.Len(t, refs, 2)
 }

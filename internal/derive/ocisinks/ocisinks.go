@@ -27,6 +27,7 @@ package ocisinks
 
 import (
 	"slices"
+	"strconv"
 	"strings"
 
 	"kiota.ch/projectfile/core/v2/pkg/genlog"
@@ -77,9 +78,14 @@ func Refs(pf *projectfile.Document) map[string]any {
 		genlog.Decision("sink_ref", "", pfmodel.SinksExtensionNS, "no sink declared")
 		return nil
 	}
+	routed, gated := routedSinks(pf)
 	out := make(map[string]any, len(declared))
 	var dropped []unresolvedSink
 	for name, entry := range declared {
+		if gated && !routed[name] {
+			genlog.Decision("sink_ref", "(unrouted)", name, "no "+pfmodel.PublishExtensionNS+" route pushes here")
+			continue
+		}
 		tmpl := selfTemplate(entry)
 		if tmpl == "" {
 			genlog.Warn("derive: sink declares no ref template — entry dropped", "sink", name,
@@ -104,6 +110,36 @@ func Refs(pf *projectfile.Document) map[string]any {
 }
 
 // selfTemplate composes this project's OWN artifact: `selfref`, else `ref`.
+// routedSinks is the set of sink names any publish route pushes to; gated is false when no route is declared.
+func routedSinks(pf *projectfile.Document) (routed map[string]bool, gated bool) {
+	raw, ok := projectfile.LookupExtension(pf, pfmodel.PublishExtensionNS)
+	if !ok {
+		return nil, false
+	}
+	routes, ok := raw.(map[string]any)
+	if !ok {
+		genlog.Warn("derive: publish namespace is not a map — sinks left unfiltered",
+			"namespace", pfmodel.PublishExtensionNS)
+		return nil, false
+	}
+	routed = map[string]bool{}
+	for forge, v := range routes {
+		route, ok := v.(map[string]any)
+		if !ok {
+			genlog.Warn("derive: publish route is not a map — route ignored", "forge", forge)
+			continue
+		}
+		push, _ := route[pfmodel.PublishPushKey].([]any)
+		for _, s := range push {
+			if name, ok := s.(string); ok && name != "" {
+				routed[name] = true
+			}
+		}
+		genlog.Decision("publish_route", forge, pfmodel.PublishExtensionNS, "push="+strconv.Itoa(len(push)))
+	}
+	return routed, true
+}
+
 func selfTemplate(entry map[string]any) string {
 	if self, ok := entry[pfmodel.SinkSelfRefKey].(string); ok && self != "" {
 		return self
