@@ -31,6 +31,7 @@ package derive
 import (
 	"kiota.ch/projectfile/core/v2/pkg/genlog"
 	"kiota.ch/projectfile/core/v2/pkg/projectfile"
+	"projectfile.org/projectfile/bridge/internal/derive/containers"
 	"projectfile.org/projectfile/bridge/internal/derive/forges"
 	"projectfile.org/projectfile/bridge/internal/derive/ocisinks"
 	"projectfile.org/projectfile/bridge/internal/derive/registries"
@@ -88,7 +89,7 @@ func Apply(pf *projectfile.Document, opts Options) ([]Change, error) {
 	if ext == nil {
 		// Absent extension means defaults: every pass runs, no opt-outs yet.
 		ext = &pfmodel.CLIExtension{
-			Derive: pfmodel.CLIDeriveToggles{Forges: true, Registries: true},
+			Derive: pfmodel.CLIDeriveToggles{Forges: true, Registries: true, Containers: true},
 		}
 	}
 
@@ -102,6 +103,11 @@ func Apply(pf *projectfile.Document, opts Options) ([]Change, error) {
 	}
 	if ext.Derive.Registries {
 		for _, p := range registries.Derive(pf) {
+			proposals = append(proposals, Change{FieldPath: p.FieldPath, NewValue: p.NewValue, Source: p.Source, Label: p.Label})
+		}
+	}
+	if ext.Derive.Containers {
+		for _, p := range containers.Derive(pf) {
 			proposals = append(proposals, Change{FieldPath: p.FieldPath, NewValue: p.NewValue, Source: p.Source, Label: p.Label})
 		}
 	}

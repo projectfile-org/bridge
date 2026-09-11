@@ -29,6 +29,7 @@ func GetCLIExtension(doc *projectfile.Document) (*CLIExtension, error) {
 			// Explicit-false is the only "off" — implicit absence stays on.
 			Forges:     boolValDefaultTrue(m, "derive", "forges"),
 			Registries: boolValDefaultTrue(m, "derive", "registries"),
+			Containers: boolValDefaultTrue(m, "derive", "containers"),
 		},
 	}
 	// Also collect paths from links with Derived=true (new per-link format).
@@ -54,6 +55,9 @@ func SetCLIExtension(doc *projectfile.Document, ext *CLIExtension) {
 	}
 	if !ext.Derive.Registries {
 		derive["registries"] = false
+	}
+	if !ext.Derive.Containers {
+		derive["containers"] = false
 	}
 	if len(derive) > 0 {
 		m["derive"] = derive
