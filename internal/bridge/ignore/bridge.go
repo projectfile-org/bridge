@@ -95,28 +95,17 @@ func (b Bridge) Render(pf *projectfile.Document, _ core.Options) (core.Output, e
 	return core.Output{Files: map[string][]byte{b.filename: body}}, nil
 }
 
-// assemble builds the byte body for one target. Layout:
-//
-//  1. REUSE header (SPDX-FileCopyrightText + SPDX-License-Identifier)
-//  2. banner (incl. Marker)
-//  3. user [org.projectfile.ignores.<extKey>].include
-//  4. user top-level extra
-//
-// Every pattern traces back to a user-declared entry in the projectfile —
-// nothing is emitted without provenance.
+// assemble builds the byte body for one target: REUSE header, banner, then a single alphabetically sorted block merging the target include with the top-level extra fan-out.
 func assemble(pf *projectfile.Document, filename, extKey string, ext *pfmodel.IgnoresExtension) []byte {
 	var content bytes.Buffer
 
 	o := overrideFor(extKey, ext)
-	if inc := o.Patterns(); len(inc) > 0 {
-		writeBlock(&content, "user-include", []byte(strings.Join(inc, "\n")+"\n"))
-	}
+	patterns := o.Patterns()
 	if ext != nil {
-		// `extra` fans out to every target, so the target's own exclude is its
-		// only way out of an entry that belongs everywhere else.
-		if extra := o.Filter(ext.Extra); len(extra) > 0 {
-			writeBlock(&content, "user-extra", []byte(strings.Join(extra, "\n")+"\n"))
-		}
+		patterns = append(patterns, o.Filter(ext.Extra)...) // `extra` fans out to every target minus this target's own exclude.
+	}
+	if len(patterns) > 0 {
+		writeBlock(&content, "user-patterns", []byte(strings.Join(patterns, "\n")+"\n"))
 	}
 
 	if content.Len() == 0 {

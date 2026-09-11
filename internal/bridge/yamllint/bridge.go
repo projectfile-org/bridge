@@ -21,10 +21,7 @@
 //     image-default ignores (vendor, node_modules). So every pattern must be
 //     re-emitted here — which is why the language fragments declare their own
 //     vendored trees rather than leaning on the image backstop.
-//   - bridge/ignore's assembler writes one pattern per line under a
-//     `# >>> user-include` banner; yamllint needs a YAML `ignore: |` block
-//     plus `extends:`/`rules:`. Forcing them into one assembler would break
-//     the flat-file family's contract.
+//   - bridge/ignore's assembler writes one sorted pattern per line under a `# >>> user-patterns` banner; yamllint needs a YAML block plus rules, so forcing them into one assembler would break the flat-file family's contract.
 package yamllint
 
 import (

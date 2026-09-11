@@ -86,11 +86,17 @@ func TestAssembleExtraPassesThrough(t *testing.T) {
 	assert.Contains(t, body, "*.bin diff=hex")
 }
 
-// Render is the dispatcher's entry point; it must survive a document with no
-// extension namespace at all, which is every project before rollout.
+// Render is the dispatcher's entry point; it must survive a document with no extension namespace at all, which is every project before rollout.
 func TestRenderWithoutNamespace(t *testing.T) {
 	out, err := Bridge{}.Render(testDoc(), core.Options{})
 	require.NoError(t, err)
 	require.Len(t, out.Files, 1)
 	assert.Contains(t, string(out.Files[filename]), "*.sh")
+}
+
+// The builtin block is alphabetically sorted like every user block, regardless of declaration order.
+func TestAssembleBuiltinBlockSorted(t *testing.T) {
+	body := string(assemble(testDoc(), nil))
+	assert.Less(t, strings.Index(body, "*.bash"), strings.Index(body, "*.sh"),
+		"expected *.bash before *.sh")
 }

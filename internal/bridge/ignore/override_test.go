@@ -45,14 +45,14 @@ func TestOverrideForNpmClaude(t *testing.T) {
 	assert.Nil(t, overrideFor(extKeyGit, ext))
 }
 
-// Include overrides land in the assembled .npmignore body under user-include.
+// Include overrides land in the assembled .npmignore body under user-patterns.
 func TestAssembleNpmIncludeApplied(t *testing.T) {
 	pf := &projectfile.Document{Identity: projectfile.Identity{Name: "p"}}
 	ext := &pfmodel.IgnoresExtension{
 		Npm: &pfmodel.IgnoreTargetOverride{Include: []string{testTgz, "coverage/"}},
 	}
 	body := string(assemble(pf, ".npmignore", "npm", ext))
-	assert.Contains(t, body, "user-include")
+	assert.Contains(t, body, "user-patterns")
 	assert.Contains(t, body, testTgz)
 	assert.Contains(t, body, "coverage/")
 }
@@ -63,7 +63,7 @@ func TestAssembleClaudeIncludeApplied(t *testing.T) {
 		Claude: &pfmodel.IgnoreTargetOverride{Include: []string{testSecrets, testReports}},
 	}
 	body := string(assemble(pf, ".claudeignore", testExtClaude, ext))
-	assert.Contains(t, body, "user-include")
+	assert.Contains(t, body, "user-patterns")
 	assert.Contains(t, body, testSecrets)
 	assert.Contains(t, body, testReports)
 }
@@ -208,7 +208,7 @@ func TestAssembleNegationFollowsItsPattern(t *testing.T) {
 	body := string(assemble(pf, testFilenameGitignore, extKeyGit, ext))
 	assert.Greater(t, strings.Index(body, "!dist/keep.txt"), strings.Index(body, "dist/\n"),
 		"a re-include emitted above its pattern is inert")
-	block := body[strings.Index(body, "# >>> user-include"):strings.Index(body, "# <<< user-include")]
+	block := body[strings.Index(body, "# >>> user-patterns"):strings.Index(body, "# <<< user-patterns")]
 	assert.NotContains(t, block, "\n\n", "no blank line may split the block")
 }
 
@@ -282,4 +282,44 @@ func TestRenderOptInEmitsOnceDeclared(t *testing.T) {
 	fd, err := Bridge{filename: ".fdignore", extKey: extKeyFd, optIn: true}.Render(doc, core.Options{})
 	assert.NoError(t, err)
 	assert.Contains(t, string(fd.Files[".fdignore"]), "LICENSES/")
+}
+
+// Include and extra merge into one globally sorted block: an extra entry sorts among includes, not after them.
+func TestAssembleIncludeExtraGloballySorted(t *testing.T) {
+	pf := &projectfile.Document{Identity: projectfile.Identity{Name: "p"}}
+	ext := &pfmodel.IgnoresExtension{
+		Extra: []string{testEnv},
+		Git:   &pfmodel.IgnoreTargetOverride{Include: []string{"zebra/", testReports}},
+	}
+	body := string(assemble(pf, testFilenameGitignore, extKeyGit, ext))
+	assert.NotContains(t, body, "user-include")
+	assert.NotContains(t, body, "user-extra")
+	env := strings.Index(body, testEnv)
+	reports := strings.Index(body, testReports)
+	zebra := strings.Index(body, "zebra/")
+	assert.Less(t, env, reports, "extra entry must sort among includes, not after them")
+	assert.Less(t, reports, zebra)
+}
+
+// A pattern declared in both include and extra is emitted once, not once per source.
+func TestAssembleIncludeExtraDeduped(t *testing.T) {
+	pf := &projectfile.Document{Identity: projectfile.Identity{Name: "p"}}
+	ext := &pfmodel.IgnoresExtension{
+		Extra: []string{testReports},
+		Git:   &pfmodel.IgnoreTargetOverride{Include: []string{testReports, testGit}},
+	}
+	body := string(assemble(pf, testFilenameGitignore, extKeyGit, ext))
+	assert.Equal(t, 1, strings.Count(body, testReports))
+}
+
+// A re-include from extra still follows the include pattern it answers: positives sort first, negations trail.
+func TestAssembleNegationAcrossSourcesFollowsPattern(t *testing.T) {
+	pf := &projectfile.Document{Identity: projectfile.Identity{Name: "p"}}
+	ext := &pfmodel.IgnoresExtension{
+		Extra: []string{"!dist/keep.txt"},
+		Git:   &pfmodel.IgnoreTargetOverride{Include: []string{"dist/", testReports}},
+	}
+	body := string(assemble(pf, testFilenameGitignore, extKeyGit, ext))
+	assert.Greater(t, strings.Index(body, "!dist/keep.txt"), strings.Index(body, "dist/\n"),
+		"a re-include emitted above its pattern is inert")
 }

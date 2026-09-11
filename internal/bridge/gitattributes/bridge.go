@@ -132,20 +132,22 @@ func assemble(pf *projectfile.Document, ext *pfmodel.AttributesExtension) []byte
 	return buf.Bytes()
 }
 
-// writeBlock emits one labelled block, patterns padded to a common column so
-// the file stays readable for the humans who review its diffs.
+// writeBlock emits one labelled block sorted by pattern and padded to a common column.
 func writeBlock(buf *bytes.Buffer, label string, rules []rule) {
 	if len(rules) == 0 {
 		return
 	}
+	sorted := make([]rule, len(rules))
+	copy(sorted, rules)
+	sort.Slice(sorted, func(i, j int) bool { return sorted[i].pattern < sorted[j].pattern })
 	width := 0
-	for _, r := range rules {
+	for _, r := range sorted {
 		if len(r.pattern) > width {
 			width = len(r.pattern)
 		}
 	}
 	fmt.Fprintf(buf, "# >>> %s\n", label)
-	for _, r := range rules {
+	for _, r := range sorted {
 		fmt.Fprintf(buf, "%-*s  %s\n", width, r.pattern, r.attr)
 	}
 	fmt.Fprintf(buf, "# <<< %s\n\n", label)
