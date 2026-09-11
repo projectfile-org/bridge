@@ -14,6 +14,7 @@ import (
 	"kiota.ch/projectfile/core/v2/pkg/projectfile"
 	"kiota.ch/projectfile/core/v2/pkg/userconfig"
 	"projectfile.org/projectfile/bridge/internal/derive"
+	"projectfile.org/projectfile/bridge/internal/pfmodel"
 	"projectfile.org/projectfile/bridge/internal/scanners/core"
 	"projectfile.org/projectfile/bridge/internal/source"
 
@@ -322,6 +323,7 @@ func buildDocument(p *source.Partial) *projectfile.Document {
 	if len(p.Links) > 0 {
 		doc.Links = append(doc.Links, p.Links...)
 	}
+	backfillLinkLabels(doc)
 
 	if p.Created != nil && *p.Created != "" {
 		doc.Identity.Created = *p.Created
@@ -382,6 +384,28 @@ func ensurePrimary(repos []projectfile.Repository) {
 		}
 	}
 	repos[0].Role = projectfile.RepositoryRoleOrigin
+}
+
+// linkLabelNoun is the plain-noun label backfillLinkLabels falls back to per link type.
+var linkLabelNoun = map[string]string{
+	projectfile.LinkBugs:          pfmodel.NounIssues,
+	projectfile.LinkHomepage:      pfmodel.NounHomepage,
+	projectfile.LinkDocumentation: pfmodel.NounDocumentation,
+}
+
+// backfillLinkLabels sets a plain noun label on any link left unlabeled by the source extractors.
+func backfillLinkLabels(doc *projectfile.Document) {
+	for i := range doc.Links {
+		l := &doc.Links[i]
+		if l.Label != nil {
+			continue
+		}
+		noun, ok := linkLabelNoun[l.Type]
+		if !ok {
+			continue
+		}
+		l.Label = pfmodel.NounLabel(doc, noun)
+	}
 }
 
 func validateFormat(f string) error {

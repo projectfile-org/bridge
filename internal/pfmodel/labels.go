@@ -28,9 +28,11 @@ import (
 // producers spell them once; the link type "source-code" doubles as its noun
 // key (its placeholder subject before the title rewrite promotes it).
 const (
-	NounSourceCode = "source-code"
-	NounIssues     = "issues"
-	NounPackages   = "packages"
+	NounSourceCode    = "source-code"
+	NounIssues        = "issues"
+	NounPackages      = "packages"
+	NounHomepage      = "homepage"
+	NounDocumentation = "documentation"
 )
 
 // onConnector translates the "on" that joins subject and forge, per locale.
@@ -47,9 +49,11 @@ var onConnector = map[string]string{
 // is independent of the readme catalog's link.type.* values. A missing entry
 // degrades to English then to the bare key (nounWord).
 var linkNouns = map[string]map[string]string{
-	NounSourceCode: {"en": "Source Code", "es": "Código fuente", "uk": "Вихідний код"},
-	NounIssues:     {"en": "Issues", "es": "Incidencias", "uk": "Задачі"},
-	NounPackages:   {"en": "Packages", "es": "Paquetes", "uk": "Пакунки"},
+	NounSourceCode:    {"en": "Source Code", "es": "Código fuente", "uk": "Вихідний код"},
+	NounIssues:        {"en": "Issues", "es": "Incidencias", "uk": "Задачі"},
+	NounPackages:      {"en": "Packages", "es": "Paquetes", "uk": "Пакунки"},
+	NounHomepage:      {"en": "Homepage", "es": "Página principal", "uk": "Головна сторінка"},
+	NounDocumentation: {"en": "Documentation", "es": "Documentación", "uk": "Документація"},
 }
 
 func onWord(lang string) string {
