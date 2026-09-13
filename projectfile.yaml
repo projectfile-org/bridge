@@ -15,6 +15,7 @@ identity:
     en: 'pf-bridge is the projection tool of the projectfile: it derives forge identity files, assembles feature and roadmap fragments, and projects the projectfile onto the files a forge and repository expect. Companion binary to pf-cli for the projectfile.org tooling.'
     es: 'pf-bridge es la herramienta de proyección del projectfile: deriva los archivos de identidad del forge, ensambla los fragmentos de características y hoja de ruta, y proyecta el projectfile sobre los archivos que un forge y un repositorio esperan. Binario compañero de pf-cli para las herramientas de projectfile.org.'
     uk: 'pf-bridge — інструмент проєктування projectfile: він створює файли ідентичності forge-майданчика, збирає фрагменти функцій і дорожньої карти та проєктує projectfile на файли, яких очікують forge і репозиторій. Бінарник-компаньйон pf-cli в інструментарії projectfile.org.'
+  version: 2.6.2
 includes:
   - .makefile/b19/ci.yaml
   - .makefile/b19/images/go.yaml
@@ -101,6 +102,16 @@ org:
           # Local-only Go workspace file: a worktree cannot see the workspace
           # go.work one level above the repositories, so it writes its own.
           - go.work
+        # FETCH_PATH points at XDG_CACHE_HOME (m6e core/base/125-artifacts.mk), so no ./fetch marker ever lands here.
+        exclude:
+          - .fetch
+      # .fetch is XDG-homed (see above); .gitlab has no consumer anywhere; lefthook is pinned to lefthook.yaml; scaffold is the b19 base-image template source, which a Go-binary project never carries.
+      container:
+        exclude:
+          - .fetch
+          - .gitlab
+          - lefthook.yml
+          - scaffold
     ci:
       forgejo:
         credentials:
