@@ -8,10 +8,10 @@ import "io"
 
 // Mode picks the direction of a Syncer run. Renamed from the pre-bridge
 // vocabulary:
-//   - ModeSync (was ModeBidirectional) — newer side authoritative,
-//     other side gap-fills.
-//   - ModeWrite (was ModeFromPF) — push pf → external, regardless of mtime.
-//   - ModeRead  (was ModeToPF)   — push external → pf, regardless of mtime.
+//   - ModeSync (was ModeBidirectional) — projectfile authoritative,
+//     external gap-fills the pf fields that are empty.
+//   - ModeWrite (was ModeFromPF) — push pf → external, no gap-fill.
+//   - ModeRead  (was ModeToPF)   — push external → pf, no gap-fill.
 //
 // Renderers ignore Mode — they have no read direction.
 type Mode string

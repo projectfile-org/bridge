@@ -7,7 +7,6 @@ package core
 import (
 	"fmt"
 	"io"
-	"os"
 
 	"kiota.ch/projectfile/core/v2/pkg/genlog"
 	"kiota.ch/projectfile/core/v2/pkg/projectfile"
@@ -17,12 +16,12 @@ import (
 // RunSync drives a single round-trip between projectfile and the external
 // file owned by syn. Algorithm:
 //
-//  1. Resolve the effective mode. Explicit --to / --from bypass mtime
-//     arbitration; default ModeSync picks the newer file as authoritative.
+//  1. Resolve the effective mode. Explicit --to / --from run one direction
+//     with force; default ModeSync makes the projectfile authoritative.
 //  2. If the external file does not exist, push every mapper's FromPF onto
 //     a fresh extDoc and mark Result.Created.
-//  3. With both files present, run the authoritative direction with
-//     force=true, then the reverse direction with force=false (gap-fill).
+//  3. With both files present, push pf → external with force=true, then
+//     external → pf with force=false so only empty pf fields gap-fill.
 //  4. Surface PersonConflicts to opts.Stderr.
 //  5. Persist via syn.Write / projectfile.Write only when !opts.DryRun.
 //
@@ -53,7 +52,7 @@ func RunSync(syn Syncer, pf *projectfile.Document, opts Options) (*Result, error
 		return nil, fmt.Errorf("read %s: %w", syn.Filename(), err)
 	}
 
-	mode, err := resolveMode(opts, syn.FullPath(opts.Dir, pf))
+	mode, err := resolveMode(opts)
 	if err != nil {
 		return nil, err
 	}
@@ -84,9 +83,6 @@ func RunSync(syn Syncer, pf *projectfile.Document, opts Options) (*Result, error
 	case modePFAuthoritative:
 		runFromPF(mappers, true, res, extName, pfName)
 		runToPF(mappers, false, res, extName, pfName) // gap-fill PF from ext
-	case modeExtAuthoritative:
-		runToPF(mappers, true, res, extName, pfName)
-		runFromPF(mappers, false, res, extName, pfName) // gap-fill ext from PF
 	}
 
 	emitConflicts(workPF, stderr, extName)
@@ -132,12 +128,8 @@ func RunSync(syn Syncer, pf *projectfile.Document, opts Options) (*Result, error
 	return res, nil
 }
 
-// Internal sentinels — ModeSync resolves into one of these before the
-// switch dispatches.
-const (
-	modePFAuthoritative  Mode = "_pf-authoritative"
-	modeExtAuthoritative Mode = "_ext-authoritative"
-)
+// Internal sentinel — ModeSync resolves into this before the switch dispatches.
+const modePFAuthoritative Mode = "_pf-authoritative"
 
 // syncCreate handles the "external file does not exist" branch.
 func syncCreate(syn Syncer, pf *projectfile.Document, opts Options, res *Result, stderr io.Writer) (*Result, error) {
@@ -190,34 +182,15 @@ func runToPF(mappers MapperList, force bool, res *Result, extName, pfName string
 	}
 }
 
-func resolveMode(opts Options, extPath string) (Mode, error) {
+func resolveMode(opts Options) (Mode, error) {
 	switch opts.Mode {
 	case ModeWrite, ModeRead:
 		return opts.Mode, nil
 	case ModeSync, "":
-		pfMod, err := fileModTime(opts.PFPath)
-		if err != nil {
-			return "", fmt.Errorf("stat projectfile: %w", err)
-		}
-		extMod, err := fileModTime(extPath)
-		if err != nil {
-			return "", fmt.Errorf("stat %s: %w", extPath, err)
-		}
-		if pfMod >= extMod {
-			return modePFAuthoritative, nil
-		}
-		return modeExtAuthoritative, nil
+		return modePFAuthoritative, nil
 	default:
 		return "", fmt.Errorf("unknown sync mode %q", opts.Mode)
 	}
-}
-
-func fileModTime(path string) (int64, error) {
-	st, err := os.Stat(path)
-	if err != nil {
-		return 0, err
-	}
-	return st.ModTime().UnixMilli(), nil
 }
 
 // emitConflicts pulls any PersonConflict records the people-mapper recorded

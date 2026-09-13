@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -160,6 +161,40 @@ func TestRunSyncModeReadPullsFromExt(t *testing.T) {
 	_, err := core.RunSync(syn, pf, opts)
 	require.NoError(t, err)
 	// ToPF(force=true) copies "from-ext" → pf.Identity.Name
+	assert.Equal(t, "from-ext", pf.Identity.Name)
+}
+
+// ModeSync is projectfile-authoritative: a set pf field overwrites the ext
+// value even when the ext file is the newer one on disk.
+func TestRunSyncPFWinsRegardlessOfMtime(t *testing.T) {
+	dir := t.TempDir()
+	pfPath := writePFFile(t, dir, "---\nidentity:\n  name: from-pf\n")
+	extPath := filepath.Join(dir, testStubJSON)
+	require.NoError(t, os.WriteFile(extPath, []byte("{}"), 0o644))
+	newer := time.Now().Add(time.Hour)
+	require.NoError(t, os.Chtimes(extPath, newer, newer))
+	syn := &stubSyncer{filename: testStubJSON, exists: true}
+	pf := &projectfile.Document{Identity: projectfile.Identity{Name: "from-pf"}}
+	opts := core.Options{Dir: dir, PFPath: pfPath, Mode: core.ModeSync}
+
+	res, err := core.RunSync(syn, pf, opts)
+	require.NoError(t, err)
+	assert.True(t, res.ExtChanged, "the newer ext file must still take the pf value")
+	assert.False(t, res.PFChanged, "a set pf field must never be overwritten from ext")
+	assert.Equal(t, "from-pf", pf.Identity.Name)
+}
+
+// ModeSync gap-fills: an empty pf field takes the ext value (the backfill case).
+func TestRunSyncEmptyPFFieldGapFillsFromExt(t *testing.T) {
+	dir := t.TempDir()
+	pfPath := writePFFile(t, dir, "---\nidentity:\n  name: \"\"\n")
+	syn := &stubSyncer{filename: testStubJSON, exists: true}
+	pf := &projectfile.Document{Identity: projectfile.Identity{Name: ""}}
+	opts := core.Options{Dir: dir, PFPath: pfPath, Mode: core.ModeSync}
+
+	res, err := core.RunSync(syn, pf, opts)
+	require.NoError(t, err)
+	assert.True(t, res.PFChanged, "an empty pf field must gap-fill from ext")
 	assert.Equal(t, "from-ext", pf.Identity.Name)
 }
 

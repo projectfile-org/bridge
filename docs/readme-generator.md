@@ -30,7 +30,7 @@ org:
 
 ```sh
 pf-bridge-readme to    # write projectfile → README.md
-pf-bridge-readme       # sync (newer side wins)
+pf-bridge-readme       # sync (projectfile wins)
 ```
 
 The first `to` run creates `README.md`. Subsequent runs overwrite **only**
@@ -1165,7 +1165,7 @@ go install projectfile.org/projectfile/bridge/cmd/pf-bridge@latest
 ## CLI
 
 ```text
-pf-bridge-readme                 # sync — newer side wins
+pf-bridge-readme                 # sync — projectfile wins
 pf-bridge-readme to              # write — projectfile → README.md
 pf-bridge-readme from            # read  — README.md → projectfile (no-op; write-only bridge)
 pf-bridge-readme to --dry-run    # preview the rendered output without writing
