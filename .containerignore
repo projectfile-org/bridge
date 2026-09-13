@@ -13,25 +13,20 @@
 *.test
 .compose
 .env
-.fetch
 .forgejo
 .git
 .github
-.gitlab
 .makefile
 .secrets
-.secrets/
 CITATION.cff
 CODEOWNERS
 LICENSE
 LICENSES
 Makefile
-bin/
-dist/
+bin
+dist
 docs
 lefthook.yaml
-lefthook.yml
 reports
-scaffold
 # <<< user-patterns
 
