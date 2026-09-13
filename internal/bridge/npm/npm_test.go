@@ -135,6 +135,47 @@ func TestBuildMappersFromPFForce(t *testing.T) {
 	assert.Equal(t, "overridden-name", doc.Name)
 }
 
+// A forced FromPF pass over a document the previous pass just wrote must be
+// silent — otherwise every --check reports drift on an in-sync project.
+func TestBuildMappersFromPFIsIdempotent(t *testing.T) {
+	dir := t.TempDir()
+	writePackageJSON(t, dir, `{"name": "my-package"}`)
+	pfPath := filepath.Join(dir, "projectfile.yaml")
+	require.NoError(t, os.WriteFile(pfPath, []byte(`---
+identity:
+  name: my-package
+  version: 1.2.3
+  summary: A test package
+keywords: [go, test]
+repositories:
+  - role: origin
+    type: git
+    url: https://github.com/acme/my-package.git
+links:
+  - type: bugs
+    url: https://github.com/acme/my-package/issues
+  - type: homepage
+    url: https://example.com
+`), 0o644))
+	pf, err := projectfile.Read(pfPath)
+	require.NoError(t, err)
+	doc, err := npm.Read(dir)
+	require.NoError(t, err)
+	bridge := npm.Bridge{}
+
+	for _, m := range bridge.BuildMappers(doc, pf) {
+		if m.FromPF != nil {
+			m.FromPF(true)
+		}
+	}
+	for _, m := range bridge.BuildMappers(doc, pf) {
+		if m.FromPF == nil {
+			continue
+		}
+		assert.Emptyf(t, m.FromPF(true), "%s reported a change on an already-synced document", m.ExtKey)
+	}
+}
+
 func TestBuildMappersFromPFNoForceSkipsExisting(t *testing.T) {
 	dir := t.TempDir()
 	writePackageJSON(t, dir, fixtureJSON)

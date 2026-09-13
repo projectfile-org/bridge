@@ -218,6 +218,9 @@ func buildMappers(pkg *Document, pf *projectfile.Document) core.MapperList {
 				if repoType == "" {
 					repoType = "git"
 				}
+				if cur := ParseRepository(pkg.Repository); cur.URL == primary.URL && cur.Type == repoType {
+					return ""
+				}
 				pkg.Repository = Repository{URL: primary.URL, Type: repoType}
 				return core.Trunc(primary.URL)
 			},
@@ -245,6 +248,9 @@ func buildMappers(pkg *Document, pf *projectfile.Document) core.MapperList {
 					return ""
 				}
 				if pkg.Bugs != nil && !force {
+					return ""
+				}
+				if ParseBugs(pkg.Bugs).URL == url {
 					return ""
 				}
 				pkg.Bugs = Bugs{URL: url}

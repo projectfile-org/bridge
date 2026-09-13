@@ -114,6 +114,8 @@ func ParsePersonList(v []any) []Person {
 
 func ParseRepository(v any) Repository {
 	switch val := v.(type) {
+	case Repository:
+		return val
 	case string:
 		if strings.HasPrefix(val, "github:") {
 			return Repository{URL: "https://github.com/" + strings.TrimPrefix(val, "github:"), Type: repoTypeGit}
@@ -152,6 +154,8 @@ func ParseRepository(v any) Repository {
 
 func ParseBugs(v any) Bugs {
 	switch val := v.(type) {
+	case Bugs:
+		return val
 	case string:
 		return Bugs{URL: val}
 	case map[string]any:
