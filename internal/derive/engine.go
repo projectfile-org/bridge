@@ -4,15 +4,12 @@
 
 // Package derive turns the primary repository URL and the detected stack
 // into structured field values that would otherwise need to be hand-typed
-// in projectfile.toml. Two inference passes today:
+// in projectfile.toml. One inference pass today:
 //
 //   - forges/   — repo URL host → tracker URL pattern (GitHub /issues,
 //     GitLab /-/issues, Codeberg/Gitea /issues, sourcehut ~/.../tracker).
-//   - registries/ — detected stack + identity.name → package-registry landing
-//     page (npmjs.com, pypi.org, packagist.org, crates.io). Output
-//     lands as [[links]] entries with type = "package-registry".
 //
-// A third package, ocisinks/, feeds AddVirtual rather than Apply: it composes
+// A second package, ocisinks/, feeds AddVirtual rather than Apply: it composes
 // container-image pull references, which are read at render time and never
 // written to disk.
 //
@@ -34,7 +31,6 @@ import (
 	"projectfile.org/projectfile/bridge/internal/derive/containers"
 	"projectfile.org/projectfile/bridge/internal/derive/forges"
 	"projectfile.org/projectfile/bridge/internal/derive/ocisinks"
-	"projectfile.org/projectfile/bridge/internal/derive/registries"
 	"projectfile.org/projectfile/bridge/internal/pfmodel"
 )
 
@@ -72,7 +68,7 @@ type Options struct {
 // The flow:
 //
 //  1. Load [org.projectfile.cli] (or default toggles + empty derived).
-//  2. For each pass (forges, registries) call the pass's Derive and collect
+//  2. For each pass (forges, containers) call the pass's Derive and collect
 //     every proposed field write.
 //  3. Filter out proposals whose FieldPath isn't already in derived AND was
 //     set by hand (non-empty pre-existing value). The user's hand-edit wins;
@@ -89,7 +85,7 @@ func Apply(pf *projectfile.Document, opts Options) ([]Change, error) {
 	if ext == nil {
 		// Absent extension means defaults: every pass runs, no opt-outs yet.
 		ext = &pfmodel.CLIExtension{
-			Derive: pfmodel.CLIDeriveToggles{Forges: true, Registries: true, Containers: true},
+			Derive: pfmodel.CLIDeriveToggles{Forges: true, Containers: true},
 		}
 	}
 
@@ -98,11 +94,6 @@ func Apply(pf *projectfile.Document, opts Options) ([]Change, error) {
 	var proposals []Change
 	if ext.Derive.Forges {
 		for _, p := range forges.Derive(pf) {
-			proposals = append(proposals, Change{FieldPath: p.FieldPath, NewValue: p.NewValue, Source: p.Source, Label: p.Label})
-		}
-	}
-	if ext.Derive.Registries {
-		for _, p := range registries.Derive(pf) {
 			proposals = append(proposals, Change{FieldPath: p.FieldPath, NewValue: p.NewValue, Source: p.Source, Label: p.Label})
 		}
 	}

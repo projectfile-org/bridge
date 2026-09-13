@@ -362,7 +362,7 @@ type LangConventions struct {
 	StyleGuideURL string
 }
 
-// CLIExtension binds `[org.projectfile.cli]`. Derive toggles (forges, registries, containers) all default to true.
+// CLIExtension binds `[org.projectfile.cli]`. Derive toggles (forges, containers) all default to true.
 type CLIExtension struct {
 	Derived []string         `toml:"-" yaml:"-" json:"-"`
 	Derive  CLIDeriveToggles `toml:"derive" yaml:"derive" json:"derive"`
@@ -371,7 +371,6 @@ type CLIExtension struct {
 // CLIDeriveToggles enables/disables individual inference passes.
 type CLIDeriveToggles struct {
 	Forges     bool `toml:"forges"     yaml:"forges"     json:"forges"`
-	Registries bool `toml:"registries" yaml:"registries" json:"registries"`
 	Containers bool `toml:"containers" yaml:"containers" json:"containers"`
 }
 

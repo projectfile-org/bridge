@@ -5,10 +5,6 @@
 // Package ocisinks composes the pull reference of every SINK a project publishes
 // its container images to, from each sink's own `ref` template.
 //
-// Not to be confused with the sibling `derive/registries`, which infers PACKAGE
-// index pages (npm, PyPI, crates.io) from the detected stack. This package is
-// about the OCI plane: where a project's IMAGES land.
-//
 // What we are trying to do: let one project declare its image PARTS once and
 // reach several destinations with them. GHCR nests freely, Docker Hub holds
 // exactly `namespace/name`, and the same build feeds both — so the path grammar

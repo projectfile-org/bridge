@@ -13,7 +13,7 @@ import (
 	"projectfile.org/projectfile/bridge/internal/pfmodel"
 )
 
-// Change matches forges.Change/registries.Change one-for-one so the engine folds all three passes uniformly.
+// Change matches forges.Change one-for-one so the engine folds both passes uniformly.
 type Change struct {
 	FieldPath string
 	NewValue  string

@@ -28,7 +28,6 @@ func GetCLIExtension(doc *projectfile.Document) (*CLIExtension, error) {
 		Derive: CLIDeriveToggles{
 			// Explicit-false is the only "off" — implicit absence stays on.
 			Forges:     boolValDefaultTrue(m, "derive", "forges"),
-			Registries: boolValDefaultTrue(m, "derive", "registries"),
 			Containers: boolValDefaultTrue(m, "derive", "containers"),
 		},
 	}
@@ -52,9 +51,6 @@ func SetCLIExtension(doc *projectfile.Document, ext *CLIExtension) {
 	derive := map[string]any{}
 	if !ext.Derive.Forges {
 		derive["forges"] = false
-	}
-	if !ext.Derive.Registries {
-		derive["registries"] = false
 	}
 	if !ext.Derive.Containers {
 		derive["containers"] = false
