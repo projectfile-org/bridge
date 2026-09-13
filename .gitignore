@@ -12,7 +12,6 @@
 *.test
 .container/*/locale/*.mo
 .env
-.fetch
 .makefile/bootstrap
 .secrets/
 /bin/
