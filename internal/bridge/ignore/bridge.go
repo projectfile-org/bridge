@@ -104,6 +104,11 @@ func assemble(pf *projectfile.Document, filename, extKey string, ext *pfmodel.Ig
 	if ext != nil {
 		patterns = append(patterns, o.Filter(ext.Extra)...) // `extra` fans out to every target minus this target's own exclude.
 	}
+	if extKey == extKeyDocker || extKey == extKeyContainer {
+		for i, p := range patterns { // docker strips slashes before matching, so a trailing slash is dead bytes there.
+			patterns[i] = stripDockerSlash(p)
+		}
+	}
 	if len(patterns) > 0 {
 		writeBlock(&content, "user-patterns", []byte(strings.Join(patterns, "\n")+"\n"))
 	}
@@ -195,6 +200,19 @@ func sortDedup(body []byte) []byte {
 	}
 
 	return []byte(strings.Join(result, "\n"))
+}
+
+// stripDockerSlash drops trailing slashes docker ignores anyway, keeping git dir-only semantics out of the docker and container targets.
+func stripDockerSlash(p string) string {
+	neg := strings.HasPrefix(p, "!")
+	trimmed := strings.TrimRight(strings.TrimPrefix(p, "!"), "/")
+	if trimmed == "" {
+		return p
+	}
+	if neg {
+		return "!" + trimmed
+	}
+	return trimmed
 }
 
 func trimTrailingBlanks(body []byte) []byte {

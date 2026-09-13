@@ -313,12 +313,27 @@ func TestAssembleIncludeExtraDeduped(t *testing.T) {
 	assert.Equal(t, 1, strings.Count(body, testReports))
 }
 
+// Docker strips slashes before matching, so the docker and container targets emit slashless patterns while git keeps dir-only semantics.
+func TestAssembleDockerStripsTrailingSlash(t *testing.T) {
+	pf := &projectfile.Document{Identity: projectfile.Identity{Name: "p"}}
+	ext := &pfmodel.IgnoresExtension{
+		Container: &pfmodel.IgnoreTargetOverride{Include: []string{testDist, "bin/", testReports}},
+	}
+	body := string(assemble(pf, testFilenameDocker, extKeyDocker, ext))
+	assert.NotContains(t, body, testDist)
+	assert.Contains(t, body, "\ndist\n")
+	git := string(assemble(pf, testFilenameGitignore, extKeyGit, &pfmodel.IgnoresExtension{
+		Git: &pfmodel.IgnoreTargetOverride{Include: []string{testDist}},
+	}))
+	assert.Contains(t, git, testDist)
+}
+
 // A re-include from extra still follows the include pattern it answers: positives sort first, negations trail.
 func TestAssembleNegationAcrossSourcesFollowsPattern(t *testing.T) {
 	pf := &projectfile.Document{Identity: projectfile.Identity{Name: "p"}}
 	ext := &pfmodel.IgnoresExtension{
 		Extra: []string{"!dist/keep.txt"},
-		Git:   &pfmodel.IgnoreTargetOverride{Include: []string{"dist/", testReports}},
+		Git:   &pfmodel.IgnoreTargetOverride{Include: []string{testDist, testReports}},
 	}
 	body := string(assemble(pf, testFilenameGitignore, extKeyGit, ext))
 	assert.Greater(t, strings.Index(body, "!dist/keep.txt"), strings.Index(body, "dist/\n"),
