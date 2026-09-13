@@ -6,7 +6,18 @@ package core
 
 import "testing"
 
+// isolate blanks every variable ResolveToken consults for kind/host so the developer’s shell cannot leak in.
+func isolate(t *testing.T, kind, host string) {
+	t.Helper()
+	t.Setenv(HostOverrideEnvVar(host), "")
+	if name := CanonicalEnvVar(kind); name != "" {
+		t.Setenv(name, "")
+	}
+	t.Setenv("GITEA_TOKEN", "")
+}
+
 func TestResolveToken_PerHostBeatsCanonical(t *testing.T) {
+	isolate(t, "github", CanonicalGitHub)
 	t.Setenv("GITHUB_TOKEN", "canonical-value")
 	t.Setenv("PF_FORGE_TOKEN_GITHUB_COM", "per-host-value")
 	tok, src := ResolveToken("github", CanonicalGitHub)
@@ -19,8 +30,8 @@ func TestResolveToken_PerHostBeatsCanonical(t *testing.T) {
 }
 
 func TestResolveToken_CanonicalFallback(t *testing.T) {
+	isolate(t, "github", CanonicalGitHub)
 	t.Setenv("GITHUB_TOKEN", "canonical-value")
-	t.Setenv("PF_FORGE_TOKEN_GITHUB_COM", "")
 	tok, src := ResolveToken("github", CanonicalGitHub)
 	if tok != "canonical-value" {
 		t.Fatalf("got %q, want canonical-value", tok)
@@ -31,7 +42,7 @@ func TestResolveToken_CanonicalFallback(t *testing.T) {
 }
 
 func TestResolveToken_ForgejoGiteaFallback(t *testing.T) {
-	t.Setenv("FORGEJO_TOKEN", "")
+	isolate(t, "forgejo", "codeberg.org")
 	t.Setenv("GITEA_TOKEN", "gitea-value")
 	tok, src := ResolveToken("forgejo", "codeberg.org")
 	if tok != "gitea-value" {
@@ -43,8 +54,7 @@ func TestResolveToken_ForgejoGiteaFallback(t *testing.T) {
 }
 
 func TestResolveToken_MissingReturnsEmpty(t *testing.T) {
-	t.Setenv("GITLAB_TOKEN", "")
-	t.Setenv("PF_FORGE_TOKEN_GITLAB_EXAMPLE_COM", "")
+	isolate(t, "gitlab", "gitlab.example.com")
 	tok, src := ResolveToken("gitlab", "gitlab.example.com")
 	if tok != "" {
 		t.Fatalf("got %q, want empty", tok)
