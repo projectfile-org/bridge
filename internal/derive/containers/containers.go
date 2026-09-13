@@ -8,6 +8,7 @@ package containers
 import (
 	"strings"
 
+	"kiota.ch/projectfile/core/v2/pkg/genlog"
 	"kiota.ch/projectfile/core/v2/pkg/projectfile"
 	"projectfile.org/projectfile/bridge/internal/derive/ocisinks"
 	"projectfile.org/projectfile/bridge/internal/pfmodel"
@@ -27,12 +28,22 @@ const hostDockerHub = "docker.io"
 // hostGHCR is the GitHub Container Registry host as it appears in a composed sink ref.
 const hostGHCR = "ghcr.io"
 
-// Derive returns at most one package-registry link per public registry the project's sinks resolve to.
+// ciExtensionNS is the CI namespace read for the matrix axes. pfmodel exports no
+// constant for it (CI is owned by the resolver, not a bridge), so this package
+// names it locally, same as the readme bridge does.
+const ciExtensionNS = "org.projectfile.ci"
+
+// Derive returns one package-registry link per public registry the project's
+// sinks resolve to, fanned out one per matrix cell when the sink's ref is
+// built per axis (e.g. a base image published once per `{B19_UBUNTU_SERIES}`).
+// A link still carrying the raw `{AXIS}` placeholder addresses nothing, so an
+// axis the document does not declare drops the link rather than publish it.
 func Derive(pf *projectfile.Document) []Change {
 	refs := ocisinks.Refs(pf)
 	if len(refs) == 0 {
 		return nil
 	}
+	axes := pfmodel.MatrixAxes(pf, ciExtensionNS)
 	var out []Change
 	seen := map[string]bool{}
 	for name, v := range refs {
@@ -46,16 +57,26 @@ func Derive(pf *projectfile.Document) []Change {
 			continue
 		}
 		value, registryLabel := resolveRegistry(pf, host, repo)
-		if value == "" || seen[value] {
+		if value == "" {
 			continue
 		}
-		seen[value] = true
-		out = append(out, Change{
-			FieldPath: "links[type=package-registry,url=" + value + "]",
-			NewValue:  value,
-			Source:    "sink:" + name,
-			Label:     registryLabel,
-		})
+		for _, expanded := range pfmodel.ExpandAxes([]string{value}, axes) {
+			if strings.Contains(expanded, "{") {
+				genlog.Warn("derive: package-registry link left an axis placeholder unresolved — link dropped",
+					"sink", name, "url", expanded, "remedy", "declare the axis under "+ciExtensionNS+".matrix.axes")
+				continue
+			}
+			if seen[expanded] {
+				continue
+			}
+			seen[expanded] = true
+			out = append(out, Change{
+				FieldPath: "links[type=package-registry,url=" + expanded + "]",
+				NewValue:  expanded,
+				Source:    "sink:" + name,
+				Label:     registryLabel,
+			})
+		}
 	}
 	return out
 }

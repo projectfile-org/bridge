@@ -303,17 +303,6 @@ func TestIntegerAxisValuesAreCoerced(t *testing.T) {
 	assert.NotContains(t, out, "{B19_LLVM_SERIES}", "an integer axis must substitute, not survive")
 }
 
-// TestScalarToStringCoercesAxisShapes pins the matrix-cell rendering for every
-// YAML scalar shape a projectfile may carry.
-func TestScalarToStringCoercesAxisShapes(t *testing.T) {
-	assert.Equal(t, "22", scalarToString(22))
-	assert.Equal(t, "8.5", scalarToString(8.5))
-	assert.Equal(t, "cli", scalarToString("cli"))
-	assert.Equal(t, "true", scalarToString(true))
-	assert.Empty(t, scalarToString(nil), "nil is not a matrix value")
-	assert.Empty(t, scalarToString([]any{"x"}), "a composite is not a matrix value")
-}
-
 // TestMatrixSectionRendersJoinedBlock: a matrix install group renders every
 // cell in ONE fenced block. The old layout — first cell showcased alone, a
 // variants note, then the remaining cells — is retired: the joined fence

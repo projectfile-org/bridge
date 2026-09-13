@@ -5,7 +5,6 @@
 package readme
 
 import (
-	"fmt"
 	"maps"
 	"slices"
 	"strconv"
@@ -87,7 +86,7 @@ func buildSection(doc *projectfile.Document, ext *pfmodel.ReadmeExtension, name,
 	if len(declared) == 0 {
 		return nil
 	}
-	axes := ciMatrixAxes(doc)
+	axes := pfmodel.MatrixAxes(doc, ciExtensionNS)
 	source := pfmodel.ReadmeExtensionNS + "." + name
 	// Rank the groups before rendering. The slice arrives in MERGE order, which
 	// puts every include-provided group ahead of the project's own (includes
@@ -154,7 +153,7 @@ func buildSectionGroup(doc *projectfile.Document, group pfmodel.ReadmeSectionGro
 	subgroups, bucketed := bucketBySink(sinks, expanded)
 	if bucketed && len(sinks) > 1 {
 		for i := range subgroups {
-			subgroups[i].Commands = expandAxes(subgroups[i].Commands, axes)
+			subgroups[i].Commands = pfmodel.ExpandAxes(subgroups[i].Commands, axes)
 		}
 		view.Subgroups = subgroups
 		genlog.Decision("readme_group", label, "commands grouped by sink", source+" sinks="+strconv.Itoa(len(subgroups)))
@@ -165,7 +164,7 @@ func buildSectionGroup(doc *projectfile.Document, group pfmodel.ReadmeSectionGro
 		}
 		return view, true
 	}
-	view.Commands = expandAxes(expanded, axes)
+	view.Commands = pfmodel.ExpandAxes(expanded, axes)
 	for _, line := range view.Commands {
 		genlog.Decision("readme_command", line, source, "group="+label+" lang="+lang)
 	}
@@ -273,75 +272,6 @@ func sectionText(def string, byLang map[string]string, lang string) string {
 	return def
 }
 
-// expandAxes substitutes the `{AXIS}` matrix placeholders m6e and pf-ci
-// both replace per cell, fanning each line out to one per cell. A base image
-// built once per Ubuntu series carries `{B19_UBUNTU_SERIES}` inside its
-// published image path, and a reader choosing a series needs to see every one.
-//
-// Only axes the document DECLARES are substituted, and an unmatched brace is
-// left alone: that is interp's cohabitation clause applied to the second
-// placeholder syntax — `docker inspect --format '{{.Id}}'` is a shell brace, not
-// an axis, and a command is not the bridge's to rewrite. Axes are walked in
-// sorted key order and their values in declared order, so a two-axis image
-// (`{B19_JAVA_DISTRO}-{B19_JAVA_SERIES}`) produces a stable cross product.
-func expandAxes(lines []string, axes map[string][]string) []string {
-	if len(axes) == 0 {
-		return lines
-	}
-	for _, axis := range slices.Sorted(maps.Keys(axes)) {
-		values := axes[axis]
-		if len(values) == 0 {
-			continue
-		}
-		token := "{" + axis + "}"
-		expanded := make([]string, 0, len(lines))
-		for _, line := range lines {
-			if !strings.Contains(line, token) {
-				expanded = append(expanded, line)
-				continue
-			}
-			for _, value := range values {
-				expanded = append(expanded, strings.ReplaceAll(line, token, value))
-			}
-		}
-		lines = expanded
-	}
-	return lines
-}
-
-// ciMatrixAxes reads org.projectfile.ci.matrix.axes as axis name → declared
-// values. Nil when the project has no matrix, which makes expandAxes a no-op for
-// the ~130 single-image projects.
-//
-// YAML scalar values are coerced to their STRING form: a matrix declared as
-// `B19_LLVM_SERIES: [22, 21]` carries INTEGER items, and pf-ci/m6e
-// substitute them as plain tokens — so the README must do the same to fill the
-// matching `{B19_LLVM_SERIES}` placeholder. Without this the integer axes were
-// silently dropped and the placeholder survived into the published README.
-func ciMatrixAxes(doc *projectfile.Document) map[string][]string {
-	matrix, ok := ciSubtree(doc)["matrix"].(map[string]any)
-	if !ok {
-		return nil
-	}
-	raw, ok := matrix["axes"].(map[string]any)
-	if !ok {
-		return nil
-	}
-	axes := make(map[string][]string, len(raw))
-	for axis, list := range raw {
-		items, ok := list.([]any)
-		if !ok {
-			continue
-		}
-		for _, item := range items {
-			if value := scalarToString(item); value != "" {
-				axes[axis] = append(axes[axis], value)
-			}
-		}
-	}
-	return axes
-}
-
 // ciSubtree returns the org.projectfile.ci mapping, or nil. Nil maps index
 // safely in Go, so every caller reads a key without a presence dance.
 func ciSubtree(doc *projectfile.Document) map[string]any {
@@ -351,25 +281,6 @@ func ciSubtree(doc *projectfile.Document) map[string]any {
 	}
 	m, _ := raw.(map[string]any)
 	return m
-}
-
-// scalarToString renders a YAML scalar (the shape an untyped decoder yields) as
-// the plain token m6e/pf-ci substitute per matrix cell. Strings pass
-// through; numbers and bools take their natural form (22, 8.5, true); anything
-// composite or nil is not a matrix value and returns "" so the caller drops it.
-func scalarToString(v any) string {
-	switch x := v.(type) {
-	case nil:
-		return ""
-	case string:
-		return x
-	case bool:
-		return fmt.Sprintf("%v", x)
-	case int, int8, int16, int32, int64, uint, uint8, uint16, uint32, uint64, float32, float64:
-		return fmt.Sprintf("%v", x)
-	default:
-		return ""
-	}
 }
 
 // goalTag is the advisory tags[] value that opts a CI node into the README's

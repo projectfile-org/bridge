@@ -14,11 +14,10 @@
 // written to disk.
 //
 // The engine is invoked from internal/bridge/core/runsync.go after
-// person-conflict emission and before the Write call, so every sync run keeps
-// the derived fields in line with the spec's principle of least astonishment.
-// The bare `pf-bridge` (no arguments) form runs ONLY the derivation pass
-// — useful when a user has just edited the primary repository URL by hand
-// and wants the issue tracker to follow.
+// person-conflict emission and before the Write call, so every two-way-sync
+// bridge run (codeowners, cff, npm, …) keeps the derived fields in line with
+// the spec's principle of least astonishment. A one-way render (readme,
+// license, …) never reaches RunSync and so never triggers this pass.
 //
 // Output is communicated through []Change so the caller (sync.go) can fold
 // each derived field into the existing Result.Changes log and the [org.projectfile.cli]

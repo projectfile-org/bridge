@@ -128,7 +128,7 @@ func buildArtifacts(doc *projectfile.Document, lang string) []artifactView {
 		genlog.Warn("unreadable artifacts namespace", "error", err.Error())
 		return nil
 	}
-	axes := ciMatrixAxes(doc)
+	axes := pfmodel.MatrixAxes(doc, ciExtensionNS)
 	var out []artifactView
 	for _, a := range declared {
 		expanded, resolved := interp.ExpandFanOut(doc, artifactAddress(a))
@@ -136,7 +136,7 @@ func buildArtifacts(doc *projectfile.Document, lang string) []artifactView {
 			genlog.Decision("artifact", a.Key, "unresolved address (dropped)", artifactAddress(a))
 			continue
 		}
-		for _, address := range expandAxes(expanded, axes) {
+		for _, address := range pfmodel.ExpandAxes(expanded, axes) {
 			out = append(out, artifactView{
 				Kind:    a.Kind,
 				Label:   artifactKindLabel(a.Kind, lang),
@@ -204,7 +204,7 @@ func strFieldList(doc *projectfile.Document, ns string) []string {
 	}
 	var out []string
 	for _, item := range items {
-		if s := scalarToString(item); s != "" {
+		if s := pfmodel.ScalarToString(item); s != "" {
 			out = append(out, s)
 		}
 	}
