@@ -35,7 +35,6 @@ keywords:
 kind: SoftwareSourceCode
 license:
   covers: project
-  spdx: ""
 links:
   - label:
       en: Projectfile Bridges on kiota.ch
