@@ -35,15 +35,8 @@ keywords:
 kind: SoftwareSourceCode
 license:
   covers: project
-  spdx: "MIT"
+  spdx: ""
 links:
-  - label:
-      en: Documentation
-      es: Documentación
-      uk: Документація
-    preferred: true
-    type: documentation
-    url: /docs
   - label:
       en: Projectfile Bridges on kiota.ch
       es: Projectfile Bridges en kiota.ch
@@ -127,10 +120,10 @@ org:
           name: binary
           prefix: 'Project the projectfile onto the files a forge expects:'
     status: maintained
-technologies:
-  - go
 repositories:
   - branch: main
     role: origin
     type: git
     url: ssh://git@kiota.ch/projectfile/bridge.git
+technologies:
+  - go
