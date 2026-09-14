@@ -12,13 +12,6 @@ pf-cli-managed: yes
 Дякуємо, що користуєтеся **Projectfile Bridges**!
 Цей документ пояснює, де шукати допомогу та як ставити зрозумілі запитання.
 
-## Перш ніж питати
-
-Перегляньте це спершу — можливо, відповідь уже є:
-
-- [Задачі на Codeberg](https://codeberg.org/projectfile/bridge/issues)
-- [Задачі на GitHub](https://github.com/damian-buho/projectfile-bridge/issues)
-
 ## Куди звертатися
 
 - **Повідомити про вразливість безпеки** — [SECURITY.md](SECURITY.md)
