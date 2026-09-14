@@ -38,43 +38,6 @@ license:
   spdx: "MIT"
 links:
   - label:
-      en: Projectfile Bridges on Codeberg
-      es: Projectfile Bridges en Codeberg
-      uk: Projectfile Bridges на Codeberg
-    tags:
-      - public
-      - badges
-      - badges-gitea
-    type: source-code
-    url: https://codeberg.org/projectfile/bridge
-  - label:
-      en: Projectfile Bridges on GitHub
-      es: Projectfile Bridges en GitHub
-      uk: Projectfile Bridges на GitHub
-    tags:
-      - public
-      - badges
-      - badges-github
-    type: source-code
-    url: https://github.com/damian-buho/projectfile-bridge
-  - label:
-      en: Projectfile Bridges on kiota.ch
-      es: Projectfile Bridges en kiota.ch
-      uk: Projectfile Bridges на kiota.ch
-    preferred: true
-    tags:
-      - ci
-    type: source-code
-    url: https://kiota.ch/projectfile/bridge
-  - label:
-      en: Issues on Codeberg
-      es: Incidencias en Codeberg
-      uk: Задачі на Codeberg
-    tags:
-      - support
-    type: bugs
-    url: https://codeberg.org/projectfile/bridge/issues
-  - label:
       en: Documentation
       es: Documentación
       uk: Документація
@@ -82,13 +45,12 @@ links:
     type: documentation
     url: /docs
   - label:
-      en: Issues on GitHub
-      es: Incidencias en GitHub
-      uk: Задачі на GitHub
-    tags:
-      - support
-    type: bugs
-    url: https://github.com/damian-buho/projectfile-bridge/issues
+      en: Projectfile Bridges on kiota.ch
+      es: Projectfile Bridges en kiota.ch
+      uk: Projectfile Bridges на kiota.ch
+    preferred: true
+    type: source-code
+    url: https://kiota.ch/projectfile/bridge
 org:
   projectfile:
     artifacts:
@@ -165,17 +127,10 @@ org:
           name: binary
           prefix: 'Project the projectfile onto the files a forge expects:'
     status: maintained
+technologies:
+  - go
 repositories:
-  - issues: true
-    role: mirror
-    type: git
-    url: ssh://git@codeberg.org/projectfile/bridge.git
-  - role: mirror
-    type: git
-    url: git@github.com:damian-buho/projectfile-bridge.git
   - branch: main
     role: origin
     type: git
     url: ssh://git@kiota.ch/projectfile/bridge.git
-technologies:
-  - go
