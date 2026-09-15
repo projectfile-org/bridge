@@ -86,3 +86,5 @@ golang.org/x/text v0.41.0/go.mod h1:jvf1O8ajNzZqhSrQBPbutR/EB83Cc0CFrezNQIwbb5M=
 gopkg.in/check.v1 v0.0.0-20161208181325-20d25e280405/go.mod h1:Co6ibVJAznAaIkqp8huTwlJQCZ016jof/cbN4VW5Yz0=
 kiota.ch/projectfile/core/v2 v2.11.0 h1:AIdDel+USV6QGio0tBwdBKqFIIjvfkz8tj0tRb/kZjA=
 kiota.ch/projectfile/core/v2 v2.11.0/go.mod h1:ChpHLJ/O1vF2BwnDang3h2OgfmatlIj8nMHx5/iCnhs=
+kiota.ch/projectfile/core/v2 v2.11.1 h1:yeUn4L1Ecwa4zd45q20Zum92HNoscH7U0sr3uATJnuw=
+kiota.ch/projectfile/core/v2 v2.11.1/go.mod h1:ChpHLJ/O1vF2BwnDang3h2OgfmatlIj8nMHx5/iCnhs=
