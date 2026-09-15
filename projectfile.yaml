@@ -67,9 +67,6 @@ org:
           - lefthook.yml
           - scaffold
     ci:
-      forgejo:
-        credentials:
-          FORGEJO_TOKEN: ${{ secrets.RELEASE_TOKEN }}
       nodes:
         binaries-are-built:
           matrix:
