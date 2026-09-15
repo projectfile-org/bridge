@@ -124,7 +124,7 @@ func (Bridge) Render(pf *projectfile.Document, opts core.Options) (core.Output, 
 			return core.Output{}, fmt.Errorf("%s: %w", doc.Out, err)
 		}
 		out.Files[doc.Out] = body
-		genlog.Plain(fmt.Sprintf("bridge: %s", doc.Out))
+		genlog.Success(fmt.Sprintf("bridge: %s", doc.Out))
 
 		for _, v := range variants {
 			rel := core.LocalizedFilename(doc.Out, v.Lang)
@@ -133,7 +133,7 @@ func (Bridge) Render(pf *projectfile.Document, opts core.Options) (core.Output, 
 				return core.Output{}, fmt.Errorf("%s: %w", rel, err)
 			}
 			out.Files[rel] = body
-			genlog.Plain(fmt.Sprintf("bridge: %s", rel))
+			genlog.Success(fmt.Sprintf("bridge: %s", rel))
 		}
 	}
 	return out, nil

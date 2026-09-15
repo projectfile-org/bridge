@@ -112,7 +112,7 @@ var forgePushCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		genlog.Plain(res.Format())
+		genlog.Success(res.Format())
 		return nil
 	},
 }
@@ -190,6 +190,7 @@ func Main(binName string) {
 	}
 	if err := forgeCmd.Execute(); err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %s\n", err)
+		genlog.FlushDebug()
 		os.Exit(1)
 	}
 }

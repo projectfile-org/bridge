@@ -35,7 +35,7 @@ func SeeAlsoFor(pf *projectfile.Document, tag, lang string) []SeeAlsoLink {
 	links := pfmodel.LinksByTag(pf, tag)
 	if len(links) == 0 {
 		if len(pf.Links) > 0 {
-			genlog.Decision("see_also", tag, "no link carries this tag (section dropped)",
+			genlog.DebugRow("see_also", tag, "no link carries this tag (section dropped)",
 				"links[] declared="+strconv.Itoa(len(pf.Links)))
 		}
 		return nil

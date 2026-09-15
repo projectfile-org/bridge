@@ -82,12 +82,14 @@ func main() {
 	case cmdAll, dirTo, dirFrom:
 		if err := runAll(args); err != nil {
 			fmt.Fprintf(os.Stderr, "Error: %s\n", err)
+			genlog.FlushDebug()
 			os.Exit(1)
 		}
 		return
 	case cmdCheck:
 		if err := runCheckAll(args[1:]); err != nil {
 			fmt.Fprintf(os.Stderr, "Error: %s\n", err)
+			genlog.FlushDebug()
 			os.Exit(1)
 		}
 		return
@@ -100,12 +102,14 @@ func main() {
 		fmt.Fprintf(os.Stderr,
 			"Error: unknown command %q — %s%s not found on PATH.\nInstalled: %s\n",
 			name, prefix, name, strings.Join(discover(), ", "))
+		genlog.FlushDebug()
 		os.Exit(1)
 	}
 	// Replace this process so signals/exit codes pass through cleanly.
 	argv := append([]string{prefix + name}, args[1:]...)
 	if err := syscall.Exec(path, argv, os.Environ()); err != nil { // #nosec G702,G204 -- path resolved via PATH discovery on a fixed prefix; dispatching is this command's job
 		fmt.Fprintf(os.Stderr, "Error: exec %s: %s\n", path, err)
+		genlog.FlushDebug()
 		os.Exit(1)
 	}
 }
@@ -191,7 +195,7 @@ func declaredChildren(flags []string) []child {
 		children = append(children, child{name: r.Name, args: mergeFlags(r.Args, flags)})
 	}
 	if len(children) > 0 {
-		genlog.Decision("check_set", strconv.Itoa(len(children))+" declared bridge(s)",
+		genlog.DebugRow("check_set", strconv.Itoa(len(children))+" declared bridge(s)",
 			"org.projectfile.ci.tools", "--all checks every installed bridge instead")
 	}
 	return children

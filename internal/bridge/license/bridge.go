@@ -124,11 +124,11 @@ func (Bridge) Render(pf *projectfile.Document, opts core.Options) (core.Output, 
 		key := filenameLicense
 		if len(declared) > 0 {
 			key = declared[0]
-			genlog.Decision("output", key, "license.file", "")
+			genlog.DebugRow("output", key, "license.file", "")
 		}
 		files[key] = []byte(spdx.Substitute(text, vars))
 		emitReuseFile(files, baseID, text, vars, !opts.ReuseCanonical)
-		genlog.Decision("reuse",
+		genlog.DebugRow("reuse",
 			"LICENSES/"+baseID+".txt ("+reuseMode(opts.ReuseCanonical)+")", "spdx", baseID)
 		return core.Output{Files: files}, nil
 	}
@@ -146,7 +146,7 @@ func (Bridge) Render(pf *projectfile.Document, opts core.Options) (core.Output, 
 		}
 	}
 	if len(declared) > 0 {
-		genlog.Decision("output",
+		genlog.DebugRow("output",
 			fmt.Sprintf("%d declared file(s): %s", len(declared), strings.Join(declared, ", ")),
 			"license.file", "")
 	}
@@ -175,7 +175,7 @@ func (Bridge) Render(pf *projectfile.Document, opts core.Options) (core.Output, 
 		// LICENSES/<id>.txt is always emitted so `reuse lint` resolves the
 		// expression regardless of declared paths. Default: substituted.
 		emitReuseFile(files, baseID, text, vars, !opts.ReuseCanonical)
-		genlog.Decision("reuse",
+		genlog.DebugRow("reuse",
 			"LICENSES/"+baseID+".txt ("+reuseMode(opts.ReuseCanonical)+")", "spdx", baseID)
 		// Declared per-term paths carry the substituted copy (legacy fan-out).
 		if key := termKeys[i]; key != "" {
@@ -218,13 +218,13 @@ func emitCoversTrace(pf *projectfile.Document, expr string) {
 	covers := strings.ToLower(strings.TrimSpace(pf.License.Covers))
 	switch covers {
 	case "", "project":
-		genlog.Decision("covers", "project (full source tree)", "license.covers", "")
+		genlog.DebugRow("covers", "project (full source tree)", "license.covers", "")
 	case "additions":
-		genlog.Decision("covers",
+		genlog.DebugRow("covers",
 			"additions — "+expr+" is NOT authoritative for the full tree; bundled upstream retains its own licensing",
 			"license.covers", "")
 	default:
-		genlog.Decision("covers", covers+" (unknown — treated as project)", "license.covers", "")
+		genlog.DebugRow("covers", covers+" (unknown — treated as project)", "license.covers", "")
 	}
 }
 
@@ -263,8 +263,8 @@ func emitDecisionTrace(pf *projectfile.Document, expr string, vars spdx.Vars) {
 	if strings.EqualFold(userconfig.Load().Copyright.YearStrategy, "current") {
 		yearSrc = "user-config [copyright].year_strategy=current"
 	}
-	genlog.Decision("spdx", expr, "[license].spdx", "")
-	genlog.Decision("year", fmt.Sprintf("%d", vars.Year), yearSrc, "[copyright].year")
+	genlog.DebugRow("spdx", expr, "[license].spdx", "")
+	genlog.DebugRow("year", fmt.Sprintf("%d", vars.Year), yearSrc, "[copyright].year")
 	// Holder source mirrors core.ReuseCopyrightHolderNames: copyright-role
 	// wins, then author/maintainer, then DisplayName last resort.
 	holderSrc := "identity (DisplayName fallback)"
@@ -273,7 +273,7 @@ func emitDecisionTrace(pf *projectfile.Document, expr string, vars spdx.Vars) {
 	} else if hasAuthorMaintainer(pf) {
 		holderSrc = "[[people]] roles=author/maintainer"
 	}
-	genlog.Decision("holders",
+	genlog.DebugRow("holders",
 		fmt.Sprintf("%d entr(y/ies): %s", len(vars.Holders), strings.Join(vars.Holders, ", ")),
 		holderSrc, "[[people]] roles")
 }

@@ -396,14 +396,14 @@ func buildHistory(in []pfmodel.FundingHistory) []fundingHistoryEntry {
 // --- Decision trace ---
 
 func emitTrace(entity fundingEntity, ext *pfmodel.FundingExtension) {
-	genlog.Decision("entity.type", entity.Type, "auto-resolved + override", "")
-	genlog.Decision("entity.role", entity.Role, "auto-resolved + override", "")
-	genlog.Decision("entity.name", entity.Name, "auto-resolved", "")
-	genlog.Decision("entity.email", entity.Email, "auto-resolved", "")
-	genlog.Decision("entity.webpageUrl", entity.WebpageURL.URL, "links[type=homepage]", "")
-	genlog.Decision("channels", fmt.Sprintf("%d", len(ext.Channels)), "[org.projectfile.funding].channels", "")
-	genlog.Decision("plans", fmt.Sprintf("%d", len(ext.Plans)), "[org.projectfile.funding].plans", "")
+	genlog.DebugRow("entity.type", entity.Type, "auto-resolved + override", "")
+	genlog.DebugRow("entity.role", entity.Role, "auto-resolved + override", "")
+	genlog.DebugRow("entity.name", entity.Name, "auto-resolved", "")
+	genlog.DebugRow("entity.email", entity.Email, "auto-resolved", "")
+	genlog.DebugRow("entity.webpageUrl", entity.WebpageURL.URL, "links[type=homepage]", "")
+	genlog.DebugRow("channels", fmt.Sprintf("%d", len(ext.Channels)), "[org.projectfile.funding].channels", "")
+	genlog.DebugRow("plans", fmt.Sprintf("%d", len(ext.Plans)), "[org.projectfile.funding].plans", "")
 	if len(ext.History) > 0 {
-		genlog.Decision("history", fmt.Sprintf("%d", len(ext.History)), "[org.projectfile.funding].history", "")
+		genlog.DebugRow("history", fmt.Sprintf("%d", len(ext.History)), "[org.projectfile.funding].history", "")
 	}
 }

@@ -60,7 +60,7 @@ func fragmentString(lang, key string) (string, bool) {
 		if v, ok := fragmentsStrings[lang][key]; ok {
 			return v, true
 		}
-		genlog.Decision("fragment_string", key, "fragments strings", "untranslated in "+lang)
+		genlog.DebugRow("fragment_string", key, "fragments strings", "untranslated in "+lang)
 	}
 	v, ok := fragmentsStrings["en"][key]
 	return v, ok

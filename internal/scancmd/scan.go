@@ -220,7 +220,7 @@ func runStacksPhase(dir, pfPath string) error {
 	}
 
 	for _, h := range hits {
-		genlog.Info("marker", "path", h.Path, "tags", h.Tags)
+		genlog.Debug("marker", "path", h.Path, "tags", h.Tags)
 	}
 
 	added := stackscan.Diff(detected, effectivePF.Stack)
@@ -314,7 +314,7 @@ func runScanPicker(dir string) error {
 
 func logHits(hits []core.Hit) {
 	for _, h := range hits {
-		genlog.Info("scanner", "name", h.Source, "field", h.Field)
+		genlog.Debug("scanner", "name", h.Source, "field", h.Field)
 	}
 }
 
@@ -453,7 +453,7 @@ func applyLink(doc *projectfile.Document, link projectfile.Link, force bool) {
 		if existing.Type == link.Type && existing.URL == link.URL {
 			if link.Label != nil && (force || existing.Label == nil) {
 				if force && existing.Label != nil {
-					genlog.Info("scan: label overwritten", "url", existing.URL)
+					genlog.Debug("scan: label overwritten", "url", existing.URL)
 				}
 				existing.Label = link.Label
 			}
@@ -463,7 +463,7 @@ func applyLink(doc *projectfile.Document, link projectfile.Link, force bool) {
 				existing.Preferred = link.Preferred
 			}
 			if tags := pfmodel.LinkTags(link); pfmodel.SetLinkTags(existing, tags, force) {
-				genlog.Info("scan: capability tags written", "url", existing.URL,
+				genlog.Debug("scan: capability tags written", "url", existing.URL,
 					"tags", tags, "force", force)
 			}
 			return
@@ -540,6 +540,7 @@ func Main(binName string) {
 	}
 	if err := scanCmd.Execute(); err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %s\n", err)
+		genlog.FlushDebug()
 		os.Exit(1)
 	}
 }

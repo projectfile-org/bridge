@@ -71,7 +71,7 @@ func Refs(pf *projectfile.Document) map[string]any {
 		declared = legacySink(pf)
 	}
 	if len(declared) == 0 {
-		genlog.Decision("sink_ref", "", pfmodel.SinksExtensionNS, "no sink declared")
+		genlog.DebugRow("sink_ref", "", pfmodel.SinksExtensionNS, "no sink declared")
 		return nil
 	}
 	routed, gated := routedSinks(pf)
@@ -79,7 +79,7 @@ func Refs(pf *projectfile.Document) map[string]any {
 	var dropped []unresolvedSink
 	for name, entry := range declared {
 		if gated && !routed[name] {
-			genlog.Decision("sink_ref", "(unrouted)", name, "no "+pfmodel.PublishExtensionNS+" route pushes here")
+			genlog.DebugRow("sink_ref", "(unrouted)", name, "no "+pfmodel.PublishExtensionNS+" route pushes here")
 			continue
 		}
 		tmpl := selfTemplate(entry)
@@ -93,11 +93,11 @@ func Refs(pf *projectfile.Document) map[string]any {
 			dropped = append(dropped, unresolvedSink{name: name, tmpl: tmpl, partial: ref})
 			continue
 		}
-		genlog.Decision("sink_ref", ref, name, "template="+tmpl)
+		genlog.DebugRow("sink_ref", ref, name, "template="+tmpl)
 		out[name] = composed(entry, ref)
 	}
 	if len(out) == 0 {
-		genlog.Decision("sink_ref", "(none)", pfmodel.SinksExtensionNS,
+		genlog.DebugRow("sink_ref", "(none)", pfmodel.SinksExtensionNS,
 			"no image part declared — project publishes no container image")
 		return nil
 	}
@@ -131,7 +131,7 @@ func routedSinks(pf *projectfile.Document) (routed map[string]bool, gated bool) 
 				routed[name] = true
 			}
 		}
-		genlog.Decision("publish_route", forge, pfmodel.PublishExtensionNS, "push="+strconv.Itoa(len(push)))
+		genlog.DebugRow("publish_route", forge, pfmodel.PublishExtensionNS, "push="+strconv.Itoa(len(push)))
 	}
 	return routed, true
 }
@@ -238,7 +238,7 @@ func legacySink(pf *projectfile.Document) map[string]map[string]any {
 	if host == "" {
 		return nil
 	}
-	genlog.Decision("sink_ref", host, pfmodel.ReadmeExtensionNS+"."+legacyRegistryKey,
+	genlog.DebugRow("sink_ref", host, pfmodel.ReadmeExtensionNS+"."+legacyRegistryKey,
 		"no sinks namespace declared")
 	return map[string]map[string]any{
 		nameOf(host): {pfmodel.SinkRefKey: host + legacyRefTemplate},

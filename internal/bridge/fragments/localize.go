@@ -66,7 +66,7 @@ func resolveVariantLangs(projectDir string, doc pfmodel.FragmentDocument, langs 
 		return nil
 	}
 	if !docLocalizable(doc) {
-		genlog.Decision("fragments_localization", doc.Out, doc.Dir, "skipped (dir outside docs/ or nested out)")
+		genlog.DebugRow("fragments_localization", doc.Out, doc.Dir, "skipped (dir outside docs/ or nested out)")
 		return nil
 	}
 	out2 := make([]variantFragments, 0, len(langs))
@@ -111,7 +111,7 @@ func overCanonical(canonical []inheritedCopy, localized map[string]inheritedCopy
 	}
 	for _, c := range canonical {
 		if _, translated := localized[slug(c.Name)]; !translated {
-			genlog.Info("fragments: parent publishes no localized document, nesting the canonical copy",
+			genlog.Debug("fragments: parent publishes no localized document, nesting the canonical copy",
 				"parent", c.Name, "lang", lang, "document", document)
 		}
 	}

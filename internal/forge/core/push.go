@@ -128,7 +128,7 @@ func processRepo(
 	rr := RepoResult{URL: repo.URL}
 
 	if !repoFilter(repo.URL) {
-		genlog.Info("forge push: skip (not in --repo filter)", "url", repo.URL)
+		genlog.Debug("forge push: skip (not in --repo filter)", "url", repo.URL)
 		rr.Skipped = true
 		rr.Reason = "not in --repo filter"
 		return rr
@@ -136,7 +136,7 @@ func processRepo(
 	// archive entries are frozen by design — pushing to them would defeat
 	// the whole point of the role. Origin + mirror both get synced.
 	if repo.Role == projectfile.RepositoryRoleArchive {
-		genlog.Info("forge push: skip (archive role)", "url", repo.URL, "role", repo.Role)
+		genlog.Debug("forge push: skip (archive role)", "url", repo.URL, "role", repo.Role)
 		rr.Skipped = true
 		rr.Reason = "archive role"
 		return rr
@@ -159,7 +159,7 @@ func processRepo(
 	rr.Kind = kind
 
 	if !forgeFilter(host) {
-		genlog.Info("forge push: skip (not in --forge filter)", "url", repo.URL, "host", host)
+		genlog.Debug("forge push: skip (not in --forge filter)", "url", repo.URL, "host", host)
 		rr.Skipped = true
 		rr.Reason = "not in --forge filter"
 		return rr
@@ -167,7 +167,7 @@ func processRepo(
 
 	if ext != nil && ext.Hosts != nil {
 		if allow, ok := ext.Hosts[host]; ok && !allow {
-			genlog.Info("forge push: skip (host opt-out)", "url", repo.URL, "host", host)
+			genlog.Debug("forge push: skip (host opt-out)", "url", repo.URL, "host", host)
 			rr.Skipped = true
 			rr.Reason = "host opt-out via org.projectfile.forge.hosts"
 			return rr
@@ -216,7 +216,7 @@ func processRepo(
 	patch, changes := diffWithFilter(current, desired, allowField, hostmatch.Kind(kind))
 	rr.Changes = changes
 	if patch.IsEmpty() {
-		genlog.Info("forge push: up to date", "url", repo.URL)
+		genlog.Debug("forge push: up to date", "url", repo.URL)
 		rr.UpToDate = true
 		return rr
 	}
@@ -225,14 +225,14 @@ func processRepo(
 	for _, fc := range changes {
 		switch {
 		case fc.Skipped:
-			genlog.Decision(fc.Field, "(skipped)", fc.Source, fc.Reason)
+			genlog.DebugRow(fc.Field, "(skipped)", fc.Source, fc.Reason)
 		default:
-			genlog.Decision(fc.Field, fc.Value, fc.Source, "")
+			genlog.DebugRow(fc.Field, fc.Value, fc.Source, "")
 		}
 	}
 
 	if opts.DryRun {
-		genlog.Info("forge push: dry-run, no API call", "url", repo.URL)
+		genlog.Debug("forge push: dry-run, no API call", "url", repo.URL)
 		return rr
 	}
 	if err := driver.Apply(repoCtx, owner, name, patch); err != nil {
@@ -241,7 +241,7 @@ func processRepo(
 		rr.Error = err.Error()
 		return rr
 	}
-	genlog.Info("forge push: applied", "url", repo.URL, "fields", len(changes))
+	genlog.Debug("forge push: applied", "url", repo.URL, "fields", len(changes))
 	return rr
 }
 

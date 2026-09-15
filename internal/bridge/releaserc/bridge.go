@@ -72,10 +72,10 @@ func (Bridge) Render(pf *projectfile.Document, _ core.Options) (core.Output, err
 		Plugins:   plugins(ext.Changelog, forgePlugin),
 	}
 
-	genlog.Decision("forge_plugin", forgeLabel, "org.projectfile.forge / primary repository host", "")
-	genlog.Decision("tag_format", cfg.TagFormat, "[org.projectfile.release].tag-format (default v${version})", "")
-	genlog.Decision("branches", fmt.Sprintf("%d", len(cfg.Branches)), "[org.projectfile.release].branches", "")
-	genlog.Decision("changelog", orDefault(ext.Changelog, "(none)"), "[org.projectfile.release].changelog", "")
+	genlog.DebugRow("forge_plugin", forgeLabel, "org.projectfile.forge / primary repository host", "")
+	genlog.DebugRow("tag_format", cfg.TagFormat, "[org.projectfile.release].tag-format (default v${version})", "")
+	genlog.DebugRow("branches", fmt.Sprintf("%d", len(cfg.Branches)), "[org.projectfile.release].branches", "")
+	genlog.DebugRow("changelog", orDefault(ext.Changelog, "(none)"), "[org.projectfile.release].changelog", "")
 
 	// yaml.v3's default Marshal uses 4-space indent; the project convention
 	// (rawdoc.YAMLNode.Marshal, projectfile.writeYAMLClean) is 2 spaces, so

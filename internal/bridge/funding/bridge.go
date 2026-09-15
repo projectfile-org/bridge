@@ -118,7 +118,7 @@ func (Bridge) Render(pf *projectfile.Document, opts core.Options) (core.Output, 
     custom = ["https://buymeacoffee.com/..."]
   Spec reference: https://projectfile.org/spec/v1#funding`)
 	}
-	genlog.Decision("providers", summary(ext), "[org.projectfile.funding]", "")
+	genlog.DebugRow("providers", summary(ext), "[org.projectfile.funding]", "")
 	body, err := core.Render(opts.Dir, "FUNDING.yml.tmpl", fundingView{
 		Marker:          core.Marker,
 		GitHub:          ext.GitHub,
@@ -240,7 +240,7 @@ func parseOthers(input string, ext *pfmodel.FundingExtension) error {
 		if val == "" {
 			return fmt.Errorf("empty value for slug %q", slug)
 		}
-		genlog.Decision("funding-other", slug, "user-input", val)
+		genlog.DebugRow("funding-other", slug, "user-input", val)
 		apply(ext, val)
 	}
 	return nil

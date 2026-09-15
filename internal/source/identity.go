@@ -69,7 +69,7 @@ func ApplyUserIdentity(p *Partial) {
 			filled = true
 		}
 		if filled {
-			genlog.Info("user identity attached", "email", p.People[i].Email)
+			genlog.Debug("user identity attached", "email", p.People[i].Email)
 		}
 	}
 }

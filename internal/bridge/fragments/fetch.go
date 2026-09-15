@@ -85,7 +85,7 @@ func fetchParents(doc pfmodel.FragmentDocument, langs []string) (map[string]inhe
 		copied, translated, err := fetchParent(context.Background(), parent, doc.Out, fetchLangs)
 		switch {
 		case errors.Is(err, errNotPublished):
-			genlog.Info("fragments: parent publishes no such document, nothing to inherit",
+			genlog.Debug("fragments: parent publishes no such document, nothing to inherit",
 				"parent", parent.URL, "document", doc.Out)
 			continue
 		case err != nil:
@@ -101,7 +101,7 @@ func fetchParents(doc pfmodel.FragmentDocument, langs []string) (map[string]inhe
 			}
 			localized[lang][slug(lc.Name)] = lc
 		}
-		genlog.Info("fragments: fetched parent",
+		genlog.Debug("fragments: fetched parent",
 			"parent", copied.Name, "ref", copied.Ref, "commit", shortCommit(copied.Commit),
 			"document", doc.Out, "languages", len(translated))
 	}
@@ -129,7 +129,7 @@ var fetchParent = func(ctx context.Context, parent pfmodel.FragmentParent, docum
 	if err != nil {
 		return inheritedCopy{}, nil, err
 	}
-	genlog.Info("fragments: resolved parent version",
+	genlog.Debug("fragments: resolved parent version",
 		"parent", name, "requested", parent.Ref, "ref", ref, "commit", shortCommit(commit))
 
 	body, err := fetchDocument(ctx, parent.URL, archiveRef(ref), document)
@@ -172,7 +172,7 @@ func fetchTranslations(ctx context.Context, parent pfmodel.FragmentParent, canon
 		cop, err := fetchLocalizedCopy(ctx, parent, canonical, ref, document, lang)
 		switch {
 		case errors.Is(err, errNotPublished):
-			genlog.Info("fragments: parent publishes no such document, variant falls back to the canonical copy",
+			genlog.Debug("fragments: parent publishes no such document, variant falls back to the canonical copy",
 				"parent", parent.URL, "document", core.LocalizedFilename(document, lang))
 			continue
 		case err != nil:
@@ -181,7 +181,7 @@ func fetchTranslations(ctx context.Context, parent pfmodel.FragmentParent, canon
 			continue
 		}
 		out[lang] = cop
-		genlog.Info("fragments: fetched localized parent copy",
+		genlog.Debug("fragments: fetched localized parent copy",
 			"parent", cop.Name, "lang", lang, "ref", cop.Ref, "document", cop.Document)
 	}
 	return out
@@ -222,15 +222,15 @@ func parentTitle(ctx context.Context, repoURL, ref string) string {
 		case errors.Is(err, errNotPublished):
 			continue
 		case err != nil:
-			genlog.Info("fragments: parent projectfile unreadable, naming the parent by repository",
+			genlog.Debug("fragments: parent projectfile unreadable, naming the parent by repository",
 				"parent", repoURL, "file", name, "error", err.Error())
 			return ""
 		}
 		title := identityTitle([]byte(body), name)
-		genlog.Info("fragments: read the parent title", "parent", repoURL, "file", name, "title", title)
+		genlog.Debug("fragments: read the parent title", "parent", repoURL, "file", name, "title", title)
 		return title
 	}
-	genlog.Info("fragments: parent publishes no projectfile, naming it by repository", "parent", repoURL)
+	genlog.Debug("fragments: parent publishes no projectfile, naming it by repository", "parent", repoURL)
 	return ""
 }
 
@@ -252,7 +252,7 @@ func identityTitle(body []byte, name string) string {
 		unmarshal = toml.Unmarshal
 	}
 	if err := unmarshal(body, &doc); err != nil {
-		genlog.Info("fragments: parent projectfile did not parse, naming the parent by repository",
+		genlog.Debug("fragments: parent projectfile did not parse, naming the parent by repository",
 			"file", name, "error", err.Error())
 		return ""
 	}
@@ -373,7 +373,7 @@ func tarEntry(stream []byte, document string) (string, error) {
 			return "", err
 		}
 		if header.Typeflag != tar.TypeReg || !strings.HasSuffix(header.Name, document) {
-			genlog.Info("fragments: skipping archive member", "member", header.Name, "want", document)
+			genlog.Debug("fragments: skipping archive member", "member", header.Name, "want", document)
 			continue
 		}
 		body, err := io.ReadAll(reader)

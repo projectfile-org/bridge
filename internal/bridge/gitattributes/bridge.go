@@ -87,7 +87,7 @@ func (Bridge) Render(pf *projectfile.Document, _ core.Options) (core.Output, err
 	if len(named) > 0 {
 		detail += " for " + strings.Join(named, ", ")
 	}
-	genlog.Decision("attributes", detail, pfmodel.AttributesExtensionNS, "")
+	genlog.DebugRow("attributes", detail, pfmodel.AttributesExtensionNS, "")
 	return core.Output{Files: map[string][]byte{filename: body}}, nil
 }
 

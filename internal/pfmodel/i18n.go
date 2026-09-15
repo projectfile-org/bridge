@@ -102,7 +102,7 @@ func Languages(doc *projectfile.Document) []string {
 			reason = "dropped (is default-language; rendered at root)"
 		}
 		if reason != "" {
-			genlog.Decision("language", lang, I18NExtensionNS+".languages", reason)
+			genlog.DebugRow("language", lang, I18NExtensionNS+".languages", reason)
 			continue
 		}
 		seen[lang] = true

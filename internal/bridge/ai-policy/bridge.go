@@ -70,7 +70,7 @@ func (Bridge) Render(pf *projectfile.Document, opts core.Options) (core.Output, 
 		return core.Output{}, err
 	}
 	if ext == nil {
-		genlog.Decision("namespace", "absent", "org.projectfile.ai",
+		genlog.DebugRow("namespace", "absent", "org.projectfile.ai",
 			"skipped — absence is not permission, never rendered as one")
 		return core.Output{Files: map[string][]byte{}}, nil
 	}
@@ -123,30 +123,30 @@ func (Bridge) Render(pf *projectfile.Document, opts core.Options) (core.Output, 
 }
 
 func emitDecisionTrace(ext *pfmodel.AIExtension, outName string, rows []activityRow, defaultActivities []string, useRows []projectUseRow, signals, enforcement []string, policyURL, contact, contactSrc string) {
-	genlog.Decision("filename", outName, "[org.projectfile.ai].filename", "default: "+filenameAIPolicy)
-	genlog.Decision("attitude", ext.Attitude, "[org.projectfile.ai].attitude", "")
-	genlog.Decision("autonomy", ext.Autonomy, "[org.projectfile.ai].autonomy", "default: any")
-	genlog.Decision("applies_to", ext.AppliesTo, "[org.projectfile.ai].applies-to", "default: everyone")
-	genlog.Decision("disclose_required", fmt.Sprintf("%v", ext.DiscloseRequired), "[org.projectfile.ai].disclose-required", "")
+	genlog.DebugRow("filename", outName, "[org.projectfile.ai].filename", "default: "+filenameAIPolicy)
+	genlog.DebugRow("attitude", ext.Attitude, "[org.projectfile.ai].attitude", "")
+	genlog.DebugRow("autonomy", ext.Autonomy, "[org.projectfile.ai].autonomy", "default: any")
+	genlog.DebugRow("applies_to", ext.AppliesTo, "[org.projectfile.ai].applies-to", "default: everyone")
+	genlog.DebugRow("disclose_required", fmt.Sprintf("%v", ext.DiscloseRequired), "[org.projectfile.ai].disclose-required", "")
 	for _, r := range rows {
-		genlog.Decision("activity_override", r.Activity+" -> "+r.Stance, "[org.projectfile.ai].activities."+r.Activity, "differs from attitude")
+		genlog.DebugRow("activity_override", r.Activity+" -> "+r.Stance, "[org.projectfile.ai].activities."+r.Activity, "differs from attitude")
 	}
-	genlog.Decision("default_activities", strings.Join(defaultActivities, ", "), "[org.projectfile.ai].attitude", "activities with no override — governed by attitude")
+	genlog.DebugRow("default_activities", strings.Join(defaultActivities, ", "), "[org.projectfile.ai].attitude", "activities with no override — governed by attitude")
 	for _, r := range useRows {
-		genlog.Decision("project_use", r.Activity+" -> "+r.Autonomy, "[org.projectfile.ai].project-use."+r.Activity, "internal direction")
+		genlog.DebugRow("project_use", r.Activity+" -> "+r.Autonomy, "[org.projectfile.ai].project-use."+r.Activity, "internal direction")
 	}
 	if len(enforcement) == 0 {
-		genlog.Decision("enforcement", "(unset, no consequence stated)", "[org.projectfile.ai].enforcement", "")
+		genlog.DebugRow("enforcement", "(unset, no consequence stated)", "[org.projectfile.ai].enforcement", "")
 	} else {
-		genlog.Decision("enforcement", strings.Join(enforcement, " → "), "[org.projectfile.ai].enforcement", "declared order is the escalation order")
+		genlog.DebugRow("enforcement", strings.Join(enforcement, " → "), "[org.projectfile.ai].enforcement", "declared order is the escalation order")
 	}
 	if len(signals) == 0 {
-		genlog.Decision("content_signals", "(unset, section states the absence)", "[org.projectfile.ai].content-signals", "")
+		genlog.DebugRow("content_signals", "(unset, section states the absence)", "[org.projectfile.ai].content-signals", "")
 	} else {
-		genlog.Decision("content_signals", strings.Join(signals, ", "), "[org.projectfile.ai].content-signals", "")
+		genlog.DebugRow("content_signals", strings.Join(signals, ", "), "[org.projectfile.ai].content-signals", "")
 	}
-	genlog.Decision("policy_url", valOrUnset(policyURL), "links[type=ai-policy]", "")
-	genlog.Decision("contact", valOrUnset(contact), contactSrc, "people[roles=community]")
+	genlog.DebugRow("policy_url", valOrUnset(policyURL), "links[type=ai-policy]", "")
+	genlog.DebugRow("contact", valOrUnset(contact), contactSrc, "people[roles=community]")
 }
 
 func valOrUnset(s string) string {

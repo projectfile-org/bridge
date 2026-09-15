@@ -53,7 +53,7 @@ func (Bridge) Render(pf *projectfile.Document, opts core.Options) (core.Output, 
 	// absent entirely) means the project has not opted in, so we emit nothing.
 	// We never delete an existing DEI.md — the marker policy handles that.
 	if ext == nil || !ext.Enabled {
-		genlog.Decision("enabled", "false", "[org.projectfile.dei].enabled", "skipped — DEI.md is opt-in")
+		genlog.DebugRow("enabled", "false", "[org.projectfile.dei].enabled", "skipped — DEI.md is opt-in")
 		return core.Output{Files: map[string][]byte{}}, nil
 	}
 
@@ -108,18 +108,18 @@ func hasMetric(ext *pfmodel.DEIExtension, slug string) bool {
 }
 
 func emitDecisionTrace(ext *pfmodel.DEIExtension, contact, contactSrc string) {
-	genlog.Decision("enabled", fmt.Sprintf("%v", ext.Enabled), "[org.projectfile.dei].enabled", "")
+	genlog.DebugRow("enabled", fmt.Sprintf("%v", ext.Enabled), "[org.projectfile.dei].enabled", "")
 	scopeSrc := "[org.projectfile.dei].scope"
 	if ext.Scope == "" {
 		scopeSrc = "default (from template)"
 	}
-	genlog.Decision("scope", valueOrEmpty(ext.Scope), scopeSrc, "[org.projectfile.dei].scope")
+	genlog.DebugRow("scope", valueOrEmpty(ext.Scope), scopeSrc, "[org.projectfile.dei].scope")
 	reviewedSrc := "[org.projectfile.dei].last-reviewed"
 	if ext.LastReviewed == "" {
 		reviewedSrc = "default ([Enter Date] placeholder)"
 	}
-	genlog.Decision("last-reviewed", valueOrEmpty(ext.LastReviewed), reviewedSrc, "[org.projectfile.dei].last-reviewed")
-	genlog.Decision("contact", valueOrEmpty(contact), contactSrc, "people[roles=community]")
+	genlog.DebugRow("last-reviewed", valueOrEmpty(ext.LastReviewed), reviewedSrc, "[org.projectfile.dei].last-reviewed")
+	genlog.DebugRow("contact", valueOrEmpty(contact), contactSrc, "people[roles=community]")
 }
 
 func valueOrEmpty(s string) string {

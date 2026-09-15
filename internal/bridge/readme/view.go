@@ -133,7 +133,7 @@ func buildArtifacts(doc *projectfile.Document, lang string) []artifactView {
 	for _, a := range declared {
 		expanded, resolved := interp.ExpandFanOut(doc, artifactAddress(a))
 		if !resolved {
-			genlog.Decision("artifact", a.Key, "unresolved address (dropped)", artifactAddress(a))
+			genlog.DebugRow("artifact", a.Key, "unresolved address (dropped)", artifactAddress(a))
 			continue
 		}
 		for _, address := range pfmodel.ExpandAxes(expanded, axes) {
@@ -188,7 +188,7 @@ func buildPlatforms(doc *projectfile.Document) []string {
 	}
 	slices.Sort(out)
 	for _, p := range out {
-		genlog.Decision("platform", p, osExtensionNS+" x "+archExtensionNS, "")
+		genlog.DebugRow("platform", p, osExtensionNS+" x "+archExtensionNS, "")
 	}
 	return out
 }
@@ -222,7 +222,7 @@ func artifactKindLabel(kind, lang string) string {
 	if label, ok := lookupMessage(lang, keyPrefixArtifactKind+kind); ok {
 		return label
 	}
-	genlog.Decision("artifact_label", kind, "no catalog entry", keyPrefixArtifactKind+kind)
+	genlog.DebugRow("artifact_label", kind, "no catalog entry", keyPrefixArtifactKind+kind)
 	return kind
 }
 
@@ -341,7 +341,7 @@ func healthFileLabel(file, lang string) string {
 	if label, ok := lookupMessage(lang, key); ok {
 		return label
 	}
-	genlog.Decision("policy_label", file, "no catalog entry", key)
+	genlog.DebugRow("policy_label", file, "no catalog entry", key)
 	return file
 }
 
@@ -553,7 +553,7 @@ func buildBadges(doc *projectfile.Document, ext *pfmodel.ReadmeExtension) []badg
 	for _, s := range ext.Shields {
 		img, href := interp.Expand(doc, s.Img), interp.Expand(doc, s.Href)
 		if img == "" || interp.Unresolved(img) || interp.Unresolved(href) {
-			genlog.Decision("badge", s.Name, "unresolved reference (dropped)", img)
+			genlog.DebugRow("badge", s.Name, "unresolved reference (dropped)", img)
 			continue
 		}
 		alt := interp.Expand(doc, s.Alt)
@@ -562,7 +562,7 @@ func buildBadges(doc *projectfile.Document, ext *pfmodel.ReadmeExtension) []badg
 		}
 		b := badge{Alt: alt, Img: img, Href: href, Row: s.Row, Priority: pfmodel.RankOf(s.Priority)}
 		if at, seen := position[s.Name]; seen {
-			genlog.Decision("badge", s.Name, "redeclared (last wins)", out[at].Img)
+			genlog.DebugRow("badge", s.Name, "redeclared (last wins)", out[at].Img)
 			out[at] = b
 			continue
 		}
@@ -600,7 +600,7 @@ func buildBadgeRows(doc *projectfile.Document, ext *pfmodel.ReadmeExtension) []b
 			i = len(rows)
 			at[b.Row] = i
 			rows = append(rows, badgeRow{Name: b.Row})
-			genlog.Decision("badge_row", rowLabel(b.Row), "first appearance", strconv.Itoa(i+1))
+			genlog.DebugRow("badge_row", rowLabel(b.Row), "first appearance", strconv.Itoa(i+1))
 		}
 		rows[i].Badges = append(rows[i].Badges, b)
 	}
@@ -676,7 +676,7 @@ func buildLinkGroups(pf *projectfile.Document, lang string) []linkGroup {
 				label, _ = lookupMessage(lang, keyPrefixLinkType+m.link.Type)
 			}
 			if label == "" {
-				genlog.Decision("link_label", m.link.Type, "no label and no catalog entry", "links[].label")
+				genlog.DebugRow("link_label", m.link.Type, "no label and no catalog entry", "links[].label")
 				label = m.link.Type
 			}
 			entries = append(entries, linkEntry{Label: label, URL: m.link.URL})
@@ -688,7 +688,7 @@ func buildLinkGroups(pf *projectfile.Document, lang string) []linkGroup {
 		})
 	}
 	if len(out) == 0 && len(pf.Links) > 0 {
-		genlog.Decision("links", strconv.Itoa(len(pf.Links)), "no readme-tagged link (section dropped)",
+		genlog.DebugRow("links", strconv.Itoa(len(pf.Links)), "no readme-tagged link (section dropped)",
 			"links[] declared="+strconv.Itoa(len(pf.Links)))
 	}
 	return out
@@ -749,7 +749,7 @@ func relatedLinks(doc *projectfile.Document, lang string) []linkEntry {
 			label, _ = lookupMessage(lang, keyPrefixLinkType+l.Type)
 		}
 		if label == "" {
-			genlog.Decision("related_label", l.Type, "no label and no catalog entry", "links[].label")
+			genlog.DebugRow("related_label", l.Type, "no label and no catalog entry", "links[].label")
 			label = l.Type
 		}
 		out = append(out, linkEntry{Label: label, URL: l.URL})
@@ -1060,7 +1060,7 @@ func buildFeatureDoc(dir, pathLang, strLang string) *featureDoc {
 				Inherited: parsed.Inherited,
 			}
 		}
-		genlog.Decision("features_fallback", localized, fileFeatures, "no localized document yet")
+		genlog.DebugRow("features_fallback", localized, fileFeatures, "no localized document yet")
 	}
 	if !fileExists(dir, fileFeatures) {
 		return nil
@@ -1122,7 +1122,7 @@ func buildAcknowledgements(doc *projectfile.Document, lang string) []ackGroup {
 		items := make([]string, 0, len(list))
 		for _, a := range list {
 			items = append(items, ackBullet(a))
-			genlog.Decision("acknowledgement", a.Name, pfmodel.AcknowledgementsExtensionNS+"."+g.key, "")
+			genlog.DebugRow("acknowledgement", a.Name, pfmodel.AcknowledgementsExtensionNS+"."+g.key, "")
 		}
 		out = append(out, ackGroup{Heading: heading, Items: items})
 	}
@@ -1147,15 +1147,15 @@ func ackBullet(a pfmodel.Acknowledgement) string {
 // accurate without round-tripping through view-model fields. Every log carries
 // at least one variable per the workspace's logging rule.
 func formatDecisionTrace(dir, lang string, v readmeView, ext *pfmodel.ReadmeExtension) {
-	genlog.Decision("lang", core.LocalizedFilename(filenameReadme, lang), "active render language", pfmodel.I18NExtensionNS+".languages")
+	genlog.DebugRow("lang", core.LocalizedFilename(filenameReadme, lang), "active render language", pfmodel.I18NExtensionNS+".languages")
 	for _, l := range v.Languages {
-		genlog.Decision("language_link", l.Label+" → "+l.Filename, pfmodel.I18NExtensionNS+".languages", "")
+		genlog.DebugRow("language_link", l.Label+" → "+l.Filename, pfmodel.I18NExtensionNS+".languages", "")
 	}
-	genlog.Decision("project_name", pfmodel.DisplayName(v.Doc), "identity.title.en or namespace/name", "")
-	genlog.Decision("summary", summaryOrUnset(extractLSForLang(v.Doc.Identity.Summary, v.Lang)), "identity.summary", "")
+	genlog.DebugRow("project_name", pfmodel.DisplayName(v.Doc), "identity.title.en or namespace/name", "")
+	genlog.DebugRow("summary", summaryOrUnset(extractLSForLang(v.Doc.Identity.Summary, v.Lang)), "identity.summary", "")
 	for _, g := range buildLinkGroups(v.Doc, v.Lang) {
 		for _, l := range g.Links {
-			genlog.Decision(
+			genlog.DebugRow(
 				fmt.Sprintf("link[%s]", g.Key),
 				l.Label+" → "+l.URL,
 				"links[]",
@@ -1164,44 +1164,44 @@ func formatDecisionTrace(dir, lang string, v readmeView, ext *pfmodel.ReadmeExte
 		}
 	}
 	for _, l := range relatedLinks(v.Doc, v.Lang) {
-		genlog.Decision("related", l.Label+" → "+l.URL, "links[] tagged related", "")
+		genlog.DebugRow("related", l.Label+" → "+l.URL, "links[] tagged related", "")
 	}
 	for _, s := range probeHealthFiles(v.Doc, dir, readmeDocPath(lang), lang, lang) {
-		genlog.Decision("static_link", s.Label+" → "+s.Filename, "policies probe", "")
+		genlog.DebugRow("static_link", s.Label+" → "+s.Filename, "policies probe", "")
 	}
 	for _, r := range buildBadgeRows(v.Doc, ext) {
 		for _, b := range r.Badges {
-			genlog.Decision("badge", b.Alt+" → "+b.Img, "readme.shields[]", rowLabel(r.Name))
+			genlog.DebugRow("badge", b.Alt+" → "+b.Img, "readme.shields[]", rowLabel(r.Name))
 		}
 	}
 	for _, l := range probeLogo(dir) {
-		genlog.Decision("logo", l, "docs/assets probe", "")
+		genlog.DebugRow("logo", l, "docs/assets probe", "")
 	}
 	for _, s := range probeScreenshots(dir) {
-		genlog.Decision("screenshot", s.Path, "docs/screenshots probe", "")
+		genlog.DebugRow("screenshot", s.Path, "docs/screenshots probe", "")
 	}
 	for _, d := range listDocsMarkdown(dir, readmeDocPath(lang)) {
-		genlog.Decision("doc_link", d.Label+" → "+d.Filename, "docs/how-to/*.md probe", "")
+		genlog.DebugRow("doc_link", d.Label+" → "+d.Filename, "docs/how-to/*.md probe", "")
 	}
 	for _, b := range probeBuildLinks(dir, readmeDocPath(lang), lang) {
-		genlog.Decision("build_link", b.Label+" → "+b.Filename, "BUILD/MAKEFILE probe", "")
+		genlog.DebugRow("build_link", b.Label+" → "+b.Filename, "BUILD/MAKEFILE probe", "")
 	}
 	for _, spec := range docLinkSpecs {
 		if link := docLink(dir, readmeDocPath(lang), spec.File, translate(lang, spec.Key)); link != nil {
-			genlog.Decision("doc_link", link.Label+" → "+link.Filename, spec.File+" probe", "")
+			genlog.DebugRow("doc_link", link.Label+" → "+link.Filename, spec.File+" probe", "")
 		}
 	}
 	parsed := parseFeatureSections(dir, fileFeatures)
 	for _, h := range parsed.Project {
-		genlog.Decision("feature", h, fileFeatures+" H3 probe", "")
+		genlog.DebugRow("feature", h, fileFeatures+" H3 probe", "")
 	}
 	for _, g := range parsed.Inherited {
 		for _, h := range g.Items {
-			genlog.Decision("feature_inherited", h, fileFeatures+" H3 probe", g.Heading)
+			genlog.DebugRow("feature_inherited", h, fileFeatures+" H3 probe", g.Heading)
 		}
 	}
 	if spdx := licenseSPDX(v.Doc); spdx != "" {
-		genlog.Decision("license", spdx, "license.spdx", "")
+		genlog.DebugRow("license", spdx, "license.spdx", "")
 	}
 }
 

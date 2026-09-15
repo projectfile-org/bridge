@@ -75,7 +75,7 @@ func Run(opts Options) error {
 	}
 
 	for _, name := range sourceNames {
-		genlog.Info("source detected", "name", name)
+		genlog.Debug("source detected", "name", name)
 	}
 
 	// Scanners run after sources and gap-fill — MergePartials uses
@@ -91,7 +91,7 @@ func Run(opts Options) error {
 			genlog.Warn("scanner failures", "err", scanErr.Error())
 		}
 		for _, h := range hits {
-			genlog.Info("scanner", "name", h.Source, "field", h.Field)
+			genlog.Debug("scanner", "name", h.Source, "field", h.Field)
 		}
 		partial = source.MergePartials(partial, scanned)
 	}
@@ -204,7 +204,7 @@ func Run(opts Options) error {
 		genlog.Warn("derive failed", "err", derr.Error())
 	} else {
 		for _, c := range changes {
-			genlog.Info("derive", "field", c.FieldPath, "source", c.Source, "value", c.NewValue)
+			genlog.Debug("derive", "field", c.FieldPath, "source", c.Source, "value", c.NewValue)
 		}
 	}
 
@@ -220,7 +220,7 @@ func Run(opts Options) error {
 		if len(sourceNames) > 0 {
 			sourcesStr = strings.Join(sourceNames, ", ")
 		}
-		genlog.Info("created", "file", filepath.Base(path), "fields", fieldCount, "from", sourcesStr)
+		genlog.Success(fmt.Sprintf("created %s (%d fields from %s)", filepath.Base(path), fieldCount, sourcesStr))
 
 		return nil
 	})

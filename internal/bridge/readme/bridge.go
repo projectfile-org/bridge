@@ -225,12 +225,12 @@ func renderBlock(dir, blockName string, data readmeView, ext *pfmodel.ReadmeExte
 			if content == "" {
 				continue
 			}
-			genlog.Decision("block", blockName, "extras", "lang="+lang)
+			genlog.DebugRow("block", blockName, "extras", "lang="+lang)
 			return []byte(content), nil
 		}
 	}
 
-	genlog.Decision("block", blockName, "no match (skipped)", "lang="+lang)
+	genlog.DebugRow("block", blockName, "no match (skipped)", "lang="+lang)
 	return nil, nil
 }
 
@@ -244,10 +244,10 @@ func execTracedBlock(tmplName string, body []byte, data readmeView, dir string, 
 		return nil, err
 	}
 	if len(bytes.TrimSpace(rendered)) == 0 {
-		genlog.Decision("block", blockName, source+" (empty, skipped)", "lang="+lang)
+		genlog.DebugRow("block", blockName, source+" (empty, skipped)", "lang="+lang)
 		return nil, nil
 	}
-	genlog.Decision("block", blockName, source, "lang="+lang)
+	genlog.DebugRow("block", blockName, source, "lang="+lang)
 	return rendered, nil
 }
 

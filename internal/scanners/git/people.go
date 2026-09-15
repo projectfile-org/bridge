@@ -127,7 +127,7 @@ func collectAuthors(root string) []source.PersonEntry {
 		// family-names only and we log so the user knows to review.
 		family, given := projectfile.SplitGitName(b.name)
 		if projectfile.AmbiguousGitName(b.name) {
-			genlog.Info("git author has single-token name; review for organization vs mononym", "name", b.name, "email", b.email)
+			genlog.Debug("git author has single-token name; review for organization vs mononym", "name", b.name, "email", b.email)
 		}
 		people = append(people, source.PersonEntry{
 			FamilyNames: family,

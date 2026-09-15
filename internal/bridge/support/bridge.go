@@ -176,31 +176,31 @@ func emitDecisionTrace(pf *projectfile.Document, ext *pfmodel.SupportExtension,
 	beforeLinks []beforeLink, rows []tableRow, paidSupport []labeledLink,
 	statusPageURL, responseTime, responseTimeSrc string,
 ) {
-	genlog.Decision("project_name", pfmodel.DisplayName(pf), "identity.title.en or namespace/name", "")
+	genlog.DebugRow("project_name", pfmodel.DisplayName(pf), "identity.title.en or namespace/name", "")
 	for _, bl := range beforeLinks {
-		genlog.Decision("before_link", bl.Label+" → "+bl.URL, "links[]", "")
+		genlog.DebugRow("before_link", bl.Label+" → "+bl.URL, "links[]", "")
 	}
 	for _, r := range rows {
-		genlog.Decision("table_row", r.Kind+" → "+r.GoTo, "links[] or local file", "")
+		genlog.DebugRow("table_row", r.Kind+" → "+r.GoTo, "links[] or local file", "")
 	}
 	if len(paidSupport) == 0 {
-		genlog.Decision("paid_support", "(unset, section omitted)", "links[type=paid-support]", "")
+		genlog.DebugRow("paid_support", "(unset, section omitted)", "links[type=paid-support]", "")
 	} else {
 		var entries []string
 		for _, p := range paidSupport {
 			entries = append(entries, p.Label+" → "+p.URL)
 		}
-		genlog.Decision("paid_support", strings.Join(entries, ", "), "links[type=paid-support]", "")
+		genlog.DebugRow("paid_support", strings.Join(entries, ", "), "links[type=paid-support]", "")
 	}
-	genlog.Decision("status_page_url", valOrUnset(statusPageURL), "links[type=status-page]", "")
-	genlog.Decision("response_time", responseTime, responseTimeSrc, "[org.projectfile.support].response-time")
+	genlog.DebugRow("status_page_url", valOrUnset(statusPageURL), "links[type=status-page]", "")
+	genlog.DebugRow("response_time", responseTime, responseTimeSrc, "[org.projectfile.support].response-time")
 	if len(ext.EOL) == 0 {
-		genlog.Decision("eol", "(unset, section omitted)", "[org.projectfile.support].eol", "")
+		genlog.DebugRow("eol", "(unset, section omitted)", "[org.projectfile.support].eol", "")
 	} else {
 		var entries []string
 		for _, e := range ext.EOL {
 			entries = append(entries, e.Version+" → "+e.Date)
 		}
-		genlog.Decision("eol", strings.Join(entries, ", "), "[org.projectfile.support].eol", "")
+		genlog.DebugRow("eol", strings.Join(entries, ", "), "[org.projectfile.support].eol", "")
 	}
 }

@@ -106,7 +106,7 @@ func buildSection(doc *projectfile.Document, ext *pfmodel.ReadmeExtension, name,
 		groups = append(groups, view)
 	}
 	if len(groups) == 0 {
-		genlog.Decision("readme_section", name, "no group resolved (section dropped)", source)
+		genlog.DebugRow("readme_section", name, "no group resolved (section dropped)", source)
 		return nil
 	}
 	return &sectionView{Title: translate(lang, name+".title"), Groups: groups}
@@ -127,13 +127,13 @@ func buildSectionGroup(doc *projectfile.Document, group pfmodel.ReadmeSectionGro
 	for _, command := range group.Commands {
 		lines, resolved := interp.ExpandFanOut(doc, command)
 		if !resolved {
-			genlog.Decision("readme_command", command, "unresolved reference (dropped)", label)
+			genlog.DebugRow("readme_command", command, "unresolved reference (dropped)", label)
 			continue
 		}
 		expanded = append(expanded, lines...)
 	}
 	if len(group.Commands) > 0 && len(expanded) == 0 {
-		genlog.Decision("readme_group", label, "no command resolved (group dropped)", source)
+		genlog.DebugRow("readme_group", label, "no command resolved (group dropped)", source)
 		return sectionGroupView{}, false
 	}
 	syntax := group.Syntax
@@ -156,17 +156,17 @@ func buildSectionGroup(doc *projectfile.Document, group pfmodel.ReadmeSectionGro
 			subgroups[i].Commands = pfmodel.ExpandAxes(subgroups[i].Commands, axes)
 		}
 		view.Subgroups = subgroups
-		genlog.Decision("readme_group", label, "commands grouped by sink", source+" sinks="+strconv.Itoa(len(subgroups)))
+		genlog.DebugRow("readme_group", label, "commands grouped by sink", source+" sinks="+strconv.Itoa(len(subgroups)))
 		for _, sg := range subgroups {
 			for _, line := range sg.Commands {
-				genlog.Decision("readme_command", line, source, "group="+label+" sink="+sg.Label+" lang="+lang)
+				genlog.DebugRow("readme_command", line, source, "group="+label+" sink="+sg.Label+" lang="+lang)
 			}
 		}
 		return view, true
 	}
 	view.Commands = pfmodel.ExpandAxes(expanded, axes)
 	for _, line := range view.Commands {
-		genlog.Decision("readme_command", line, source, "group="+label+" lang="+lang)
+		genlog.DebugRow("readme_command", line, source, "group="+label+" lang="+lang)
 	}
 	return view, true
 }
@@ -255,7 +255,7 @@ func groupLabel(name string) string {
 func expandProse(doc *projectfile.Document, text, label string) string {
 	expanded, resolved := interp.ExpandChecked(doc, text)
 	if !resolved {
-		genlog.Decision("readme_prose", expanded, "unresolved reference (dropped)", label)
+		genlog.DebugRow("readme_prose", expanded, "unresolved reference (dropped)", label)
 		return ""
 	}
 	return expanded
@@ -337,10 +337,10 @@ func buildReadmeGoals(doc *projectfile.Document) []goalView {
 		}
 	}
 	if len(tagged) > 0 {
-		genlog.Decision("readme_goals", "tagged", "filtered to readme-tagged nodes", strconv.Itoa(len(tagged)))
+		genlog.DebugRow("readme_goals", "tagged", "filtered to readme-tagged nodes", strconv.Itoa(len(tagged)))
 		return tagged
 	}
-	genlog.Decision("readme_goals", "all", "no readme tag; falling back to every goal", strconv.Itoa(len(all)))
+	genlog.DebugRow("readme_goals", "all", "no readme tag; falling back to every goal", strconv.Itoa(len(all)))
 	return all
 }
 

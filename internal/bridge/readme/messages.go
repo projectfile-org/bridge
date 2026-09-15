@@ -71,7 +71,7 @@ func loadCatalogs() {
 	for _, e := range entries {
 		name := e.Name()
 		if e.IsDir() || !strings.HasSuffix(name, messagesExt) {
-			genlog.Decision("message_catalog", name, messagesDir, "skipped (not a catalog)")
+			genlog.DebugRow("message_catalog", name, messagesDir, "skipped (not a catalog)")
 			continue
 		}
 		body, err := messagesFS.ReadFile(messagesDir + "/" + name)
@@ -86,7 +86,7 @@ func loadCatalogs() {
 		}
 		lang := strings.TrimSuffix(name, messagesExt)
 		catalogs[lang] = m
-		genlog.Decision("message_catalog", lang, messagesDir+"/"+name, strconv.Itoa(len(m))+" keys")
+		genlog.DebugRow("message_catalog", lang, messagesDir+"/"+name, strconv.Itoa(len(m))+" keys")
 	}
 }
 
@@ -100,7 +100,7 @@ func lookupMessage(lang, key string) (string, bool) {
 		if v, ok := catalogs[lang][key]; ok {
 			return v, true
 		}
-		genlog.Decision("message", key, "catalog "+defaultCatalog, "untranslated in "+lang)
+		genlog.DebugRow("message", key, "catalog "+defaultCatalog, "untranslated in "+lang)
 	}
 	v, ok := catalogs[defaultCatalog][key]
 	return v, ok

@@ -150,8 +150,8 @@ func (Bridge) Render(pf *projectfile.Document, opts core.Options) (core.Output, 
 	emitDecisionTrace(pf, ext, sections, sectionsSrc, docsURL, bugsURL,
 		chatURL, cocURL, claURL, securityContact, commitStyle, workflow, versioning, styleGuideURL,
 		authorFollows, authorSites, projectSocials, forgeStars, hasFunding)
-	genlog.Decision("ai_policy_pointer", valOrDefault(aiPolicyName, "(no namespace, no pointer)"), "org.projectfile.ai", "")
-	genlog.Decision("forge_label", valOrDefault(forgeLabel, "(unknown host, plain issues)"), "hostmatch on links[type=bugs]", "")
+	genlog.DebugRow("ai_policy_pointer", valOrDefault(aiPolicyName, "(no namespace, no pointer)"), "org.projectfile.ai", "")
+	genlog.DebugRow("forge_label", valOrDefault(forgeLabel, "(unknown host, plain issues)"), "hostmatch on links[type=bugs]", "")
 
 	// Only three things vary per language here: the project's own display
 	// name, its summary (both localized-strings), and the SUPPORT.md
@@ -417,33 +417,33 @@ func emitDecisionTrace(pf *projectfile.Document, ext *pfmodel.ContributingExtens
 	authorFollows, authorSites, projectSocials, forgeStars []followLink,
 	hasFunding bool,
 ) {
-	genlog.Decision("project_name", pfmodel.DisplayName(pf), "identity.title.en or namespace/name", "")
-	genlog.Decision("sections", strings.Join(sections, ", "), sectionsSrc, "[org.projectfile.contributing].sections")
-	genlog.Decision("docs_url", valOrUnset(docsURL), "links[type=documentation] or forge <repo>/docs", "")
-	genlog.Decision("bugs_url", valOrUnset(bugsURL), "links[type=bugs]", "")
-	genlog.Decision("chat_url", valOrUnset(chatURL), "links[type=chat] or ext.chat-url", "")
-	genlog.Decision("coc_url", valOrUnset(cocURL), "links[type=enforcement] or ext.coc-url", "")
-	genlog.Decision("cla_url", valOrUnset(claURL), "links[type=cla] or ext.cla-url", "")
-	genlog.Decision("security_contact", valOrUnset(securityContact), "people[role=security].email or links[type=security-report]", "")
-	genlog.Decision("commit_style", valOrDefault(commitStyle, "conventional"), "org.projectfile.conventions.commit-style", "")
-	genlog.Decision("workflow", valOrDefault(workflow, "(unset, no workflow row)"), "org.projectfile.conventions.workflow", "")
-	genlog.Decision("versioning", valOrDefault(versioning, "(unset, no versioning row)"), "org.projectfile.conventions.versioning", "")
-	genlog.Decision("style_guide_url", valOrUnset(styleGuideURL), "org.projectfile.conventions.style-guide-url", "")
-	genlog.Decision("recommend_to_star", ext.RecommendToStar.Mode(), "org.projectfile.contributing.recommend-to-star", "default: none (bool|map host->bool)")
-	genlog.Decision("recommend_to_follow", ext.RecommendToFollow.Mode(), "org.projectfile.contributing.recommend-to-follow", "default: none (bool|map platform->bool)")
+	genlog.DebugRow("project_name", pfmodel.DisplayName(pf), "identity.title.en or namespace/name", "")
+	genlog.DebugRow("sections", strings.Join(sections, ", "), sectionsSrc, "[org.projectfile.contributing].sections")
+	genlog.DebugRow("docs_url", valOrUnset(docsURL), "links[type=documentation] or forge <repo>/docs", "")
+	genlog.DebugRow("bugs_url", valOrUnset(bugsURL), "links[type=bugs]", "")
+	genlog.DebugRow("chat_url", valOrUnset(chatURL), "links[type=chat] or ext.chat-url", "")
+	genlog.DebugRow("coc_url", valOrUnset(cocURL), "links[type=enforcement] or ext.coc-url", "")
+	genlog.DebugRow("cla_url", valOrUnset(claURL), "links[type=cla] or ext.cla-url", "")
+	genlog.DebugRow("security_contact", valOrUnset(securityContact), "people[role=security].email or links[type=security-report]", "")
+	genlog.DebugRow("commit_style", valOrDefault(commitStyle, "conventional"), "org.projectfile.conventions.commit-style", "")
+	genlog.DebugRow("workflow", valOrDefault(workflow, "(unset, no workflow row)"), "org.projectfile.conventions.workflow", "")
+	genlog.DebugRow("versioning", valOrDefault(versioning, "(unset, no versioning row)"), "org.projectfile.conventions.versioning", "")
+	genlog.DebugRow("style_guide_url", valOrUnset(styleGuideURL), "org.projectfile.conventions.style-guide-url", "")
+	genlog.DebugRow("recommend_to_star", ext.RecommendToStar.Mode(), "org.projectfile.contributing.recommend-to-star", "default: none (bool|map host->bool)")
+	genlog.DebugRow("recommend_to_follow", ext.RecommendToFollow.Mode(), "org.projectfile.contributing.recommend-to-follow", "default: none (bool|map platform->bool)")
 	for _, f := range forgeStars {
-		genlog.Decision("forge_star", f.URL, "links[type=source-code]", f.URL)
+		genlog.DebugRow("forge_star", f.URL, "links[type=source-code]", f.URL)
 	}
 	for _, f := range authorFollows {
-		genlog.Decision("author_follow", f.Handle, "people[role=author].handles", f.Site)
+		genlog.DebugRow("author_follow", f.Handle, "people[role=author].handles", f.Site)
 	}
 	for _, s := range authorSites {
-		genlog.Decision("author_site", s.URL, "people[role=author].url", s.Handle)
+		genlog.DebugRow("author_site", s.URL, "people[role=author].url", s.Handle)
 	}
 	for _, s := range projectSocials {
-		genlog.Decision("project_social", s.Label, "links[].handles or links[type=social]", s.URL)
+		genlog.DebugRow("project_social", s.Label, "links[].handles or links[type=social]", s.URL)
 	}
-	genlog.Decision("has_funding", fmt.Sprintf("%v", hasFunding), "org.projectfile.funding present", "")
+	genlog.DebugRow("has_funding", fmt.Sprintf("%v", hasFunding), "org.projectfile.funding present", "")
 }
 
 func valOrUnset(s string) string {

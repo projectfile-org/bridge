@@ -139,12 +139,15 @@ func Main(binName string) {
 	}
 
 	err := root.Execute()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error: %s\n", err)
+		genlog.FlushDebug()
+	}
 	// The ledger flushes LAST, after the error line, so the final thing on
 	// screen is the set of findings that did not stop the run. A warning that
 	// exits 0 is otherwise invisible under a buffering runner.
 	warn.Summary(root.ErrOrStderr())
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error: %s\n", err)
 		os.Exit(1)
 	}
 }
@@ -257,7 +260,7 @@ func runBridgeSync(syn core.Syncer, pf *projectfile.Document, opts core.Options)
 	if err != nil {
 		return err
 	}
-	genlog.Plain(res.Format())
+	genlog.Success(res.Format())
 	// --check on a two-way bridge means the same thing it means on a renderer:
 	// report drift, change nothing. RunSync already withheld the writes (Check
 	// sets DryRun), so any field it WOULD have moved is drift.
@@ -475,7 +478,7 @@ func runAllBridges(mode core.Mode, dir string, cmd *cobra.Command) error {
 		var errs []string
 		for _, b := range eligible {
 			if bridgeDryRun {
-				genlog.Info("bridge all", "file", b.Filename())
+				genlog.Debug("bridge all", "file", b.Filename())
 			}
 			if err := runAllBridgeOne(b, mode, dir, pfPath, cmd); err != nil {
 				warn.Record("bridge all: failed",

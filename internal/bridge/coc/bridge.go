@@ -89,10 +89,10 @@ func (Bridge) Render(pf *projectfile.Document, opts core.Options) (core.Output, 
 	if covenant != covenantContributorCovenant {
 		return core.Output{}, fmt.Errorf("CODE_OF_CONDUCT.md: unsupported covenant %q — only %q ships a template; for other covenants point a links[type=conduct-full-text] entry at your own text", covenant, covenantContributorCovenant)
 	}
-	genlog.Decision("project_name", pfmodel.DisplayName(pf), "identity.title.en or namespace/name", "")
-	genlog.Decision("contact_email", email, emailSrc, "[org.projectfile.security].contact")
-	genlog.Decision("covenant", covenant, "[org.projectfile.code-of-conduct].covenant", "default")
-	genlog.Decision("scope", scope, "[org.projectfile.code-of-conduct].scope", "default")
+	genlog.DebugRow("project_name", pfmodel.DisplayName(pf), "identity.title.en or namespace/name", "")
+	genlog.DebugRow("contact_email", email, emailSrc, "[org.projectfile.security].contact")
+	genlog.DebugRow("covenant", covenant, "[org.projectfile.code-of-conduct].covenant", "default")
+	genlog.DebugRow("scope", scope, "[org.projectfile.code-of-conduct].scope", "default")
 	return core.RenderLocalized(pf, core.LocalizedSpec{
 		Filename:  filenameCOC,
 		Langs:     pfmodel.Languages(pf),

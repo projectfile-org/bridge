@@ -49,7 +49,7 @@ func (remotesScanner) Scan(root string) (*source.Partial, []core.Hit, error) {
 			continue
 		}
 		if host, _ := parseForgeLocator(remote); userconfig.IsPrivateHost(host) {
-			genlog.Info("git scanner: redacting private remote", "name", name, "host", host)
+			genlog.Debug("git scanner: redacting private remote", "name", name, "host", host)
 			continue
 		}
 		r := projectfile.Repository{URL: remote, Type: "git"}
@@ -90,7 +90,7 @@ func (remotesScanner) Scan(root string) (*source.Partial, []core.Hit, error) {
 			// built and has no tags to overwrite. applyLink is where the
 			// document's own list is weighed.
 			if tags := hostmatch.Capabilities(page); pfmodel.SetLinkTags(&link, tags, false) {
-				genlog.Info("git scanner: proposing capability tags", "url", page, "tags", tags)
+				genlog.Debug("git scanner: proposing capability tags", "url", page, "tags", tags)
 				hits = append(hits, core.Hit{Source: scannerGitRemotes, Field: "links[type=source-code].tags:" + name})
 			}
 			p.Links = append(p.Links, link)
@@ -102,7 +102,7 @@ func (remotesScanner) Scan(root string) (*source.Partial, []core.Hit, error) {
 					bugs := projectfile.Link{Type: projectfile.LinkBugs, URL: tracker}
 					bugs.Label = pfmodel.ComposeOnLabel(langDoc, pfmodel.NounLabel(langDoc, pfmodel.NounIssues), forge)
 					p.Links = append(p.Links, bugs)
-					genlog.Info("git scanner: deriving issues link", "url", tracker, "from", page)
+					genlog.Debug("git scanner: deriving issues link", "url", tracker, "from", page)
 					hits = append(hits, core.Hit{Source: scannerGitRemotes, Field: "links[type=bugs]:" + name})
 				}
 			}

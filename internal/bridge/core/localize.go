@@ -229,7 +229,7 @@ func InsertLanguageBar(body []byte, base, active, defLang string, langs []string
 	bar.WriteString("\n\n")
 
 	at := h1Offset(body)
-	genlog.Decision("language_bar", strings.TrimSpace(bar.String()), "org.projectfile.i18n.languages", base)
+	genlog.DebugRow("language_bar", strings.TrimSpace(bar.String()), "org.projectfile.i18n.languages", base)
 	out := make([]byte, 0, len(body)+bar.Len())
 	out = append(out, body[:at]...)
 	out = append(out, bar.String()...)
@@ -312,7 +312,7 @@ func RenderLocalized(pf *projectfile.Document, spec LocalizedSpec, opts Options)
 		if err != nil {
 			return Output{}, err
 		}
-		genlog.Decision("rendered", LocalizedFilename(spec.Filename, lang), tmpl, "lang="+langLabel(lang, defLang))
+		genlog.DebugRow("rendered", LocalizedFilename(spec.Filename, lang), tmpl, "lang="+langLabel(lang, defLang))
 		body = InsertLanguageBar(body, spec.Filename, lang, defLang, translated)
 		// See-also comes before the footer: it is document content (cross-
 		// references), the footer is trailing meta-prose about the generator.

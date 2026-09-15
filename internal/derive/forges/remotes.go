@@ -65,16 +65,16 @@ func Remotes(pf *projectfile.Document, kinds map[string]string) map[string]any {
 		}
 		slug, remote := coordinates(link.URL, kinds)
 		if slug == "" {
-			genlog.Info("forge remote skipped", "url", link.URL, "reason", "no host/owner/repo")
+			genlog.Debug("forge remote skipped", "url", link.URL, "reason", "no host/owner/repo")
 			continue
 		}
 		if _, taken := out[slug]; taken {
-			genlog.Info("forge remote skipped", "slug", slug, "reason", "slug already claimed", "url", link.URL)
+			genlog.Debug("forge remote skipped", "slug", slug, "reason", "slug already claimed", "url", link.URL)
 			continue
 		}
 		out[slug] = remote
 		slugs[slug] = true
-		genlog.Info("forge remote derived", "slug", slug, "url", remote[KeyURL], "kind", remote[KeyKind])
+		genlog.Debug("forge remote derived", "slug", slug, "url", remote[KeyURL], "kind", remote[KeyKind])
 		claims = append(claims, claimsFor(link, remote)...)
 	}
 	if len(out) == 0 {
@@ -127,7 +127,7 @@ func issuesClaim(pf *projectfile.Document, out map[string]any) []claim {
 	}
 	host, owner, repo := hostOwnerRepo(ir.URL)
 	if host == "" {
-		genlog.Info("forge issues alias skipped", "url", ir.URL, "reason", "no host/owner/repo")
+		genlog.Debug("forge issues alias skipped", "url", ir.URL, "reason", "no host/owner/repo")
 		return nil
 	}
 	for slug, v := range out {
@@ -135,10 +135,10 @@ func issuesClaim(pf *projectfile.Document, out map[string]any) []claim {
 		if !ok || remote[KeyHost] != host || remote[KeyOwner] != owner || remote[KeyRepo] != repo {
 			continue
 		}
-		genlog.Info("forge issues alias matched", "slug", slug, "url", ir.URL)
+		genlog.Debug("forge issues alias matched", "slug", slug, "url", ir.URL)
 		return []claim{{alias: AliasIssues, remote: remote}}
 	}
-	genlog.Info("forge issues alias skipped", "url", ir.URL, "reason", "no source-code link matches")
+	genlog.Debug("forge issues alias skipped", "url", ir.URL, "reason", "no source-code link matches")
 	return nil
 }
 
@@ -165,12 +165,12 @@ func applyAliases(out map[string]any, slugs map[string]bool, claims []claim) {
 			continue
 		}
 		if _, taken := out[c.alias]; taken {
-			genlog.Info("forge alias skipped", "alias", c.alias,
+			genlog.Debug("forge alias skipped", "alias", c.alias,
 				"reason", "already claimed by an earlier link", "url", c.remote[KeyURL])
 			continue
 		}
 		out[c.alias] = c.remote
-		genlog.Info("forge alias derived", "alias", c.alias, "url", c.remote[KeyURL])
+		genlog.Debug("forge alias derived", "alias", c.alias, "url", c.remote[KeyURL])
 	}
 }
 

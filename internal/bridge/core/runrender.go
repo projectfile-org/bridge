@@ -112,7 +112,7 @@ func checkOutput(dir string, out Output, opts Options) error {
 			}
 			drifted = append(drifted, rel)
 		default:
-			genlog.Plain(fmt.Sprintf("bridge: %s (in sync)", rel))
+			genlog.Success(fmt.Sprintf("bridge: %s (in sync)", rel))
 		}
 	}
 	if len(drifted) == 0 {
@@ -167,7 +167,7 @@ func writeOutput(dir string, out Output, policy Policy, opts Options) error {
 		if err := os.WriteFile(absPath, out.Files[rel], 0o644); err != nil { // #nosec G306 -- generated metadata, world-readable by intent
 			return fmt.Errorf("write %s: %w", rel, err)
 		}
-		genlog.Plain(fmt.Sprintf("bridge: %s (%s)", rel, status))
+		genlog.Success(fmt.Sprintf("bridge: %s (%s)", rel, status))
 	}
 
 	if refusals > 0 {

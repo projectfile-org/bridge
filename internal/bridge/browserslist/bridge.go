@@ -66,10 +66,10 @@ func (Bridge) Render(pf *projectfile.Document, _ core.Options) (core.Output, err
 		}
 		// Suppress rather than emit an empty file: an empty .browserslistrc
 		// reads as "support nothing", clobbering the tool's defaults.
-		genlog.Decision("browsers", "(none — unconstrained, file suppressed)", "requirements.browsers", "")
+		genlog.DebugRow("browsers", "(none — unconstrained, file suppressed)", "requirements.browsers", "")
 		return core.Output{}, nil
 	}
-	genlog.Decision("browsers", fmt.Sprintf("%d quer(y/ies): %s", len(list), strings.Join(list, ", ")),
+	genlog.DebugRow("browsers", fmt.Sprintf("%d quer(y/ies): %s", len(list), strings.Join(list, ", ")),
 		"requirements.browsers", "")
 	body := assemble(pf, list)
 	return core.Output{Files: map[string][]byte{filename: body}}, nil

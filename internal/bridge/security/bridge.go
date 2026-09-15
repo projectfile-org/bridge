@@ -170,30 +170,30 @@ func extensionToMap(ext *pfmodel.SecurityExtension) map[string]any {
 }
 
 func emitDecisionTrace(contact, contactSrc string, ext *pfmodel.SecurityExtension, window, windowSrc string, gpgKeyURL string, ackCount int, fp, fpSrc string) {
-	genlog.Decision("contact", valueOrEmpty(contact), contactSrc, "[org.projectfile.security].contact")
-	genlog.Decision("report-url", valueOrEmpty(ext.ReportURL), "[org.projectfile.security].report-url", "")
-	genlog.Decision("disclosure-window", window, windowSrc, "[org.projectfile.security].disclosure-window")
+	genlog.DebugRow("contact", valueOrEmpty(contact), contactSrc, "[org.projectfile.security].contact")
+	genlog.DebugRow("report-url", valueOrEmpty(ext.ReportURL), "[org.projectfile.security].report-url", "")
+	genlog.DebugRow("disclosure-window", window, windowSrc, "[org.projectfile.security].disclosure-window")
 	if len(ext.SupportedVersions) == 0 {
-		genlog.Decision("supported-versions", "(unset, section omitted)", "[org.projectfile.security].supported-versions", "")
+		genlog.DebugRow("supported-versions", "(unset, section omitted)", "[org.projectfile.security].supported-versions", "")
 	} else {
-		genlog.Decision("supported-versions", fmt.Sprintf("%v", ext.SupportedVersions), "[org.projectfile.security].supported-versions", "")
+		genlog.DebugRow("supported-versions", fmt.Sprintf("%v", ext.SupportedVersions), "[org.projectfile.security].supported-versions", "")
 	}
 	if ext.GPGKey != "" {
-		genlog.Decision("gpg-key", ext.GPGKey, "[org.projectfile.security].gpg-key", "")
+		genlog.DebugRow("gpg-key", ext.GPGKey, "[org.projectfile.security].gpg-key", "")
 	}
 	if fp != "" {
-		genlog.Decision("gpg-fingerprint", fp, fpSrc, "")
+		genlog.DebugRow("gpg-fingerprint", fp, fpSrc, "")
 	}
 	if gpgKeyURL != "" {
-		genlog.Decision("gpg-key-url", gpgKeyURL, "links[].type=pgp-key", "")
+		genlog.DebugRow("gpg-key-url", gpgKeyURL, "links[].type=pgp-key", "")
 	}
 	if ext.BugBountyURL != "" {
-		genlog.Decision("bug-bounty-url", ext.BugBountyURL, "[org.projectfile.security].bug-bounty-url", "")
+		genlog.DebugRow("bug-bounty-url", ext.BugBountyURL, "[org.projectfile.security].bug-bounty-url", "")
 	}
 	if ackCount == 0 {
-		genlog.Decision("acknowledged", "(unset, section omitted)", "org.projectfile.vulnerabilities.suppress", "")
+		genlog.DebugRow("acknowledged", "(unset, section omitted)", "org.projectfile.vulnerabilities.suppress", "")
 	} else {
-		genlog.Decision("acknowledged", fmt.Sprintf("%d entries", ackCount), "org.projectfile.vulnerabilities.suppress", "")
+		genlog.DebugRow("acknowledged", fmt.Sprintf("%d entries", ackCount), "org.projectfile.vulnerabilities.suppress", "")
 	}
 }
 

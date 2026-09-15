@@ -12,6 +12,7 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"kiota.ch/projectfile/core/v2/pkg/genlog"
 	"projectfile.org/projectfile/bridge/internal/buildinfo"
 	"projectfile.org/projectfile/bridge/internal/describe"
 	"projectfile.org/projectfile/bridge/internal/rootflags"
@@ -73,6 +74,7 @@ func Main(binName string) {
 	}
 	if err := initCmd.Execute(); err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %s\n", err)
+		genlog.FlushDebug()
 		os.Exit(1)
 	}
 }

@@ -126,7 +126,7 @@ func warmSPDX() error {
 	if err != nil {
 		return fmt.Errorf("warm SPDX: %w", err)
 	}
-	genlog.Plain(fmt.Sprintf("SPDX: %d embedded, %d cached, %d fetched", emb, cached, fetched))
+	genlog.Success(fmt.Sprintf("SPDX: %d embedded, %d cached, %d fetched", emb, cached, fetched))
 	return nil
 }
 
@@ -172,7 +172,7 @@ func warmIncludes(dir string) error {
 		}
 		warmed++
 	}
-	genlog.Plain(fmt.Sprintf("includes: warmed %d/%d remote includes", warmed, len(includes)))
+	genlog.Success(fmt.Sprintf("includes: warmed %d/%d remote includes", warmed, len(includes)))
 	return nil
 }
 
@@ -210,6 +210,7 @@ func Main(binName string) {
 	}
 	if err := cacheCmd.Execute(); err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %s\n", err)
+		genlog.FlushDebug()
 		os.Exit(1)
 	}
 }
