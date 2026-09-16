@@ -33,6 +33,12 @@ pf-bridge проєктує projectfile на файли, forge-майданчик
 - **Виконуваний файл** `pf-bridge`
 - **Образ контейнера** `ghcr.io/projectfile-org/bridge:latest`
 
+## Підтримувані платформи
+
+- `linux/amd64`
+- `linux/arm64`
+- `linux/riscv64`
+
 ## Встановлення
 
 Завантажте опублікований образ контейнера:

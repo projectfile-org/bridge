@@ -31,6 +31,12 @@ See [FEATURES.md](FEATURES.md) for the full list.
 - **Executable** `pf-bridge`
 - **Container image** `ghcr.io/projectfile-org/bridge:latest`
 
+## Supported platforms
+
+- `linux/amd64`
+- `linux/arm64`
+- `linux/riscv64`
+
 ## Installation
 
 Pull the published container image:
