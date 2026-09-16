@@ -537,15 +537,6 @@ func hrefForLang(s pfmodel.Shield, lang string) string {
 	return s.Href
 }
 
-// badgeFanoutSep joins one shield's img and href into a single line before
-// expansion, so the two resolve and axis-substitute IN LOCKSTEP. A project
-// that publishes one container per matrix cell (b19/ruby's four series, each
-// its own Docker Hub repository) declares img and href from the SAME
-// `${…flatpath}`; expanding them separately would fan each out to N values
-// independently and cross the wrong img with the wrong href. A NUL byte never
-// appears in a URL, so splitting back apart afterward is unambiguous.
-const badgeFanoutSep = "\x00"
-
 // buildBadges maps declared shields to the template's badge view model, with
 // every `${…}` reference resolved against the document (spec §3.8). This is
 // what lets ONE badge row in a shared m6e fragment serve the whole fleet: the
@@ -559,17 +550,16 @@ const badgeFanoutSep = "\x00"
 //     is a broken image in every README that renders it. An href that is simply
 //     ABSENT is fine — a pure indicator (project status) links nowhere, and the
 //     template renders it unlinked.
-//   - A shield whose img/href names a CI matrix axis (`{B19_RUBY_SERIES}`,
-//     via ${org.projectfile.image.*}) fans out to one badge per declared
-//     value — the same rule buildArtifacts and buildSectionGroup already run,
-//     because a project publishing several containers has no single image to
-//     badge.
-//   - Shields are deduplicated by `name`, LAST wins, whole fan-out replaced as
-//     a unit. Includes union sequences with include entries first and the base
-//     document last (spec §4.9a), so redeclaring a name in the project's own
-//     projectfile replaces the inherited badge — the only way to override one,
-//     since includes cannot delete. The first position is kept so overriding
-//     never reorders the row.
+//   - A shield whose img/href still names a CI matrix axis (`{B19_RUBY_SERIES}`,
+//     via ${org.projectfile.image.*}) is DROPPED too, rather than fanned out to
+//     one badge per series: a language image with a dozen supported versions
+//     would otherwise turn one badge into a whole row of near-identical ones.
+//     A single-image project never names an axis, so this never touches it.
+//   - Shields are deduplicated by `name`, LAST wins. Includes union sequences
+//     with include entries first and the base document last (spec §4.9a), so
+//     redeclaring a name in the project's own projectfile replaces the
+//     inherited badge — the only way to override one, since includes cannot
+//     delete. The first position is kept so overriding never reorders the row.
 //
 // Alt defaults to Name so a missing alt-text never yields an empty `![ ](...)`.
 // href resolves per lang first (HrefByLang), so a shared badge can link each
@@ -579,51 +569,44 @@ func buildBadges(doc *projectfile.Document, ext *pfmodel.ReadmeExtension, lang s
 		return nil
 	}
 	axes := pfmodel.MatrixAxes(doc, ciExtensionNS)
-	byName := make(map[string][]badge, len(ext.Shields))
-	order := make([]string, 0, len(ext.Shields))
-	for _, s := range ext.Shields {
-		fanned := expandShield(doc, s, axes, lang)
-		if len(fanned) == 0 {
-			continue
-		}
-		if prev, seen := byName[s.Name]; seen {
-			genlog.DebugRow("badge", s.Name, "redeclared (last wins)", prev[0].Img)
-		} else {
-			order = append(order, s.Name)
-		}
-		byName[s.Name] = fanned
-	}
 	out := make([]badge, 0, len(ext.Shields))
-	for _, name := range order {
-		out = append(out, byName[name]...)
-	}
-	return out
-}
-
-// expandShield resolves one shield to zero or more badges: zero when img or
-// href never resolves, one for a plain shield, several when axes fans its
-// `{AXIS}` placeholder out to the matrix's declared values.
-func expandShield(doc *projectfile.Document, s pfmodel.Shield, axes map[string][]string, lang string) []badge {
-	combined := s.Img + badgeFanoutSep + hrefForLang(s, lang)
-	expanded, resolved := interp.ExpandFanOut(doc, combined)
-	if !resolved {
-		genlog.DebugRow("badge", s.Name, "unresolved reference (dropped)", s.Img)
-		return nil
-	}
-	alt := interp.Expand(doc, s.Alt)
-	if alt == "" {
-		alt = s.Name
-	}
-	var out []badge
-	for _, line := range pfmodel.ExpandAxes(expanded, axes) {
-		img, href, _ := strings.Cut(line, badgeFanoutSep)
+	position := make(map[string]int, len(ext.Shields))
+	for _, s := range ext.Shields {
+		img, href := interp.Expand(doc, s.Img), interp.Expand(doc, hrefForLang(s, lang))
 		if img == "" || interp.Unresolved(img) || interp.Unresolved(href) {
 			genlog.DebugRow("badge", s.Name, "unresolved reference (dropped)", img)
 			continue
 		}
-		out = append(out, badge{Alt: alt, Img: img, Href: href, Row: s.Row, Priority: pfmodel.RankOf(s.Priority)})
+		if namesMatrixAxis(img, axes) || namesMatrixAxis(href, axes) {
+			genlog.DebugRow("badge", s.Name, "names a CI-matrix series (dropped)", img)
+			continue
+		}
+		alt := interp.Expand(doc, s.Alt)
+		if alt == "" {
+			alt = s.Name
+		}
+		b := badge{Alt: alt, Img: img, Href: href, Row: s.Row, Priority: pfmodel.RankOf(s.Priority)}
+		if at, seen := position[s.Name]; seen {
+			genlog.DebugRow("badge", s.Name, "redeclared (last wins)", out[at].Img)
+			out[at] = b
+			continue
+		}
+		position[s.Name] = len(out)
+		out = append(out, b)
 	}
 	return out
+}
+
+// namesMatrixAxis reports whether s still carries a `{AXIS}` placeholder for
+// any axis the CI matrix declares — the signal that a badge would need one
+// instance per series, which buildBadges drops rather than renders.
+func namesMatrixAxis(s string, axes map[string][]string) bool {
+	for axis := range axes {
+		if strings.Contains(s, "{"+axis+"}") {
+			return true
+		}
+	}
+	return false
 }
 
 // rowUnnamed labels the row a shield joins when it declares no `row`, for the

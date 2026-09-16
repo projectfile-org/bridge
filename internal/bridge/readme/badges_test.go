@@ -256,11 +256,11 @@ func TestBuildBadgesHrefResolvesPerLang(t *testing.T) {
 }
 
 // A project publishing several containers from one matrix (b19/ruby's four
-// Ruby series, each its own Docker Hub repository) has no single flatpath to
-// badge. A shield naming the `{AXIS}` placeholder fans out to one badge per
-// declared series value, img and href paired from the SAME cell — never
-// cross-multiplied into wrong pairs.
-func TestBuildBadgesFansOutPerSeriesAxis(t *testing.T) {
+// Ruby series) has no single flatpath to badge, and a row of one near-
+// identical badge per series scales badly for a project with a dozen of
+// them. A shield naming the `{AXIS}` placeholder is dropped rather than
+// fanned out; a project declaring no matrix at all is unaffected.
+func TestBuildBadgesDropsShieldNamingMatrixAxis(t *testing.T) {
 	pf := minimalDoc(t)
 	pf.Extensions = map[string]any{
 		ciExtensionNS: map[string]any{
@@ -276,16 +276,14 @@ func TestBuildBadgesFansOutPerSeriesAxis(t *testing.T) {
 				Img:  "https://img.shields.io/docker/pulls/foo-{" + axisSeries + "}",
 				Href: "https://hub.docker.com/r/foo-{" + axisSeries + "}",
 			},
+			{Name: "license", Img: "i", Href: "h"},
 		},
 	}
 
 	got := buildBadges(pf, ext, "")
 
-	require.Len(t, got, 2, "one badge per declared series")
-	assert.Equal(t, "https://img.shields.io/docker/pulls/foo-resolute", got[0].Img)
-	assert.Equal(t, "https://hub.docker.com/r/foo-resolute", got[0].Href, "href paired with the same cell as img")
-	assert.Equal(t, "https://img.shields.io/docker/pulls/foo-noble", got[1].Img)
-	assert.Equal(t, "https://hub.docker.com/r/foo-noble", got[1].Href)
+	require.Len(t, got, 1, "the series-naming shield is dropped; the plain one survives")
+	assert.Equal(t, "license", got[0].Alt)
 }
 
 // A redeclared shield name MOVES to the row the redeclaration names AND adopts

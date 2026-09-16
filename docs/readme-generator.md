@@ -673,13 +673,14 @@ data — the cost of a new badge, for a whole fleet, is one YAML entry and no co
     higher renders first, default `50`, ties keep declaration order.
 - With no `shields` entries, the `badges` block renders empty and is skipped
   automatically.
-- `img`/`href` naming a CI matrix's `{AXIS}` placeholder — the same one
-    [Fan-out](#fan-out) substitutes in command lines — fan out to one badge per
-    declared axis value, `img` and `href` paired from the same cell. A project
-    publishing several containers off one matrix (b19/ruby’s `3.4`/`4.0`/…
-    series, each its own Docker Hub repository) has no single image to badge,
-    so a `dockerhub-pulls` shield naming `${image.flatpath}` renders one pull
-    badge per series instead of one badge for a repository that does not exist.
+- `img`/`href` still naming a CI matrix's `{AXIS}` placeholder — the same one
+    [Fan-out](#fan-out) substitutes in command lines — is **dropped**, not
+    fanned out. A project publishing several containers off one matrix
+    (b19/ruby’s `3.4`/`4.0`/… series) has no single image a `dockerhub-pulls`
+    shield naming `${image.flatpath}` could badge; rather than turn one badge
+    into a whole row of near-identical ones for a project with many series, it
+    renders none for now. A single-image project never names an axis, so this
+    never touches it.
 - `href` accepts a lang map (`{en: …, es: …, uk: …}`) instead of a bare string,
     resolved against the render’s active language with `en`/first-non-empty as
     the fallback — the same shape `extras[].content` and section
