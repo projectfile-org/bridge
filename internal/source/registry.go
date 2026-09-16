@@ -62,6 +62,9 @@ type Source interface {
 	Extract(dir string) (*Partial, error)
 }
 
+// repoTypeGit is the VCS type every source emits for repository entries.
+const repoTypeGit = "git"
+
 var (
 	registryMu sync.Once
 	registry   []Source
@@ -77,6 +80,7 @@ func Registry() []Source {
 			Register(CFFSource{})
 			Register(NPMSource{})
 			Register(ComposerSource{})
+			Register(ShardSource{})
 		}
 	})
 	return registry

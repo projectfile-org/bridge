@@ -59,7 +59,7 @@ func (ComposerSource) Extract(dir string) (*Partial, error) {
 		if doc.Support.Source != "" {
 			p.Repositories = []projectfile.Repository{{
 				URL:  doc.Support.Source,
-				Type: "git",
+				Type: repoTypeGit,
 				Role: projectfile.RepositoryRoleOrigin,
 			}}
 		}

@@ -50,7 +50,7 @@ func (CFFSource) Extract(dir string) (*Partial, error) {
 		// the same place.
 		p.Repositories = []projectfile.Repository{{
 			URL:  doc.RepositoryCode,
-			Type: "git",
+			Type: repoTypeGit,
 			Role: projectfile.RepositoryRoleOrigin,
 		}}
 		p.Links = append(p.Links, projectfile.Link{Type: projectfile.LinkSourceCode, URL: doc.RepositoryCode})
