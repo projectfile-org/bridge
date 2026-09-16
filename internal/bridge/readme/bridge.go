@@ -296,7 +296,7 @@ func execBlockTemplate(name string, body []byte, data readmeView, dir string, ex
 			// rendered lines: each URL's ${…} references resolved against the
 			// document, unresolvable entries dropped, duplicates collapsed
 			// last-wins, survivors grouped by their `row`.
-			"badgeRows": func() []badgeRow { return buildBadgeRows(data.Doc, ext) },
+			"badgeRows": func() []badgeRow { return buildBadgeRows(data.Doc, ext, data.StrLang) },
 			// readmeSection resolves a structured command section — its title
 			// plus the groups whose commands the document could answer — by
 			// block name; nil when the document declares none or none survived,

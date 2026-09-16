@@ -505,8 +505,12 @@ type Shield struct {
 	Name string
 	Img  string
 	Href string
-	Alt  string
-	Row  string
+	// HrefByLang overrides Href per render language, resolved the same way
+	// ReadmeExtra.ContentByLang is: falls back to Href when the active
+	// language has no entry.
+	HrefByLang map[string]string
+	Alt        string
+	Row        string
 	// Priority is the advisory render order within a row. Higher = first; the
 	// zero value (unset) means PriorityDefault and stays in declaration order.
 	Priority int

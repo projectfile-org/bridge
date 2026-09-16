@@ -50,7 +50,7 @@ func TestBuildBadgesAltFallsBackToName(t *testing.T) {
 			{Name: "go report", Alt: "Go Report", Img: "i2", Href: "h2"},
 		},
 	}
-	got := buildBadges(nil, ext)
+	got := buildBadges(nil, ext, "")
 	require.Len(t, got, 2)
 	assert.Equal(t, "dockerhub pulls", got[0].Alt, "alt falls back to name")
 	assert.Equal(t, "Go Report", got[1].Alt, "explicit alt preserved")
@@ -58,8 +58,8 @@ func TestBuildBadgesAltFallsBackToName(t *testing.T) {
 
 // No ext (readme extension absent entirely) → no badges, never a nil panic.
 func TestBuildBadgesNilExtension(t *testing.T) {
-	assert.Nil(t, buildBadges(nil, nil))
-	assert.Nil(t, buildBadges(nil, &pfmodel.ReadmeExtension{}))
+	assert.Nil(t, buildBadges(nil, nil, ""))
+	assert.Nil(t, buildBadges(nil, &pfmodel.ReadmeExtension{}, ""))
 }
 
 // A shared fragment declares badges for forges a given project may not have.
@@ -75,7 +75,7 @@ func TestBuildBadgesDropsUnresolvedAndDedupes(t *testing.T) {
 		},
 	}
 
-	got := buildBadges(pf, ext)
+	got := buildBadges(pf, ext, "")
 
 	require.Len(t, got, 1, "the codeberg badge has no mirror to resolve against")
 	assert.Equal(t, blockLicense, got[0].Alt)
@@ -110,7 +110,7 @@ func TestBuildBadgeRowsGroupsByFirstAppearance(t *testing.T) {
 		},
 	}
 
-	rows := buildBadgeRows(nil, ext)
+	rows := buildBadgeRows(nil, ext, "")
 
 	require.Len(t, rows, 3)
 	assert.Equal(t, []string{rowStatic, rowDynamic, rowEcosystem}, []string{rows[0].Name, rows[1].Name, rows[2].Name})
@@ -125,7 +125,7 @@ func TestBuildBadgeRowsUnnamedRow(t *testing.T) {
 		Shields: []pfmodel.Shield{{Name: "a", Img: "i1"}, {Name: "b", Img: "i2"}},
 	}
 
-	rows := buildBadgeRows(nil, ext)
+	rows := buildBadgeRows(nil, ext, "")
 
 	require.Len(t, rows, 1)
 	assert.Empty(t, rows[0].Name)
@@ -144,7 +144,7 @@ func TestBuildBadgeRowsRedeclarationMovesRow(t *testing.T) {
 		},
 	}
 
-	rows := buildBadgeRows(nil, ext)
+	rows := buildBadgeRows(nil, ext, "")
 
 	require.Len(t, rows, 1, "nothing is left in the dynamic row")
 	assert.Equal(t, rowStatic, rows[0].Name)
@@ -189,7 +189,7 @@ func TestBuildBadgeRowsPriorityOrdersWithinRow(t *testing.T) {
 		},
 	}
 
-	rows := buildBadgeRows(nil, ext)
+	rows := buildBadgeRows(nil, ext, "")
 
 	require.Len(t, rows, 1)
 	got := []string{rows[0].Badges[0].Alt, rows[0].Badges[1].Alt, rows[0].Badges[2].Alt}
@@ -209,7 +209,7 @@ func TestBuildBadgeRowsPriorityStableForTies(t *testing.T) {
 		},
 	}
 
-	rows := buildBadgeRows(nil, ext)
+	rows := buildBadgeRows(nil, ext, "")
 
 	require.Len(t, rows, 1)
 	got := []string{rows[0].Badges[0].Alt, rows[0].Badges[1].Alt, rows[0].Badges[2].Alt}
@@ -228,11 +228,64 @@ func TestBuildBadgeRowsPriorityStaysWithinRow(t *testing.T) {
 		},
 	}
 
-	rows := buildBadgeRows(nil, ext)
+	rows := buildBadgeRows(nil, ext, "")
 
 	require.Len(t, rows, 2)
 	assert.Equal(t, []string{rowStatic, rowEcosystem}, []string{rows[0].Name, rows[1].Name},
 		"row order unchanged even when a later row holds the highest priority")
+}
+
+// A shield's href resolves per render language: HrefByLang wins when the
+// active language has an entry, so a shared badge (conventional commits,
+// semver) can link a Ukrainian render to the Ukrainian spec page instead of
+// always the English one. Href stays the fallback for a language the map
+// carries no entry for.
+func TestBuildBadgesHrefResolvesPerLang(t *testing.T) {
+	ext := &pfmodel.ReadmeExtension{
+		Shields: []pfmodel.Shield{
+			{
+				Name: "commit-style", Img: "i", Href: "https://example.test/en/",
+				HrefByLang: map[string]string{"uk": "https://example.test/uk/"},
+			},
+		},
+	}
+
+	assert.Equal(t, "https://example.test/uk/", buildBadges(nil, ext, "uk")[0].Href, "uk entry wins")
+	assert.Equal(t, "https://example.test/en/", buildBadges(nil, ext, "es")[0].Href, "no es entry: falls back to Href")
+	assert.Equal(t, "https://example.test/en/", buildBadges(nil, ext, "")[0].Href, "default render: falls back to Href")
+}
+
+// A project publishing several containers from one matrix (b19/ruby's four
+// Ruby series, each its own Docker Hub repository) has no single flatpath to
+// badge. A shield naming the `{AXIS}` placeholder fans out to one badge per
+// declared series value, img and href paired from the SAME cell — never
+// cross-multiplied into wrong pairs.
+func TestBuildBadgesFansOutPerSeriesAxis(t *testing.T) {
+	pf := minimalDoc(t)
+	pf.Extensions = map[string]any{
+		ciExtensionNS: map[string]any{
+			keyMatrix: map[string]any{keyAxes: map[string]any{
+				axisSeries: []any{seriesResolute, seriesNoble},
+			}},
+		},
+	}
+	ext := &pfmodel.ReadmeExtension{
+		Shields: []pfmodel.Shield{
+			{
+				Name: "dockerhub-pulls",
+				Img:  "https://img.shields.io/docker/pulls/foo-{" + axisSeries + "}",
+				Href: "https://hub.docker.com/r/foo-{" + axisSeries + "}",
+			},
+		},
+	}
+
+	got := buildBadges(pf, ext, "")
+
+	require.Len(t, got, 2, "one badge per declared series")
+	assert.Equal(t, "https://img.shields.io/docker/pulls/foo-resolute", got[0].Img)
+	assert.Equal(t, "https://hub.docker.com/r/foo-resolute", got[0].Href, "href paired with the same cell as img")
+	assert.Equal(t, "https://img.shields.io/docker/pulls/foo-noble", got[1].Img)
+	assert.Equal(t, "https://hub.docker.com/r/foo-noble", got[1].Href)
 }
 
 // A redeclared shield name MOVES to the row the redeclaration names AND adopts
@@ -246,7 +299,7 @@ func TestBuildBadgeRowsRedeclarationAdoptsPriority(t *testing.T) {
 		},
 	}
 
-	rows := buildBadgeRows(nil, ext)
+	rows := buildBadgeRows(nil, ext, "")
 
 	require.Len(t, rows, 2)
 	assert.Equal(t, rowStatic, rows[0].Name)

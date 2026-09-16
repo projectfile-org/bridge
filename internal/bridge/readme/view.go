@@ -523,12 +523,35 @@ func extraContentForLang(extra pfmodel.ReadmeExtra, lang string) string {
 	return extra.Content
 }
 
+// hrefForLang resolves a Shield's href for a specific lang, mirroring
+// extraContentForLang: falls back to the default Href when HrefByLang is nil
+// or has no entry for the requested language. This is what lets one badge
+// declaration (conventionalcommits.org, semver.org) link each render to its
+// own language's page instead of always the English one.
+func hrefForLang(s pfmodel.Shield, lang string) string {
+	if lang != "" && s.HrefByLang != nil {
+		if v, ok := s.HrefByLang[lang]; ok && v != "" {
+			return v
+		}
+	}
+	return s.Href
+}
+
+// badgeFanoutSep joins one shield's img and href into a single line before
+// expansion, so the two resolve and axis-substitute IN LOCKSTEP. A project
+// that publishes one container per matrix cell (b19/ruby's four series, each
+// its own Docker Hub repository) declares img and href from the SAME
+// `${…flatpath}`; expanding them separately would fan each out to N values
+// independently and cross the wrong img with the wrong href. A NUL byte never
+// appears in a URL, so splitting back apart afterward is unambiguous.
+const badgeFanoutSep = "\x00"
+
 // buildBadges maps declared shields to the template's badge view model, with
 // every `${…}` reference resolved against the document (spec §3.8). This is
 // what lets ONE badge row in a shared m6e fragment serve the whole fleet: the
 // URL names fields, and each consumer answers them from its own projectfile.
 //
-// Two rules make that fragment safe across heterogeneous projects:
+// Three rules make that fragment safe across heterogeneous projects:
 //
 //   - A shield whose img or href still carries an unresolved reference is
 //     DROPPED. A project with no Codeberg mirror cannot answer
@@ -536,38 +559,69 @@ func extraContentForLang(extra pfmodel.ReadmeExtra, lang string) string {
 //     is a broken image in every README that renders it. An href that is simply
 //     ABSENT is fine — a pure indicator (project status) links nowhere, and the
 //     template renders it unlinked.
-//   - Shields are deduplicated by `name`, LAST wins. Includes union sequences
-//     with include entries first and the base document last (spec §4.9a), so
-//     redeclaring a name in the project's own projectfile replaces the
-//     inherited badge — the only way to override one, since includes cannot
-//     delete. The first position is kept so overriding never reorders the row.
+//   - A shield whose img/href names a CI matrix axis (`{B19_RUBY_SERIES}`,
+//     via ${org.projectfile.image.*}) fans out to one badge per declared
+//     value — the same rule buildArtifacts and buildSectionGroup already run,
+//     because a project publishing several containers has no single image to
+//     badge.
+//   - Shields are deduplicated by `name`, LAST wins, whole fan-out replaced as
+//     a unit. Includes union sequences with include entries first and the base
+//     document last (spec §4.9a), so redeclaring a name in the project's own
+//     projectfile replaces the inherited badge — the only way to override one,
+//     since includes cannot delete. The first position is kept so overriding
+//     never reorders the row.
 //
 // Alt defaults to Name so a missing alt-text never yields an empty `![ ](...)`.
-
-func buildBadges(doc *projectfile.Document, ext *pfmodel.ReadmeExtension) []badge {
+// href resolves per lang first (HrefByLang), so a shared badge can link each
+// render to its own language's page.
+func buildBadges(doc *projectfile.Document, ext *pfmodel.ReadmeExtension, lang string) []badge {
 	if ext == nil || len(ext.Shields) == 0 {
 		return nil
 	}
-	out := make([]badge, 0, len(ext.Shields))
-	position := make(map[string]int, len(ext.Shields))
+	axes := pfmodel.MatrixAxes(doc, ciExtensionNS)
+	byName := make(map[string][]badge, len(ext.Shields))
+	order := make([]string, 0, len(ext.Shields))
 	for _, s := range ext.Shields {
-		img, href := interp.Expand(doc, s.Img), interp.Expand(doc, s.Href)
+		fanned := expandShield(doc, s, axes, lang)
+		if len(fanned) == 0 {
+			continue
+		}
+		if prev, seen := byName[s.Name]; seen {
+			genlog.DebugRow("badge", s.Name, "redeclared (last wins)", prev[0].Img)
+		} else {
+			order = append(order, s.Name)
+		}
+		byName[s.Name] = fanned
+	}
+	out := make([]badge, 0, len(ext.Shields))
+	for _, name := range order {
+		out = append(out, byName[name]...)
+	}
+	return out
+}
+
+// expandShield resolves one shield to zero or more badges: zero when img or
+// href never resolves, one for a plain shield, several when axes fans its
+// `{AXIS}` placeholder out to the matrix's declared values.
+func expandShield(doc *projectfile.Document, s pfmodel.Shield, axes map[string][]string, lang string) []badge {
+	combined := s.Img + badgeFanoutSep + hrefForLang(s, lang)
+	expanded, resolved := interp.ExpandFanOut(doc, combined)
+	if !resolved {
+		genlog.DebugRow("badge", s.Name, "unresolved reference (dropped)", s.Img)
+		return nil
+	}
+	alt := interp.Expand(doc, s.Alt)
+	if alt == "" {
+		alt = s.Name
+	}
+	var out []badge
+	for _, line := range pfmodel.ExpandAxes(expanded, axes) {
+		img, href, _ := strings.Cut(line, badgeFanoutSep)
 		if img == "" || interp.Unresolved(img) || interp.Unresolved(href) {
 			genlog.DebugRow("badge", s.Name, "unresolved reference (dropped)", img)
 			continue
 		}
-		alt := interp.Expand(doc, s.Alt)
-		if alt == "" {
-			alt = s.Name
-		}
-		b := badge{Alt: alt, Img: img, Href: href, Row: s.Row, Priority: pfmodel.RankOf(s.Priority)}
-		if at, seen := position[s.Name]; seen {
-			genlog.DebugRow("badge", s.Name, "redeclared (last wins)", out[at].Img)
-			out[at] = b
-			continue
-		}
-		position[s.Name] = len(out)
-		out = append(out, b)
+		out = append(out, badge{Alt: alt, Img: img, Href: href, Row: s.Row, Priority: pfmodel.RankOf(s.Priority)})
 	}
 	return out
 }
@@ -591,10 +645,10 @@ const rowUnnamed = "(unnamed)"
 //
 // Grouping runs AFTER buildBadges has deduplicated, so redeclaring a name also
 // moves that badge to the row the redeclaration names.
-func buildBadgeRows(doc *projectfile.Document, ext *pfmodel.ReadmeExtension) []badgeRow {
+func buildBadgeRows(doc *projectfile.Document, ext *pfmodel.ReadmeExtension, lang string) []badgeRow {
 	var rows []badgeRow
 	at := make(map[string]int)
-	for _, b := range buildBadges(doc, ext) {
+	for _, b := range buildBadges(doc, ext, lang) {
 		i, seen := at[b.Row]
 		if !seen {
 			i = len(rows)
@@ -1169,7 +1223,7 @@ func formatDecisionTrace(dir, lang string, v readmeView, ext *pfmodel.ReadmeExte
 	for _, s := range probeHealthFiles(v.Doc, dir, readmeDocPath(lang), lang, lang) {
 		genlog.DebugRow("static_link", s.Label+" → "+s.Filename, "policies probe", "")
 	}
-	for _, r := range buildBadgeRows(v.Doc, ext) {
+	for _, r := range buildBadgeRows(v.Doc, ext, v.StrLang) {
 		for _, b := range r.Badges {
 			genlog.DebugRow("badge", b.Alt+" → "+b.Img, "readme.shields[]", rowLabel(r.Name))
 		}
