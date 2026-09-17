@@ -673,7 +673,7 @@ data — the cost of a new badge, for a whole fleet, is one YAML entry and no co
     higher renders first, default `50`, ties keep declaration order.
 - With no `shields` entries, the `badges` block renders empty and is skipped
   automatically.
-- `img`/`href` still naming a CI matrix's `{AXIS}` placeholder — the same one
+- `img`/`href` still naming a CI matrix’s `{AXIS}` placeholder — the same one
     [Fan-out](#fan-out) substitutes in command lines — is **dropped**, not
     fanned out. A project publishing several containers off one matrix
     (b19/ruby’s `3.4`/`4.0`/… series) has no single image a `dockerhub-pulls`
@@ -685,7 +685,7 @@ data — the cost of a new badge, for a whole fleet, is one YAML entry and no co
     resolved against the render’s active language with `en`/first-non-empty as
     the fallback — the same shape `extras[].content` and section
     `prefix`/`postfix` already use. This is what lets one shared badge
-    (conventional commits, semver) link a Ukrainian render to the Ukrainian
+    (conventional commits, SemVer) link a Ukrainian render to the Ukrainian
     spec page instead of always English.
 
 > **Prefer shields.io’s `/static/v1?label=…&message=…&color=…` query form over
