@@ -22,6 +22,7 @@ const (
 	// value the issues alias must reach from an ssh clone URL.
 	codebergURL = "https://codeberg.org/b19/ubuntu"
 	kindForgejo = "forgejo"
+	hostKiota   = "kiota.ch"
 	slugGit     = "git"
 	keyTags     = "tags"
 )
@@ -43,7 +44,7 @@ func TestRemotesAcrossMirrors(t *testing.T) {
 		"https://kiota.ch/b19/ubuntu",
 	)
 
-	got := forges.Remotes(doc, map[string]string{"kiota.ch": kindForgejo})
+	got := forges.Remotes(doc, map[string]string{hostKiota: kindForgejo})
 
 	require.Len(t, got, 3)
 	assert.Equal(t, map[string]any{
@@ -124,13 +125,29 @@ func TestRemotesAliasesByCapability(t *testing.T) {
 		tagged("https://kiota.ch/b19/ubuntu", true, "ci"),
 	}}
 
-	got := forges.Remotes(doc, map[string]string{"kiota.ch": kindForgejo})
+	got := forges.Remotes(doc, map[string]string{hostKiota: kindForgejo})
 
 	assert.Equal(t, got["codeberg"], got["badges"], "an alias IS the remote, not a copy")
 	assert.Equal(t, got["codeberg"], got["public"], "first in document order wins the alias")
 	assert.Equal(t, got["github"], got["ci"], "github is the first ci-tagged mirror")
 	assert.Equal(t, got["kiota"], got[forges.AliasPreferred],
 		"links[].preferred yields its alias with no tag declared")
+}
+
+// A fragment's claim must hold however a project orders its includes: the
+// highest `priority` wins the alias, not the first in document order.
+func TestRemotesAliasByPriority(t *testing.T) {
+	kiota := tagged("https://kiota.ch/b19/ubuntu", true, "public", "badges")
+	kiota.Extra["priority"] = 10
+	codeberg := tagged(codebergURL, false, "public", "badges")
+	codeberg.Extra["priority"] = 90
+	doc := &projectfile.Document{Links: []projectfile.Link{kiota, codeberg}}
+
+	got := forges.Remotes(doc, map[string]string{hostKiota: kindForgejo})
+
+	assert.Equal(t, got["codeberg"], got["badges"], "priority 90 beats 10 declared first")
+	assert.Equal(t, got["codeberg"], got["public"])
+	assert.Equal(t, got["kiota"], got[forges.AliasPreferred], "preferred is not contested here")
 }
 
 // A capability must never steal an identity: a project that tags a mirror

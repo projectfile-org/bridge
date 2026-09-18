@@ -6,6 +6,7 @@ package forges
 
 import (
 	"net/url"
+	"slices"
 	"strings"
 
 	"kiota.ch/projectfile/core/v2/pkg/genlog"
@@ -39,7 +40,8 @@ const (
 //
 // The slug is the FIRST domain label (codeberg.org → codeberg, kiota.ch →
 // kiota): deterministic, dot-free, and needing no declaration anywhere. On a
-// slug collision the first mirror in document order wins.
+// slug collision the first mirror in document order wins; an alias goes to
+// the highest link `priority`, ties in document order.
 //
 // kinds is org.projectfile.forge.kinds — the user's authoritative host→kind
 // map, which is how a self-hosted instance on a bare hostname (kiota.ch) gets
@@ -87,8 +89,9 @@ func Remotes(pf *projectfile.Document, kinds map[string]string) map[string]any {
 // claim is one alias a link asks for, carried with the remote it names so the
 // apply pass needs no second lookup.
 type claim struct {
-	alias  string
-	remote map[string]any
+	alias    string
+	remote   map[string]any
+	priority int
 }
 
 // AliasPreferred is the alias every document gets for free from
@@ -106,11 +109,12 @@ const AliasIssues = "issues"
 // tag it declares, plus `preferred` when it is the §5.11 canonical entry.
 func claimsFor(link *projectfile.Link, remote map[string]any) []claim {
 	var out []claim
+	priority := pfmodel.LinkPriority(*link)
 	for _, tag := range pfmodel.LinkTags(*link) {
-		out = append(out, claim{alias: tag, remote: remote})
+		out = append(out, claim{alias: tag, remote: remote, priority: priority})
 	}
 	if link.Preferred {
-		out = append(out, claim{alias: AliasPreferred, remote: remote})
+		out = append(out, claim{alias: AliasPreferred, remote: remote, priority: priority})
 	}
 	return out
 }
@@ -136,7 +140,7 @@ func issuesClaim(pf *projectfile.Document, out map[string]any) []claim {
 			continue
 		}
 		genlog.Debug("forge issues alias matched", "slug", slug, "url", ir.URL)
-		return []claim{{alias: AliasIssues, remote: remote}}
+		return []claim{{alias: AliasIssues, remote: remote, priority: pfmodel.PriorityDefault}}
 	}
 	genlog.Debug("forge issues alias skipped", "url", ir.URL, "reason", "no source-code link matches")
 	return nil
@@ -152,11 +156,12 @@ func issuesClaim(pf *projectfile.Document, out map[string]any) []claim {
 //   - A claim naming an existing slug is refused. A slug is an identity and a
 //     capability must never be able to steal it, or `remotes.gitea` would stop
 //     meaning gitea.com for any project that tagged a mirror `gitea`.
-//   - The first claimant of an alias wins, in document order, matching the rule
-//     slug collisions already use. Later claimants are traced, not dropped
-//     silently, because "my badge points at the wrong mirror" is otherwise
-//     invisible.
+//   - The highest-priority claimant of an alias wins, ties in document order,
+//     so a fragment's claim holds however a project orders its includes. Later
+//     claimants are traced, not dropped silently, because "my badge points at
+//     the wrong mirror" is otherwise invisible.
 func applyAliases(out map[string]any, slugs map[string]bool, claims []claim) {
+	slices.SortStableFunc(claims, func(a, b claim) int { return pfmodel.ByPriorityDesc(a.priority, b.priority) })
 	for _, c := range claims {
 		if slugs[c.alias] {
 			genlog.Warn("forge alias refused: it would shadow a forge slug",
@@ -166,7 +171,7 @@ func applyAliases(out map[string]any, slugs map[string]bool, claims []claim) {
 		}
 		if _, taken := out[c.alias]; taken {
 			genlog.Debug("forge alias skipped", "alias", c.alias,
-				"reason", "already claimed by an earlier link", "url", c.remote[KeyURL])
+				"reason", "already claimed by a higher-priority link", "url", c.remote[KeyURL])
 			continue
 		}
 		out[c.alias] = c.remote
