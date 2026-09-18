@@ -120,7 +120,7 @@ templates under `org.projectfile.forge.links[]` / `.repositories[]` — the
 spec shapes, with `${path}` / `${flatpath}` / `${name}` read relative to the
 forge namespace — and `pf-bridge scan forge` expands each against the merged
 document and gap-fills the result through `applyLink` / `applyRepository`
-(`--force` rewrites label, preferred and tags). A template that does not
+(`--force` rewrites label, preferred, tags and priority). A template that does not
 resolve is skipped with a warning, so a `${` never reaches the file. A
 template with no `label` gets the same noun placeholder `git-remotes` writes,
 which the title promotion rewrites per declared language. Templates never sit

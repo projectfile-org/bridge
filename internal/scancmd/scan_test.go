@@ -124,6 +124,39 @@ func TestApplyLinkGapFillsTags(t *testing.T) {
 	})
 }
 
+// A template's priority reaches a hand-written link the same way its tags do:
+// gap-filled when absent, kept when declared, replaced under --force.
+func TestApplyLinkGapFillsPriority(t *testing.T) {
+	proposed := projectfile.Link{
+		Type:  projectfile.LinkSourceCode,
+		URL:   testApplyLinkURL,
+		Extra: map[string]any{"priority": 80},
+	}
+
+	t.Run("fills_unranked_link", func(t *testing.T) {
+		doc := &projectfile.Document{
+			Links: []projectfile.Link{{Type: projectfile.LinkSourceCode, URL: testApplyLinkURL}},
+		}
+		applyLink(doc, proposed, false)
+		require.Len(t, doc.Links, 1)
+		assert.Equal(t, 80, pfmodel.LinkPriority(doc.Links[0]))
+	})
+
+	t.Run("keeps_curated_priority", func(t *testing.T) {
+		doc := &projectfile.Document{
+			Links: []projectfile.Link{{
+				Type:  projectfile.LinkSourceCode,
+				URL:   testApplyLinkURL,
+				Extra: map[string]any{"priority": 5},
+			}},
+		}
+		applyLink(doc, proposed, false)
+		assert.Equal(t, 5, pfmodel.LinkPriority(doc.Links[0]))
+		applyLink(doc, proposed, true)
+		assert.Equal(t, 80, pfmodel.LinkPriority(doc.Links[0]), "--force replaces it")
+	})
+}
+
 // TestApplyLinkForceOverwrites guards the escape hatch. Gap-fill alone makes
 // the first fleet-wide scan irreversible: 152 projectfiles would hold whatever
 // label/tags shipped first, and no later run could correct them. --force is how

@@ -160,6 +160,21 @@ func SetLinkTags(l *projectfile.Link, tags []string, force bool) bool {
 	return true
 }
 
+// SetLinkPriority gap-fills a proposed priority onto l under SetLinkTags' rule: a declared key wins unless force.
+func SetLinkPriority(l *projectfile.Link, priority int, force bool) bool {
+	if l == nil || priority == PriorityDefault {
+		return false
+	}
+	if _, declared := l.Extra[keyPriority]; declared && !force {
+		return false
+	}
+	if l.Extra == nil {
+		l.Extra = map[string]any{}
+	}
+	l.Extra[keyPriority] = priority
+	return true
+}
+
 // SetLinkLabel writes a proposed label onto the link matching (linkType, url),
 // reporting whether it wrote. force=true overwrites a non-empty label;
 // force=false gap-fills, so a hand-written or previously-derived label survives

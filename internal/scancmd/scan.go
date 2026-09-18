@@ -441,11 +441,11 @@ func applyRepository(doc *projectfile.Document, repo projectfile.Repository) {
 // dedup key is (type, url) so multiple links of the same type with distinct
 // URLs (e.g. two source-code links for origin + mirror) coexist; an identical
 // pair from a second source is a no-op. When the existing link lacks a field
-// the incoming one carries (label, preferred, tags), it is gap-filled —
+// the incoming one carries (label, preferred, tags, priority), it is gap-filled —
 // existing values win, so a manually set preferred:true is never downgraded
 // and a curated capability list is never overruled.
 //
-// force overwrites label, preferred AND capability tags. Gap-fill alone is
+// force overwrites label, preferred, priority AND capability tags. Gap-fill alone is
 // irreversible: a Bare label written before org.projectfile.i18n.languages was
 // declared, or one tag vocabulary, would freeze forever. --force is how such a
 // fleet is moved to the current localized/vocabulary form — the scanner
@@ -469,6 +469,9 @@ func applyLink(doc *projectfile.Document, link projectfile.Link, force bool) {
 			if tags := pfmodel.LinkTags(link); pfmodel.SetLinkTags(existing, tags, force) {
 				genlog.Debug("scan: capability tags written", "url", existing.URL,
 					"tags", tags, "force", force)
+			}
+			if priority := pfmodel.LinkPriority(link); pfmodel.SetLinkPriority(existing, priority, force) {
+				genlog.Debug("scan: priority written", "url", existing.URL, "priority", priority, "force", force)
 			}
 			return
 		}
@@ -536,7 +539,7 @@ func Main(binName string) {
 	scanCmd.Flags().BoolVar(&scanPrune, "prune", false,
 		"remove stale tags from pf in place (mutually exclusive with --strict, stacks only)")
 	scanCmd.Flags().BoolVarP(&scanForce, "force", "f", false,
-		"overwrite declared links[] label, preferred and tags with the host proposal (links only)")
+		"overwrite declared links[] label, preferred, tags and priority with the proposal (links only)")
 	rootflags.Bind(scanCmd)
 
 	if describe.Handled(scanCmd, os.Args[1:]) {
