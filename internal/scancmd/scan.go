@@ -50,10 +50,11 @@ var scanCmd = &cobra.Command{
 	Use:   "scan [scanner...] [directory]",
 	Short: "Run scanners to refresh projectfile metadata from filesystem signals",
 	Long: "Without arguments, scan opens an interactive picker.\n" +
-		"Available scanners: all, git, git-authors, git-remotes, git-dates, stacks.\n" +
+		"Available scanners: all, forge, git, git-authors, git-remotes, git-dates, stacks.\n" +
 		"Combine multiple: pf-cli scan git-remotes stacks\n" +
 		"\"git\" expands to git-authors + git-remotes + git-dates.\n" +
 		"\"all\" runs every registered scanner.\n" +
+		"\"forge\" materializes org.projectfile.forge.{links,repositories} templates into links[] and repositories[].\n" +
 		"\n" +
 		"Stack-specific flags (--check/--strict/--prune) only apply when\n" +
 		"\"stacks\" is in the scanner list.",
@@ -86,6 +87,7 @@ const (
 	scannerGitRemotes = "git-remotes"
 	scannerGitDates   = "git-dates"
 	scannerStacks     = "stacks"
+	scannerForge      = "forge"
 )
 
 var knownScannerNames = map[string]bool{
@@ -95,6 +97,7 @@ var knownScannerNames = map[string]bool{
 	scannerGitRemotes: true,
 	scannerGitDates:   true,
 	scannerStacks:     true,
+	scannerForge:      true,
 }
 
 // parseScanArgs splits positional args into scanner names and an optional
@@ -286,6 +289,7 @@ func runScanPicker(dir string) error {
 		{scannerGitRemotes, "git remotes → repositories, source-code links"},
 		{scannerGitDates, "commit dates → identity.created, identity.modified"},
 		{scannerStacks, "filesystem markers → stack tags (merge/check/prune)"},
+		{scannerForge, "forge templates → links[], repositories[]"},
 	}
 	chosen, err := selector.Run(selector.Choices[scanChoice]{
 		Title:  "What to scan?",

@@ -14,6 +14,7 @@ package all
 import (
 	// Self-register with core during init(). The aggregator pattern means
 	// adding a new scanner is one line here, not one per consumer.
+	_ "projectfile.org/projectfile/bridge/internal/scanners/forge"
 	_ "projectfile.org/projectfile/bridge/internal/scanners/git"
 	_ "projectfile.org/projectfile/bridge/internal/scanners/stack"
 )
