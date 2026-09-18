@@ -141,6 +141,11 @@ Claims come from three places: the advisory `tags` list on the link (§139
 repository so the tracker is declared once even though the repository entry
 holds an unusable SSH URL. `hostOwnerRepo` is what reads that triple out of any
 transport, including the scp-style `git@host:o/r.git` that carries no scheme.
+`repositories[releases=true]` (a §139 extra key, read like `cffr`) → `releases`
+plus `releases-<route>` the same way, except that several entries may carry it
+— the origin and every mirror a release lands on — so each claim rides at its
+naming link’s priority and the most public mirror takes the bare alias. No
+fragment sets it: a forge is not where releases go, a release trait is.
 
 An alias never shadows a slug (a slug is an identity; the claim is refused and
 warned), and the highest link `priority` wins a contested alias, ties in
@@ -151,7 +156,7 @@ this repository, which is the thing the aliases exist to remove.
 `hostmatch.Rule.Capabilities` holds the only tags a hostname settles, and
 `pf-bridge scan git-remotes` proposes them. Host knowledge lives in the rule
 table and nowhere else. Two limits are deliberate: only `public` and the
-`badges*` family are host facts (`ci` and `releases` are per-project choices),
+`badges*` family are host facts (`ci` is a per-project choice, `releases` a repository one),
 and every self-hosted prefix rule proposes nothing, since `gitlab.` also
 matches an internal instance.
 

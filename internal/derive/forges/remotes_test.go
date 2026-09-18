@@ -25,6 +25,9 @@ const (
 	hostKiota   = "kiota.ch"
 	slugGit     = "git"
 	keyTags     = "tags"
+	keyReleases = "releases"
+	kiotaSSH    = "ssh://git@kiota.ch/b19/ubuntu.git"
+	codebergSCP = "git@codeberg.org:b19/ubuntu.git"
 )
 
 func sourceCode(urls ...string) *projectfile.Document {
@@ -85,7 +88,7 @@ func TestRemotesShapes(t *testing.T) {
 func TestRemotesSkipsUnusable(t *testing.T) {
 	assert.Nil(t, forges.Remotes(nil, nil))
 	assert.Nil(t, forges.Remotes(sourceCode(), nil))
-	assert.Nil(t, forges.Remotes(sourceCode("ssh://git@kiota.ch/b19/ubuntu.git"), nil),
+	assert.Nil(t, forges.Remotes(sourceCode(kiotaSSH), nil),
 		"an ssh clone URL has no scheme a badge endpoint can use")
 	assert.Nil(t, forges.Remotes(sourceCode("https://codeberg.org/"), nil), "no owner/repo")
 }
@@ -170,7 +173,7 @@ func TestRemotesAliasNeverShadowsASlug(t *testing.T) {
 func TestRemotesIssuesAliasFromRepositories(t *testing.T) {
 	cases := []struct{ name, repoURL string }{
 		{"ssh scheme", "ssh://git@codeberg.org/b19/ubuntu.git"},
-		{"scp style", "git@codeberg.org:b19/ubuntu.git"},
+		{"scp style", codebergSCP},
 		{"already http", codebergURL},
 	}
 	for _, tc := range cases {
@@ -192,12 +195,48 @@ func TestRemotesIssuesAliasFromRepositories(t *testing.T) {
 func TestRemotesIssuesAliasUnmatched(t *testing.T) {
 	doc := sourceCode(codebergURL)
 	doc.Repositories = []projectfile.Repository{
-		{URL: "ssh://git@kiota.ch/b19/ubuntu.git", Issues: true, Type: "git"},
+		{URL: kiotaSSH, Issues: true, Type: "git"},
 	}
 
 	got := forges.Remotes(doc, nil)
 
 	assert.NotContains(t, got, forges.AliasIssues)
+}
+
+// repositories[releases=true] may mark several mirrors. Each one gets its route
+// alias; the bare alias follows the most public link, exactly as `badges` does.
+func TestRemotesReleasesAliasesFromRepositories(t *testing.T) {
+	kiota := tagged("https://kiota.ch/b19/ubuntu", true)
+	kiota.Extra = map[string]any{"priority": 10}
+	github := tagged("https://github.com/damian-buho/b19-ubuntu", false)
+	github.Extra = map[string]any{"priority": 80}
+	doc := &projectfile.Document{Links: []projectfile.Link{kiota, github, tagged(codebergURL, false)}}
+	doc.Repositories = []projectfile.Repository{
+		{URL: kiotaSSH, Role: "origin", Extra: map[string]any{keyReleases: true}},
+		{URL: "git@github.com:damian-buho/b19-ubuntu.git", Role: "mirror", Extra: map[string]any{keyReleases: true}},
+		{URL: codebergSCP, Role: "mirror"},
+	}
+
+	got := forges.Remotes(doc, map[string]string{hostKiota: kindForgejo})
+
+	assert.Equal(t, got["kiota"], got["releases-gitea"], "kinds map classifies kiota as forgejo, route gitea")
+	assert.Equal(t, got["github"], got["releases-github"])
+	assert.Equal(t, got["github"], got[forges.AliasReleases], "priority 80 beats 10 for the bare alias")
+	assert.NotContains(t, got, "releases-codeberg", "an unmarked mirror claims nothing")
+}
+
+// No marked repository, or one no source-code link matches, files no alias.
+func TestRemotesReleasesAliasUnmatched(t *testing.T) {
+	doc := sourceCode(codebergURL)
+	doc.Repositories = []projectfile.Repository{
+		{URL: kiotaSSH, Extra: map[string]any{keyReleases: true}},
+		{URL: codebergSCP, Extra: map[string]any{keyReleases: "yes"}},
+	}
+
+	got := forges.Remotes(doc, nil)
+
+	assert.NotContains(t, got, forges.AliasReleases)
+	assert.NotContains(t, got, "releases-gitea")
 }
 
 // A malformed or absent tag list drops the capability instead of inventing one.

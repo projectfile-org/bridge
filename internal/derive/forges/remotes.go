@@ -82,7 +82,8 @@ func Remotes(pf *projectfile.Document, kinds map[string]string) map[string]any {
 	if len(out) == 0 {
 		return nil
 	}
-	applyAliases(out, slugs, append(claims, issuesClaim(pf, out)...))
+	claims = append(claims, issuesClaim(pf, out)...)
+	applyAliases(out, slugs, append(claims, releasesClaims(pf, out)...))
 	return out
 }
 
@@ -144,6 +145,58 @@ func issuesClaim(pf *projectfile.Document, out map[string]any) []claim {
 	}
 	genlog.Debug("forge issues alias skipped", "url", ir.URL, "reason", "no source-code link matches")
 	return nil
+}
+
+// AliasReleases is the alias derived from repositories[].releases, the twin of AliasIssues.
+const AliasReleases = "releases"
+
+// routeByKind maps a forge kind to its shields route family, the suffix `badges-<route>` uses.
+var routeByKind = map[string]string{
+	string(hostmatch.KindGitHub):  "github",
+	string(hostmatch.KindGitLab):  "gitlab",
+	string(hostmatch.KindForgejo): "gitea",
+}
+
+// releasesClaims files `releases` and `releases-<route>` for every repositories[releases=true] entry, at its link's priority.
+func releasesClaims(pf *projectfile.Document, out map[string]any) []claim {
+	var claims []claim
+	for _, rr := range pfmodel.ReleasesRepositories(pf) {
+		host, owner, repo := hostOwnerRepo(rr.URL)
+		if host == "" {
+			genlog.Debug("forge releases alias skipped", "url", rr.URL, "reason", "no host/owner/repo")
+			continue
+		}
+		matched := false
+		for i := range pf.Links {
+			link := &pf.Links[i]
+			if link.Type != projectfile.LinkSourceCode || !sameRepository(link.URL, host, owner, repo) {
+				continue
+			}
+			remote, ok := out[firstLabel(host)].(map[string]any)
+			if !ok || remote[KeyHost] != host || remote[KeyOwner] != owner || remote[KeyRepo] != repo {
+				continue
+			}
+			matched = true
+			priority := pfmodel.LinkPriority(*link)
+			claims = append(claims, claim{alias: AliasReleases, remote: remote, priority: priority})
+			kind, _ := remote[KeyKind].(string)
+			route, known := routeByKind[kind]
+			genlog.Debug("forge releases alias matched", "url", rr.URL, "route", route, "priority", priority)
+			if known {
+				claims = append(claims, claim{alias: AliasReleases + "-" + route, remote: remote, priority: priority})
+			}
+		}
+		if !matched {
+			genlog.Debug("forge releases alias skipped", "url", rr.URL, "reason", "no source-code link matches")
+		}
+	}
+	return claims
+}
+
+// sameRepository reports whether raw names the host/owner/repo triple on any transport.
+func sameRepository(raw, host, owner, repo string) bool {
+	h, o, r := hostOwnerRepo(raw)
+	return h == host && o == owner && r == repo
 }
 
 // applyAliases files each claim next to the slugs, so one remote is reachable

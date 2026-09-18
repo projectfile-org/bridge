@@ -114,6 +114,23 @@ func pickRepository(doc *projectfile.Document) *projectfile.Repository {
 	return &doc.Repositories[0]
 }
 
+// keyReleases is the §139 additional key marking a repository that carries the project's releases.
+const keyReleases = "releases"
+
+// ReleasesRepositories returns every entry marked releases: true, in document order.
+func ReleasesRepositories(doc *projectfile.Document) []*projectfile.Repository {
+	if doc == nil {
+		return nil
+	}
+	var out []*projectfile.Repository
+	for i := range doc.Repositories {
+		if boolFromExtra(doc.Repositories[i].Extra, keyReleases) {
+			out = append(out, &doc.Repositories[i])
+		}
+	}
+	return out
+}
+
 // boolFromExtra reads key from the §139 Extra map as a bool, tolerating both
 // the parsed (bool) and serialized (string) shapes the encoders carry. Returns
 // false when the key is absent or not bool-shaped.
