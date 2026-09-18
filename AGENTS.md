@@ -111,6 +111,22 @@ bridge/
     └── warn/               warning ledger + end-of-run summary (+ fan-out handoff)
 ```
 
+### Forge templates (`internal/scanners/forge`)
+
+`links[]` and `repositories[]` are MATERIALIZED, never derived: the file on
+disk carries concrete URLs, because a link validator, an indexer or a human
+reads it without pf-cli. A fleet fragment declares the grammar once as
+templates under `org.projectfile.forge.links[]` / `.repositories[]` — the
+spec shapes, with `${path}` / `${flatpath}` / `${name}` read relative to the
+forge namespace — and `pf-bridge scan forge` expands each against the merged
+document and gap-fills the result through `applyLink` / `applyRepository`
+(`--force` rewrites label, preferred and tags). A template that does not
+resolve is skipped with a warning, so a `${` never reaches the file. A
+template with no `label` gets the same noun placeholder `git-remotes` writes,
+which the title promotion rewrites per declared language. Templates never sit
+in the spec lists themselves: pf-cli does no interpolation, so a `${…}` there
+would reach every consumer of the merged document.
+
 ### Forge capability aliases (`internal/derive/forges`)
 
 `Remotes()` files each `links[type=source-code]` mirror under its slug (first
@@ -127,8 +143,9 @@ holds an unusable SSH URL. `hostOwnerRepo` is what reads that triple out of any
 transport, including the scp-style `git@host:o/r.git` that carries no scheme.
 
 An alias never shadows a slug (a slug is an identity; the claim is refused and
-warned), and the first claimant wins in document order. The vocabulary is
-deliberately open — registering words would put the fleet’s topology back in
+warned), and the highest link `priority` wins a contested alias, ties in
+document order — so a fragment’s claim holds however a project orders its
+`includes:`. The vocabulary is deliberately open — registering words would put the fleet’s topology back in
 this repository, which is the thing the aliases exist to remove.
 
 `hostmatch.Rule.Capabilities` holds the only tags a hostname settles, and
