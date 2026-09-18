@@ -104,10 +104,10 @@ bridge/
     │                        forge, funding, ...) — moved out of core in the core-2.0 cut
     ├── bridge/             every projectfile↔external-file bridge + core/ contract + registry
     ├── forge/              forge push (core/ + drivers/{github,gitlab,forgejo} + hostmatch/)
-    ├── scanners/           stack + git scanners (core registry)
+    ├── scanners/           stack + git + forge + sinks scanners (core registry)
     ├── source/             `init` ecosystem auto-detection (reuses bridge parsers)
     ├── scaffold/           interactive `init` TUI (runs scanners)
-    ├── derive/             read-time fields (forge remotes, sink refs) + containers (registry pages)
+    ├── derive/             read-time fields (forge remotes, sink refs) + containers (registry pages, run by `scan sinks`)
     └── warn/               warning ledger + end-of-run summary (+ fan-out handoff)
 ```
 
@@ -126,6 +126,20 @@ template with no `label` gets the same noun placeholder `git-remotes` writes,
 which the title promotion rewrites per declared language. Templates never sit
 in the spec lists themselves: pf-cli does no interpolation, so a `${…}` there
 would reach every consumer of the merged document.
+
+### Registry pages (`internal/scanners/sinks`)
+
+`links[type=package-registry]` is materialized the same way: `pf-bridge scan
+sinks` runs `derive/containers` over the merged document and proposes one
+landing page per PUBLIC sink (`ghcr.io` → the package under the GitHub
+repository, `docker.io` → the Docker Hub repository; kiota, ECR and quay have
+no public page), fanned out per matrix cell when the image path names an axis.
+The GHCR page hangs off the GitHub repository, so the scanner folds in the
+forge links `Materialize` stages in the same run — `scan all` converges in one
+pass on a project that just gained its GitHub fragment. Nothing else writes
+this link: a bridge sync (`cff`, `shard`, `npm`, …) touches only the fields its
+file maps, so `pf-cli del` followed by a sync leaves the link gone until the
+scanner runs again.
 
 ### Forge capability aliases (`internal/derive/forges`)
 

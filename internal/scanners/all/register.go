@@ -16,5 +16,6 @@ import (
 	// adding a new scanner is one line here, not one per consumer.
 	_ "projectfile.org/projectfile/bridge/internal/scanners/forge"
 	_ "projectfile.org/projectfile/bridge/internal/scanners/git"
+	_ "projectfile.org/projectfile/bridge/internal/scanners/sinks"
 	_ "projectfile.org/projectfile/bridge/internal/scanners/stack"
 )

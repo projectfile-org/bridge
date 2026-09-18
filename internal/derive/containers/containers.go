@@ -14,13 +14,8 @@ import (
 	"projectfile.org/projectfile/bridge/internal/pfmodel"
 )
 
-// Change matches forges.Change one-for-one so the engine folds both passes uniformly.
-type Change struct {
-	FieldPath string
-	NewValue  string
-	Source    string
-	Label     *projectfile.LocalizedString
-}
+// LinkPackageRegistry is the links[] type of a registry landing page; core names no constant for it.
+const LinkPackageRegistry = "package-registry"
 
 // hostDockerHub is the Docker Hub registry host as it appears in a composed sink ref.
 const hostDockerHub = "docker.io"
@@ -38,13 +33,13 @@ const ciExtensionNS = "org.projectfile.ci"
 // built per axis (e.g. a base image published once per `{B19_UBUNTU_SERIES}`).
 // A link still carrying the raw `{AXIS}` placeholder addresses nothing, so an
 // axis the document does not declare drops the link rather than publish it.
-func Derive(pf *projectfile.Document) []Change {
+func Derive(pf *projectfile.Document) []projectfile.Link {
 	refs := ocisinks.Refs(pf)
 	if len(refs) == 0 {
 		return nil
 	}
 	axes := pfmodel.MatrixAxes(pf, ciExtensionNS)
-	var out []Change
+	var out []projectfile.Link
 	seen := map[string]bool{}
 	for name, v := range refs {
 		entry, ok := v.(map[string]any)
@@ -70,12 +65,8 @@ func Derive(pf *projectfile.Document) []Change {
 				continue
 			}
 			seen[expanded] = true
-			out = append(out, Change{
-				FieldPath: "links[type=package-registry,url=" + expanded + "]",
-				NewValue:  expanded,
-				Source:    "sink:" + name,
-				Label:     registryLabel,
-			})
+			genlog.Debug("derive: package-registry link", "sink", name, "url", expanded)
+			out = append(out, projectfile.Link{Type: LinkPackageRegistry, URL: expanded, Label: registryLabel})
 		}
 	}
 	return out

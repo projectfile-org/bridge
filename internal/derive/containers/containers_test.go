@@ -52,8 +52,8 @@ func TestDeriveGHCRUsesSourceRepoAndEncodesNesting(t *testing.T) {
 	got := containers.Derive(doc)
 
 	require.Len(t, got, 1)
-	assert.Equal(t, "https://github.com/damian-buho/b19-ubuntu/pkgs/container/b19%2Fubuntu", got[0].NewValue)
-	assert.Equal(t, "links[type=package-registry,url="+got[0].NewValue+"]", got[0].FieldPath)
+	assert.Equal(t, "https://github.com/damian-buho/b19-ubuntu/pkgs/container/b19%2Fubuntu", got[0].URL)
+	assert.Equal(t, containers.LinkPackageRegistry, got[0].Type)
 }
 
 func TestDeriveGHCRSkippedWithoutGitHubSourceLink(t *testing.T) {
@@ -72,7 +72,7 @@ func TestDeriveDockerHubFlatPath(t *testing.T) {
 	got := containers.Derive(doc)
 
 	require.Len(t, got, 1)
-	assert.Equal(t, "https://hub.docker.com/r/damian-buho/b19-ubuntu", got[0].NewValue)
+	assert.Equal(t, "https://hub.docker.com/r/damian-buho/b19-ubuntu", got[0].URL)
 }
 
 func TestDeriveDockerHubOfficialImage(t *testing.T) {
@@ -83,7 +83,7 @@ func TestDeriveDockerHubOfficialImage(t *testing.T) {
 	got := containers.Derive(doc)
 
 	require.Len(t, got, 1)
-	assert.Equal(t, "https://hub.docker.com/_/ubuntu", got[0].NewValue)
+	assert.Equal(t, "https://hub.docker.com/_/ubuntu", got[0].URL)
 }
 
 func TestDerivePrivateForgeSinkIsIgnored(t *testing.T) {
@@ -133,7 +133,7 @@ func TestDeriveFansOutOnePerMatrixAxisValue(t *testing.T) {
 	got := containers.Derive(doc)
 
 	require.Len(t, got, 2)
-	urls := []string{got[0].NewValue, got[1].NewValue}
+	urls := []string{got[0].URL, got[1].URL}
 	assert.ElementsMatch(t, []string{
 		"https://hub.docker.com/r/damianbuho/b19-ubuntu-resolute",
 		"https://hub.docker.com/r/damianbuho/b19-ubuntu-noble",

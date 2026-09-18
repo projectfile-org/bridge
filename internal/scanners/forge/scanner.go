@@ -39,6 +39,12 @@ func (Scanner) Scan(root string) (*source.Partial, []core.Hit, error) {
 	if err != nil {
 		return nil, nil, err
 	}
+	p, hits := Materialize(doc)
+	return p, hits, nil
+}
+
+// Materialize expands the forge templates of an already-read merged document.
+func Materialize(doc *projectfile.Document) (*source.Partial, []core.Hit) {
 	raw, _ := projectfile.LookupExtension(doc, pfmodel.ForgeExtensionNS)
 	ns, _ := raw.(map[string]any)
 	tmpl := projectfile.FromMap(map[string]any{keyLinks: ns[keyLinks], keyRepositories: ns[keyRepositories]})
@@ -62,7 +68,7 @@ func (Scanner) Scan(root string) (*source.Partial, []core.Hit, error) {
 		hits = append(hits, core.Hit{Source: scannerForge, Field: "repositories[role=" + r.Role + "]:" + u})
 	}
 	genlog.Debug("forge scanner: templates materialized", "links", len(p.Links), "repositories", len(p.Repositories))
-	return p, hits, nil
+	return p, hits
 }
 
 // expandLink fills the URL and label in place; false when a reference stays unresolved.
