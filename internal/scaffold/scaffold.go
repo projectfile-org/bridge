@@ -13,7 +13,6 @@ import (
 	"kiota.ch/projectfile/core/v2/pkg/pflock"
 	"kiota.ch/projectfile/core/v2/pkg/projectfile"
 	"kiota.ch/projectfile/core/v2/pkg/userconfig"
-	"projectfile.org/projectfile/bridge/internal/derive"
 	"projectfile.org/projectfile/bridge/internal/pfmodel"
 	"projectfile.org/projectfile/bridge/internal/scanners/core"
 	"projectfile.org/projectfile/bridge/internal/source"
@@ -193,20 +192,6 @@ func Run(opts Options) error {
 	}
 
 	doc := buildDocument(partial)
-
-	// Run the derive engine before write so init produces a self-consistent
-	// document — same passes sync runs (forge tracker URLs, package-registry
-	// landing pages). Without this, the user has to chase `pf-cli sync` (or
-	// hand-write the bugs link) immediately after init for a complete file.
-	// Failures are advisory: log and continue, since the document is still
-	// valid without the derived links.
-	if changes, derr := derive.Apply(doc, derive.Options{}); derr != nil {
-		genlog.Warn("derive failed", "err", derr.Error())
-	} else {
-		for _, c := range changes {
-			genlog.Debug("derive", "field", c.FieldPath, "source", c.Source, "value", c.NewValue)
-		}
-	}
 
 	path := filepath.Join(dir, "projectfile."+format)
 

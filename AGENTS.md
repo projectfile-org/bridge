@@ -59,7 +59,7 @@ correction: `BUSL-1.1` is canonical for the Business Source License — `BSL-1.1
 
 Bridge-owned typed shapes of `org.projectfile.*` extension namespaces
 (citation, readme, forge, funding, acknowledgements, codeowners, contributing,
-support, security, release, conventions, cli-derive, ignores, vulnerabilities,
+support, security, release, conventions, ignores, vulnerabilities,
 editors, dei) and their accessors live in `internal/pfmodel` below — moved out of
 core in the core-2.0 cut. Bridge code reaches them there, not through
 `pkg/projectfile`.
@@ -107,7 +107,7 @@ bridge/
     ├── scanners/           stack + git scanners (core registry)
     ├── source/             `init` ecosystem auto-detection (reuses bridge parsers)
     ├── scaffold/           interactive `init` TUI (runs scanners)
-    ├── derive/             inference engine (repo URL → forge links, stack → package registries, sink entries → pull refs)
+    ├── derive/             read-time fields (forge remotes, sink refs) + containers (registry pages)
     └── warn/               warning ledger + end-of-run summary (+ fan-out handoff)
 ```
 
@@ -184,10 +184,10 @@ and “where does this project’s BASE image live” in `pf-cli sink ref`, wher
 coordinates name a foreign project. The reader lives in core for the same
 reason: cli, bridge and pf-ci must not each own a list of the destinations.
 
-`Refs()` feeds **`AddVirtual`, not `Apply`**. That split is load-bearing: `Apply`
-proposes changes the caller PERSISTS, and the fleet’s sink entries arrive through
-an include, so a derive write would copy include data into every base document.
-`AddVirtual` computes into the in-memory merged document only, where
+`Refs()` feeds **`AddVirtual`, never a scanner**. That split is load-bearing: a
+scanner proposes entries the command PERSISTS, and the fleet’s sink entries
+arrive through an include, so a write would copy include data into every base
+document. `AddVirtual` computes into the in-memory merged document only, where
 `forge.remotes` lives.
 
 A composed ref is COMPLETE — every `${…}` resolved — or it is DROPPED. A `{AXIS}`

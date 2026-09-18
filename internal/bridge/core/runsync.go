@@ -10,7 +10,6 @@ import (
 
 	"kiota.ch/projectfile/core/v2/pkg/genlog"
 	"kiota.ch/projectfile/core/v2/pkg/projectfile"
-	"projectfile.org/projectfile/bridge/internal/derive"
 )
 
 // RunSync drives a single round-trip between projectfile and the external
@@ -86,19 +85,6 @@ func RunSync(syn Syncer, pf *projectfile.Document, opts Options) (*Result, error
 	}
 
 	emitConflicts(workPF, stderr, extName)
-
-	// Derivation pass runs after conflict emission so the engine sees the
-	// final repository/stack state for THIS sync run. Changes are written
-	// straight into workPF; they ride out alongside the bridge writes
-	// below in the same opts.DryRun gate.
-	derivedChanges, err := derive.Apply(workPF, derive.Options{})
-	if err != nil {
-		return nil, fmt.Errorf("derive: %w", err)
-	}
-	for _, c := range derivedChanges {
-		res.PFFields = append(res.PFFields, FieldChange{Key: c.FieldPath, Value: c.NewValue, From: c.Source, To: "projectfile"})
-		res.PFChanged = true
-	}
 
 	if !opts.DryRun {
 		// Force rewrites the external file even when no mapped field moved.

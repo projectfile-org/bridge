@@ -362,18 +362,6 @@ type LangConventions struct {
 	StyleGuideURL string
 }
 
-// CLIExtension binds `[org.projectfile.cli]`. Derive toggles (forges, containers) all default to true.
-type CLIExtension struct {
-	Derived []string         `toml:"-" yaml:"-" json:"-"`
-	Derive  CLIDeriveToggles `toml:"derive" yaml:"derive" json:"derive"`
-}
-
-// CLIDeriveToggles enables/disables individual inference passes.
-type CLIDeriveToggles struct {
-	Forges     bool `toml:"forges"     yaml:"forges"     json:"forges"`
-	Containers bool `toml:"containers" yaml:"containers" json:"containers"`
-}
-
 // ForgeExtension binds `[org.projectfile.forge]`. Push is the global
 // kill-switch; Fields toggles per-field push; Hosts/Kinds are per-host.
 type ForgeExtension struct {

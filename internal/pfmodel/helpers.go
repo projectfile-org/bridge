@@ -40,7 +40,6 @@ const (
 	AIExtensionNS               = "org.projectfile.ai"
 	ContributingExtensionNS     = "org.projectfile.contributing"
 	CodeOwnersExtensionNS       = "org.projectfile.codeowners"
-	CLIExtensionNS              = "org.projectfile.cli"
 	ForgeExtensionNS            = "org.projectfile.forge"
 	ConventionsExtensionNS      = "org.projectfile.conventions"
 	SupportExtensionNS          = "org.projectfile.support"
@@ -241,6 +240,23 @@ func boolVal(m map[string]any, key string) bool {
 	b, ok := v.(bool)
 	if !ok {
 		return false
+	}
+	return b
+}
+
+// boolValDefaultTrue reads m[outer][inner] as a bool; a missing path or non-bool leaf stays on.
+func boolValDefaultTrue(m map[string]any, outer, inner string) bool {
+	sub, ok := m[outer].(map[string]any)
+	if !ok {
+		return true
+	}
+	v, ok := sub[inner]
+	if !ok {
+		return true
+	}
+	b, ok := v.(bool)
+	if !ok {
+		return true
 	}
 	return b
 }

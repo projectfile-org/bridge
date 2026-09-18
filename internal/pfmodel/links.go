@@ -175,40 +175,6 @@ func SetLinkPriority(l *projectfile.Link, priority int, force bool) bool {
 	return true
 }
 
-// SetLinkLabel writes a proposed label onto the link matching (linkType, url),
-// reporting whether it wrote. force=true overwrites a non-empty label;
-// force=false gap-fills, so a hand-written or previously-derived label survives
-// re-derivation. Mirrors SetLinkTags' gap rule so the derive engine and scanners
-// share one "existing wins" policy across every link field.
-//
-// It is the sole label writer: producers hand it a *LocalizedString (Bare for
-// single-language projects, a Langs map when org.projectfile.i18n.languages is
-// declared) and the gap test decides whether it lands.
-func SetLinkLabel(doc *projectfile.Document, linkType, url string, label *projectfile.LocalizedString, force bool) bool {
-	if doc == nil || linkType == "" || url == "" || label == nil {
-		return false
-	}
-	for i := range doc.Links {
-		l := &doc.Links[i]
-		if l.Type != linkType || l.URL != url {
-			continue
-		}
-		if hasLabel(l) && !force {
-			return false
-		}
-		l.Label = label
-		return true
-	}
-	return false
-}
-
-// hasLabel reports whether a link carries a non-empty label — Bare set, or any
-// localized entry. The gap-fill gate for SetLinkLabel, kept here so the test for
-// "is this slot free" lives next to the writer that uses it.
-func hasLabel(l *projectfile.Link) bool {
-	return l.Label != nil && (l.Label.Bare != "" || len(l.Label.Langs) > 0)
-}
-
 // TagsFrom extracts a tag list from an untyped §139 value. Exported because the
 // readme's goal filter reads the same shape off a CI node map: the tolerance
 // rules (absent key, wrong type, mixed items, empty strings) must not diverge
@@ -363,14 +329,4 @@ func SetLink(doc *projectfile.Document, linkType, url string, force bool) bool {
 	}
 	doc.Links = append(doc.Links, projectfile.Link{Type: linkType, URL: url})
 	return true
-}
-
-// AddLink appends a new entry to doc.Links unconditionally. Use this when
-// emitting multiple entries of the same type (mirrors of source-code, several
-// chat channels); use SetLink for the "one canonical URL per type" case.
-func AddLink(doc *projectfile.Document, linkType, url string) {
-	if doc == nil || linkType == "" || url == "" {
-		return
-	}
-	doc.Links = append(doc.Links, projectfile.Link{Type: linkType, URL: url})
 }
