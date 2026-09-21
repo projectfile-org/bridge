@@ -206,7 +206,7 @@ func TestRunSyncNoCreateRefuses(t *testing.T) {
 	opts := core.Options{Dir: dir, PFPath: pfPath, Mode: core.ModeSync, NoCreate: true}
 
 	_, err := core.RunSync(syn, pf, opts)
-	assert.Error(t, err, "--no-create must return an error when ext file is absent")
+	assert.Error(t, err, "--create-all must be passed when ext file is absent")
 }
 
 // TestRunSyncWritesBaseNotMerged is the regression test for the include-leak

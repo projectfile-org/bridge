@@ -61,7 +61,7 @@ func (r *stubRenderer) Render(_ *projectfile.Document, _ core.Options) (core.Out
 func TestRunRenderCreatesFile(t *testing.T) {
 	dir := t.TempDir()
 	r := &stubRenderer{filename: testStubTXT, content: []byte("hello")}
-	require.NoError(t, core.RunRender(r, &projectfile.Document{}, core.Options{Dir: dir}))
+	require.NoError(t, core.RunRender(r, &projectfile.Document{}, core.Options{Dir: dir, NoCreate: false}))
 	data, err := os.ReadFile(filepath.Join(dir, testStubTXT))
 	require.NoError(t, err)
 	assert.Equal(t, "hello", string(data))
@@ -164,7 +164,7 @@ func TestRunRenderMarkerAllowsManagedFile(t *testing.T) {
 		policy:   core.Policy{Marker: true},
 		content:  []byte("# pf-cli-managed: yes\nnew"),
 	}
-	require.NoError(t, core.RunRender(r, &projectfile.Document{}, core.Options{Dir: dir}))
+	require.NoError(t, core.RunRender(r, &projectfile.Document{}, core.Options{Dir: dir, NoCreate: false}))
 	data, _ := os.ReadFile(target)
 	assert.Equal(t, "# pf-cli-managed: yes\nnew", string(data))
 }
@@ -179,7 +179,7 @@ func TestRunRenderMarkerForceOverridesCheck(t *testing.T) {
 		policy:   core.Policy{Marker: true},
 		content:  []byte("forced content"),
 	}
-	require.NoError(t, core.RunRender(r, &projectfile.Document{}, core.Options{Dir: dir, Force: true}))
+	require.NoError(t, core.RunRender(r, &projectfile.Document{}, core.Options{Dir: dir, Force: true, NoCreate: false}))
 	data, _ := os.ReadFile(target)
 	assert.Equal(t, "forced content", string(data))
 }
@@ -193,7 +193,7 @@ func TestRunRenderMultiFile(t *testing.T) {
 			testFileB: []byte("content-b"),
 		},
 	}
-	require.NoError(t, core.RunRender(r, &projectfile.Document{}, core.Options{Dir: dir}))
+	require.NoError(t, core.RunRender(r, &projectfile.Document{}, core.Options{Dir: dir, NoCreate: false}))
 
 	a, err := os.ReadFile(filepath.Join(dir, testFileA))
 	require.NoError(t, err)
@@ -212,8 +212,78 @@ func TestRunRenderCreatesSubdirectory(t *testing.T) {
 			"sub/dir/FILE.txt": []byte("nested"),
 		},
 	}
-	require.NoError(t, core.RunRender(r, &projectfile.Document{}, core.Options{Dir: dir}))
+	require.NoError(t, core.RunRender(r, &projectfile.Document{}, core.Options{Dir: dir, NoCreate: false}))
 	data, err := os.ReadFile(filepath.Join(dir, "sub", "dir", "FILE.txt"))
 	require.NoError(t, err)
 	assert.Equal(t, "nested", string(data))
+}
+
+// TestRunRenderNoCreateSkips: with --create-all not set (the default), a renderer
+// silently skips a file that does not exist instead of creating it, and returns nil.
+func TestRunRenderNoCreateSkips(t *testing.T) {
+	dir := t.TempDir()
+	r := &stubRenderer{
+		filename: testStubTXT,
+		content:  []byte("would-be content"),
+	}
+	err := core.RunRender(r, &projectfile.Document{}, core.Options{Dir: dir, NoCreate: true})
+	assert.NoError(t, err, "--create-all not set should skip missing files silently, not error")
+	_, statErr := os.Stat(filepath.Join(dir, testStubTXT))
+	assert.True(t, os.IsNotExist(statErr), "the file must not have been created")
+}
+
+// TestRunRenderNoCreateSkipsMultiFile: when some files exist and some don't,
+// only the existing ones are updated; missing files are skipped with no error.
+func TestRunRenderNoCreateSkipsMultiFile(t *testing.T) {
+	dir := t.TempDir()
+
+	// Create one file, leave the other missing.
+	existing := filepath.Join(dir, "A.txt")
+	require.NoError(t, os.WriteFile(existing, []byte("old-a"), 0o644))
+
+	r := &stubRenderer{
+		filename: "A.txt",
+		files: map[string][]byte{
+			"A.txt": []byte("new-a"),
+			"B.txt": []byte("new-b"),
+		},
+	}
+	err := core.RunRender(r, &projectfile.Document{}, core.Options{Dir: dir, NoCreate: true})
+	assert.NoError(t, err, "missing files should be skipped, not fail the run")
+	updated, _ := os.ReadFile(existing)
+	assert.Equal(t, "new-a", string(updated))
+	_, statErr := os.Stat(filepath.Join(dir, "B.txt"))
+	assert.True(t, os.IsNotExist(statErr), "B.txt must not have been created")
+}
+
+// TestRunRenderCreateAllowed: when --create-all is passed, files are
+// created even if they don't exist (the old default behaviour, now opt-in).
+func TestRunRenderCreateAllowed(t *testing.T) {
+	dir := t.TempDir()
+	r := &stubRenderer{
+		filename: testStubTXT,
+		content:  []byte("new content"),
+	}
+	err := core.RunRender(r, &projectfile.Document{}, core.Options{Dir: dir, NoCreate: false})
+	assert.NoError(t, err)
+	data, err := os.ReadFile(filepath.Join(dir, testStubTXT))
+	require.NoError(t, err)
+	assert.Equal(t, "new content", string(data))
+}
+
+// TestRunRenderNoCreateIgnoresExisting: --create-all blocks creation of missing
+// files but does not block updates of files that already exist.
+func TestRunRenderNoCreateIgnoresExisting(t *testing.T) {
+	dir := t.TempDir()
+	target := filepath.Join(dir, testStubTXT)
+	require.NoError(t, os.WriteFile(target, []byte("old content"), 0o644))
+
+	r := &stubRenderer{
+		filename: testStubTXT,
+		content:  []byte("new content"),
+	}
+	require.NoError(t, core.RunRender(r, &projectfile.Document{}, core.Options{Dir: dir, NoCreate: true}))
+	data, err := os.ReadFile(target)
+	require.NoError(t, err)
+	assert.Equal(t, "new content", string(data))
 }

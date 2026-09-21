@@ -1190,7 +1190,7 @@ pf-bridge-readme --list          # list registered bridge filenames
 ```
 
 Flags: `--dry-run` (`-n`), `--force` (`-f`), `--check`, `--offline`,
-`--quiet` (`-q`), `--verbose` (`-v`), `--no-create`, `--ignore-user-config`,
+`--quiet` (`-q`), `--verbose` (`-v`), `--create-all`, `--ignore-user-config`,
 `--sorted`, `--fail-on {error|warning}`.
 
 ### `--check`, the drift gate

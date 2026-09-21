@@ -101,6 +101,9 @@ func checkOutput(dir string, out Output, opts Options) error {
 		existing, readErr := os.ReadFile(absPath) // #nosec G304 -- joined from caller-provided dir + registered filename
 		switch {
 		case readErr != nil && os.IsNotExist(readErr):
+			if opts.NoCreate {
+				continue // --create-all: missing file is expected, not drift
+			}
 			warn.Record("drift: file is missing", "file", rel)
 			drifted = append(drifted, rel)
 		case readErr != nil:
@@ -146,6 +149,10 @@ func writeOutput(dir string, out Output, policy Policy, opts Options) error {
 		status := "created"
 		switch {
 		case readErr != nil && os.IsNotExist(readErr):
+			if opts.NoCreate {
+				genlog.Plain(fmt.Sprintf("bridge: %s (skipped — missing, --create-all not set)", rel))
+				continue // --create-all not set: expected, not a refusal
+			}
 			// fall through with status=created
 		case readErr != nil:
 			return fmt.Errorf("read existing %s: %w", rel, readErr)

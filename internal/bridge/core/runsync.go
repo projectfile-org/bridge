@@ -41,7 +41,8 @@ func RunSync(syn Syncer, pf *projectfile.Document, opts Options) (*Result, error
 
 	if !syn.Exists(opts.Dir) {
 		if opts.NoCreate {
-			return nil, fmt.Errorf("%s does not exist and --no-create is set", syn.Filename())
+			return nil, fmt.Errorf("%s does not exist and %s was not passed",
+				syn.Filename(), "--create-all")
 		}
 		return syncCreate(syn, pf, opts, res, stderr)
 	}

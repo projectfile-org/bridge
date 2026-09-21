@@ -52,7 +52,7 @@ var (
 	bridgeForce          bool
 	bridgeDryRun         bool
 	bridgePreview        bool
-	bridgeNoCreate       bool
+	bridgeCreateAll      bool
 	bridgeCheck          bool
 	bridgeNoDiff         bool
 	bridgeFailOnDrift    bool
@@ -117,8 +117,8 @@ func Main(binName string) {
 		"show what would change without writing")
 	root.Flags().BoolVar(&bridgePreview, "preview", false,
 		"print the rendered file(s) to stdout instead of writing (renderers only; syncers fall back to --dry-run)")
-	root.Flags().BoolVar(&bridgeNoCreate, "no-create", false,
-		"do not create target file if it does not exist (syncers only)")
+	root.Flags().BoolVar(&bridgeCreateAll, "create-all", false,
+		"create target files even if they do not exist (default: only update existing files)")
 	root.Flags().BoolVar(&bridgeCheck, "check", false,
 		"report drift instead of writing — the sync gate; implies --dry-run. Warns by default, see --fail-on-drift")
 	root.Flags().BoolVar(&bridgeNoDiff, "no-diff", false,
@@ -220,7 +220,7 @@ func runBridgeLocked(b core.Bridge, mode core.Mode, dir, pfPath string, cmd *cob
 		// path that gates on it (RunSync's persist step, writeOutput's status
 		// lines) even though the renderer preview path returns before reaching it.
 		DryRun:         bridgeDryRun || bridgeCheck || bridgePreview,
-		NoCreate:       bridgeNoCreate,
+		NoCreate:       !bridgeCreateAll,
 		Check:          bridgeCheck,
 		Preview:        bridgePreview,
 		Diff:           !bridgeNoDiff,
@@ -520,7 +520,7 @@ func runAllBridgeOne(b core.Bridge, mode core.Mode, dir, pfPath string, cmd *cob
 		// path that gates on it (RunSync's persist step, writeOutput's status
 		// lines) even though the renderer preview path returns before reaching it.
 		DryRun:         bridgeDryRun || bridgeCheck || bridgePreview,
-		NoCreate:       bridgeNoCreate,
+		NoCreate:       !bridgeCreateAll,
 		Check:          bridgeCheck,
 		Preview:        bridgePreview,
 		Diff:           !bridgeNoDiff,
