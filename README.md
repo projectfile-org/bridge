@@ -35,6 +35,7 @@ See [FEATURES.md](FEATURES.md) for the full list.
 
 - **Executable** `pf-bridge`
 - **Container image** `ghcr.io/projectfile-org/bridge:latest`
+- **Container image** `docker.io/damianbuho/projectfile-bridge:latest`
 
 ## Supported platforms
 
@@ -50,6 +51,12 @@ Pull the published container image:
 
 ```sh
 docker pull ghcr.io/projectfile-org/bridge:latest
+```
+
+### Pull from DockerHub
+
+```sh
+docker pull docker.io/damianbuho/projectfile-bridge:latest
 ```
 
 Stable releases also publish `X.Y.Z`, `X.Y` and `X` tags — pull the precision you want to pin.

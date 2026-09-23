@@ -37,6 +37,7 @@ Consulta [FEATURES.md](FEATURES.md) para ver la lista completa.
 
 - **Ejecutable** `pf-bridge`
 - **Imagen de contenedor** `ghcr.io/projectfile-org/bridge:latest`
+- **Imagen de contenedor** `docker.io/damianbuho/projectfile-bridge:latest`
 
 ## Plataformas admitidas
 
@@ -52,6 +53,12 @@ Descarga la imagen de contenedor publicada:
 
 ```sh
 docker pull ghcr.io/projectfile-org/bridge:latest
+```
+
+### Descargar de DockerHub
+
+```sh
+docker pull docker.io/damianbuho/projectfile-bridge:latest
 ```
 
 Las versiones estables también publican las etiquetas `X.Y.Z`, `X.Y` y `X`: descarga el nivel de precisión que quieras fijar.
