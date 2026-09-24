@@ -77,8 +77,8 @@ func TestRenderList(t *testing.T) {
 	var plain strings.Builder
 	renderList(&plain, entries, false)
 	assert.Equal(t,
-		"  npm     package.json — two-way sync\n"+
-			"  readme  README.md — one-way render\n",
+		"  npm     [rw]  package.json — two-way sync\n"+
+			"  readme  [ro]  README.md — one-way render\n",
 		plain.String())
 
 	var bold strings.Builder
