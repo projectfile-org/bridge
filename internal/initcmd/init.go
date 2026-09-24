@@ -30,9 +30,11 @@ var (
 
 var initCmd = &cobra.Command{
 	Use:   "init [directory]",
-	Short: "Scaffold a new projectfile document",
+	Short: "Scaffold a new projectfile document (prefer pf-cli init)",
 	Long: "Create a new projectfile.yaml (or .toml/.json) by discovering metadata from\n" +
-		"known sources (CITATION.cff, etc.) and prompting for missing required fields.",
+		"known sources (CITATION.cff, etc.) and prompting for missing required fields.\n" +
+		"Prefer `pf-cli init`, which delegates here when pf-bridge is installed and\n" +
+		"falls back to a basic scaffold otherwise.",
 	Aliases:       []string{"scaffold"},
 	Args:          cobra.MaximumNArgs(1),
 	Version:       buildinfo.Version,

@@ -16,7 +16,7 @@ per bridge on PATH.
 - `pf-bridge <name> [to|from] [dir]` → execs `pf-bridge-<name>`. Each per-bridge binary round-trips its metadata file(s) (package.json via `npm`, CITATION.cff via `cff`, …) or derive-renders (LICENSE via `license`, .gitignore family via `ignore`, …). Direction is `to`/`from`/none; a single-file binary implies its filename, a multi-file one (`ignore`, `vulnerabilities`) takes the name or `all`. The `license` bridge renders the substituted root LICENSE **and** `LICENSES/<id>.txt` per SPDX term (also substituted by default; `--reuse-canonical` keeps the literal SPDX placeholders to match `reuse download`).
 - `pf-bridge all` / `to all` / `from all` — fan out across every installed file bridge.
 - `pf-bridge forge|scan|init` → execs `pf-bridge-forge` (push identity to GitHub/GitLab/Forgejo), `pf-bridge-scan` (filesystem/Git scanners), or
-    `pf-bridge-init` (scaffold a new projectfile).
+    `pf-bridge-init` (scaffold a new projectfile — engine behind `pf-cli init`, which delegates here when installed).
 
 The **document backend** (read/query/mutate/convert/validate) is the sibling
 `projectfile/core` module (`pf-cli`). This module was extracted from it in the
