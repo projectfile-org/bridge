@@ -70,8 +70,8 @@ func (Bridge) Render(pf *projectfile.Document, opts core.Options) (core.Output, 
 		return core.Output{}, err
 	}
 	if ext == nil {
-		genlog.DebugRow("namespace", "absent", "org.projectfile.ai",
-			"skipped — absence is not permission, never rendered as one")
+		genlog.Plain("AI_POLICY.md: no [org.projectfile.ai] namespace — nothing to render.")
+		genlog.Plain("Declare the namespace (attitude plus activities) to publish a policy; absence stays silent by design.")
 		return core.Output{Files: map[string][]byte{}}, nil
 	}
 	warnUnknownStances(ext)

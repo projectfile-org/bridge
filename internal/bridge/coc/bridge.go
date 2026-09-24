@@ -5,8 +5,12 @@
 package coc
 
 import (
+	"context"
 	"fmt"
 	"os"
+	"os/exec"
+	"strings"
+	"time"
 
 	"kiota.ch/projectfile/core/v2/pkg/genlog"
 	"kiota.ch/projectfile/core/v2/pkg/projectfile"
@@ -47,9 +51,13 @@ func (Bridge) RequiredFields(pf *projectfile.Document) []core.Missing {
 	if email, _ := contactEmail(pf); email != "" {
 		return nil
 	}
+	hint := "moderator email address (e.g. conduct@example.org)"
+	if gitEmail := gitConfigEmail("."); gitEmail != "" {
+		hint = fmt.Sprintf("moderator email address (git suggests %s)", gitEmail)
+	}
 	return []core.Missing{{
 		Field: "[org.projectfile.security].contact",
-		Hint:  "moderator email address (e.g. conduct@example.org)",
+		Hint:  hint,
 		Setter: func(v string) error {
 			if v == "" {
 				return fmt.Errorf("contact email is required")
@@ -67,6 +75,9 @@ func (Bridge) RequiredFields(pf *projectfile.Document) []core.Missing {
 
 func (Bridge) Render(pf *projectfile.Document, opts core.Options) (core.Output, error) {
 	email, emailSrc := contactEmail(pf)
+	if email == "" {
+		email, emailSrc = gitConfigEmail(opts.Dir), "git config user.email"
+	}
 	if email == "" {
 		return core.Output{}, fmt.Errorf("CODE_OF_CONDUCT.md: no contact email available — add a [[people]] entry with role 'community' (or 'maintainer') and email, or set [org.projectfile.security].contact")
 	}
@@ -117,6 +128,22 @@ func contactEmail(pf *projectfile.Document) (string, string) {
 		return sec.Contact, "[org.projectfile.security].contact"
 	}
 	return pfmodel.ContactEmail(pf, projectfile.RoleCommunity)
+}
+
+// gitConfigEmail reads the user's email from git config as a last-resort
+// contact suggestion. Bounded by timeout; empty when git is absent.
+func gitConfigEmail(dir string) string {
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+	cmd := exec.CommandContext(ctx, "git", "config", "user.email") // #nosec G204 -- fixed argv, no user input
+	if dir != "" {
+		cmd.Dir = dir
+	}
+	out, err := cmd.Output()
+	if err != nil {
+		return ""
+	}
+	return strings.TrimSpace(string(out))
 }
 
 // securityExtensionToMap mirrors the helper in the security bridge — kept

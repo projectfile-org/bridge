@@ -72,7 +72,7 @@ func Write(dir string, doc *Document) error {
 	// that has slipped through Read. Validate on the typed YAML body
 	// (REUSE header is not YAML content).
 	if err := Validate(data); err != nil {
-		return fmt.Errorf("CITATION.cff schema validation: %w", err)
+		return fmt.Errorf("CITATION.cff: schema validation failed: %s (%s)", firstValidationLine(err), cffSchemaURL)
 	}
 	if len(data) > 0 && data[len(data)-1] != '\n' {
 		data = append(data, '\n')
@@ -84,6 +84,12 @@ func Write(dir string, doc *Document) error {
 // Write yet. It is identical behaviour.
 func WriteMerge(dir string, doc *Document) error {
 	return Write(dir, doc)
+}
+
+// firstValidationLine contracts a schema error to its first line.
+func firstValidationLine(err error) string {
+	msg, _, _ := strings.Cut(err.Error(), "\n")
+	return strings.TrimSpace(msg)
 }
 
 // headCommentFor composes the YAML comment lines that form the document head.

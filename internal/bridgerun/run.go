@@ -155,6 +155,7 @@ func Main(binName string) {
 
 	err := root.Execute()
 	if err != nil {
+		genlog.Error("bridge failed", "err", err.Error())
 		fmt.Fprintf(os.Stderr, "Error: %s\n", err)
 		genlog.FlushDebug()
 	}
@@ -247,8 +248,12 @@ func runBridgeLocked(b core.Bridge, mode core.Mode, dir, pfPath string, cmd *cob
 
 	if rb, ok := b.(core.RequiredFieldsBridge); ok {
 		if missing := rb.RequiredFields(pf); len(missing) > 0 && isatty.IsTerminal(os.Stdout.Fd()) {
-			if err := fillRequiredFields(b.Filename(), missing, pf, pfPath); err != nil {
+			filled, err := fillRequiredFields(b.Filename(), missing, pf, pfPath)
+			if err != nil {
 				return err
+			}
+			if filled {
+				opts.NoCreate = false
 			}
 		}
 	}
@@ -412,9 +417,10 @@ func policySummary(p core.Policy) string {
 // fillRequiredFields drives the bubbletea fill-mode prompt over the bridge's
 // Missing list. Each field's Setter mutates pf in place; after the form is
 // accepted, only the filled fields are written to the BASE projectfile so
-// include-inherited values are never materialised. Cancellation returns
-// "cancelled" so the caller can short-circuit without error.
-func fillRequiredFields(filename string, missing []core.Missing, pf *projectfile.Document, pfPath string) error {
+// include-inherited values are never materialised. Reports whether the form
+// was accepted so the caller can honour the effort (e.g. create the target
+// file instead of skipping it as missing). Cancellation returns "cancelled".
+func fillRequiredFields(filename string, missing []core.Missing, pf *projectfile.Document, pfPath string) (bool, error) {
 	fields := make([]selector.FillField, len(missing))
 	for i, m := range missing {
 		m := m // capture by value for the closure
@@ -426,21 +432,21 @@ func fillRequiredFields(filename string, missing []core.Missing, pf *projectfile
 	}
 	if err := selector.Fill(filename+": fill required fields", fields); err != nil {
 		if errors.Is(err, selector.ErrCancelled) {
-			return errors.New("cancelled")
+			return false, errors.New("cancelled")
 		}
-		return err
+		return false, err
 	}
 	// Write only the filled fields to the base document, not the merged pf.
 	preFill := pf.Clone()
 	basePF, err := projectfile.ReadBaseFromPath(pfPath)
 	if err != nil {
-		return fmt.Errorf("read base after fill: %w", err)
+		return false, fmt.Errorf("read base after fill: %w", err)
 	}
 	projectfile.ReconcileBase(basePF, preFill, pf)
 	if err := projectfile.Write(basePF, pfPath); err != nil {
-		return fmt.Errorf("write projectfile after fill: %w", err)
+		return false, fmt.Errorf("write projectfile after fill: %w", err)
 	}
-	return nil
+	return true, nil
 }
 
 // printList writes each name on its own line — used by both --list and the
