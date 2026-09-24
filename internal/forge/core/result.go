@@ -4,7 +4,10 @@
 
 package core
 
-import "fmt"
+import (
+	"fmt"
+	"strings"
+)
 
 // FieldChange describes a single field the push command touched (or would
 // touch in dry-run). Mirrors sync/core/FieldChange so the two log surfaces
@@ -51,13 +54,48 @@ func (r *PushResult) Touched() int {
 	return n
 }
 
-// Format renders a one-line summary suitable as the command's last log line.
+// Format renders the summary plus one line per forge so a 0/N run still
+// says which forge moved and which was already in sync or skipped why.
 func (r *PushResult) Format() string {
 	verb := "pushed"
 	if r.DryRun {
 		verb = "would push"
 	}
-	return fmt.Sprintf("%s changes to %d/%d repo(s)", verb, r.Touched(), len(r.Repos))
+	lines := []string{fmt.Sprintf("%s changes to %d/%d repo(s)", verb, r.Touched(), len(r.Repos))}
+	for _, rp := range r.Repos {
+		lines = append(lines, "  "+rp.Format())
+	}
+	return strings.Join(lines, "\n")
+}
+
+// Format renders one per-forge status line for the push summary.
+func (r RepoResult) Format() string {
+	label := r.URL
+	if r.Host != "" {
+		label = r.Host + " " + r.URL
+	}
+	switch {
+	case r.Failed:
+		return fmt.Sprintf("%s: failed — %s", label, r.Error)
+	case r.Skipped:
+		if r.Reason != "" {
+			return fmt.Sprintf("%s: skipped — %s", label, r.Reason)
+		}
+		return fmt.Sprintf("%s: skipped", label)
+	case r.UpToDate:
+		return fmt.Sprintf("%s: up to date", label)
+	default:
+		names := []string{}
+		for _, c := range r.Changes {
+			if !c.Skipped {
+				names = append(names, c.Field)
+			}
+		}
+		if len(names) == 0 {
+			return fmt.Sprintf("%s: up to date", label)
+		}
+		return fmt.Sprintf("%s: updated %s", label, strings.Join(names, ", "))
+	}
 }
 
 // Trunc caps display strings used in FieldChange values. Same 60-char limit
