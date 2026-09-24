@@ -259,7 +259,7 @@ func (m optionalFieldsModel) View() string {
 	if focused == optTitleIdx {
 		focus1 = highlight.Render("> ")
 	}
-	titleLabel := "identity.title:"
+	titleLabel := "identity.title (human-readable name):"
 	if m.partial.Title != nil {
 		titleLabel = fmt.Sprintf("identity.title: %s", dimmed.Render("("+extractLS(m.partial.Title)+" from source)"))
 		fmt.Fprintf(&b, "  %s %s\n\n", focus1, dimmed.Render(titleLabel))
@@ -272,7 +272,7 @@ func (m optionalFieldsModel) View() string {
 	if focused == optSummaryIdx {
 		focus2 = highlight.Render("> ")
 	}
-	summaryLabel := "identity.summary:"
+	summaryLabel := "identity.summary (one-line pitch):"
 	if m.partial.Summary != nil {
 		summaryLabel = fmt.Sprintf("identity.summary: %s", dimmed.Render("("+extractLS(m.partial.Summary)+" from source)"))
 		fmt.Fprintf(&b, "  %s %s\n\n", focus2, dimmed.Render(summaryLabel))

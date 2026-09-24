@@ -125,19 +125,6 @@ func Run(opts Options) error {
 		genlog.Info("scaffold: license from user config", "value", ucfg.Init.LicenseDefault)
 	}
 
-	// Directory-name fallback: when no source/scanner/ucfg supplied a name,
-	// the directory's basename is overwhelmingly the right answer. Sits
-	// below CLI overrides (next block) so --name still wins, and above the
-	// missing-fields prompt so the user isn't asked to type what we already
-	// know. Uses the absolute path so "." doesn't degenerate to ".".
-	if partial.Name == nil || *partial.Name == "" {
-		if abs, absErr := filepath.Abs(dir); absErr == nil {
-			base := filepath.Base(abs)
-			partial.Name = source.StringPtr(base)
-			genlog.Info("scaffold: name from directory", "value", base)
-		}
-	}
-
 	if opts.Namespace != "" {
 		partial.Namespace = source.StringPtr(opts.Namespace)
 	}
@@ -146,6 +133,18 @@ func Run(opts Options) error {
 	}
 	if opts.License != "" {
 		partial.License = source.StringPtr(opts.License)
+	}
+
+	// Directory-name suggestion: the basename is overwhelmingly the right
+	// slug. Scripted runs adopt it silently; interactive runs get it as an
+	// editable prompt prefill so identity.name is always asked directly.
+	dirBase := ""
+	if abs, absErr := filepath.Abs(dir); absErr == nil {
+		dirBase = filepath.Base(abs)
+	}
+	if opts.NonInteractive && (partial.Name == nil || *partial.Name == "") && dirBase != "" {
+		partial.Name = source.StringPtr(dirBase)
+		genlog.Info("scaffold: name from directory", "value", dirBase)
 	}
 
 	format := opts.Format
@@ -170,6 +169,7 @@ func Run(opts Options) error {
 
 	missing := findMissing(partial, missingDefaults{
 		namespace: ucfg.Init.NamespaceDefault,
+		name:      dirBase,
 	})
 	if len(missing) > 0 {
 		if opts.NonInteractive {
@@ -228,7 +228,7 @@ func findMissing(p *source.Partial, defaults missingDefaults) []MissingField {
 	if p.Namespace == nil || *p.Namespace == "" {
 		missing = append(missing, MissingField{
 			Label:       "identity.namespace",
-			Description: "Reverse-DNS namespace (e.g. org.example)",
+			Description: "Reverse-DNS owner handle (e.g. org.example) — who publishes this",
 			Default:     defaults.namespace,
 			Setter: func(v string) {
 				p.Namespace = source.StringPtr(v)
@@ -239,7 +239,8 @@ func findMissing(p *source.Partial, defaults missingDefaults) []MissingField {
 	if p.Name == nil || *p.Name == "" {
 		missing = append(missing, MissingField{
 			Label:       "identity.name",
-			Description: "Project name (lowercase, dashes allowed)",
+			Description: "URL-safe project slug, lowercase with dashes (e.g. my-tool) — not the human-readable title",
+			Default:     defaults.name,
 			Setter: func(v string) {
 				p.Name = source.StringPtr(v)
 			},
@@ -249,12 +250,12 @@ func findMissing(p *source.Partial, defaults missingDefaults) []MissingField {
 	return missing
 }
 
-// missingDefaults carries prompt prefill values for required fields. Threading
-// a typed struct keeps findMissing's signature stable when a future field
-// gains its own ucfg default (e.g. license — currently handled in the
-// optional-fields prompt where it lives in promptOptionalFields).
+// missingDefaults carries prompt prefill values for required fields.
+// Threading a typed struct keeps findMissing's signature stable when a
+// future field gains its own default.
 type missingDefaults struct {
 	namespace string
+	name      string
 }
 
 func buildDocument(p *source.Partial) *projectfile.Document {
