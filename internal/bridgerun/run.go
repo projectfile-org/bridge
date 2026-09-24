@@ -67,6 +67,12 @@ var (
 // plane exports one variable.
 const EnvFailOnDrift = "PF_BRIDGE_FAIL_ON_DRIFT"
 
+// envFlag reports whether the named env var parses as true.
+func envFlag(name string) bool {
+	v, err := strconv.ParseBool(os.Getenv(name))
+	return err == nil && v
+}
+
 // failOnDrift resolves the drift severity for this run. Default is WARN: drift
 // is reported, diffed and summarised, and the command still exits 0.
 //
@@ -111,8 +117,16 @@ func Main(binName string) {
 		SilenceErrors: true,
 		RunE:          runBridge,
 	}
+	bridgeForce = bridgeForce || envFlag("PF_BRIDGE_FORCE")
+	bridgeDryRun = bridgeDryRun || envFlag("PF_BRIDGE_DRY_RUN")
+	bridgePreview = bridgePreview || envFlag("PF_BRIDGE_PREVIEW")
+	bridgeCreateAll = bridgeCreateAll || envFlag("PF_BRIDGE_CREATE_ALL")
+	bridgeCheck = bridgeCheck || envFlag("PF_BRIDGE_CHECK")
+	bridgeNoDiff = bridgeNoDiff || envFlag("PF_BRIDGE_NO_DIFF")
+	bridgeFailOnDrift = bridgeFailOnDrift || envFlag(EnvFailOnDrift)
+	bridgeReuseCanonical = bridgeReuseCanonical || envFlag("PF_BRIDGE_REUSE_CANONICAL")
 	root.Flags().BoolVarP(&bridgeForce, "force", "f", false,
-		"overwrite even if the file lacks the pf-cli marker; on a two-way bridge, rewrite the file even when every field already agrees")
+		"overwrite even if the file lacks the marker; on a two-way bridge, rewrite the file even when every field already agrees")
 	root.Flags().BoolVarP(&bridgeDryRun, "dry-run", "n", false,
 		"show what would change without writing")
 	root.Flags().BoolVar(&bridgePreview, "preview", false,
@@ -124,12 +138,13 @@ func Main(binName string) {
 	root.Flags().BoolVar(&bridgeNoDiff, "no-diff", false,
 		"under --check, report drift without the unified diff of what changed")
 	root.Flags().BoolVar(&bridgeFailOnDrift, "fail-on-drift", false,
-		"under --check, exit non-zero on drift instead of warning; also "+EnvFailOnDrift+"=1")
+		"under --check, exit non-zero on drift instead of warning")
 	root.Flags().BoolVar(&bridgeReuseCanonical, "reuse-canonical", false,
 		"keep LICENSES/<id>.txt at the canonical SPDX text (no copyright holder/year substitution; license bridge only)")
 	root.Flags().BoolVar(&bridgeList, "list", false,
 		"print every registered bridge filename and exit")
 	rootflags.Bind(root)
+	root.SetHelpTemplate(root.HelpTemplate() + "\nEvery --flag above defaults from its PF_BRIDGE_* env var.\n")
 
 	// The dispatcher's listing probe: answer before cobra runs so no config
 	// or lock work happens.

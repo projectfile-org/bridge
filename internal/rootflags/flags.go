@@ -39,16 +39,27 @@ func ReadOpts() projectfile.ReadOptions {
 	return projectfile.ReadOptions{Offline: offlineFlag, FailOn: failOnFlag.level}
 }
 
+// envBool reports whether the named env var parses as true.
+func envBool(name string) bool {
+	v, err := strconv.ParseBool(os.Getenv(name))
+	return err == nil && v
+}
+
 // Bind registers the persistent flags on root and installs the shared
 // PersistentPreRun that pushes the parsed values into the core packages.
+// Every flag defaults from its PF_BRIDGE_* env var so CI can set behaviour
+// without editing command lines; an explicit CLI flag always wins.
 func Bind(root *cobra.Command) {
+	quietFlag = quietFlag || envBool("PF_BRIDGE_QUIET")
+	verboseFlag = verboseFlag || envBool("PF_BRIDGE_VERBOSE") || envBool("PF_CLI_VERBOSE")
+	ignoreUserConfigFlag = ignoreUserConfigFlag || envBool("PF_BRIDGE_IGNORE_USER_CONFIG")
+	offlineFlag = offlineFlag || envBool("PF_BRIDGE_OFFLINE")
+	sortedFlag = sortedFlag || envBool("PF_BRIDGE_SORTED")
+	if v := os.Getenv("PF_BRIDGE_FAIL_ON"); v != "" {
+		_ = failOnFlag.Set(v)
+	}
 	root.PersistentPreRun = func(_ *cobra.Command, _ []string) {
 		genlog.SetQuiet(quietFlag)
-		if !verboseFlag {
-			if v, _ := strconv.ParseBool(os.Getenv("PF_CLI_VERBOSE")); v {
-				verboseFlag = true
-			}
-		}
 		genlog.SetVerbose(verboseFlag)
 		userconfig.SetIgnored(ignoreUserConfigFlag)
 		projectfile.SetYAMLOutputSorted(sortedFlag)
@@ -56,14 +67,13 @@ func Bind(root *cobra.Command) {
 			genlog.Info("offline mode", "message", "network fetches disabled")
 		}
 	}
-
 	pf := root.PersistentFlags()
 	pf.BoolVarP(&quietFlag, "quiet", "q", false,
 		"suppress info/decision-trace output; warnings and errors still print")
 	pf.BoolVarP(&verboseFlag, "verbose", "v", false,
-		"show operational log lines (file detection, includes, locks); also PF_CLI_VERBOSE=1")
+		"show operational log lines (file detection, includes, locks)")
 	pf.BoolVar(&ignoreUserConfigFlag, "ignore-user-config", false,
-		"skip $XDG_CONFIG_HOME/projectfile/cli.* loading — run as if no personal config existed")
+		"skip user config loading — run as if no personal config existed")
 	pf.BoolVar(&offlineFlag, "offline", false,
 		"refuse all network fetches; use embedded and cached data only")
 	pf.BoolVar(&sortedFlag, "sorted", false,
@@ -72,6 +82,7 @@ func Bind(root *cobra.Command) {
 		"abort when an include-resolution problem reaches this severity: "+
 			"'error' (default; a missing local include warns and is skipped) or "+
 			"'warning' (a missing local include aborts the command)")
+	root.SetHelpTemplate(root.HelpTemplate() + "\nEvery --flag above defaults from its PF_BRIDGE_* env var.\n")
 }
 
 // failOnFlagValue parses --fail-on. pflag calls Set during parse, so an invalid

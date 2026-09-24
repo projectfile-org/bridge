@@ -58,8 +58,7 @@ const (
 	dirFrom = "from"
 )
 
-// toolBinaries are pf-bridge-* that are NOT file bridges, so `all` skips them
-// (they take unrelated argument grammars).
+// toolBinaries are pf-bridge-* siblings with their own grammar, so `all` skips them.
 var toolBinaries = map[string]bool{"forge": true, "scan": true, "init": true, "cache": true}
 
 func main() {
@@ -388,14 +387,14 @@ func discover() []string {
 	return out
 }
 
-// listBridges writes every installed bridge with its self-description.
+// listBridges writes every installed bridge with its self-description, grouped by category.
 func listBridges(w *os.File) {
 	names := discover()
 	if len(names) == 0 {
 		fmt.Fprintln(w, "(no pf-bridge-* binaries found on PATH)")
 		return
 	}
-	renderList(w, withDescriptions(names), useColor(w))
+	renderGrouped(w, withDescriptions(names), useColor(w))
 }
 
 // withDescriptions probes every child for its one-line self-introduction.
@@ -431,9 +430,38 @@ func probeDescribe(ctx context.Context, name string) string {
 
 type bridgeEntry struct{ name, desc string }
 
-// renderList writes the aligned name/description table. Names go bold when
-// color is on; padding stays outside the escape so columns line up either way.
-func renderList(w io.Writer, entries []bridgeEntry, color bool) {
+// Usage listing sections.
+const (
+	catManifests = "Package manifests"
+	catCite      = "Citation and ownership"
+	catDocs      = "Documentation"
+	catRepo      = "Repository setup"
+)
+
+// bridgeCategories groups bridge names for the usage listing; alphabetical within each group.
+var bridgeCategories = map[string]string{
+	"npm": catManifests, "composer": catManifests, "pyproject": catManifests, "shard": catManifests,
+	"cff": catCite, "codeowners": catCite, "funding": catCite, "fundingjson": catCite,
+	"readme": catDocs, "contributing": catDocs, "coc": catDocs, "security": catDocs, "support": catDocs, "dei": catDocs, "ai-policy": catDocs, "llm": catDocs, "fragments": catDocs,
+	"ignore": catRepo, "gitattributes": catRepo, "yamllint": catRepo, "releaserc": catRepo, "browserslist": catRepo, "vulnerabilities": catRepo, "license": catRepo,
+}
+
+// categoryOrder fixes the section order of the usage listing.
+var categoryOrder = []string{catManifests, catCite, catDocs, catRepo}
+
+// modeTag classifies a bridge description as two-way ([rw]) or render-only ([ro]).
+func modeTag(desc string) string {
+	if strings.Contains(desc, "two-way sync") {
+		return "[rw]"
+	}
+	if strings.Contains(desc, "one-way render") || strings.Contains(desc, "sync and render") {
+		return "[ro]"
+	}
+	return "    "
+}
+
+// renderEntries writes one aligned name/tag/description table.
+func renderEntries(w io.Writer, entries []bridgeEntry, color bool) {
 	width := 0
 	for _, e := range entries {
 		if len(e.name) > width {
@@ -446,8 +474,49 @@ func renderList(w io.Writer, entries []bridgeEntry, color bool) {
 		if color {
 			name = "\x1b[1m" + name + "\x1b[22m"
 		}
-		fmt.Fprintf(w, "  %s%s  %s\n", name, pad, e.desc)
+		fmt.Fprintf(w, "  %s%s  %s  %s\n", name, pad, modeTag(e.desc), e.desc)
 	}
+}
+
+// renderGrouped writes tools first, then bridges grouped by category.
+func renderGrouped(w io.Writer, entries []bridgeEntry, color bool) {
+	var tools, bridges []bridgeEntry
+	for _, e := range entries {
+		if toolBinaries[e.name] {
+			tools = append(tools, e)
+		} else {
+			bridges = append(bridges, e)
+		}
+	}
+	if len(tools) > 0 {
+		fmt.Fprintf(w, "Tools:\n")
+		renderEntries(w, tools, color)
+	}
+	byCat := map[string][]bridgeEntry{}
+	var rest []bridgeEntry
+	for _, e := range bridges {
+		if c, ok := bridgeCategories[e.name]; ok {
+			byCat[c] = append(byCat[c], e)
+		} else {
+			rest = append(rest, e)
+		}
+	}
+	for _, c := range categoryOrder {
+		if len(byCat[c]) == 0 {
+			continue
+		}
+		fmt.Fprintf(w, "%s:\n", c)
+		renderEntries(w, byCat[c], color)
+	}
+	if len(rest) > 0 {
+		fmt.Fprintf(w, "Other bridges:\n")
+		renderEntries(w, rest, color)
+	}
+}
+
+// renderList writes the aligned name/description table without grouping.
+func renderList(w io.Writer, entries []bridgeEntry, color bool) {
+	renderEntries(w, entries, color)
 }
 
 // useColor reports whether w is an interactive terminal that has not opted out
@@ -457,21 +526,29 @@ func useColor(w *os.File) bool {
 }
 
 func usage(w *os.File) {
-	fmt.Fprintf(w, "pf-bridge — project the projectfile onto files, forges, and the repo\n\n")
+	fmt.Fprintf(w, "pf-bridge — keep every project file in sync with your projectfile document\n\n")
+	fmt.Fprintf(w, "A projectfile (projectfile.yaml) is the single source of truth for a project:\n")
+	fmt.Fprintf(w, "identity, people, links, and tool config. pf-bridge copies that data out\n")
+	fmt.Fprintf(w, "into the files each tool already reads — README.md, package.json,\n")
+	fmt.Fprintf(w, "CITATION.cff, forge settings — and reads two-way files back.\n")
+	fmt.Fprintf(w, "Spec: https://projectfile.org/specification/\n\n")
 	fmt.Fprintf(w, "Usage:\n")
-	fmt.Fprintf(w, "  pf-bridge <name> [args]   run the pf-bridge-<name> binary (e.g. readme, npm, forge)\n")
-	fmt.Fprintf(w, "  pf-bridge all             sync every installed file bridge\n")
-	fmt.Fprintf(w, "  pf-bridge check           check the bridges this project declares for drift, write nothing\n")
-	fmt.Fprintf(w, "  pf-bridge check <name>…   check only the named bridges\n")
-	fmt.Fprintf(w, "  pf-bridge check --all     check every INSTALLED bridge, declared or not\n")
-	fmt.Fprintf(w, "  pf-bridge to all          write pf → every external file\n")
-	fmt.Fprintf(w, "  pf-bridge from all        read every external file → pf\n")
-	fmt.Fprintf(w, "  pf-bridge --list          list installed bridges with a one-line description\n\n")
-	fmt.Fprintf(w, "Flags after a fan-out verb reach every bridge: `pf-bridge check --fail-on-drift`,\n")
-	fmt.Fprintf(w, "`pf-bridge all --dry-run`. Drift warns by default; --fail-on-drift makes it fatal.\n\n")
+	fmt.Fprintf(w, "  pf-bridge <bridge> [args]   run one bridge (e.g. readme, npm, forge)\n")
+	fmt.Fprintf(w, "  pf-bridge all [flags]       update every file from the projectfile [rw]\n")
+	fmt.Fprintf(w, "  pf-bridge check [flags]     verify declared files match, write nothing [ro]\n")
+	fmt.Fprintf(w, "  pf-bridge to all            write projectfile out to every file [rw]\n")
+	fmt.Fprintf(w, "  pf-bridge from all          read every two-way file back in [rw]\n")
+	fmt.Fprintf(w, "  pf-bridge --list            list installed bridges\n\n")
+	fmt.Fprintf(w, "[rw] updates files, [ro] only reads or compares. `check` without names\n")
+	fmt.Fprintf(w, "covers the bridges this project declares; `check <name>…` narrows it,\n")
+	fmt.Fprintf(w, "`check --all` covers every installed bridge instead.\n\n")
+	fmt.Fprintf(w, "Shared flags (also accepted after a bridge name):\n")
+	fmt.Fprintf(w, "  --check, --dry-run, --force, --create-all, --fail-on-drift, --offline,\n")
+	fmt.Fprintf(w, "  --quiet, --verbose. Each has a PF_BRIDGE_* env equivalent.\n")
+	fmt.Fprintf(w, "  Drift warns by default; --fail-on-drift makes it fatal.\n\n")
 	if names := discover(); len(names) > 0 {
-		fmt.Fprintf(w, "Installed bridges:\n")
-		renderList(w, withDescriptions(names), useColor(w))
+		renderGrouped(w, withDescriptions(names), useColor(w))
+		fmt.Fprintf(w, "\nHelp per bridge: pf-bridge <bridge> --help\n")
 	} else {
 		fmt.Fprintf(w, "Installed: (none found on PATH)\n")
 	}
