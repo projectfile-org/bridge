@@ -78,6 +78,9 @@ func main() {
 	case "--list", "list":
 		listBridges(os.Stdout)
 		return
+	case "completion":
+		printCompletion(os.Stdout, args[1:])
+		return
 	case cmdAll, dirTo, dirFrom:
 		if err := runAll(args); err != nil {
 			fmt.Fprintf(os.Stderr, "Error: %s\n", err)
@@ -397,6 +400,34 @@ func listBridges(w *os.File) {
 	renderGrouped(w, withDescriptions(names), useColor(w))
 }
 
+// printCompletion writes a shell completion script covering the dispatcher
+// verbs plus every installed bridge name, so one command completes the whole tool.
+func printCompletion(w io.Writer, args []string) {
+	shell := "bash"
+	if len(args) > 0 {
+		shell = args[0]
+	}
+	names := append([]string{cmdAll, cmdCheck, dirTo, dirFrom, "forge", "scan", "init", "cache"}, discover()...)
+	seen := map[string]bool{}
+	uniq := []string{}
+	for _, n := range names {
+		if !seen[n] {
+			seen[n] = true
+			uniq = append(uniq, n)
+		}
+	}
+	sort.Strings(uniq)
+	words := strings.Join(uniq, " ")
+	switch shell {
+	case "zsh":
+		fmt.Fprintf(w, "#compdef pf-bridge\n_pf_bridge() { _arguments '1:command:(%s)' }\ncompdef _pf_bridge pf-bridge\n", words)
+	case "fish":
+		fmt.Fprintf(w, "complete -c pf-bridge -f -n __fish_use_subcommand -a '%s'\n", words)
+	default:
+		fmt.Fprintf(w, "_pf_bridge() { local cmds=\"%s\"; COMPREPLY=($(compgen -W \"$cmds\" -- \"${COMP_WORDS[COMP_CWORD]}\")); }\ncomplete -F _pf_bridge pf-bridge\n", words)
+	}
+}
+
 // withDescriptions probes every child for its one-line self-introduction.
 // Children that cannot answer (older install, foreign binary) keep an empty
 // description rather than failing the listing; a spent deadline lists the
@@ -538,7 +569,8 @@ func usage(w *os.File) {
 	fmt.Fprintf(w, "  pf-bridge check [flags]     verify declared files match, write nothing [ro]\n")
 	fmt.Fprintf(w, "  pf-bridge to all            write projectfile out to every file [rw]\n")
 	fmt.Fprintf(w, "  pf-bridge from all          read every two-way file back in [rw]\n")
-	fmt.Fprintf(w, "  pf-bridge --list            list installed bridges\n\n")
+	fmt.Fprintf(w, "  pf-bridge --list            list installed bridges\n")
+	fmt.Fprintf(w, "  pf-bridge completion SHELL  print completion script (bash|zsh|fish)\n\n")
 	fmt.Fprintf(w, "[rw] updates files, [ro] only reads or compares. `check` without names\n")
 	fmt.Fprintf(w, "covers the bridges this project declares; `check <name>…` narrows it,\n")
 	fmt.Fprintf(w, "`check --all` covers every installed bridge instead.\n\n")

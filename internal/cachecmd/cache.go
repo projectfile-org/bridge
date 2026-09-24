@@ -16,6 +16,9 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"sort"
+	"strings"
+	"time"
 
 	"github.com/spf13/cobra"
 
@@ -27,20 +30,29 @@ import (
 	"projectfile.org/projectfile/bridge/internal/rootflags"
 )
 
+// cacheRoot resolves the shared slot and names where it came from.
+func cacheRoot() (string, string) {
+	if v := os.Getenv("XDG_CACHE_HOME"); v != "" {
+		return filepath.Join(v, "pf"), "XDG_CACHE_HOME"
+	}
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return "", "XDG_CACHE_HOME|HOME"
+	}
+	return filepath.Join(home, ".cache", "pf"), "HOME/.cache"
+}
+
 var cacheCmd = &cobra.Command{
 	Use:   "cache",
-	Short: "Manage pf-bridge's local SPDX and include cache",
-	Long: "pf-bridge keeps a local copy of SPDX license texts and HTTP includes\n" +
-		"so it can render LICENSE files and read projectfiles without a network\n" +
-		"connection once warmed.\n" +
+	Short: "Manage the local SPDX and include cache",
+	Long: "Keep a local copy of SPDX license texts and HTTP includes so LICENSE\n" +
+		"renders and projectfile reads work offline once warmed.\n" +
 		"\n" +
-		"The cache lives at:\n" +
-		"  ${XDG_CACHE_HOME:-~/.cache}/pf/\n" +
-		"    spdx/      license boilerplate texts (warmed here, read by the license bridge)\n" +
-		"    includes/  HTTP includes pf-bridge resolves while reading a projectfile\n" +
+		"Layout under the cache root:\n" +
+		"  spdx/      license boilerplate texts (read by the license bridge)\n" +
+		"  includes/  HTTP includes resolved while reading a projectfile\n" +
 		"\n" +
-		"This slot is shared with pf-cli and pf-ci — a purge here clears the cache\n" +
-		"they all read.",
+		"One slot shared by every projectfile tool — a purge here clears it for all.",
 }
 
 var cacheStatusCmd = &cobra.Command{
@@ -49,30 +61,67 @@ var cacheStatusCmd = &cobra.Command{
 	Args:  cobra.NoArgs,
 	RunE: func(cmd *cobra.Command, _ []string) error {
 		out := cmd.OutOrStdout()
-
-		spdxDir, err := spdx.CacheDir()
-		if err != nil {
-			return err
-		}
+		root, src := cacheRoot()
 		s := spdx.Status()
-		includes := countCachedIncludes()
-
-		fmt.Fprintf(out, "cache location: %s\n", spdxDir)
-		fmt.Fprintf(out, "SPDX:     %d embedded, %d cached\n", s.Embedded, s.Cached)
-		fmt.Fprintf(out, "includes: %d cached\n", includes)
+		ids := spdx.CachedIDs()
+		sort.Strings(ids)
+		entries, _ := projectfile.IncludeCacheEntries()
+		fmt.Fprintf(out, "Cache: %s (from %s)\n", root, src)
+		fmt.Fprintf(out, "SPDX: %d embedded, %d cached\n", s.Embedded, s.Cached)
+		fmt.Fprintf(out, "  cached: %s\n", strings.Join(truncateList(ids, 20), ", "))
+		fmt.Fprintf(out, "includes: %d cached\n", len(entries))
+		for _, e := range entries {
+			fmt.Fprintf(out, "  %s  %s  %s\n", freshnessMark(e.Fresh), e.URL, ageString(e.FetchedAt, e.Age))
+		}
 		return nil
 	},
 }
 
+func freshnessMark(fresh bool) string {
+	if fresh {
+		return "fresh"
+	}
+	return "stale"
+}
+
+func ageString(at time.Time, age time.Duration) string {
+	if at.IsZero() {
+		return "(age unknown)"
+	}
+	return fmt.Sprintf("(fetched %s, %s ago)", at.Format("2006-01-02 15:04"), shortAge(age))
+}
+
+func shortAge(d time.Duration) string {
+	switch {
+	case d < time.Hour:
+		return fmt.Sprintf("%dm", int(d.Minutes()))
+	case d < 24*time.Hour:
+		return fmt.Sprintf("%dh", int(d.Hours()))
+	default:
+		return fmt.Sprintf("%dd", int(d.Hours()/24))
+	}
+}
+
+func truncateList(in []string, limit int) []string {
+	if len(in) == 0 {
+		return []string{"(none)"}
+	}
+	if len(in) <= limit {
+		return in
+	}
+	return append(append([]string{}, in[:limit]...), fmt.Sprintf("+%d more", len(in)-limit))
+}
+
 var cacheWarmCmd = &cobra.Command{
 	Use:   "warm [directory]",
-	Short: "Pre-fetch SPDX license texts and HTTP includes",
-	Long: "Download SPDX license texts and the projectfile's HTTP includes so\n" +
-		"pf-bridge works fully offline afterwards. Requires a network connection.\n" +
+	Short: "Fetch SPDX texts and this project's HTTP includes",
+	Long: "Download SPDX license texts plus the HTTP includes declared by the\n" +
+		"projectfile in [directory] (default: current directory) so later runs\n" +
+		"work offline. Stale entries are refreshed, missing ones fetched.\n" +
+		"Requires a network connection.\n" +
 		"\n" +
 		"Deprecated SPDX ids are skipped: they have no upstream text file, so\n" +
-		"fetching them only ever fails. Includes are read from the projectfile\n" +
-		"in [directory] (default: the current directory); if none is found,\n" +
+		"fetching them only ever fails. With no projectfile in [directory],\n" +
 		"only SPDX is warmed.",
 	Args: cobra.MaximumNArgs(1),
 	RunE: func(_ *cobra.Command, args []string) error {
@@ -101,11 +150,7 @@ var cachePurgeCmd = &cobra.Command{
 	Args: cobra.NoArgs,
 	RunE: func(cmd *cobra.Command, _ []string) error {
 		out := cmd.OutOrStdout()
-
-		spdxDir, err := spdx.CacheDir()
-		if err != nil {
-			return err
-		}
+		root, _ := cacheRoot()
 		spdxRemoved, err := spdx.Purge()
 		if err != nil {
 			return fmt.Errorf("purge SPDX: %w", err)
@@ -115,7 +160,7 @@ var cachePurgeCmd = &cobra.Command{
 			return fmt.Errorf("purge includes: %w", err)
 		}
 		fmt.Fprintf(out, "purged %d SPDX text(s) and %d include(s) from %s\n",
-			spdxRemoved, includesRemoved, spdxDir)
+			spdxRemoved, includesRemoved, root)
 		return nil
 	},
 }
@@ -174,23 +219,6 @@ func warmIncludes(dir string) error {
 	}
 	genlog.Success(fmt.Sprintf("includes: warmed %d/%d remote includes", warmed, len(includes)))
 	return nil
-}
-
-func countCachedIncludes() int {
-	dir, err := projectfile.IncludesCacheDir()
-	if err != nil {
-		return 0
-	}
-	f, err := os.Open(dir) // #nosec G304 -- path derived from XDG
-	if err != nil {
-		return 0
-	}
-	defer f.Close()
-	names, err := f.Readdirnames(0)
-	if err != nil {
-		return 0
-	}
-	return len(names)
 }
 
 // Main is the pf-bridge-cache entry point.
