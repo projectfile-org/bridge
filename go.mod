@@ -7,7 +7,7 @@ module projectfile.org/projectfile/bridge
 go 1.26.7
 
 require (
-	github.com/ProtonMail/go-crypto v1.4.1
+	github.com/ProtonMail/go-crypto v1.5.1
 	github.com/charmbracelet/bubbles v1.0.0
 	github.com/charmbracelet/bubbletea v1.3.10
 	github.com/charmbracelet/lipgloss v1.1.0
