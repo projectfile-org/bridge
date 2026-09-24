@@ -88,3 +88,5 @@ kiota.ch/projectfile/core/v2 v2.12.2 h1:yndaRWWyN3t1Y4O2N+0ZUBJa7ZOWsz6Cqi8/hmvB
 kiota.ch/projectfile/core/v2 v2.12.2/go.mod h1:ChpHLJ/O1vF2BwnDang3h2OgfmatlIj8nMHx5/iCnhs=
 kiota.ch/projectfile/core/v2 v2.12.3 h1:NepIR5KbE4Gg/XRxVwoTeoAdQhCIIGGYDNPEHiH9Uzk=
 kiota.ch/projectfile/core/v2 v2.12.3/go.mod h1:ChpHLJ/O1vF2BwnDang3h2OgfmatlIj8nMHx5/iCnhs=
+kiota.ch/projectfile/core/v2 v2.13.0 h1:qhMRgapKkB/hACjJi1GEI4E7fMTTNdiTbN0lTgdMan4=
+kiota.ch/projectfile/core/v2 v2.13.0/go.mod h1:ChpHLJ/O1vF2BwnDang3h2OgfmatlIj8nMHx5/iCnhs=
