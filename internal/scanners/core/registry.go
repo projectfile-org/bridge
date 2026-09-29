@@ -9,6 +9,7 @@ import (
 	"sort"
 	"sync"
 
+	"kiota.ch/projectfile/core/v2/pkg/genlog"
 	"projectfile.org/projectfile/bridge/internal/source"
 )
 
@@ -74,6 +75,7 @@ func RunAll(root string) (*source.Partial, []Hit, error) {
 	for _, s := range scanners {
 		// Cheap probe first — skip scan entirely when not applicable.
 		if !s.Detect(root) {
+			genlog.Debug("scanner not applicable", "name", s.Name(), "root", root)
 			continue
 		}
 		p, h, err := s.Scan(root)
@@ -114,6 +116,7 @@ func RunNamed(root string, names []string) (*source.Partial, []Hit, error) {
 			continue
 		}
 		if !s.Detect(root) {
+			genlog.Debug("scanner not applicable", "name", s.Name(), "root", root)
 			continue
 		}
 		p, h, err := s.Scan(root)

@@ -11,8 +11,15 @@
 package core
 
 import (
+	"kiota.ch/projectfile/core/v2/pkg/projectfile"
 	"projectfile.org/projectfile/bridge/internal/source"
 )
+
+// HasProjectfile reports whether root holds a projectfile, the Detect probe of a scanner that reads one.
+func HasProjectfile(root string) bool {
+	_, err := projectfile.DetectPath(root)
+	return err == nil
+}
 
 // Scanner is the interface every init-time auto-discovery driver implements.
 // Implementations self-register from init() via Register, mirroring the

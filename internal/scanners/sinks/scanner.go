@@ -24,7 +24,7 @@ type Scanner struct{}
 
 func (Scanner) Name() string { return scannerSinks }
 
-func (Scanner) Detect(_ string) bool { return true }
+func (Scanner) Detect(root string) bool { return core.HasProjectfile(root) }
 
 // Scan reads the merged document and proposes one concrete link per resolved public sink.
 func (Scanner) Scan(root string) (*source.Partial, []core.Hit, error) {
