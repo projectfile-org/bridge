@@ -328,6 +328,28 @@ func TestMatrixSectionRendersJoinedBlock(t *testing.T) {
 	assert.NotContains(t, out, "Available variants")
 }
 
+// TestPerCellGroupSplitsByMatrixCell: a per-cell group renders one headed fence
+// per cell, labelled in placeholder order, with axis-free lines repeated in each.
+func TestPerCellGroupSplitsByMatrixCell(t *testing.T) {
+	pf := minimalDoc(t)
+	perCell := group("release", "Download:", "curl --output x x-{GOOS}-{GOARCH}", "./x --help")
+	perCell["per-cell"] = true
+	pf.Extensions = map[string]any{
+		ciExtensionNS: map[string]any{
+			keyMatrix: map[string]any{keyAxes: map[string]any{
+				"GOARCH": []any{"amd64", "arm64"},
+				"GOOS":   []any{"linux"},
+			}},
+		},
+		readmeNS: map[string]any{blockInstallation: []any{perCell}},
+	}
+
+	out := renderDoc(t, t.TempDir(), pf)
+
+	assert.Contains(t, out, "### Download for linux/amd64\n\n```sh\ncurl --output x x-linux-amd64\n./x --help\n```")
+	assert.Contains(t, out, "### Download for linux/arm64\n\n```sh\ncurl --output x x-linux-arm64\n./x --help\n```")
+}
+
 // TestMultiSinkGroupRendersPerSinkSubsections: when a group's commands fan out
 // over several sinks, each destination renders its own "<verb> <label>"
 // subsection with one joined fence, ordered by the fan-out — which is sink

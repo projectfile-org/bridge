@@ -38,10 +38,11 @@ type sectionGroupView struct {
 	Subgroups []sectionSubgroupView
 }
 
-// sectionSubgroupView is one sink's slice of a group: the label its heading
-// shows and the commands destined for that sink, matrix cells joined.
+// sectionSubgroupView is one sink's or one matrix cell's slice of a group:
+// the heading it renders under and the commands belonging to it.
 type sectionSubgroupView struct {
 	Label    string
+	Heading  string
 	Commands []string
 }
 
@@ -99,7 +100,7 @@ func buildSection(doc *projectfile.Document, ext *pfmodel.ReadmeExtension, name,
 	})
 	var groups []sectionGroupView
 	for _, group := range declared {
-		view, ok := buildSectionGroup(doc, group, axes, source, lang)
+		view, ok := buildSectionGroup(doc, group, axes, name, lang)
 		if !ok {
 			continue
 		}
@@ -121,7 +122,8 @@ func buildSection(doc *projectfile.Document, ext *pfmodel.ReadmeExtension, name,
 // subgroup per destination (buckets, sink priority order); anything else keeps
 // the single-fence shape, so an npm recipe or a hand-written host never gains a
 // destination heading nobody declared for it.
-func buildSectionGroup(doc *projectfile.Document, group pfmodel.ReadmeSectionGroup, axes map[string][]string, source, lang string) (sectionGroupView, bool) {
+func buildSectionGroup(doc *projectfile.Document, group pfmodel.ReadmeSectionGroup, axes map[string][]string, section, lang string) (sectionGroupView, bool) {
+	source := pfmodel.ReadmeExtensionNS + "." + section
 	label := groupLabel(group.Name)
 	var expanded []string
 	for _, command := range group.Commands {
@@ -154,12 +156,26 @@ func buildSectionGroup(doc *projectfile.Document, group pfmodel.ReadmeSectionGro
 	if bucketed && len(sinks) > 1 {
 		for i := range subgroups {
 			subgroups[i].Commands = pfmodel.ExpandAxes(subgroups[i].Commands, axes)
+			subgroups[i].Heading = translate(lang, section+".sink") + " " + subgroups[i].Label
 		}
 		view.Subgroups = subgroups
 		genlog.DebugRow("readme_group", label, "commands grouped by sink", source+" sinks="+strconv.Itoa(len(subgroups)))
 		for _, sg := range subgroups {
 			for _, line := range sg.Commands {
 				genlog.DebugRow("readme_command", line, source, "group="+label+" sink="+sg.Label+" lang="+lang)
+			}
+		}
+		return view, true
+	}
+	if cells := splitByCell(expanded, axes); group.PerCell && len(cells) > 1 {
+		for i := range cells {
+			cells[i].Heading = translate(lang, section+".cell") + " " + cells[i].Label
+		}
+		view.Subgroups = cells
+		genlog.DebugRow("readme_group", label, "commands split per matrix cell", source+" cells="+strconv.Itoa(len(cells)))
+		for _, c := range cells {
+			for _, line := range c.Commands {
+				genlog.DebugRow("readme_command", line, source, "group="+label+" cell="+c.Label+" lang="+lang)
 			}
 		}
 		return view, true
@@ -236,6 +252,46 @@ func bucketBySink(sinks []sinkView, lines []string) ([]sectionSubgroupView, bool
 		buckets = append(buckets, sectionSubgroupView{Label: owner.Label, Commands: []string{line}})
 	}
 	return buckets, true
+}
+
+// splitByCell expands lines once per matrix cell of the axes they name, so a
+// cell's fence holds only its own commands. Axes order by first appearance in
+// the lines, which is the order the label joins their values with "/"
+// (`{GOOS}-{GOARCH}` labels `linux/amd64`). A line naming no axis repeats in
+// every cell. Nil when the lines name no declared axis.
+func splitByCell(lines []string, axes map[string][]string) []sectionSubgroupView {
+	joined := strings.Join(lines, "\n")
+	var used []string
+	for axis, values := range axes {
+		if len(values) > 0 && strings.Contains(joined, "{"+axis+"}") {
+			used = append(used, axis)
+		}
+	}
+	if len(used) == 0 {
+		return nil
+	}
+	slices.SortFunc(used, func(a, b string) int {
+		return strings.Index(joined, "{"+a+"}") - strings.Index(joined, "{"+b+"}")
+	})
+	cells := []sectionSubgroupView{{Commands: lines}}
+	for _, axis := range used {
+		next := make([]sectionSubgroupView, 0, len(cells)*len(axes[axis]))
+		for _, cell := range cells {
+			for _, value := range axes[axis] {
+				label := value
+				if cell.Label != "" {
+					label = cell.Label + "/" + value
+				}
+				commands := make([]string, len(cell.Commands))
+				for i, line := range cell.Commands {
+					commands[i] = strings.ReplaceAll(line, "{"+axis+"}", value)
+				}
+				next = append(next, sectionSubgroupView{Label: label, Commands: commands})
+			}
+		}
+		cells = next
+	}
+	return cells
 }
 
 // groupUnnamed labels a group that declares no name, for the decision trace only.

@@ -56,6 +56,8 @@ acknowledgements.credits: Згадки
 # обох блоках (MD024).
 installation.sink: Завантажити з
 usage.sink: З
+installation.cell: Завантажити для
+usage.cell: На
 
 # Блок артефактів — те, що проєкт постачає. Ключ типу походить від
 # оголошеного `kind`.

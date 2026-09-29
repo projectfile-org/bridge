@@ -275,6 +275,15 @@ destination needs no heading naming it — and a group referencing anything no
 sink declares (an npm artifact, a hand-written host) never gains a destination
 heading nobody declared for it.
 
+**Per-cell subsections.** Joining is wrong when the cells are alternatives that
+collide: N `curl --output <cmd>` lines write the same file, so pasting the fence
+keeps only the last platform. A group declaring `per-cell: true` renders one
+`### Download for <cell>` subsection per matrix cell instead (`usage.cell` in the
+usage block), and a line naming no axis — `./<cmd> --help` — repeats in every
+cell. The label joins the cell’s axis values with `/` in the order their
+placeholders first appear, so `<cmd>-{GOOS}-{GOARCH}` reads `linux/amd64`.
+A sink split takes precedence; a group naming no declared axis stays one fence.
+
 Two sources of several values, either of which works:
 
 1. **Several matching artifacts** — `{kind=image}` on a project declaring two

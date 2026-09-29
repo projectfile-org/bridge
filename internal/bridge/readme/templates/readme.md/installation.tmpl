@@ -8,7 +8,7 @@
 {{- if $g.Subgroups}}
 {{- range $sg := $g.Subgroups}}
 
-### {{t "installation.sink"}} {{$sg.Label}}
+### {{$sg.Heading}}
 
 ```{{$g.Syntax}}
 {{range $sg.Commands}}{{.}}

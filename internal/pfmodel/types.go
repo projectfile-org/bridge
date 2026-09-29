@@ -480,6 +480,8 @@ type ReadmeSectionGroup struct {
 	// close. PriorityDefault keeps declaration order for every group that sets
 	// nothing, so a document that ignores the key renders as it always did.
 	Priority int
+	// PerCell renders one headed fence per matrix cell instead of joining them.
+	PerCell bool
 }
 
 // Shield is a badge image rendered as markdown: [![alt](img)](href). Row is
