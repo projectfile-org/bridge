@@ -32,6 +32,7 @@ import (
 	"fmt"
 	"path/filepath"
 	"strconv"
+	"strings"
 
 	"kiota.ch/projectfile/core/v2/pkg/genlog"
 	"kiota.ch/projectfile/core/v2/pkg/projectfile"
@@ -227,10 +228,15 @@ func resolveDocuments(pf *projectfile.Document) ([]pfmodel.FragmentDocument, err
 // sections as the canonical file — they quote upstream, which publishes one
 // language, and a variant that dropped them would understate the project.
 func assembleDocument(projectDir, strLang, barLang, defLang string, doc pfmodel.FragmentDocument, own []Fragment, inherited []inheritedEntry, variants []variantFragments, reuse string) ([]byte, error) {
+	genlog.DebugRow("fragments_layout", doc.Out, "inherit", "flat="+strconv.FormatBool(doc.Standalone))
+	if doc.Standalone {
+		own = promoted(own)
+	}
 	view := fragmentView{
 		REUSEHeader:      reuse,
 		Title:            localizedDocTitle(doc.Title, doc.Out, strLang),
 		HasProject:       len(own) > 0,
+		Flat:             doc.Standalone,
 		ProjectHeading:   localizedProjectHeading(doc.Title, doc.Out, strLang),
 		ProjectFragments: own,
 		Inherited:        inherited,
@@ -250,6 +256,18 @@ func assembleDocument(projectDir, strLang, barLang, defLang string, doc pfmodel.
 	body = core.InsertLanguageBar(body, doc.Out, barLang, defLang, variantLangTags(variants))
 	body = wrapAfterHeader(body, strLang)
 	return core.CollapseBlankLines(body), nil
+}
+
+// promoted raises each fragment's demoted H3 title to H2.
+func promoted(own []Fragment) []Fragment {
+	out := make([]Fragment, len(own))
+	for i, f := range own {
+		if strings.HasPrefix(f.Body, "### ") {
+			f.Body = f.Body[1:]
+		}
+		out[i] = f
+	}
+	return out
 }
 
 // variantLangTags flattens the resolved variant set for the language bar.

@@ -33,6 +33,19 @@ func TestUsageExcerptShowsTopHelpAndFirstExample(t *testing.T) {
 	assert.Contains(t, out, "[USAGE.md](USAGE.md)")
 }
 
+// TestUsageExcerptReadsFlatDocument: a standalone USAGE.md carries its sections at H2 with no Project heading.
+func TestUsageExcerptReadsFlatDocument(t *testing.T) {
+	dir := t.TempDir()
+	writeFile(t, dir, fileUsage, "# Usage\n\n## `demo --help`\n\n```text\nUsage: demo\n## not a heading\n```\n\n"+
+		"## Lint a repository\n\n```sh\ndemo .\n```\n\n## `demo lint --help`\n\n```text\nUsage: demo lint\n```\n")
+
+	out := renderDoc(t, dir, minimalDoc(t))
+
+	assert.Contains(t, out, "### `demo --help`\n\n```text\nUsage: demo\n## not a heading\n```")
+	assert.Contains(t, out, "### Lint a repository\n\n```sh\ndemo .\n```")
+	assert.NotContains(t, out, "demo lint --help")
+}
+
 // TestUsageWithoutSectionsFallsBackToLink: a USAGE.md with no level-3 section keeps the plain link.
 func TestUsageWithoutSectionsFallsBackToLink(t *testing.T) {
 	dir := t.TempDir()

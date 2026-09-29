@@ -15,6 +15,7 @@ type fragmentView struct {
 	REUSEHeader      string
 	Title            string
 	HasProject       bool
+	Flat             bool // inherit: false — no Project heading, own entries at H2
 	ProjectHeading   string
 	ProjectFragments []Fragment
 	Inherited        []inheritedEntry

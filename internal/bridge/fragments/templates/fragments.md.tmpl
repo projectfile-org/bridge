@@ -1,8 +1,10 @@
 {{- .REUSEHeader -}}
 # {{.Title}}
 {{- if .HasProject}}
+{{- if not .Flat}}
 
 {{.ProjectHeading}}
+{{- end}}
 
 {{range .ProjectFragments}}{{.Body}}
 

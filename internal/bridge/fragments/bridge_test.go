@@ -768,7 +768,7 @@ func TestRenderNonLocalizableDocumentSkipsVariants(t *testing.T) {
 	assert.NotContains(t, out.Files, "docs/es/CHANGELOG.md")
 }
 
-// TestRenderConventionsStandaloneShellInheritsNothing: `inherit: false` keeps the flat parents list off that shell.
+// TestRenderConventionsStandaloneShellInheritsNothing: `inherit: false` drops the parents and the Project heading, entries at H2.
 func TestRenderConventionsStandaloneShellInheritsNothing(t *testing.T) {
 	child := t.TempDir()
 	writeFragment(t, child, "docs/usage.d", "00-help", "`demo --help`", "Help body.")
@@ -783,6 +783,20 @@ func TestRenderConventionsStandaloneShellInheritsNothing(t *testing.T) {
 	out, err := fragments.Bridge{}.Render(doc, offlineOptions(child))
 	require.NoError(t, err)
 	got := string(out.Files["USAGE.md"])
-	assert.Contains(t, got, "### `demo --help`")
+	assert.Contains(t, got, "# Usage\n\n## `demo --help`\n\nHelp body.")
+	assert.NotContains(t, got, "Project Usage")
 	assert.NotContains(t, got, headingInherited)
+}
+
+// TestRenderOrdersFragmentsByStem: `90-help-cache.md` precedes `90-help-cache-purge.md`.
+func TestRenderOrdersFragmentsByStem(t *testing.T) {
+	dir := t.TempDir()
+	writeProjectfile(t, dir, "    fragments:\n      documents:\n        - {dir: usage.d, out: USAGE.md, title: Usage}")
+	writeFragment(t, dir, "usage.d", "90-help-cache-purge", "Purge", "Purge body.")
+	writeFragment(t, dir, "usage.d", "90-help-cache", "Cache", "Cache body.")
+
+	out, err := fragments.Bridge{}.Render(docWithFragments(t, dir), core.Options{Dir: dir})
+	require.NoError(t, err)
+	got := string(out.Files["USAGE.md"])
+	assert.Less(t, strings.Index(got, "### Cache"), strings.Index(got, "### Purge"))
 }

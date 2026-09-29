@@ -14,7 +14,7 @@ import (
 // helpTitleSuffix ends the title of every captured `<command> --help` section.
 const helpTitleSuffix = "--help`"
 
-// usageSection is one level-3 section of USAGE.md: its heading text and its body verbatim.
+// usageSection is one section of USAGE.md: its heading text and its body verbatim.
 type usageSection struct {
 	Title string
 	Body  string
@@ -54,8 +54,10 @@ func buildUsageDoc(dir, pathLang string) *usageDoc {
 	return out
 }
 
-// parseUsageSections splits the project part of an assembled USAGE.md into its level-3 sections, skipping fenced code.
+// parseUsageSections splits the project part of an assembled USAGE.md into its sections, skipping fenced code.
 func parseUsageSections(text string) []usageSection {
+	lines := strings.Split(text, "\n")
+	depth := usageSectionDepth(lines)
 	var out []usageSection
 	var body []string
 	fenced, h2 := false, 0
@@ -65,15 +67,15 @@ func parseUsageSections(text string) []usageSection {
 		}
 		body = nil
 	}
-	for _, line := range strings.Split(text, "\n") {
+	for _, line := range lines {
 		if strings.HasPrefix(line, "```") {
 			fenced = !fenced
 		}
 		level, title, ok := parseATXHeading(line)
 		switch {
-		case fenced || !ok || level > 3:
+		case fenced || !ok || level > depth:
 			body = append(body, line)
-		case level == 3:
+		case level == depth:
 			flush()
 			out = append(out, usageSection{Title: title})
 		case level == 2:
@@ -85,6 +87,26 @@ func parseUsageSections(text string) []usageSection {
 	}
 	flush()
 	return out
+}
+
+// usageSectionDepth is 3 when the sections nest under a project H2 (an inheriting document), 2 when they sit flat.
+func usageSectionDepth(lines []string) int {
+	var levels []int
+	fenced := false
+	for _, line := range lines {
+		if strings.HasPrefix(line, "```") {
+			fenced = !fenced
+		}
+		if level, _, ok := parseATXHeading(line); !fenced && ok && level > 1 {
+			if levels = append(levels, level); len(levels) == 2 {
+				break
+			}
+		}
+	}
+	if len(levels) == 2 && levels[0] == 2 && levels[1] == 3 {
+		return 3
+	}
+	return 2
 }
 
 // boolWord renders a flag for a trace row.
