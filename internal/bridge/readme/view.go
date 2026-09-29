@@ -1190,6 +1190,7 @@ func formatDecisionTrace(dir, lang string, v readmeView, ext *pfmodel.ReadmeExte
 	}
 	genlog.DebugRow("project_name", pfmodel.DisplayName(v.Doc), "identity.title.en or namespace/name", "")
 	genlog.DebugRow("summary", summaryOrUnset(extractLSForLang(v.Doc.Identity.Summary, v.Lang)), "identity.summary", "")
+	genlog.DebugRow("description", summaryOrUnset(extractLSForLang(v.Doc.Identity.Description, v.Lang)), "identity.description", "preferred over summary")
 	for _, g := range buildLinkGroups(v.Doc, v.Lang) {
 		for _, l := range g.Links {
 			genlog.DebugRow(

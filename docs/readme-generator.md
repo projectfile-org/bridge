@@ -53,7 +53,7 @@ rich project fills every section.
 | ------------------ | --------------------------------------------------------------------------------------------------------------- | -------------- |
 | `languages`        | `i18n.languages` (cross-link bar; see [Multi-language READMEs](#multi-language-readmes))                        | yes            |
 | `logo`             | `docs/logo.<ext>` then `assets/logo.<ext>` probe                                                                | yes            |
-| `basics`           | `identity.title` + `identity.summary`                                                                           | yes            |
+| `basics`           | `identity.title` + `identity.description`, else `identity.summary`                                              | yes            |
 | `badges`           | `readme.shields` (see [Badges](#badges))                                                                        | yes            |
 | `screenshots`      | `docs/screenshots/*.<img>` probe                                                                                | yes            |
 | `features`         | `FEATURES.md` probe, localized first (project H3 titles as bullets; inherited ones under per-parent subheaders) | yes            |

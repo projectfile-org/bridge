@@ -447,6 +447,22 @@ func TestMultiLangResolvesSummaryPerLanguage(t *testing.T) {
 	assert.Contains(t, string(out.Files["docs/uk/README.md"]), summaryUK)
 }
 
+// TestBasicsPrefersDescription: identity.description replaces the summary when declared, per language.
+func TestBasicsPrefersDescription(t *testing.T) {
+	pf := minimalDoc(t)
+	pf.Identity.Summary = &projectfile.LocalizedString{Langs: map[string]string{"en": summaryEN, "es": summaryES}}
+	pf.Identity.Description = &projectfile.LocalizedString{Langs: map[string]string{"en": "Hello, at length"}}
+	pf.Extensions = map[string]any{pfmodel.I18NExtensionNS: map[string]any{keyLanguages: []any{"es"}}}
+
+	out, err := Bridge{}.Render(pf, core.Options{Dir: t.TempDir(), Mode: modeWrite, Force: true})
+	require.NoError(t, err)
+
+	assert.Contains(t, string(out.Files["README.md"]), "\n\nHello, at length\n")
+	assert.NotContains(t, string(out.Files["README.md"]), "\n\nHello\n")
+	assert.Contains(t, string(out.Files["docs/es/README.md"]), "Hello, at length",
+		"a description without the language falls back to its default text, never to the summary")
+}
+
 // TestMultiLangCrossLinks verifies the cross-language bar appears at the top
 // of each variant, lists every OTHER language, and never links to itself.
 func TestMultiLangCrossLinks(t *testing.T) {
