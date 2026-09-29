@@ -52,7 +52,7 @@ license.body: This project is licensed under %s — see the [LICENSE](LICENSE) f
 license.body.upstream: The packaging in this repository is licensed under %s — see the [LICENSE](LICENSE) file for details.
 upstream.packages: Packages %s.
 upstream.fork: Fork of %s.
-upstream.license: "%[1]s is distributed under its own license, %[2]s."
+upstream.license: "%[1]s is distributed under its own license, `%[2]s`."
 upstream.license.own: "%s is distributed under its own license."
 
 # Acknowledgements block — post-licence credits, one subheading per declared

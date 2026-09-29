@@ -45,7 +45,7 @@ license.body: Este proyecto se publica bajo la licencia %s — consulta el archi
 license.body.upstream: El empaquetado de este repositorio se publica bajo la licencia %s — consulta el archivo [LICENSE](LICENSE) para más detalles.
 upstream.packages: Empaqueta %s.
 upstream.fork: Bifurcación de %s.
-upstream.license: "%[1]s se distribuye bajo su propia licencia, %[2]s."
+upstream.license: "%[1]s se distribuye bajo su propia licencia, `%[2]s`."
 upstream.license.own: "%s se distribuye bajo su propia licencia."
 
 # Bloque de agradecimientos — créditos tras la licencia, un subtítulo por cada

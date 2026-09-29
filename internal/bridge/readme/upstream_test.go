@@ -17,7 +17,7 @@ const pgName = "PostgreSQL"
 func TestUpstreamNamedUnderBasicsAndSplitInLicense(t *testing.T) {
 	pf := minimalDoc(t)
 	pf.Identity.Version = "18"
-	pf.Rest = map[string]any{"upstream": []any{
+	pf.Extensions = map[string]any{"upstream": []any{
 		map[string]any{keyName: pgName, keyURL: "https://www.postgresql.org", "version": "${identity.version}", "license": pgName},
 		map[string]any{keyName: map[string]any{"en": "Helper"}, "relation": "fork"},
 	}}
@@ -26,7 +26,7 @@ func TestUpstreamNamedUnderBasicsAndSplitInLicense(t *testing.T) {
 
 	assert.Contains(t, out, "a demo project\n\nPackages [PostgreSQL](https://www.postgresql.org) 18.\n\nFork of Helper.")
 	assert.Contains(t, out, "## License\n\nThe packaging in this repository is licensed under MIT — see the [LICENSE](LICENSE) file for details. "+
-		"PostgreSQL is distributed under its own license, PostgreSQL. Helper is distributed under its own license.")
+		"PostgreSQL is distributed under its own license, `PostgreSQL`. Helper is distributed under its own license.")
 }
 
 // TestUpstreamAbsentKeepsPlainLicense: without upstream the license sentence is unchanged.
@@ -40,7 +40,7 @@ func TestUpstreamAbsentKeepsPlainLicense(t *testing.T) {
 // TestUpstreamUnresolvedVersionOmitted: a version reference that resolves to nothing is left out, the name stays.
 func TestUpstreamUnresolvedVersionOmitted(t *testing.T) {
 	pf := minimalDoc(t)
-	pf.Rest = map[string]any{"upstream": []any{map[string]any{keyName: pgName, "version": "${org.example.missing}"}}}
+	pf.Extensions = map[string]any{"upstream": []any{map[string]any{keyName: pgName, "version": "${org.example.missing}"}}}
 
 	out := renderDoc(t, t.TempDir(), pf)
 

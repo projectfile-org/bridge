@@ -38,10 +38,8 @@ func (e upstreamEntry) Ref() string {
 
 // buildUpstream reads the top-level upstream list; an entry with no name is dropped, an unresolved version or URL is omitted.
 func buildUpstream(doc *projectfile.Document, lang string) []upstreamEntry {
-	if doc == nil {
-		return nil
-	}
-	items, _ := doc.Rest["upstream"].([]any)
+	raw, _ := projectfile.LookupExtension(doc, "upstream")
+	items, _ := raw.([]any)
 	out := make([]upstreamEntry, 0, len(items))
 	for _, item := range items {
 		m, _ := item.(map[string]any)
