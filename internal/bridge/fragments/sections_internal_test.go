@@ -10,6 +10,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync/atomic"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -204,9 +205,9 @@ func TestFetchParentsReportsFailure(t *testing.T) {
 		Dir: "docs/features.d", Out: "FEATURES.md", Title: "Features",
 		Parents: []pfmodel.FragmentParent{{URL: itestURL}, {URL: "https://example.test/b19/other"}},
 	}
-	var calls int
+	var calls atomic.Int32
 	itestStub(t, func(parent pfmodel.FragmentParent, _ string, _ []string) (inheritedCopy, map[string]inheritedCopy, error) {
-		calls++
+		calls.Add(1)
 		if strings.HasSuffix(parent.URL, "/other") {
 			return inheritedCopy{}, nil, errors.New("boom")
 		}
@@ -216,7 +217,7 @@ func TestFetchParentsReportsFailure(t *testing.T) {
 	copies, _, ok := fetchParents(doc, nil)
 	assert.False(t, ok, "a failed parent must fail the document")
 	assert.Len(t, copies, 1, "readable copies still return")
-	assert.Equal(t, 2, calls)
+	assert.Equal(t, int32(2), calls.Load())
 }
 
 // TestFetchParentsSkipsUnpublishedParent: a parent that publishes no such

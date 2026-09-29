@@ -15,6 +15,7 @@ import (
 	"regexp"
 	"sort"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/pelletier/go-toml/v2"
@@ -74,36 +75,98 @@ var projectfileNames = []string{pfYAML, pfTOML, pfJSON}
 //
 // A parent that publishes no such document is an absence, not a failure.
 func fetchParents(doc pfmodel.FragmentDocument, langs []string) (map[string]inheritedCopy, map[string]map[string]inheritedCopy, bool) {
+	return reportParents(doc, collectParents(doc, langs))
+}
+
+// docFetch is one document's prefetched parents, reported back in document order.
+type docFetch struct {
+	copies    map[string]inheritedCopy
+	localized map[string]map[string]inheritedCopy
+	ok        bool
+	fetched   bool
+}
+
+// fetchDocs resolves every document's parents concurrently, reporting back in document order for deterministic warnings.
+func fetchDocs(docs []pfmodel.FragmentDocument, langs []string) []docFetch {
+	raws := make([][]parentFetch, len(docs))
+	var wg sync.WaitGroup
+	for i := range docs {
+		if len(docs[i].Parents) == 0 {
+			continue
+		}
+		wg.Add(1)
+		go func(i int) {
+			defer wg.Done()
+			raws[i] = collectParents(docs[i], langs)
+		}(i)
+	}
+	wg.Wait()
+	out := make([]docFetch, len(docs))
+	for i := range docs {
+		if len(docs[i].Parents) == 0 {
+			continue
+		}
+		copies, localized, ok := reportParents(docs[i], raws[i])
+		out[i] = docFetch{copies: copies, localized: localized, ok: ok, fetched: true}
+	}
+	return out
+}
+
+// parentFetch is one parent's fetched copies plus the error that decides its fate.
+type parentFetch struct {
+	parent     pfmodel.FragmentParent
+	copied     inheritedCopy
+	translated map[string]inheritedCopy
+	err        error
+}
+
+// collectParents fetches every declared parent concurrently into ordered slots.
+func collectParents(doc pfmodel.FragmentDocument, langs []string) []parentFetch {
 	fetchLangs := langs
 	if !docLocalizable(doc) {
 		fetchLangs = nil
 	}
+	results := make([]parentFetch, len(doc.Parents))
+	var wg sync.WaitGroup
+	for i, parent := range doc.Parents {
+		wg.Add(1)
+		go func(i int, parent pfmodel.FragmentParent) {
+			defer wg.Done()
+			copied, translated, err := fetchParent(context.Background(), parent, doc.Out, fetchLangs)
+			results[i] = parentFetch{parent: parent, copied: copied, translated: translated, err: err}
+		}(i, parent)
+	}
+	wg.Wait()
+	return results
+}
+
+// reportParents folds collected fetches into copies, warning in declaration order.
+func reportParents(doc pfmodel.FragmentDocument, results []parentFetch) (map[string]inheritedCopy, map[string]map[string]inheritedCopy, bool) {
 	copies := map[string]inheritedCopy{}
 	localized := map[string]map[string]inheritedCopy{}
 	ok := true
-	for _, parent := range doc.Parents {
-		copied, translated, err := fetchParent(context.Background(), parent, doc.Out, fetchLangs)
+	for _, r := range results {
 		switch {
-		case errors.Is(err, errNotPublished):
+		case errors.Is(r.err, errNotPublished):
 			genlog.Debug("fragments: parent publishes no such document, nothing to inherit",
-				"parent", parent.URL, "document", doc.Out)
+				"parent", r.parent.URL, "document", doc.Out)
 			continue
-		case err != nil:
+		case r.err != nil:
 			warn.Record("fragments: parent unreachable, keeping the committed sections",
-				"parent", parent.URL, "document", doc.Out, "error", err.Error())
+				"parent", r.parent.URL, "document", doc.Out, "error", r.err.Error())
 			ok = false
 			continue
 		}
-		copies[slug(copied.Name)] = copied
-		for lang, lc := range translated {
+		copies[slug(r.copied.Name)] = r.copied
+		for lang, lc := range r.translated {
 			if localized[lang] == nil {
 				localized[lang] = map[string]inheritedCopy{}
 			}
 			localized[lang][slug(lc.Name)] = lc
 		}
 		genlog.Debug("fragments: fetched parent",
-			"parent", copied.Name, "ref", copied.Ref, "commit", shortCommit(copied.Commit),
-			"document", doc.Out, "languages", len(translated))
+			"parent", r.copied.Name, "ref", r.copied.Ref, "commit", shortCommit(r.copied.Commit),
+			"document", doc.Out, "languages", len(r.translated))
 	}
 	return copies, localized, ok
 }
@@ -132,9 +195,28 @@ var fetchParent = func(ctx context.Context, parent pfmodel.FragmentParent, docum
 	genlog.Debug("fragments: resolved parent version",
 		"parent", name, "requested", parent.Ref, "ref", ref, "commit", shortCommit(commit))
 
-	body, err := fetchDocument(ctx, parent.URL, archiveRef(ref), document)
-	if err != nil {
-		return inheritedCopy{}, nil, err
+	aref := archiveRef(ref)
+	var body string
+	var bodyErr error
+	var batch map[string]string
+	var title string
+	var wg sync.WaitGroup
+	wg.Add(3)
+	go func() {
+		defer wg.Done()
+		body, bodyErr = fetchDocument(ctx, parent.URL, aref, document)
+	}()
+	go func() {
+		defer wg.Done()
+		batch = fetchExtrasBatch(ctx, parent.URL, aref, document, langs)
+	}()
+	go func() {
+		defer wg.Done()
+		title = parentTitle(ctx, parent.URL, aref)
+	}()
+	wg.Wait()
+	if bodyErr != nil {
+		return inheritedCopy{}, nil, bodyErr
 	}
 
 	spdx, rest := splitSPDX(body)
@@ -147,7 +229,7 @@ var fetchParent = func(ctx context.Context, parent pfmodel.FragmentParent, docum
 
 	cop := inheritedCopy{
 		Name:     name,
-		Title:    parentTitle(ctx, parent.URL, archiveRef(ref)),
+		Title:    title,
 		URL:      parent.URL,
 		Ref:      ref,
 		Commit:   commit,
@@ -155,21 +237,55 @@ var fetchParent = func(ctx context.Context, parent pfmodel.FragmentParent, docum
 		SPDX:     spdx,
 		Body:     normalizeInherited(rest),
 	}
-	return cop, fetchTranslations(ctx, parent, cop, ref, document, langs), nil
+	return cop, translationsFromBatch(ctx, parent, cop, aref, document, langs, batch), nil
 }
 
-// fetchTranslations reads the parent's localized document per declared
-// language at the ref the canonical copy was read at, so one section's version
-// and one language's entries never describe different releases. A language the
-// parent does not publish is an absence, not a failure: the variant falls back
-// to the canonical copy.
-func fetchTranslations(ctx context.Context, parent pfmodel.FragmentParent, canonical inheritedCopy, ref, document string, langs []string) map[string]inheritedCopy {
+// fetchExtrasBatch reads one parent's localized documents in a single archive call, yielding nil when any language misses so the caller falls back to per-file reads.
+func fetchExtrasBatch(ctx context.Context, repoURL, aref, document string, langs []string) map[string]string {
+	var paths []string
+	for _, lang := range langs {
+		paths = append(paths, core.LocalizedFilename(document, lang))
+	}
+	if len(paths) == 0 {
+		return nil
+	}
+	batch, err := fetchArchiveMap(ctx, repoURL, aref, paths)
+	if err != nil {
+		genlog.Debug("fragments: batched extras fetch missed, falling back to per-file reads", "parent", repoURL, "error", err.Error())
+		return nil
+	}
+	return batch
+}
+
+// translationsFromBatch layers each language's copy from the batch, reading per file only the languages the batch missed.
+func translationsFromBatch(ctx context.Context, parent pfmodel.FragmentParent, canonical inheritedCopy, aref, document string, langs []string, batch map[string]string) map[string]inheritedCopy {
 	if len(langs) == 0 {
 		return nil
 	}
+	type langCopy struct {
+		cop inheritedCopy
+		err error
+	}
+	results := make([]langCopy, len(langs))
+	var wg sync.WaitGroup
+	for i, lang := range langs {
+		wg.Add(1)
+		go func(i int, lang string) {
+			defer wg.Done()
+			path := core.LocalizedFilename(document, lang)
+			if body, ok := batch[path]; ok {
+				cop, err := localizedCopyFromBody(canonical, lang, path, body)
+				results[i] = langCopy{cop: cop, err: err}
+				return
+			}
+			cop, err := fetchLocalizedCopy(ctx, parent, canonical, aref, document, lang)
+			results[i] = langCopy{cop: cop, err: err}
+		}(i, lang)
+	}
+	wg.Wait()
 	out := map[string]inheritedCopy{}
-	for _, lang := range langs {
-		cop, err := fetchLocalizedCopy(ctx, parent, canonical, ref, document, lang)
+	for i, lang := range langs {
+		cop, err := results[i].cop, results[i].err
 		switch {
 		case errors.Is(err, errNotPublished):
 			genlog.Debug("fragments: parent publishes no such document, variant falls back to the canonical copy",
@@ -195,6 +311,11 @@ func fetchLocalizedCopy(ctx context.Context, parent pfmodel.FragmentParent, cano
 	if err != nil {
 		return inheritedCopy{}, err
 	}
+	return localizedCopyFromBody(canonical, lang, path, body)
+}
+
+// localizedCopyFromBody reduces an already-fetched localized document to the nesting shape.
+func localizedCopyFromBody(canonical inheritedCopy, lang, path, body string) (inheritedCopy, error) {
 	spdx, rest := splitSPDX(body)
 	if spdx == "" {
 		return inheritedCopy{}, fmt.Errorf("%s in %s carries no SPDX header — refusing to vendor unlicensed text", path, canonical.Name)
@@ -207,6 +328,23 @@ func fetchLocalizedCopy(ctx context.Context, parent pfmodel.FragmentParent, cano
 	return cop, nil
 }
 
+// refCache memoizes which version of a parent to read, keyed by repository plus wanted ref.
+var refCache sync.Map // string → refResult
+
+// titleCache memoizes what the parent calls itself, keyed by repository plus archive ref.
+var titleCache sync.Map // string → string
+
+// refMu serializes concurrent first misses so one shared parent resolves once.
+var refMu sync.Mutex
+
+// titleMu serializes concurrent first misses so one shared parent reads its title once.
+var titleMu sync.Mutex
+
+type refResult struct {
+	ref    string
+	commit string
+}
+
 // parentTitle reads what the parent calls ITSELF — identity.title — so a
 // heading reads as prose ("B19/Ubuntu") instead of as a repository path
 // ("b19/ubuntu"). Read at the same ref as the document, so the name and the
@@ -216,6 +354,22 @@ func fetchLocalizedCopy(ctx context.Context, parent pfmodel.FragmentParent, cano
 // parent by owner/repo — which the URL always yields. A parent that publishes
 // no projectfile, or one that omits the title, stays inheritable.
 func parentTitle(ctx context.Context, repoURL, ref string) string {
+	key := repoURL + "\x00" + ref
+	if v, ok := titleCache.Load(key); ok {
+		return v.(string)
+	}
+	titleMu.Lock()
+	defer titleMu.Unlock()
+	if v, ok := titleCache.Load(key); ok {
+		return v.(string)
+	}
+	title := parentTitleUncached(ctx, repoURL, ref)
+	titleCache.Store(key, title)
+	return title
+}
+
+// parentTitleUncached tries each projectfile encoding in turn for the parent's title.
+func parentTitleUncached(ctx context.Context, repoURL, ref string) string {
 	for _, name := range projectfileNames {
 		body, err := fetchDocument(ctx, repoURL, ref, name)
 		switch {
@@ -296,6 +450,27 @@ func localizedTitle(v any) string {
 // to know semver — and one ls-remote covers every forge, needing no API and no
 // token beyond the git access the developer already has.
 func resolveRef(ctx context.Context, repoURL, want string) (ref, commit string, err error) {
+	key := repoURL + "\x00" + want
+	if v, ok := refCache.Load(key); ok {
+		r := v.(refResult)
+		return r.ref, r.commit, nil
+	}
+	refMu.Lock()
+	defer refMu.Unlock()
+	if v, ok := refCache.Load(key); ok {
+		r := v.(refResult)
+		return r.ref, r.commit, nil
+	}
+	ref, commit, err = resolveRefUncached(ctx, repoURL, want)
+	if err != nil {
+		return "", "", err
+	}
+	refCache.Store(key, refResult{ref: ref, commit: commit})
+	return ref, commit, nil
+}
+
+// resolveRefUncached answers WHICH version of the parent to read against the live forge.
+func resolveRefUncached(ctx context.Context, repoURL, want string) (ref, commit string, err error) {
 	if want != "" {
 		out, err := gitLsRemote(ctx, repoURL, "refs/tags/"+want, "refs/heads/"+want)
 		if err != nil {
@@ -357,6 +532,54 @@ func fetchDocument(ctx context.Context, repoURL, ref, document string) (string, 
 		return "", fmt.Errorf("%s at %s %s: %w", document, repoURL, ref, err)
 	}
 	return body, nil
+}
+
+// fetchArchiveMap reads several paths at one ref in a single archive call. Any miss fails the whole call by git's own hand, and the caller falls back to per-file reads.
+func fetchArchiveMap(ctx context.Context, repoURL, aref string, paths []string) (map[string]string, error) {
+	argv := append([]string{"archive", "--format=tar", "--remote=" + repoURL, aref}, paths...)
+	out, err := runGit(ctx, argv...)
+	if err != nil {
+		return nil, err
+	}
+	return tarEntries([]byte(out), paths)
+}
+
+// tarEntries pulls every requested file out of a tar stream, matching each member to its longest requested suffix so a localized path never shadows its canonical one.
+func tarEntries(stream []byte, paths []string) (map[string]string, error) {
+	found := map[string]string{}
+	reader := tar.NewReader(bytes.NewReader(stream))
+	for {
+		header, err := reader.Next()
+		if errors.Is(err, io.EOF) {
+			return found, nil
+		}
+		if err != nil {
+			return nil, err
+		}
+		if header.Typeflag != tar.TypeReg {
+			continue
+		}
+		best := ""
+		for _, p := range paths {
+			if header.Name != p && !strings.HasSuffix(header.Name, "/"+p) {
+				continue
+			}
+			if len(p) > len(best) {
+				best = p
+			}
+		}
+		if best == "" {
+			continue
+		}
+		if _, taken := found[best]; taken {
+			continue
+		}
+		body, err := io.ReadAll(reader)
+		if err != nil {
+			return nil, err
+		}
+		found[best] = string(body)
+	}
 }
 
 // tarEntry pulls one file out of a tar stream. `git archive <ref> <path>` yields

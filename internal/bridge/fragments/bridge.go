@@ -107,14 +107,25 @@ func (Bridge) Render(pf *projectfile.Document, opts core.Options) (core.Output, 
 	langs := pfmodel.Languages(pf)
 	defLang := pfmodel.DefaultLanguage(pf)
 	reuse := core.REUSEHeader(pf, core.StyleHTML)
-	out := core.Output{Files: map[string][]byte{}}
-	for _, doc := range docs {
+	owns := make([][]Fragment, len(docs))
+	for i, doc := range docs {
 		own, err := loadFragments(opts.Dir, doc.Dir)
 		if err != nil {
 			return core.Output{}, fmt.Errorf("%s: %w", doc.Out, err)
 		}
+		owns[i] = own
+	}
+	var pres []docFetch
+	if !opts.Offline && !opts.DryRun {
+		pres = fetchDocs(docs, langs)
+	} else {
+		pres = make([]docFetch, len(docs))
+	}
+	out := core.Output{Files: map[string][]byte{}}
+	for i, doc := range docs {
+		own := owns[i]
 
-		canonical, resolveVariants := sectionsFor(opts.Dir, doc, opts, langs, defLang)
+		canonical, resolveVariants := sectionsFor(opts.Dir, doc, opts, langs, defLang, pres[i])
 		if len(own) == 0 && len(canonical) == 0 {
 			genlog.Plain(fmt.Sprintf("bridge: %s (skipped, no fragments)", doc.Out))
 			continue
@@ -156,13 +167,21 @@ func (Bridge) Render(pf *projectfile.Document, opts core.Options) (core.Output, 
 // inherited sections) before that warning means anything. Evaluating it
 // eagerly would warn about missing translations for a document that is not
 // declared in any language — Render skips those silently.
-func sectionsFor(projectDir string, doc pfmodel.FragmentDocument, opts core.Options, langs []string, defLang string) ([]inheritedEntry, func() []variantFragments) {
+func sectionsFor(projectDir string, doc pfmodel.FragmentDocument, opts core.Options, langs []string, defLang string, pre docFetch) ([]inheritedEntry, func() []variantFragments) {
 	none := func(string) ([]inheritedEntry, bool) { return nil, false }
 	if len(doc.Parents) == 0 {
 		return nil, func() []variantFragments { return resolveVariantLangs(projectDir, doc, langs, none) }
 	}
 	if !opts.Offline && !opts.DryRun {
-		if copies, localized, ok := fetchParents(doc, langs); ok {
+		var copies map[string]inheritedCopy
+		var localized map[string]map[string]inheritedCopy
+		var ok bool
+		if pre.fetched {
+			copies, localized, ok = pre.copies, pre.localized, pre.ok
+		} else {
+			copies, localized, ok = fetchParents(doc, langs)
+		}
+		if ok {
 			ordered := orderedCopies(copies)
 			return localizedInherited(ordered, defLang), func() []variantFragments {
 				return resolveVariantLangs(projectDir, doc, langs, func(lang string) ([]inheritedEntry, bool) {

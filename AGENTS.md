@@ -332,6 +332,12 @@ Two things bite when adding a parent:
   archive --remote` fails there with “operation not supported by protocol”.
   Point parents at a forge that serves it (kiota.ch, Codeberg), not at a GitHub
   mirror.
+- **One online generate costs about one ls-remote plus one archive round trip
+  per parent.** Ref resolution and the parent title memoize per repository,
+  each document’s localized copies arrive in one batched `git archive`
+  (per-file fallback on any miss, since one absent path fails the whole call),
+  and documents and parents fetch concurrently with warnings replayed in
+  declaration order — logs stay deterministic.
 
 ### Fan-out verbs
 

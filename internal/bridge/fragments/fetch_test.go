@@ -7,11 +7,14 @@ package fragments
 import (
 	"archive/tar"
 	"bytes"
+	"context"
 	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"projectfile.org/projectfile/bridge/internal/bridge/core"
+	"projectfile.org/projectfile/bridge/internal/pfmodel"
 )
 
 // spdxTag is split from its value so the REUSE scanner does not read the
@@ -152,9 +155,38 @@ func TestLocalizedTitleIsDeterministic(t *testing.T) {
 	}
 }
 
-// TestTarEntryPicksTheDocument verifies one file is read out of the archive
-// stream by name, so a server that prefixes or pads the stream cannot hand back
-// a different file than the one asked for.
+// TestTarEntriesAssignsLongestSuffix verifies a batched archive maps each member to its longest requested suffix, so docs/es/FEATURES.md never lands in FEATURES.md.
+func TestTarEntriesAssignsLongestSuffix(t *testing.T) {
+	var buf bytes.Buffer
+	writer := tar.NewWriter(&buf)
+	for name, body := range map[string]string{"b19-ubuntu/FEATURES.md": "canonical", "b19-ubuntu/docs/es/FEATURES.md": "spanish", pfYAML: "pf", "README.md": "unasked"} {
+		require.NoError(t, writer.WriteHeader(&tar.Header{
+			Name: name, Mode: 0o644, Size: int64(len(body)), Typeflag: tar.TypeReg,
+		}))
+		_, err := writer.Write([]byte(body))
+		require.NoError(t, err)
+	}
+	require.NoError(t, writer.Close())
+
+	got, err := tarEntries(buf.Bytes(), []string{outFeaturesName, core.LocalizedFilename(outFeaturesName, "es"), pfYAML})
+	require.NoError(t, err)
+	assert.Equal(t, map[string]string{outFeaturesName: "canonical", core.LocalizedFilename(outFeaturesName, "es"): "spanish", pfYAML: "pf"}, got)
+}
+
+// TestTranslationsFromBatchNestsCopies verifies batched localized documents reduce to the same nesting shape as per-file reads.
+func TestTranslationsFromBatchNestsCopies(t *testing.T) {
+	canonical := inheritedCopy{Name: testParent, Title: testParentTitle, URL: testParentURL, Ref: testRef, Document: outFeaturesName}
+	esPath := core.LocalizedFilename(outFeaturesName, "es")
+	batch := map[string]string{esPath: upstreamDoc("### Entrada", "", "Cuerpo.")}
+	out := translationsFromBatch(context.Background(), pfmodel.FragmentParent{URL: testParentURL}, canonical, testRef, outFeaturesName, []string{"es"}, batch)
+	require.Contains(t, out, "es")
+	assert.Equal(t, "es", out["es"].Lang)
+	assert.Contains(t, out["es"].Body, "### Entrada")
+	assert.Equal(t, testParentTitle, out["es"].Title, "provenance rides along")
+	assert.Empty(t, translationsFromBatch(context.Background(), pfmodel.FragmentParent{URL: testParentURL}, canonical, testRef, outFeaturesName, nil, batch))
+}
+
+// TestTarEntryPicksTheDocument verifies one file is read out of the archive stream by name, so a server that prefixes or pads the stream cannot hand back a different file than the one asked for.
 func TestTarEntryPicksTheDocument(t *testing.T) {
 	var buf bytes.Buffer
 	writer := tar.NewWriter(&buf)
