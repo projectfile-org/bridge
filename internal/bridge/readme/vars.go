@@ -432,7 +432,7 @@ type goalView struct {
 // of map iteration order. A NULL node (the shape a bare `ci:` override leaves)
 // is skipped, as is an entry point with no description (the template would
 // otherwise print a literal <no value>).
-func buildReadmeGoals(doc *projectfile.Document) []goalView {
+func buildReadmeGoals(doc *projectfile.Document, lang string) []goalView {
 	nodes, ok := ciSubtree(doc)["nodes"].(map[string]any)
 	if !ok {
 		return nil
@@ -450,7 +450,7 @@ func buildReadmeGoals(doc *projectfile.Document) []goalView {
 		if !isGoal && !taggedNode {
 			continue
 		}
-		description, _ := node["description"].(string)
+		description := pfmodel.LocalizedText(node, "description", lang)
 		if description == "" {
 			continue
 		}

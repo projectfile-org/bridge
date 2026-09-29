@@ -592,7 +592,7 @@ func TestReadmeGoalsPrefersTagged(t *testing.T) {
 		map[string]any{keyName: nodePublished, keyGoal: true, keyDescription: descPublish, keyTags: []any{goalTag}},
 		map[string]any{keyName: nodeAnalyze, keyGoal: true, keyDescription: descAnalyze},
 	)
-	got := buildReadmeGoals(pf)
+	got := buildReadmeGoals(pf, "")
 	require.Len(t, got, 1)
 	assert.Equal(t, nodePublished, got[0].Name)
 }
@@ -606,7 +606,7 @@ func TestReadmeGoalsFallbackAllWhenNoneTagged(t *testing.T) {
 		map[string]any{keyName: nodePublished, keyGoal: true, keyDescription: descPublish},
 		map[string]any{keyName: nodeAnalyze, keyGoal: true, keyDescription: descAnalyze},
 	)
-	got := buildReadmeGoals(pf)
+	got := buildReadmeGoals(pf, "")
 	require.Len(t, got, 2)
 }
 
@@ -621,7 +621,7 @@ func TestReadmeGoalsSkipsNonGoalsAndDescriptionless(t *testing.T) {
 		// no description
 		map[string]any{keyName: "tagless", keyGoal: true},
 	)
-	assert.Empty(t, buildReadmeGoals(pf))
+	assert.Empty(t, buildReadmeGoals(pf, ""))
 }
 
 // TestReadmeGoalsAdmitsTaggedNonGoal: a node that is NOT a forge goal but opts
@@ -635,9 +635,19 @@ func TestReadmeGoalsAdmitsTaggedNonGoal(t *testing.T) {
 		map[string]any{keyName: nodeReadyToPublish, keyDescription: "Run the pseudo-CI pipeline", keyTags: []any{goalTag}}, // not goal:true
 		map[string]any{keyName: nodeAnalyze, keyGoal: true, keyDescription: descAnalyze},                                   // goal, no tag
 	)
-	got := buildReadmeGoals(pf)
+	got := buildReadmeGoals(pf, "")
 	require.Len(t, got, 1)
 	assert.Equal(t, nodeReadyToPublish, got[0].Name)
+}
+
+// TestReadmeGoalsLocalizedDescription: a language-map description renders in the requested language.
+func TestReadmeGoalsLocalizedDescription(t *testing.T) {
+	pf := minimalDoc(t)
+	pf.Extensions = ciNodes(
+		map[string]any{keyName: nodeAnalyze, keyGoal: true, keyDescription: map[string]any{"en": descAnalyze, "es": "Analiza"}},
+	)
+	assert.Equal(t, "Analiza", buildReadmeGoals(pf, "es")[0].Description)
+	assert.Equal(t, descAnalyze, buildReadmeGoals(pf, "uk")[0].Description)
 }
 
 // TestBuildingBlockAdvertisesDevContainer: when the DAG declares a

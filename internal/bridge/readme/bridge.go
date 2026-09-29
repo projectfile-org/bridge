@@ -324,7 +324,7 @@ func execBlockTemplate(name string, body []byte, data readmeView, dir string, ex
 			// readmeGoals lists the CI goals the building block highlights,
 			// preferring goals tagged `readme` and falling back to every goal
 			// when none are tagged. Returns nil for a project with no CI DAG.
-			"readmeGoals": func() []goalView { return buildReadmeGoals(data.Doc) },
+			"readmeGoals": func() []goalView { return buildReadmeGoals(data.Doc, data.StrLang) },
 			// hasDevContainer reports whether the CI DAG declares a dev-container
 			// node, so the building block can advertise the local dev loop.
 			"hasDevContainer": func() bool { return hasDevContainer(data.Doc) },

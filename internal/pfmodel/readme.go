@@ -145,6 +145,14 @@ func extractLocalizedVal(m map[string]any, key string) string {
 	return ""
 }
 
+// LocalizedText resolves the localized string at m[key] for lang, else its default resolution.
+func LocalizedText(m map[string]any, key, lang string) string {
+	if v := extractLocalizedMap(m, key)[lang]; v != "" {
+		return v
+	}
+	return extractLocalizedVal(m, key)
+}
+
 // extractLocalizedMap returns the raw lang→text map when the entry at key is
 // a language map, or nil otherwise (bare string, missing, or wrong type).
 // Language-aware consumers use it to preserve the full set of translations
