@@ -198,3 +198,16 @@ func TestIsDispatcherVerb(t *testing.T) {
 	}
 	assert.False(t, isDispatcherVerb(bridgeName))
 }
+
+func TestPrintCompletionRejectsUnknownShell(t *testing.T) {
+	var out strings.Builder
+	err := printCompletion(&out, []string{"nosuchshell"})
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "bash, zsh, fish")
+	assert.Empty(t, out.String())
+	for _, shell := range completionShells {
+		out.Reset()
+		assert.NoError(t, printCompletion(&out, []string{shell}), shell)
+		assert.Contains(t, out.String(), "pf-bridge", shell)
+	}
+}

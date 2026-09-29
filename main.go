@@ -79,7 +79,10 @@ func main() {
 		listBridges(os.Stdout)
 		return
 	case "completion":
-		printCompletion(os.Stdout, args[1:])
+		if err := printCompletion(os.Stdout, args[1:]); err != nil {
+			fmt.Fprintf(os.Stderr, "Error: %s\n", err)
+			os.Exit(2)
+		}
 		return
 	case cmdAll, dirTo, dirFrom:
 		if err := runAll(args); err != nil {
@@ -402,10 +405,13 @@ func listBridges(w *os.File) {
 
 // printCompletion writes a shell completion script covering the dispatcher
 // verbs plus every installed bridge name, so one command completes the whole tool.
-func printCompletion(w io.Writer, args []string) {
+func printCompletion(w io.Writer, args []string) error {
 	shell := "bash"
 	if len(args) > 0 {
 		shell = args[0]
+	}
+	if !slices.Contains(completionShells, shell) {
+		return fmt.Errorf("unsupported shell %q for completion (supported: %s)", shell, strings.Join(completionShells, ", "))
 	}
 	names := append([]string{cmdAll, cmdCheck, dirTo, dirFrom, "forge", "scan", "init", "cache"}, discover()...)
 	seen := map[string]bool{}
@@ -426,7 +432,11 @@ func printCompletion(w io.Writer, args []string) {
 	default:
 		fmt.Fprintf(w, "_pf_bridge() { local cmds=\"%s\"; COMPREPLY=($(compgen -W \"$cmds\" -- \"${COMP_WORDS[COMP_CWORD]}\")); }\ncomplete -F _pf_bridge pf-bridge\n", words)
 	}
+	return nil
 }
+
+// completionShells are the shells printCompletion emits a script for.
+var completionShells = []string{"bash", "zsh", "fish"}
 
 // withDescriptions probes every child for its one-line self-introduction.
 // Children that cannot answer (older install, foreign binary) keep an empty
