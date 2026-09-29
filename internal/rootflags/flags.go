@@ -82,6 +82,9 @@ func Bind(root *cobra.Command) {
 		"abort when an include-resolution problem reaches this severity: "+
 			"'error' (default; a missing local include warns and is skipped) or "+
 			"'warning' (a missing local include aborts the command)")
+	if root.Version != "" {
+		root.Flags().BoolP("version", "V", false, "print the version and exit")
+	}
 	root.SetHelpTemplate(root.HelpTemplate() + "\nEvery --flag above defaults from its PF_BRIDGE_* env var.\n")
 }
 
