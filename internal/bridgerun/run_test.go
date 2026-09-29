@@ -5,8 +5,11 @@
 package bridgerun
 
 import (
+	"bytes"
+	"os"
 	"testing"
 
+	"github.com/spf13/cobra"
 	"github.com/stretchr/testify/assert"
 
 	"kiota.ch/projectfile/core/v2/pkg/projectfile"
@@ -66,4 +69,22 @@ func TestDescribeLine(t *testing.T) {
 		"custom line (one-way render), "+
 			"b-readme.md, b2-dockerignore, c-package.json — sync and render",
 		describeLine())
+}
+
+func TestNoTerminalStdinListsInsteadOfPrompting(t *testing.T) {
+	bridge.Register(fakeRenderer{"tty-one"})
+	bridge.Register(fakeRenderer{"tty-two"})
+	r, w, err := os.Pipe()
+	assert.NoError(t, err)
+	defer func() { _ = r.Close(); _ = w.Close() }()
+	saved := promptInput
+	promptInput = r
+	defer func() { promptInput = saved }()
+
+	assert.False(t, canPrompt())
+	var out bytes.Buffer
+	cmd := &cobra.Command{}
+	cmd.SetOut(&out)
+	assert.NoError(t, runBridge(cmd, nil))
+	assert.Contains(t, out.String(), "tty-one\ntty-two\n")
 }

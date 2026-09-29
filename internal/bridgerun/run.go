@@ -183,7 +183,8 @@ func runBridge(cmd *cobra.Command, args []string) error {
 	if name == "" {
 		if names := bridgeFilenames(); len(names) == 1 {
 			name = names[0]
-		} else if !isatty.IsTerminal(os.Stdout.Fd()) {
+		} else if !canPrompt() {
+			genlog.Debug("no terminal on stdin, listing instead of prompting", "files", len(names))
 			return printList(cmd, names)
 		} else {
 			picked, err := pickBridgeTarget()
@@ -247,7 +248,7 @@ func runBridgeLocked(b core.Bridge, mode core.Mode, dir, pfPath string, cmd *cob
 	}
 
 	if rb, ok := b.(core.RequiredFieldsBridge); ok {
-		if missing := rb.RequiredFields(pf); len(missing) > 0 && isatty.IsTerminal(os.Stdout.Fd()) {
+		if missing := rb.RequiredFields(pf); len(missing) > 0 && canPrompt() {
 			filled, err := fillRequiredFields(b.Filename(), missing, pf, pfPath)
 			if err != nil {
 				return err
@@ -255,6 +256,8 @@ func runBridgeLocked(b core.Bridge, mode core.Mode, dir, pfPath string, cmd *cob
 			if filled {
 				opts.NoCreate = false
 			}
+		} else if len(missing) > 0 {
+			genlog.Debug("no terminal on stdin, skipping required-fields prompt", "file", b.Filename(), "missing", len(missing))
 		}
 	}
 
@@ -447,6 +450,15 @@ func fillRequiredFields(filename string, missing []core.Missing, pf *projectfile
 		return false, fmt.Errorf("write projectfile after fill: %w", err)
 	}
 	return true, nil
+}
+
+// promptInput is the stream a prompt reads its answer from.
+var promptInput = os.Stdin
+
+// canPrompt reports whether promptInput is a terminal a person can answer on.
+func canPrompt() bool {
+	fd := promptInput.Fd()
+	return isatty.IsTerminal(fd) || isatty.IsCygwinTerminal(fd)
 }
 
 // printList writes each name on its own line — used by both --list and the
