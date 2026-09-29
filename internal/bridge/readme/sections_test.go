@@ -1064,6 +1064,19 @@ func TestPlatformsBlockSkippedWhenNeitherDeclared(t *testing.T) {
 	assert.NotContains(t, out, "## Supported platforms")
 }
 
+// TestPlatformsBlockFallsBackToFleetDefault: an image declaring no platform
+// renders the readme default; a project publishing no image still drops it.
+func TestPlatformsBlockFallsBackToFleetDefault(t *testing.T) {
+	readme := map[string]any{"default-platforms": []any{"linux/amd64"}}
+	pf := minimalDoc(t)
+	pf.Extensions = map[string]any{readmeNS: readme, artifactsNS: imageArtifact(refSinkKiota)}
+	assert.Contains(t, renderDoc(t, t.TempDir(), pf), "## Supported platforms\n\n- `linux/amd64`")
+
+	pf = minimalDoc(t)
+	pf.Extensions = map[string]any{readmeNS: readme}
+	assert.NotContains(t, renderDoc(t, t.TempDir(), pf), "## Supported platforms")
+}
+
 // TestArtifactAddressPicksByKind pins the per-kind address chain: the ONE string
 // that identifies each artifact to a reader.
 func TestArtifactAddressPicksByKind(t *testing.T) {

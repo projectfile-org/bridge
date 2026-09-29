@@ -76,6 +76,10 @@ rich project fills every section.
 | `license`          | `license.spdx`                                                                                                  | yes            |
 | `acknowledgements` | `org.projectfile.acknowledgements` — post-licence credits                                                       | yes            |
 
+`platforms` has one fallback: a project that publishes an image but declares
+neither list shows `readme.default-platforms`, the fleet’s runner platform.
+Silence would read as “runs everywhere”.
+
 Override the list to reorder, drop, or add blocks:
 
 ```yaml

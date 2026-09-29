@@ -176,7 +176,7 @@ func buildPlatforms(doc *projectfile.Document) []string {
 	oses := strFieldList(doc, osExtensionNS)
 	arches := strFieldList(doc, archExtensionNS)
 	if len(oses) == 0 && len(arches) == 0 {
-		return nil
+		return defaultPlatforms(doc)
 	}
 	if len(oses) == 0 {
 		oses = []string{platformDefaultOS}
@@ -192,6 +192,25 @@ func buildPlatforms(doc *projectfile.Document) []string {
 		genlog.DebugRow("platform", p, osExtensionNS+" x "+archExtensionNS, "")
 	}
 	return out
+}
+
+// defaultPlatformsKey names the platforms an image declaring none is built for — the runner's, a fleet fact.
+const defaultPlatformsKey = pfmodel.ReadmeExtensionNS + ".default-platforms"
+
+// defaultPlatforms is the undeclared case: the fleet default for a project that
+// publishes an image, nothing for one that does not, since silence reads as "everywhere".
+func defaultPlatforms(doc *projectfile.Document) []string {
+	artifacts, _ := pfmodel.GetArtifacts(doc)
+	for _, a := range pfmodel.ArtifactsOfKind(artifacts, pfmodel.ArtifactKindImage) {
+		if _, resolved := interp.ExpandFanOut(doc, a.Ref); !resolved {
+			continue
+		}
+		out := strFieldList(doc, defaultPlatformsKey)
+		slices.Sort(out)
+		genlog.DebugRow("platform", strings.Join(out, " "), defaultPlatformsKey, "no platform declared, image "+a.Key)
+		return out
+	}
+	return nil
 }
 
 // strFieldList reads an extension namespace whose value is a list of strings and
