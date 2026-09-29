@@ -292,6 +292,8 @@ func execBlockTemplate(name string, body []byte, data readmeView, dir string, ex
 			// license is nil-safe SPDX lookup; empty when License is unset, so
 			// {{with license}}…{{end}} drops the section cleanly.
 			"license": func() string { return licenseSPDX(data.Doc) },
+			// upstream lists the §4.4b software this project packages or forks; empty drops its lines.
+			"upstream": func() []upstreamEntry { return buildUpstream(data.Doc, data.StrLang) },
 			// badgeRows maps ext.Shields to the badge view model grouped into
 			// rendered lines: each URL's ${…} references resolved against the
 			// document, unresolvable entries dropped, duplicates collapsed

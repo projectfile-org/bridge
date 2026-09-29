@@ -20,14 +20,12 @@ import (
 const (
 	keyImage       = "image"
 	keyCommands    = "commands"
-	keyName        = "name"
 	keyPrefix      = "prefix"
 	keyKind        = "kind"
 	keyAxes        = "axes"
 	keyRef         = "ref"
 	keyMatrix      = "matrix"
 	keyLabel       = "label"
-	keyURL         = "url"
 	keyDescription = "description"
 	keyGoal        = "goal"
 	// CI node-name and field fixtures shared across the goal-filter tests.

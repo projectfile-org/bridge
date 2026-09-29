@@ -2,3 +2,6 @@
 {{- with or (ls .Doc.Identity.Description) (ls .Doc.Identity.Summary)}}
 
 {{.}}{{end}}
+{{- range upstream}}
+
+{{if .Fork}}{{printf (t "upstream.fork") .Ref}}{{else}}{{printf (t "upstream.packages") .Ref}}{{end}}{{end}}

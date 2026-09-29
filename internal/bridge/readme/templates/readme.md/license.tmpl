@@ -1,5 +1,5 @@
 {{- with license}}
 ## {{t "license.title"}}
 
-{{printf (t "license.body") .}}
+{{if upstream}}{{printf (t "license.body.upstream") .}}{{range upstream}} {{if .License}}{{printf (t "upstream.license") .Name .License}}{{else}}{{printf (t "upstream.license.own") .Name}}{{end}}{{end}}{{else}}{{printf (t "license.body") .}}{{end}}
 {{end}}
