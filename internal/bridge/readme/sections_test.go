@@ -53,6 +53,7 @@ const (
 	axisSeries = "B19_UBUNTU_SERIES"
 	axisGOARCH = "GOARCH"
 	axisLLVM   = "B19_LLVM_SERIES"
+	axisGOOS   = "GOOS"
 	archARM64  = "arm64"
 	// Sink-fixture refs and series values, same goconst rule.
 	refSinkGhcr    = "ghcr.io/o/demo:latest"
@@ -341,7 +342,7 @@ func TestPerCellGroupSplitsByMatrixCell(t *testing.T) {
 		ciExtensionNS: map[string]any{
 			keyMatrix: map[string]any{keyAxes: map[string]any{
 				axisGOARCH: []any{archAMD64, archARM64},
-				"GOOS":     []any{"linux"},
+				axisGOOS:   []any{platformDefaultOS},
 			}},
 		},
 		readmeNS: map[string]any{blockInstallation: []any{perCell}},
@@ -351,6 +352,30 @@ func TestPerCellGroupSplitsByMatrixCell(t *testing.T) {
 
 	assert.Contains(t, out, "### Download for linux/amd64\n\n```sh\ncurl --output x x-linux-amd64\n./x --help\n```")
 	assert.Contains(t, out, "### Download for linux/arm64\n\n```sh\ncurl --output x x-linux-arm64\n./x --help\n```")
+}
+
+// TestExcludedCellNeverRenders: a node's matrix.exclude drops that cell from per-cell and joined fences alike.
+func TestExcludedCellNeverRenders(t *testing.T) {
+	pf := minimalDoc(t)
+	perCell := group("release", "Download:", "curl x-{GOOS}-{GOARCH}")
+	perCell["per-cell"] = true
+	joined := group("list", "All:", "echo {GOOS}/{GOARCH}")
+	pf.Extensions = map[string]any{
+		ciExtensionNS: map[string]any{
+			"nodes": map[string]any{"build": map[string]any{keyMatrix: map[string]any{
+				keyAxes:   map[string]any{axisGOARCH: []any{archAMD64, "riscv64"}, axisGOOS: []any{platformDefaultOS, "darwin"}},
+				"exclude": []any{map[string]any{axisGOARCH: "riscv64", axisGOOS: "darwin"}},
+			}}},
+		},
+		readmeNS: map[string]any{blockInstallation: []any{perCell, joined}},
+	}
+
+	out := renderDoc(t, t.TempDir(), pf)
+
+	assert.Contains(t, out, "curl x-linux-riscv64")
+	assert.Contains(t, out, "echo linux/riscv64")
+	assert.NotContains(t, out, "darwin-riscv64")
+	assert.NotContains(t, out, "darwin/riscv64")
 }
 
 // TestAxisArgsGroupKeepsAxisAsDockerfileArg: an axis-args group names each axis once as an ARG, not once per cell.
@@ -1055,7 +1080,7 @@ func TestArtifactsBlockSkippedWhenNoneDeclared(t *testing.T) {
 func TestPlatformsBlockRendersCartesianProduct(t *testing.T) {
 	pf := minimalDoc(t)
 	pf.Extensions = map[string]any{
-		osExtensionNS:   []any{"linux"},
+		osExtensionNS:   []any{platformDefaultOS},
 		archExtensionNS: []any{archARM64, archAMD64},
 	}
 	out := renderDoc(t, t.TempDir(), pf)

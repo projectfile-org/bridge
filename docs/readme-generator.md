@@ -290,6 +290,8 @@ usage block), and a line naming no axis — `./<cmd> --help` — repeats in ever
 cell. The label joins the cell’s axis values with `/` in the order their
 placeholders first appear, so `<cmd>-{GOOS}-{GOARCH}` reads `linux/amd64`.
 A sink split takes precedence; a group naming no declared axis stays one fence.
+A cell any global or per-node `matrix.exclude` entry names renders nowhere, the
+same cells CI never builds.
 
 **Axis arguments.** A Dockerfile names ONE base, so N `FROM` lines in one fence
 build an accidental multi-stage image whose last stage wins. A group declaring

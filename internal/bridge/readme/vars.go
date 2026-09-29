@@ -88,7 +88,7 @@ func buildSection(doc *projectfile.Document, ext *pfmodel.ReadmeExtension, name,
 	if len(declared) == 0 {
 		return nil
 	}
-	axes := pfmodel.AllMatrixAxes(doc, ciExtensionNS)
+	matrix := pfmodel.AllMatrix(doc, ciExtensionNS)
 	source := pfmodel.ReadmeExtensionNS + "." + name
 	// Rank the groups before rendering. The slice arrives in MERGE order, which
 	// puts every include-provided group ahead of the project's own (includes
@@ -101,7 +101,7 @@ func buildSection(doc *projectfile.Document, ext *pfmodel.ReadmeExtension, name,
 	})
 	var groups []sectionGroupView
 	for _, group := range declared {
-		view, ok := buildSectionGroup(doc, group, axes, name, lang)
+		view, ok := buildSectionGroup(doc, group, matrix, name, lang)
 		if !ok {
 			continue
 		}
@@ -123,7 +123,7 @@ func buildSection(doc *projectfile.Document, ext *pfmodel.ReadmeExtension, name,
 // subgroup per destination (buckets, sink priority order); anything else keeps
 // the single-fence shape, so an npm recipe or a hand-written host never gains a
 // destination heading nobody declared for it.
-func buildSectionGroup(doc *projectfile.Document, group pfmodel.ReadmeSectionGroup, axes map[string][]string, section, lang string) (sectionGroupView, bool) {
+func buildSectionGroup(doc *projectfile.Document, group pfmodel.ReadmeSectionGroup, matrix pfmodel.Matrix, section, lang string) (sectionGroupView, bool) {
 	source := pfmodel.ReadmeExtensionNS + "." + section
 	label := groupLabel(group.Name)
 	var expanded []string
@@ -157,7 +157,7 @@ func buildSectionGroup(doc *projectfile.Document, group pfmodel.ReadmeSectionGro
 	subgroups, bucketed := bucketBySink(sinks, expanded)
 	if bucketed && len(sinks) > 1 {
 		for i := range subgroups {
-			subgroups[i].Commands = expandGroupLines(group, subgroups[i].Commands, axes)
+			subgroups[i].Commands = expandGroupLines(group, subgroups[i].Commands, matrix)
 			subgroups[i].Heading = translate(lang, section+".sink") + " " + subgroups[i].Label
 		}
 		view.Subgroups = subgroups
@@ -169,7 +169,7 @@ func buildSectionGroup(doc *projectfile.Document, group pfmodel.ReadmeSectionGro
 		}
 		return view, true
 	}
-	if cells := splitByCell(expanded, axes); group.PerCell && len(cells) > 1 {
+	if cells := splitByCell(expanded, matrix); group.PerCell && len(cells) > 1 {
 		for i := range cells {
 			cells[i].Heading = translate(lang, section+".cell") + " " + cells[i].Label
 		}
@@ -182,7 +182,7 @@ func buildSectionGroup(doc *projectfile.Document, group pfmodel.ReadmeSectionGro
 		}
 		return view, true
 	}
-	view.Commands = expandGroupLines(group, expanded, axes)
+	view.Commands = expandGroupLines(group, expanded, matrix)
 	for _, line := range view.Commands {
 		genlog.DebugRow("readme_command", line, source, "group="+label+" lang="+lang)
 	}
@@ -260,17 +260,19 @@ func bucketBySink(sinks []sinkView, lines []string) ([]sectionSubgroupView, bool
 // cell's fence holds only its own commands. Axes order by first appearance in
 // the lines, which is the order the label joins their values with "/"
 // (`{GOOS}-{GOARCH}` labels `linux/amd64`). A line naming no axis repeats in
-// every cell. Nil when the lines name no declared axis.
-func splitByCell(lines []string, axes map[string][]string) []sectionSubgroupView {
-	used := usedAxes(lines, axes)
+// every cell. Nil when the lines name no declared axis. Excluded cells are dropped.
+func splitByCell(lines []string, matrix pfmodel.Matrix) []sectionSubgroupView {
+	used := usedAxes(lines, matrix.Axes)
 	if len(used) == 0 {
 		return nil
 	}
 	cells := []sectionSubgroupView{{Commands: lines}}
+	values := []map[string]string{{}}
 	for _, axis := range used {
-		next := make([]sectionSubgroupView, 0, len(cells)*len(axes[axis]))
-		for _, cell := range cells {
-			for _, value := range axes[axis] {
+		next := make([]sectionSubgroupView, 0, len(cells)*len(matrix.Axes[axis]))
+		nextValues := make([]map[string]string, 0, cap(next))
+		for c, cell := range cells {
+			for _, value := range matrix.Axes[axis] {
 				label := value
 				if cell.Label != "" {
 					label = cell.Label + "/" + value
@@ -280,11 +282,22 @@ func splitByCell(lines []string, axes map[string][]string) []sectionSubgroupView
 					commands[i] = strings.ReplaceAll(line, "{"+axis+"}", value)
 				}
 				next = append(next, sectionSubgroupView{Label: label, Commands: commands})
+				assigned := maps.Clone(values[c])
+				assigned[axis] = value
+				nextValues = append(nextValues, assigned)
 			}
 		}
-		cells = next
+		cells, values = next, nextValues
 	}
-	return cells
+	kept := cells[:0]
+	for c, cell := range cells {
+		if matrix.Excluded(values[c]) {
+			genlog.DebugRow("readme_cell", cell.Label, "excluded by matrix.exclude (dropped)", "cells="+strconv.Itoa(len(cells)))
+			continue
+		}
+		kept = append(kept, cell)
+	}
+	return kept
 }
 
 // usedAxes lists the declared axes the lines name, in order of first appearance.
@@ -320,11 +333,11 @@ func axisArgs(lines []string, axes map[string][]string) []string {
 }
 
 // expandGroupLines resolves matrix axes the way the group asks: ARG lines, or one line per cell.
-func expandGroupLines(group pfmodel.ReadmeSectionGroup, lines []string, axes map[string][]string) []string {
+func expandGroupLines(group pfmodel.ReadmeSectionGroup, lines []string, matrix pfmodel.Matrix) []string {
 	if group.AxisArgs {
-		return axisArgs(lines, axes)
+		return axisArgs(lines, matrix.Axes)
 	}
-	return pfmodel.ExpandAxes(lines, axes)
+	return matrix.Expand(lines)
 }
 
 // groupUnnamed labels a group that declares no name, for the decision trace only.

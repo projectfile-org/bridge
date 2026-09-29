@@ -92,28 +92,97 @@ func AllMatrixAxes(doc *projectfile.Document, ns string) map[string][]string {
 // package's to rewrite. Axes are walked in sorted key order and their values
 // in declared order, so a two-axis image produces a stable cross product.
 func ExpandAxes(lines []string, axes map[string][]string) []string {
-	if len(axes) == 0 {
-		return lines
+	return Matrix{Axes: axes}.Expand(lines)
+}
+
+// Matrix is a document's axes plus the cells its `exclude` entries subtract.
+type Matrix struct {
+	Axes    map[string][]string
+	Exclude []map[string]string
+}
+
+// AllMatrix is AllMatrixAxes plus every global and per-node `matrix.exclude` entry.
+func AllMatrix(doc *projectfile.Document, ns string) Matrix {
+	matrix := Matrix{Axes: AllMatrixAxes(doc, ns)}
+	raw, _ := projectfile.LookupExtension(doc, ns)
+	root, _ := raw.(map[string]any)
+	matrix.Exclude = matrixExcludeOf(root)
+	nodes, _ := root["nodes"].(map[string]any)
+	for _, name := range slices.Sorted(maps.Keys(nodes)) {
+		node, _ := nodes[name].(map[string]any)
+		matrix.Exclude = append(matrix.Exclude, matrixExcludeOf(node)...)
 	}
-	for _, axis := range slices.Sorted(maps.Keys(axes)) {
-		values := axes[axis]
-		if len(values) == 0 {
+	return matrix
+}
+
+// matrixExcludeOf reads `matrix.exclude` from one mapping as axis → value entries.
+func matrixExcludeOf(m map[string]any) []map[string]string {
+	matrix, _ := m["matrix"].(map[string]any)
+	list, _ := matrix["exclude"].([]any)
+	var out []map[string]string
+	for _, item := range list {
+		entry, ok := item.(map[string]any)
+		if !ok || len(entry) == 0 {
 			continue
 		}
-		token := "{" + axis + "}"
-		expanded := make([]string, 0, len(lines))
-		for _, line := range lines {
-			if !strings.Contains(line, token) {
-				expanded = append(expanded, line)
-				continue
-			}
-			for _, value := range values {
-				expanded = append(expanded, strings.ReplaceAll(line, token, value))
+		cell := make(map[string]string, len(entry))
+		for axis, value := range entry {
+			cell[axis] = ScalarToString(value)
+		}
+		out = append(out, cell)
+	}
+	return out
+}
+
+// Excluded reports whether some exclude entry names only axes the cell carries, each at the cell's value.
+func (m Matrix) Excluded(cell map[string]string) bool {
+	for _, entry := range m.Exclude {
+		matched := true
+		for axis, value := range entry {
+			if got, ok := cell[axis]; !ok || got != value {
+				matched = false
+				break
 			}
 		}
-		lines = expanded
+		if matched {
+			return true
+		}
 	}
-	return lines
+	return false
+}
+
+// Expand fans each line out once per cell of the axes it names, in sorted axis order, minus excluded cells.
+func (m Matrix) Expand(lines []string) []string {
+	if len(m.Axes) == 0 {
+		return lines
+	}
+	out := make([]string, 0, len(lines))
+	for _, line := range lines {
+		texts, cells := []string{line}, []map[string]string{{}}
+		for _, axis := range slices.Sorted(maps.Keys(m.Axes)) {
+			token := "{" + axis + "}"
+			if len(m.Axes[axis]) == 0 || !strings.Contains(line, token) {
+				continue
+			}
+			nextTexts := make([]string, 0, len(texts)*len(m.Axes[axis]))
+			nextCells := make([]map[string]string, 0, cap(nextTexts))
+			for i := range texts {
+				for _, value := range m.Axes[axis] {
+					cell := maps.Clone(cells[i])
+					cell[axis] = value
+					nextTexts = append(nextTexts, strings.ReplaceAll(texts[i], token, value))
+					nextCells = append(nextCells, cell)
+				}
+			}
+			texts, cells = nextTexts, nextCells
+		}
+		for i := range texts {
+			if !m.Excluded(cells[i]) {
+				out = append(out, texts[i])
+			}
+		}
+	}
+	return out
 }
 
 // ScalarToString renders a YAML scalar (the shape an untyped decoder yields) as
