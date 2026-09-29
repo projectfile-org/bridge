@@ -1,5 +1,8 @@
-{{- with readmeSection "usage"}}
-## {{.Title}}
+{{- $section := readmeSection "usage"}}
+{{- $excerpt := usageDoc}}
+{{- if or $section $excerpt}}
+## {{with $section}}{{.Title}}{{else}}{{t "usage.title"}}{{end}}
+{{- with $section}}
 {{- range $g := .Groups}}
 {{- with $g.Title}}
 
@@ -43,6 +46,17 @@
 | --- | --- | --- |
 {{range .}}| `{{.Name}}` |{{if .Required}} {{t "usage.inputs.required"}} {{else if .Default}} `{{.Default}}` {{else}} {{end}}| {{.Description}} |
 {{end -}}
+{{- end}}
+{{- end}}
+{{- with $excerpt}}
+{{- range .Sections}}
+
+### {{.Title}}
+
+{{.Body}}
+{{- end}}
+
+{{printf (t "usage.more") .Name .Filename}}
 {{- end}}
 {{- else}}
 {{- with docLink "USAGE.md" (t "usage.title")}}

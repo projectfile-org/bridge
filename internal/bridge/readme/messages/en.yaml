@@ -30,6 +30,7 @@ installation.title: Installation
 installation.body: See [%[1]s](%[2]s) for setup steps.
 usage.title: Usage
 usage.body: See [%[1]s](%[2]s) for examples.
+usage.more: Every command and more examples are in [%[1]s](%[2]s).
 building.title: Building
 building.goals: "Pipeline entry points:"
 building.intro.make: "Run `make` with no arguments for the default target; run `make help` to list every target."
