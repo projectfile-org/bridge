@@ -412,3 +412,22 @@ func TestNoPublishNamespaceListsEverySink(t *testing.T) {
 
 	assert.Len(t, refs, 2)
 }
+
+// A fallback left alone once the unrouted primaries drop is the ordinary destination.
+func TestLoneFallbackIsPromotedToPrimary(t *testing.T) {
+	doc := docWithParts(map[string]any{
+		pfmodel.SinksExtensionNS: map[string]any{
+			nameKiota: map[string]any{keyRef: refKiota, keyRole: "fallback"},
+			nameGHCR:  map[string]any{keyRef: refGHCR},
+		},
+		pfmodel.PublishExtensionNS: map[string]any{
+			nameKiota: map[string]any{pfmodel.PublishPushKey: []any{nameKiota}},
+		},
+	})
+
+	refs := ocisinks.Refs(doc)
+
+	kiota, ok := refs[nameKiota].(map[string]any)
+	require.True(t, ok)
+	assert.Equal(t, pfmodel.SinkRolePrimary, kiota[keyRole])
+}

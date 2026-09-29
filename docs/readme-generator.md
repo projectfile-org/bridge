@@ -533,6 +533,12 @@ commands:
   - docker pull ${org.projectfile.sinks{role=primary}.ref}
 ```
 
+A `fallback` is relative to the primaries. When routing leaves no primary — a
+project published to the origin alone — every surviving sink is composed as
+`primary`. Its pull line then leads the section with the ordinary lead-in and
+tag note, and the “if the registries above are unreachable” group has no
+fallback left to name, so it drops.
+
 ### Projects that declare no sinks
 
 A document with no `sinks` namespace gets **one** primary entry synthesized from

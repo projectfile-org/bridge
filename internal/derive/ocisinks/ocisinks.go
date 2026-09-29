@@ -102,7 +102,27 @@ func Refs(pf *projectfile.Document) map[string]any {
 		return nil
 	}
 	warnUnresolved(dropped)
+	promoteLoneFallback(out)
 	return out
+}
+
+// promoteLoneFallback makes every sink primary when none is: a fallback with
+// nothing to fall back from is the ordinary destination.
+func promoteLoneFallback(sinks map[string]any) {
+	for _, v := range sinks {
+		if entry, ok := v.(map[string]any); ok && entry[pfmodel.SinkRoleKey] == pfmodel.SinkRolePrimary {
+			return
+		}
+	}
+	for name, v := range sinks {
+		entry, ok := v.(map[string]any)
+		if !ok {
+			continue
+		}
+		role, _ := entry[pfmodel.SinkRoleKey].(string)
+		genlog.DebugRow("sink_role", pfmodel.SinkRolePrimary, name, "promoted from "+role+", no primary sink survives")
+		entry[pfmodel.SinkRoleKey] = pfmodel.SinkRolePrimary
+	}
 }
 
 // selfTemplate composes this project's OWN artifact: `selfref`, else `ref`.
