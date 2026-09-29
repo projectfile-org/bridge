@@ -70,6 +70,7 @@ artifact.kind.website: Sitio web
 artifact.kind.ssh: Servidor SSH
 artifact.kind.archive: Archivo comprimido
 artifact.kind.module: Módulo
+artifact.kind.action: Acción de CI
 
 # Bloque de políticas
 policy.contributing: Cómo contribuir

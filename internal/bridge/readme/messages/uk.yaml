@@ -70,6 +70,7 @@ artifact.kind.website: Вебсайт
 artifact.kind.ssh: SSH-сервер
 artifact.kind.archive: Архів
 artifact.kind.module: Модуль
+artifact.kind.action: CI-дія
 
 # Блок політик
 policy.contributing: Як зробити внесок

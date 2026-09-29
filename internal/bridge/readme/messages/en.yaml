@@ -78,6 +78,7 @@ artifact.kind.website: Site
 artifact.kind.ssh: SSH server
 artifact.kind.archive: Archive
 artifact.kind.module: Module
+artifact.kind.action: CI action
 
 # Policies block — key is the health file’s basename, lower-cased.
 policy.contributing: How to contribute
