@@ -46,6 +46,18 @@ func TestUsageExcerptReadsFlatDocument(t *testing.T) {
 	assert.NotContains(t, out, "demo lint --help")
 }
 
+// TestUsageExcerptDropsLintDirectives: a localized USAGE.md’s closing textlint directive stays out of the README.
+func TestUsageExcerptDropsLintDirectives(t *testing.T) {
+	dir := t.TempDir()
+	writeFile(t, dir, fileUsage, "# Usage\n\n<!-- textlint-disable terminology -->\n\n## `demo --help`\n\n```text\nUsage: demo\n```\n\n"+
+		"## Lint a repository\n\n```sh\ndemo .\n```\n\n<!-- textlint-enable -->\n")
+
+	out := renderDoc(t, dir, minimalDoc(t))
+
+	assert.Contains(t, out, "### Lint a repository\n\n```sh\ndemo .\n```")
+	assert.NotContains(t, out, "textlint-enable")
+}
+
 // TestUsageWithoutSectionsFallsBackToLink: a USAGE.md with no level-3 section keeps the plain link.
 func TestUsageWithoutSectionsFallsBackToLink(t *testing.T) {
 	dir := t.TempDir()

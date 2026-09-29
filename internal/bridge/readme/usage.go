@@ -73,6 +73,8 @@ func parseUsageSections(text string) []usageSection {
 		}
 		level, title, ok := parseATXHeading(line)
 		switch {
+		case !fenced && strings.HasPrefix(line, "<!-- textlint-"):
+			genlog.DebugRow("usage_directive_dropped", line, fileUsage, "")
 		case fenced || !ok || level > depth:
 			body = append(body, line)
 		case level == depth:
