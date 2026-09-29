@@ -291,6 +291,12 @@ cell. The label joins the cell’s axis values with `/` in the order their
 placeholders first appear, so `<cmd>-{GOOS}-{GOARCH}` reads `linux/amd64`.
 A sink split takes precedence; a group naming no declared axis stays one fence.
 
+**Axis arguments.** A Dockerfile names ONE base, so N `FROM` lines in one fence
+build an accidental multi-stage image whose last stage wins. A group declaring
+`axis-args: true` keeps each axis its lines name as a leading
+`ARG <AXIS>=<first value>` and rewrites `{AXIS}` to `${AXIS}`, so each sink’s
+fence holds one `FROM` the reader retargets by editing a single line.
+
 Two sources of several values, either of which works:
 
 1. **Several matching artifacts** — `{kind=image}` on a project declaring two

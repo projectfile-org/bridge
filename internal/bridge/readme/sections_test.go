@@ -52,6 +52,7 @@ const (
 	sinkKiota  = "kiota"
 	axisSeries = "B19_UBUNTU_SERIES"
 	axisGOARCH = "GOARCH"
+	axisLLVM   = "B19_LLVM_SERIES"
 	archARM64  = "arm64"
 	// Sink-fixture refs and series values, same goconst rule.
 	refSinkGhcr    = "ghcr.io/o/demo:latest"
@@ -289,7 +290,7 @@ func TestIntegerAxisValuesAreCoerced(t *testing.T) {
 		ciExtensionNS: map[string]any{
 			keyImage: "b19/llvm/{B19_LLVM_SERIES}",
 			keyMatrix: map[string]any{keyAxes: map[string]any{
-				"B19_LLVM_SERIES": []any{22, 21}, // integers, not quoted strings
+				axisLLVM: []any{22, 21}, // integers, not quoted strings
 			}},
 		},
 		artifactsNS: imageArtifact("kiota.ch/${org.projectfile.ci.image}:latest"),
@@ -315,7 +316,7 @@ func TestMatrixSectionRendersJoinedBlock(t *testing.T) {
 		ciExtensionNS: map[string]any{
 			keyImage: "b19/llvm/{B19_LLVM_SERIES}",
 			keyMatrix: map[string]any{keyAxes: map[string]any{
-				"B19_LLVM_SERIES": []any{22, 21},
+				axisLLVM: []any{22, 21},
 			}},
 		},
 		artifactsNS: imageArtifact("kiota.ch/${org.projectfile.ci.image}:latest"),
@@ -350,6 +351,24 @@ func TestPerCellGroupSplitsByMatrixCell(t *testing.T) {
 
 	assert.Contains(t, out, "### Download for linux/amd64\n\n```sh\ncurl --output x x-linux-amd64\n./x --help\n```")
 	assert.Contains(t, out, "### Download for linux/arm64\n\n```sh\ncurl --output x x-linux-arm64\n./x --help\n```")
+}
+
+// TestAxisArgsGroupKeepsAxisAsDockerfileArg: an axis-args group names each axis once as an ARG, not once per cell.
+func TestAxisArgsGroupKeepsAxisAsDockerfileArg(t *testing.T) {
+	pf := minimalDoc(t)
+	from := group("base-image", "Build on top of this image:", "FROM kiota.ch/b19/llvm/{B19_LLVM_SERIES}:latest")
+	from["axis-args"] = true
+	from["syntax"] = "dockerfile"
+	pf.Extensions = map[string]any{
+		ciExtensionNS: map[string]any{
+			keyMatrix: map[string]any{keyAxes: map[string]any{axisLLVM: []any{"22", "21"}}},
+		},
+		readmeNS: map[string]any{blockUsage: []any{from}},
+	}
+
+	out := renderDoc(t, t.TempDir(), pf)
+
+	assert.Contains(t, out, "```dockerfile\nARG B19_LLVM_SERIES=22\nFROM kiota.ch/b19/llvm/${B19_LLVM_SERIES}:latest\n```")
 }
 
 // TestGroupTitleNestsSubsections: a titled group renders its own heading, and

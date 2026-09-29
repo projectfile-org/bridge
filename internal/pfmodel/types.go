@@ -484,6 +484,8 @@ type ReadmeSectionGroup struct {
 	Priority int
 	// PerCell renders one headed fence per matrix cell instead of joining them.
 	PerCell bool
+	// AxisArgs keeps matrix axes as leading `ARG <AXIS>=<first value>` lines instead of fanning out.
+	AxisArgs bool
 }
 
 // Shield is a badge image rendered as markdown: [![alt](img)](href). Row is

@@ -157,7 +157,7 @@ func buildSectionGroup(doc *projectfile.Document, group pfmodel.ReadmeSectionGro
 	subgroups, bucketed := bucketBySink(sinks, expanded)
 	if bucketed && len(sinks) > 1 {
 		for i := range subgroups {
-			subgroups[i].Commands = pfmodel.ExpandAxes(subgroups[i].Commands, axes)
+			subgroups[i].Commands = expandGroupLines(group, subgroups[i].Commands, axes)
 			subgroups[i].Heading = translate(lang, section+".sink") + " " + subgroups[i].Label
 		}
 		view.Subgroups = subgroups
@@ -182,7 +182,7 @@ func buildSectionGroup(doc *projectfile.Document, group pfmodel.ReadmeSectionGro
 		}
 		return view, true
 	}
-	view.Commands = pfmodel.ExpandAxes(expanded, axes)
+	view.Commands = expandGroupLines(group, expanded, axes)
 	for _, line := range view.Commands {
 		genlog.DebugRow("readme_command", line, source, "group="+label+" lang="+lang)
 	}
@@ -262,19 +262,10 @@ func bucketBySink(sinks []sinkView, lines []string) ([]sectionSubgroupView, bool
 // (`{GOOS}-{GOARCH}` labels `linux/amd64`). A line naming no axis repeats in
 // every cell. Nil when the lines name no declared axis.
 func splitByCell(lines []string, axes map[string][]string) []sectionSubgroupView {
-	joined := strings.Join(lines, "\n")
-	var used []string
-	for axis, values := range axes {
-		if len(values) > 0 && strings.Contains(joined, "{"+axis+"}") {
-			used = append(used, axis)
-		}
-	}
+	used := usedAxes(lines, axes)
 	if len(used) == 0 {
 		return nil
 	}
-	slices.SortFunc(used, func(a, b string) int {
-		return strings.Index(joined, "{"+a+"}") - strings.Index(joined, "{"+b+"}")
-	})
 	cells := []sectionSubgroupView{{Commands: lines}}
 	for _, axis := range used {
 		next := make([]sectionSubgroupView, 0, len(cells)*len(axes[axis]))
@@ -294,6 +285,46 @@ func splitByCell(lines []string, axes map[string][]string) []sectionSubgroupView
 		cells = next
 	}
 	return cells
+}
+
+// usedAxes lists the declared axes the lines name, in order of first appearance.
+func usedAxes(lines []string, axes map[string][]string) []string {
+	joined := strings.Join(lines, "\n")
+	var used []string
+	for axis, values := range axes {
+		if len(values) > 0 && strings.Contains(joined, "{"+axis+"}") {
+			used = append(used, axis)
+		}
+	}
+	slices.SortFunc(used, func(a, b string) int {
+		return strings.Index(joined, "{"+a+"}") - strings.Index(joined, "{"+b+"}")
+	})
+	return used
+}
+
+// axisArgs leads the lines with `ARG <AXIS>=<first value>` per used axis and turns `{AXIS}` into `${AXIS}`.
+func axisArgs(lines []string, axes map[string][]string) []string {
+	used := usedAxes(lines, axes)
+	out := make([]string, 0, len(used)+len(lines))
+	for _, axis := range used {
+		genlog.DebugRow("readme_axis", axis, "kept as ARG", "default="+axes[axis][0])
+		out = append(out, "ARG "+axis+"="+axes[axis][0])
+	}
+	for _, line := range lines {
+		for _, axis := range used {
+			line = strings.ReplaceAll(line, "{"+axis+"}", "${"+axis+"}")
+		}
+		out = append(out, line)
+	}
+	return out
+}
+
+// expandGroupLines resolves matrix axes the way the group asks: ARG lines, or one line per cell.
+func expandGroupLines(group pfmodel.ReadmeSectionGroup, lines []string, axes map[string][]string) []string {
+	if group.AxisArgs {
+		return axisArgs(lines, axes)
+	}
+	return pfmodel.ExpandAxes(lines, axes)
 }
 
 // groupUnnamed labels a group that declares no name, for the decision trace only.
