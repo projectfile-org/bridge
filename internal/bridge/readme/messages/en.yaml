@@ -66,6 +66,10 @@ usage.sink: From
 # Heading word for a per-matrix-cell subsection, completed by the cell ("Download for linux/amd64").
 installation.cell: Download for
 usage.cell: On
+# Label of a matrix axis list, keyed by the image part naming the axis.
+variant.series: Series
+variant.sapi: SAPI
+variant.distro: Distribution
 # Action inputs table under the usage snippet, read from action.yaml.
 usage.inputs: "The action takes these inputs:"
 usage.inputs.name: Input

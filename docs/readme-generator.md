@@ -261,18 +261,23 @@ series without naming any of them:
 
 ```sh
 docker pull kiota.ch/b19/ubuntu/resolute:latest
-docker pull kiota.ch/b19/ubuntu/noble:latest
 ```
 
-When a group fans out to more than one command, every cell renders **joined**
-in one fenced block — the values are visible in the lines themselves, so no
-variant note restates what the fence already shows.
+Series: `resolute` | `noble`
+
+The cells of one line are ALTERNATIVES, and a fence is pasted whole: N `FROM`
+lines build an accidental multi-stage image, N pulls fetch what nobody asked
+for. So a fanned-out line renders ONCE, at its first cell not excluded, and
+every axis it names with several values is listed under the group as
+`<label>: a | b`, each value in code. The label is the image part declaring the axis
+(`org.projectfile.image.series: "{B19_UBUNTU_SERIES}"` → `series`), localized
+through the `variant.<part>` catalog key, else the part name, else the axis.
 
 **Per-sink subsections.** A group whose commands all name a sink’s composed
 reference — the shape every container project inherits from
 `m6e/container/traits/oci-image.yaml` — splits further: one `### From <label>`
 subsection per destination, in sink `priority` order, each holding that
-destination’s cells joined in its own fence. The label is the sink entry’s
+destination’s line in its own fence and the variant list once below them all. The label is the sink entry’s
 `label` key, falling back to the sink name; the heading verb localizes from the
 `installation.sink` / `usage.sink` catalog keys — one per command block, because
 a shared verb repeats the heading in both blocks and trips MD024 in every
@@ -282,8 +287,8 @@ destination needs no heading naming it — and a group referencing anything no
 sink declares (an npm artifact, a hand-written host) never gains a destination
 heading nobody declared for it.
 
-**Per-cell subsections.** Joining is wrong when the cells are alternatives that
-collide: N `curl --output <cmd>` lines write the same file, so pasting the fence
+**Per-cell subsections.** One line is wrong when each cell is a different
+artifact: N `curl --output <cmd>` lines write the same file, so pasting the fence
 keeps only the last platform. A group declaring `per-cell: true` renders one
 `### Download for <cell>` subsection per matrix cell instead (`usage.cell` in the
 usage block), and a line naming no axis — `./<cmd> --help` — repeats in every
@@ -292,12 +297,6 @@ placeholders first appear, so `<cmd>-{GOOS}-{GOARCH}` reads `linux/amd64`.
 A sink split takes precedence; a group naming no declared axis stays one fence.
 A cell any global or per-node `matrix.exclude` entry names renders nowhere, the
 same cells CI never builds.
-
-**Axis arguments.** A Dockerfile names ONE base, so N `FROM` lines in one fence
-build an accidental multi-stage image whose last stage wins. A group declaring
-`axis-args: true` keeps each axis its lines name as a leading
-`ARG <AXIS>=<first value>` and rewrites `{AXIS}` to `${AXIS}`, so each sink’s
-fence holds one `FROM` the reader retargets by editing a single line.
 
 Two sources of several values, either of which works:
 

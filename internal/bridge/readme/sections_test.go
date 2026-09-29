@@ -257,8 +257,8 @@ func TestSeriesImageFansOutFromAxisPlaceholder(t *testing.T) {
 
 	out := renderDoc(t, t.TempDir(), pf)
 
-	assert.Contains(t, out, "docker pull kiota.ch/b19/ubuntu/resolute:latest")
-	assert.Contains(t, out, "docker pull kiota.ch/b19/ubuntu/noble:latest")
+	assert.Contains(t, out, "```sh\ndocker pull kiota.ch/b19/ubuntu/resolute:latest\n```")
+	assert.Contains(t, out, "B19_UBUNTU_SERIES: `resolute` | `noble`")
 }
 
 // TestUndeclaredBraceSurvives: only axes the document DECLARES are substituted.
@@ -303,7 +303,7 @@ func TestIntegerAxisValuesAreCoerced(t *testing.T) {
 	out := renderDoc(t, t.TempDir(), pf)
 
 	assert.Contains(t, out, "docker pull kiota.ch/b19/llvm/22:latest")
-	assert.Contains(t, out, "docker pull kiota.ch/b19/llvm/21:latest")
+	assert.Contains(t, out, "`22` | `21`")
 	assert.NotContains(t, out, "{B19_LLVM_SERIES}", "an integer axis must substitute, not survive")
 }
 
@@ -328,7 +328,7 @@ func TestMatrixSectionRendersJoinedBlock(t *testing.T) {
 
 	out := renderDoc(t, t.TempDir(), pf)
 
-	assert.Contains(t, out, "```sh\ndocker pull kiota.ch/b19/llvm/22:latest\ndocker pull kiota.ch/b19/llvm/21:latest\n```")
+	assert.Contains(t, out, "```sh\ndocker pull kiota.ch/b19/llvm/22:latest\n```\n\nB19_LLVM_SERIES: `22` | `21`")
 	assert.NotContains(t, out, "Available variants")
 }
 
@@ -373,18 +373,18 @@ func TestExcludedCellNeverRenders(t *testing.T) {
 	out := renderDoc(t, t.TempDir(), pf)
 
 	assert.Contains(t, out, "curl x-linux-riscv64")
-	assert.Contains(t, out, "echo linux/riscv64")
+	assert.Contains(t, out, "echo linux/amd64\n```")
 	assert.NotContains(t, out, "darwin-riscv64")
 	assert.NotContains(t, out, "darwin/riscv64")
 }
 
-// TestAxisArgsGroupKeepsAxisAsDockerfileArg: an axis-args group names each axis once as an ARG, not once per cell.
-func TestAxisArgsGroupKeepsAxisAsDockerfileArg(t *testing.T) {
+// TestVariantListNamedByImagePart: a fanned-out FROM keeps one runnable line, its axis listed under the label of the image part naming it.
+func TestVariantListNamedByImagePart(t *testing.T) {
 	pf := minimalDoc(t)
 	from := group("base-image", "Build on top of this image:", "FROM kiota.ch/b19/llvm/{B19_LLVM_SERIES}:latest")
-	from["axis-args"] = true
 	from["syntax"] = "dockerfile"
 	pf.Extensions = map[string]any{
+		pfmodel.ImageExtensionNS: map[string]any{"series": "{" + axisLLVM + "}"},
 		ciExtensionNS: map[string]any{
 			keyMatrix: map[string]any{keyAxes: map[string]any{axisLLVM: []any{"22", "21"}}},
 		},
@@ -393,7 +393,7 @@ func TestAxisArgsGroupKeepsAxisAsDockerfileArg(t *testing.T) {
 
 	out := renderDoc(t, t.TempDir(), pf)
 
-	assert.Contains(t, out, "```dockerfile\nARG B19_LLVM_SERIES=22\nFROM kiota.ch/b19/llvm/${B19_LLVM_SERIES}:latest\n```")
+	assert.Contains(t, out, "```dockerfile\nFROM kiota.ch/b19/llvm/22:latest\n```\n\nSeries: `22` | `21`")
 }
 
 // TestGroupTitleNestsSubsections: a titled group renders its own heading, and
@@ -448,10 +448,8 @@ func TestMultiSinkGroupRendersPerSinkSubsections(t *testing.T) {
 		"install and usage must not repeat a heading")
 }
 
-// TestSinkSubsectionsJoinMatrixCells: each destination's fence lists EVERY
-// matrix cell of that sink, joined — one block per registry, never one per
-// cell.
-func TestSinkSubsectionsJoinMatrixCells(t *testing.T) {
+// TestSinkSubsectionsShowFirstCellThenVariants: each registry's fence holds its first cell; the axis list follows once.
+func TestSinkSubsectionsShowFirstCellThenVariants(t *testing.T) {
 	pf := minimalDoc(t)
 	pf.Extensions = map[string]any{
 		ciExtensionNS: map[string]any{
@@ -471,8 +469,8 @@ func TestSinkSubsectionsJoinMatrixCells(t *testing.T) {
 
 	out := renderDoc(t, t.TempDir(), pf)
 
-	assert.Contains(t, out, "### Pull from GHCR\n\n```sh\ndocker pull ghcr.io/o/demo/resolute:latest\ndocker pull ghcr.io/o/demo/noble:latest\n```")
-	assert.Contains(t, out, "### Pull from kiota\n\n```sh\ndocker pull kiota.ch/demo/resolute:latest\ndocker pull kiota.ch/demo/noble:latest\n```")
+	assert.Contains(t, out, "### Pull from GHCR\n\n```sh\ndocker pull ghcr.io/o/demo/resolute:latest\n```")
+	assert.Contains(t, out, "### Pull from kiota\n\n```sh\ndocker pull kiota.ch/demo/resolute:latest\n```\n\nB19_UBUNTU_SERIES: `resolute` | `noble`")
 }
 
 // TestSingleSinkGroupRendersPlain: a document carrying ONE sink (the legacy

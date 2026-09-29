@@ -27,7 +27,7 @@ const ciExtensionNS = "org.projectfile.ci"
 //
 // Subgroups is the per-destination split of those commands, set when they fan
 // out over several sinks: each sink's lines render under their own heading with
-// every matrix cell of that destination joined in ONE fence. Nil otherwise, and
+// its first matrix cell in ONE fence. Nil otherwise, and
 // Commands carries the lines instead — the two are mutually exclusive.
 type sectionGroupView struct {
 	Name      string
@@ -37,6 +37,8 @@ type sectionGroupView struct {
 	Postfix   string
 	Syntax    string
 	Subgroups []sectionSubgroupView
+	// Variants lists each fanned-out axis as `<label>: `a` | `b``, once under the whole group.
+	Variants []string
 }
 
 // sectionSubgroupView is one sink's or one matrix cell's slice of a group:
@@ -150,6 +152,9 @@ func buildSectionGroup(doc *projectfile.Document, group pfmodel.ReadmeSectionGro
 		Postfix: expandProse(doc, sectionText(group.Postfix, group.PostfixByLang, lang), label),
 		Syntax:  syntax,
 	}
+	if !group.PerCell {
+		view.Variants = variantLines(doc, expanded, matrix, lang)
+	}
 	// Bucketing runs on lines still carrying {AXIS}: the composed ref is a
 	// literal substring of its own pull line at that point, and axis expansion
 	// would erase the match.
@@ -157,7 +162,7 @@ func buildSectionGroup(doc *projectfile.Document, group pfmodel.ReadmeSectionGro
 	subgroups, bucketed := bucketBySink(sinks, expanded)
 	if bucketed && len(sinks) > 1 {
 		for i := range subgroups {
-			subgroups[i].Commands = expandGroupLines(group, subgroups[i].Commands, matrix)
+			subgroups[i].Commands = firstCell(subgroups[i].Commands, matrix)
 			subgroups[i].Heading = translate(lang, section+".sink") + " " + subgroups[i].Label
 		}
 		view.Subgroups = subgroups
@@ -182,7 +187,7 @@ func buildSectionGroup(doc *projectfile.Document, group pfmodel.ReadmeSectionGro
 		}
 		return view, true
 	}
-	view.Commands = expandGroupLines(group, expanded, matrix)
+	view.Commands = firstCell(expanded, matrix)
 	for _, line := range view.Commands {
 		genlog.DebugRow("readme_command", line, source, "group="+label+" lang="+lang)
 	}
@@ -315,29 +320,46 @@ func usedAxes(lines []string, axes map[string][]string) []string {
 	return used
 }
 
-// axisArgs leads the lines with `ARG <AXIS>=<first value>` per used axis and turns `{AXIS}` into `${AXIS}`.
-func axisArgs(lines []string, axes map[string][]string) []string {
-	used := usedAxes(lines, axes)
-	out := make([]string, 0, len(used)+len(lines))
-	for _, axis := range used {
-		genlog.DebugRow("readme_axis", axis, "kept as ARG", "default="+axes[axis][0])
-		out = append(out, "ARG "+axis+"="+axes[axis][0])
-	}
+// firstCell keeps each line once, at its first non-excluded matrix cell, so a fence stays runnable as pasted.
+func firstCell(lines []string, matrix pfmodel.Matrix) []string {
+	out := make([]string, 0, len(lines))
 	for _, line := range lines {
-		for _, axis := range used {
-			line = strings.ReplaceAll(line, "{"+axis+"}", "${"+axis+"}")
+		if cells := matrix.Expand([]string{line}); len(cells) > 0 {
+			out = append(out, cells[0])
 		}
-		out = append(out, line)
 	}
 	return out
 }
 
-// expandGroupLines resolves matrix axes the way the group asks: ARG lines, or one line per cell.
-func expandGroupLines(group pfmodel.ReadmeSectionGroup, lines []string, matrix pfmodel.Matrix) []string {
-	if group.AxisArgs {
-		return axisArgs(lines, matrix.Axes)
+// variantLines renders one `<label>: `a` | `b“ line per axis the lines name that carries several values.
+func variantLines(doc *projectfile.Document, lines []string, matrix pfmodel.Matrix, lang string) []string {
+	var out []string
+	for _, axis := range usedAxes(lines, matrix.Axes) {
+		values := matrix.Axes[axis]
+		if len(values) < 2 {
+			genlog.DebugRow("readme_variant", axis, "single value (no list)", "value="+values[0])
+			continue
+		}
+		label := variantLabel(doc, axis, lang)
+		genlog.DebugRow("readme_variant", axis, "listed", "label="+label+" values="+strings.Join(values, ","))
+		out = append(out, label+": `"+strings.Join(values, "` | `")+"`")
 	}
-	return matrix.Expand(lines)
+	return out
+}
+
+// variantLabel names an axis by the image part declaring it (`series: "{AXIS}"`), localized when the catalog knows the part.
+func variantLabel(doc *projectfile.Document, axis, lang string) string {
+	raw, _ := projectfile.LookupExtension(doc, pfmodel.ImageExtensionNS)
+	parts, _ := raw.(map[string]any)
+	for _, part := range slices.Sorted(maps.Keys(parts)) {
+		if value, _ := parts[part].(string); value == "{"+axis+"}" {
+			if label, ok := lookupMessage(lang, "variant."+part); ok {
+				return label
+			}
+			return part
+		}
+	}
+	return axis
 }
 
 // groupUnnamed labels a group that declares no name, for the decision trace only.

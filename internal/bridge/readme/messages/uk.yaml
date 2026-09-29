@@ -58,6 +58,9 @@ installation.sink: Завантажити з
 usage.sink: З
 installation.cell: Завантажити для
 usage.cell: На
+variant.series: Серія
+variant.sapi: SAPI
+variant.distro: Дистрибутив
 usage.inputs: "Дія приймає такі вхідні параметри:"
 usage.inputs.name: Параметр
 usage.inputs.default: Типове значення

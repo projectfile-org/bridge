@@ -58,6 +58,9 @@ installation.sink: Descargar de
 usage.sink: Desde
 installation.cell: Descargar para
 usage.cell: En
+variant.series: Serie
+variant.sapi: SAPI
+variant.distro: Distribución
 usage.inputs: "La acción acepta estas entradas:"
 usage.inputs.name: Entrada
 usage.inputs.default: Valor por defecto
