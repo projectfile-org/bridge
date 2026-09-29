@@ -391,13 +391,12 @@ func applyPartialToDoc(doc *projectfile.Document, effectivePF *projectfile.Docum
 		}
 	}
 	// Gap-fill the `support` tag onto the issues tracker so SUPPORT.md's
-	// "Before You Ask" lists it by default. SetLinkTags gap-fills (a curated
-	// tags key, even tags: [], is left alone); scanForce overrides. The issues
-	// tracker is the one link a reader should check before asking.
+	// "Before You Ask" lists it by default. A default, never forced: under
+	// --force it would overwrite the tags a scanner just proposed.
 	for i := range doc.Links {
 		l := &doc.Links[i]
 		if l.Type == projectfile.LinkBugs {
-			pfmodel.SetLinkTags(l, []string{pfmodel.TagSupport}, scanForce)
+			pfmodel.SetLinkTags(l, []string{pfmodel.TagSupport}, false)
 		}
 	}
 	if p.Created != nil && *p.Created != "" && doc.Identity.Created == "" {

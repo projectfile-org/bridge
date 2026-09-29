@@ -11,6 +11,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"kiota.ch/projectfile/core/v2/pkg/projectfile"
 	"projectfile.org/projectfile/bridge/internal/pfmodel"
+	"projectfile.org/projectfile/bridge/internal/source"
 )
 
 // testApplyLinkURL is the (type,url) pair reused across every applyLink case;
@@ -208,4 +209,26 @@ func TestApplyLinkForceOverwrites(t *testing.T) {
 		assert.False(t, doc.Links[0].Preferred, "--force overwrites preferred")
 		assert.Equal(t, []string{pfmodel.TagPublic}, pfmodel.LinkTags(doc.Links[0]))
 	})
+}
+
+// TestForceKeepsProposedBugsTags: the `support` default must not clobber the
+// tags a forced scan just proposed for the issues tracker.
+func TestForceKeepsProposedBugsTags(t *testing.T) {
+	scanForce = true
+	t.Cleanup(func() { scanForce = false })
+	doc := &projectfile.Document{Links: []projectfile.Link{{
+		Type:  projectfile.LinkBugs,
+		URL:   testApplyLinkURL,
+		Extra: map[string]any{tagsKey: []any{pfmodel.TagSupport}},
+	}}}
+	proposed := []string{pfmodel.TagSupport, "readme"}
+	partial := &source.Partial{Links: []projectfile.Link{{
+		Type:  projectfile.LinkBugs,
+		URL:   testApplyLinkURL,
+		Extra: map[string]any{tagsKey: proposed},
+	}}}
+
+	applyPartialToDoc(doc, &projectfile.Document{}, partial)
+
+	assert.Equal(t, proposed, pfmodel.LinkTags(doc.Links[0]))
 }
