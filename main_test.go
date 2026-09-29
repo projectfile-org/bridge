@@ -211,3 +211,12 @@ func TestPrintCompletionRejectsUnknownShell(t *testing.T) {
 		assert.Contains(t, out.String(), "pf-bridge", shell)
 	}
 }
+
+func TestLeadingFlagError(t *testing.T) {
+	err := leadingFlagError("--check")
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), `"--check"`)
+	assert.Contains(t, err.Error(), "pf-bridge all --check")
+	assert.NotContains(t, err.Error(), prefix+"--check")
+	assert.NoError(t, leadingFlagError(bridgeName))
+}

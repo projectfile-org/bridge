@@ -102,6 +102,10 @@ func main() {
 
 	// Git-style dispatch: pf-bridge <name> [args] → exec pf-bridge-<name>.
 	name := args[0]
+	if err := leadingFlagError(name); err != nil {
+		fmt.Fprintf(os.Stderr, "Error: %s\n", err)
+		os.Exit(2)
+	}
 	path, err := exec.LookPath(prefix + name)
 	if err != nil {
 		fmt.Fprintf(os.Stderr,
@@ -433,6 +437,14 @@ func printCompletion(w io.Writer, args []string) error {
 		fmt.Fprintf(w, "_pf_bridge() { local cmds=\"%s\"; COMPREPLY=($(compgen -W \"$cmds\" -- \"${COMP_WORDS[COMP_CWORD]}\")); }\ncomplete -F _pf_bridge pf-bridge\n", words)
 	}
 	return nil
+}
+
+// leadingFlagError rejects a flag typed before the command, naming the trailing form that works.
+func leadingFlagError(arg string) error {
+	if !strings.HasPrefix(arg, "-") {
+		return nil
+	}
+	return fmt.Errorf("flag %q must follow the command, e.g. `pf-bridge all %s` or `pf-bridge <name> %s` (see pf-bridge --help)", arg, arg, arg)
 }
 
 // completionShells are the shells printCompletion emits a script for.
