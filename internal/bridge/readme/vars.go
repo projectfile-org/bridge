@@ -86,7 +86,7 @@ func buildSection(doc *projectfile.Document, ext *pfmodel.ReadmeExtension, name,
 	if len(declared) == 0 {
 		return nil
 	}
-	axes := pfmodel.MatrixAxes(doc, ciExtensionNS)
+	axes := pfmodel.AllMatrixAxes(doc, ciExtensionNS)
 	source := pfmodel.ReadmeExtensionNS + "." + name
 	// Rank the groups before rendering. The slice arrives in MERGE order, which
 	// puts every include-provided group ahead of the project's own (includes

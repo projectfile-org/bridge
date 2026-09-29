@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"kiota.ch/projectfile/core/v2/pkg/projectfile"
 	"projectfile.org/projectfile/bridge/internal/pfmodel"
 )
 
@@ -40,4 +41,21 @@ func TestExpandAxesFansOutOnePerCell(t *testing.T) {
 func TestExpandAxesLeavesUndeclaredBraceAlone(t *testing.T) {
 	out := pfmodel.ExpandAxes([]string{`docker inspect --format '{{.Id}}'`}, nil)
 	assert.Equal(t, []string{`docker inspect --format '{{.Id}}'`}, out)
+}
+
+// TestAllMatrixAxesUnionsNodeAxes: axes declared per node join the top-level ones, values deduplicated in order.
+func TestAllMatrixAxesUnionsNodeAxes(t *testing.T) {
+	const arch = "GOARCH"
+	withAxis := func(axis string, values ...any) map[string]any {
+		return map[string]any{"matrix": map[string]any{"axes": map[string]any{axis: values}}}
+	}
+	ci := withAxis("S", "a")
+	ci["nodes"] = map[string]any{
+		"built":    withAxis(arch, "amd64", "arm64"),
+		"released": withAxis(arch, "arm64", "riscv64"),
+		"plain":    nil,
+	}
+	doc := &projectfile.Document{Extensions: map[string]any{"org.projectfile.ci": ci}}
+	assert.Equal(t, map[string][]string{"S": {"a"}, arch: {"amd64", "arm64", "riscv64"}}, pfmodel.AllMatrixAxes(doc, "org.projectfile.ci"))
+	assert.Equal(t, map[string][]string{"S": {"a"}}, pfmodel.MatrixAxes(doc, "org.projectfile.ci"), "the root-only reader is unchanged")
 }

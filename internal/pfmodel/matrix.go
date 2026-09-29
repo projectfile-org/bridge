@@ -31,6 +31,11 @@ func MatrixAxes(doc *projectfile.Document, ns string) map[string][]string {
 	if !ok {
 		return nil
 	}
+	return MatrixAxesOf(m)
+}
+
+// MatrixAxesOf reads `matrix.axes` from one mapping: a namespace root or a single node.
+func MatrixAxesOf(m map[string]any) map[string][]string {
 	matrix, ok := m["matrix"].(map[string]any)
 	if !ok {
 		return nil
@@ -48,6 +53,28 @@ func MatrixAxes(doc *projectfile.Document, ns string) map[string][]string {
 		for _, item := range items {
 			if value := ScalarToString(item); value != "" {
 				axes[axis] = append(axes[axis], value)
+			}
+		}
+	}
+	return axes
+}
+
+// AllMatrixAxes is MatrixAxes plus every node's own `matrix.axes`, values unioned in first-seen order.
+func AllMatrixAxes(doc *projectfile.Document, ns string) map[string][]string {
+	axes := MatrixAxes(doc, ns)
+	raw, _ := projectfile.LookupExtension(doc, ns)
+	m, _ := raw.(map[string]any)
+	nodes, _ := m["nodes"].(map[string]any)
+	for _, name := range slices.Sorted(maps.Keys(nodes)) {
+		node, _ := nodes[name].(map[string]any)
+		for axis, values := range MatrixAxesOf(node) {
+			if axes == nil {
+				axes = map[string][]string{}
+			}
+			for _, value := range values {
+				if !slices.Contains(axes[axis], value) {
+					axes[axis] = append(axes[axis], value)
+				}
 			}
 		}
 	}
