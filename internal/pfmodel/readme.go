@@ -95,6 +95,8 @@ func parseReadmeSection(m map[string]any, key string) []ReadmeSectionGroup {
 		}
 		group := ReadmeSectionGroup{
 			Name:          strVal(sm, "name"),
+			Title:         extractLocalizedVal(sm, "title"),
+			TitleByLang:   extractLocalizedMap(sm, "title"),
 			Prefix:        extractLocalizedVal(sm, "prefix"),
 			PrefixByLang:  extractLocalizedMap(sm, "prefix"),
 			Commands:      strListVal(sm, "commands"),

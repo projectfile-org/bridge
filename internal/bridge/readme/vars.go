@@ -31,6 +31,7 @@ const ciExtensionNS = "org.projectfile.ci"
 // Commands carries the lines instead — the two are mutually exclusive.
 type sectionGroupView struct {
 	Name      string
+	Title     string
 	Prefix    string
 	Commands  []string
 	Postfix   string
@@ -144,6 +145,7 @@ func buildSectionGroup(doc *projectfile.Document, group pfmodel.ReadmeSectionGro
 	}
 	view := sectionGroupView{
 		Name:    group.Name,
+		Title:   expandProse(doc, sectionText(group.Title, group.TitleByLang, lang), label),
 		Prefix:  expandProse(doc, sectionText(group.Prefix, group.PrefixByLang, lang), label),
 		Postfix: expandProse(doc, sectionText(group.Postfix, group.PostfixByLang, lang), label),
 		Syntax:  syntax,

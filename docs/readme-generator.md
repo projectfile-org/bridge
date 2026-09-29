@@ -146,6 +146,9 @@ org:
 - The heading comes from the message catalog (`installation.title`, …), so it
     localizes with the rest of the readme.
 - `name` is the group’s identity for override, never display text.
+- `title` (localized-string, installation and usage only) gives the group its own
+    `###` heading and moves its subsections to `####`. Without it, prose that
+    follows a subsectioned group reads as part of that group’s last subsection.
 - `priority` orders the groups within a section, higher first, defaulting to 50.
     Declaration order cannot serve: includes concatenate **loser-first**, so
     every group a shared fragment carries arrives above the project’s own, and a

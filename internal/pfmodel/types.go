@@ -463,6 +463,8 @@ type ReadmeExtra struct {
 // own.
 type ReadmeSectionGroup struct {
 	Name          string
+	Title         string
+	TitleByLang   map[string]string
 	Prefix        string
 	PrefixByLang  map[string]string
 	Commands      []string

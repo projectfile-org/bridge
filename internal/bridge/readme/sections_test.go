@@ -51,6 +51,8 @@ const (
 	sinkGhcr   = "ghcr"
 	sinkKiota  = "kiota"
 	axisSeries = "B19_UBUNTU_SERIES"
+	axisGOARCH = "GOARCH"
+	archARM64  = "arm64"
 	// Sink-fixture refs and series values, same goconst rule.
 	refSinkGhcr    = "ghcr.io/o/demo:latest"
 	refSinkKiota   = "kiota.ch/demo:latest"
@@ -264,7 +266,7 @@ func TestUndeclaredBraceSurvives(t *testing.T) {
 	pf := minimalDoc(t)
 	pf.Extensions = map[string]any{
 		ciExtensionNS: map[string]any{
-			keyMatrix: map[string]any{keyAxes: map[string]any{"GOARCH": []any{archAMD64}}},
+			keyMatrix: map[string]any{keyAxes: map[string]any{axisGOARCH: []any{archAMD64}}},
 		},
 		readmeNS: map[string]any{
 			blockUsage: []any{group("inspect", "Inspect it:", `docker inspect --format '{{.Id}}' x`)},
@@ -337,8 +339,8 @@ func TestPerCellGroupSplitsByMatrixCell(t *testing.T) {
 	pf.Extensions = map[string]any{
 		ciExtensionNS: map[string]any{
 			keyMatrix: map[string]any{keyAxes: map[string]any{
-				"GOARCH": []any{"amd64", "arm64"},
-				"GOOS":   []any{"linux"},
+				axisGOARCH: []any{archAMD64, archARM64},
+				"GOOS":     []any{"linux"},
 			}},
 		},
 		readmeNS: map[string]any{blockInstallation: []any{perCell}},
@@ -348,6 +350,25 @@ func TestPerCellGroupSplitsByMatrixCell(t *testing.T) {
 
 	assert.Contains(t, out, "### Download for linux/amd64\n\n```sh\ncurl --output x x-linux-amd64\n./x --help\n```")
 	assert.Contains(t, out, "### Download for linux/arm64\n\n```sh\ncurl --output x x-linux-arm64\n./x --help\n```")
+}
+
+// TestGroupTitleNestsSubsections: a titled group renders its own heading, and
+// its subsections drop one level so they sit under it, not beside it.
+func TestGroupTitleNestsSubsections(t *testing.T) {
+	pf := minimalDoc(t)
+	titled := group("release", "Download:", "curl x-{GOARCH}")
+	titled["per-cell"] = true
+	titled["title"] = "Prebuilt binary"
+	pf.Extensions = map[string]any{
+		ciExtensionNS: map[string]any{
+			keyMatrix: map[string]any{keyAxes: map[string]any{axisGOARCH: []any{archAMD64, archARM64}}},
+		},
+		readmeNS: map[string]any{blockInstallation: []any{titled}},
+	}
+
+	out := renderDoc(t, t.TempDir(), pf)
+
+	assert.Contains(t, out, "### Prebuilt binary\n\nDownload:\n\n#### Download for amd64\n")
 }
 
 // TestMultiSinkGroupRendersPerSinkSubsections: when a group's commands fan out
@@ -1016,7 +1037,7 @@ func TestPlatformsBlockRendersCartesianProduct(t *testing.T) {
 	pf := minimalDoc(t)
 	pf.Extensions = map[string]any{
 		osExtensionNS:   []any{"linux"},
-		archExtensionNS: []any{"arm64", archAMD64},
+		archExtensionNS: []any{archARM64, archAMD64},
 	}
 	out := renderDoc(t, t.TempDir(), pf)
 	assert.Contains(t, out, "## Supported platforms")

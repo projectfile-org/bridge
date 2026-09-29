@@ -1,6 +1,10 @@
 {{- with readmeSection "usage"}}
 ## {{.Title}}
 {{- range $g := .Groups}}
+{{- with $g.Title}}
+
+### {{.}}
+{{- end}}
 {{- with $g.Prefix}}
 
 {{.}}
@@ -8,7 +12,7 @@
 {{- if $g.Subgroups}}
 {{- range $sg := $g.Subgroups}}
 
-### {{$sg.Heading}}
+{{if $g.Title}}#{{end}}### {{$sg.Heading}}
 
 ```{{$g.Syntax}}
 {{range $sg.Commands}}{{.}}
