@@ -3,15 +3,7 @@
 
 {{range .Headings}}- {{.}}
 {{end}}
-{{- range .Inherited}}
-
-### {{.Heading}}
-
-{{range .Items}}- {{.}}
-{{end}}
-{{- end}}
-
-{{printf (t "features.body") .Name .Filename}}
+{{if .Parents}}{{printf (t "features.inherited") .Parents .Name .Filename}}{{else}}{{printf (t "features.body") .Name .Filename}}{{end}}
 {{- if .Untranslated}}
 
 {{t "features.untranslated"}}

@@ -56,7 +56,7 @@ rich project fills every section.
 | `basics`           | `identity.title` + `identity.description`, else `identity.summary`                                              | yes            |
 | `badges`           | `readme.shields` (see [Badges](#badges))                                                                        | yes            |
 | `screenshots`      | `docs/screenshots/*.<img>` probe                                                                                | yes            |
-| `features`         | `FEATURES.md` probe, localized first (project H3 titles as bullets; inherited ones under per-parent subheaders) | yes            |
+| `features`         | `FEATURES.md` probe, localized first (project H3 titles as bullets; one note naming inherited parents)          | yes            |
 | `benchmarks`       | `BENCHMARKS.md` probe                                                                                           | yes            |
 | `quick-start`      | `readme.quick-start` groups, else `QUICKSTART.md` probe                                                         | yes            |
 | `requirements`     | `REQUIREMENTS.md` probe                                                                                         | yes            |

@@ -15,6 +15,7 @@ import (
 
 	"kiota.ch/projectfile/core/v2/pkg/projectfile"
 	"projectfile.org/projectfile/bridge/internal/bridge/core"
+	"projectfile.org/projectfile/bridge/internal/bridge/fragments"
 	"projectfile.org/projectfile/bridge/internal/pfmodel"
 )
 
@@ -134,22 +135,29 @@ func TestFeatureHeadingsFiltersH3(t *testing.T) {
 	assert.Nil(t, featureHeadings(t.TempDir()), "absent FEATURES.md → nil")
 }
 
-// TestFeaturesBlockSeparatesInherited: H3 titles under a later "Inherited
-// from …" H2 render under their own subheader, apart from the project's own
-// features — not as one flat list.
-func TestFeaturesBlockSeparatesInherited(t *testing.T) {
+// TestFeaturesBlockSummarisesInherited: inherited features collapse into one note naming each parent.
+func TestFeaturesBlockSummarisesInherited(t *testing.T) {
 	dir := t.TempDir()
 	writeFile(t, dir, "FEATURES.md",
 		"# Features\n\n## Project features\n\n### Own feature\n\n"+
-			"## Inherited from B19/Ubuntu\n\n### Persistent APT cache\n\n### Non-root by default\n")
+			"## Inherited from B19/Ubuntu\n\n### Persistent APT cache\n\n"+
+			"## Inherited from B19/Go\n\n### Warm module cache\n")
 	pf := minimalDoc(t)
 	body := renderDoc(t, dir, pf)
 
 	assert.Contains(t, body, "- Own feature")
-	assert.Contains(t, body, "### Inherited from B19/Ubuntu")
-	assert.Contains(t, body, "- Persistent APT cache")
-	assert.Less(t, strings.Index(body, "- Own feature"), strings.Index(body, "### Inherited from"),
-		"project features render before the inherited subheader")
+	assert.NotContains(t, body, "Persistent APT cache")
+	assert.NotContains(t, body, "### Inherited from")
+	assert.Contains(t, body, "It also inherits the features of B19/Ubuntu, B19/Go — see [FEATURES.md](FEATURES.md) for the full list.")
+	assert.NotContains(t, body, "See [FEATURES.md]")
+}
+
+// TestInheritedParentLocalized: the parent name parses out of a heading in any shipped language.
+func TestInheritedParentLocalized(t *testing.T) {
+	assert.Equal(t, "B19 / Ubuntu", fragments.InheritedParent("## Inherited from B19 / Ubuntu"))
+	assert.Equal(t, "B19 / Ubuntu", fragments.InheritedParent("Heredado de B19 / Ubuntu"))
+	assert.Equal(t, "B19 / Ubuntu", fragments.InheritedParent("Успадковано від B19 / Ubuntu"))
+	assert.Equal(t, "Something else", fragments.InheritedParent("Something else"))
 }
 
 // TestParseFeatureSectionsLocalizedHeadings: the project/inherited split is

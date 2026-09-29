@@ -11,6 +11,7 @@ logo.alt: логотип
 screenshots.title: Знімки екрана
 features.title: Можливості
 features.body: Див. [%[1]s](%[2]s), щоб переглянути повний перелік.
+features.inherited: Також успадковує можливості %[1]s — повний перелік див. у [%[2]s](%[3]s).
 features.untranslated: Вибачте, цю частину ще не перекладено.
 benchmarks.title: Продуктивність
 benchmarks.body: Див. [%[1]s](%[2]s), щоб переглянути результати вимірювань.

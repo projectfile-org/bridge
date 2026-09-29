@@ -112,3 +112,16 @@ func parseInheritedHeading(heading, defLang string) string {
 	prefix := format[:strings.IndexByte(format, '%')]
 	return strings.TrimSpace(strings.TrimPrefix(text, prefix))
 }
+
+// InheritedParent returns the parent name of an inherited-section heading written in any shipped language.
+func InheritedParent(heading string) string {
+	text := strings.TrimSpace(strings.TrimPrefix(strings.TrimSpace(heading), "##"))
+	for _, strs := range fragmentsStrings {
+		format := strs[keyInheritedPlain]
+		if prefix := format[:strings.IndexByte(format, '%')]; strings.HasPrefix(text, prefix) {
+			return strings.TrimSpace(strings.TrimPrefix(text, prefix))
+		}
+	}
+	genlog.Debug("fragments: inherited heading carries no known prefix", "heading", text)
+	return text
+}

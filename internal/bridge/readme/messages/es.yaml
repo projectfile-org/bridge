@@ -11,6 +11,7 @@ logo.alt: logotipo
 screenshots.title: Capturas de pantalla
 features.title: Características
 features.body: Consulta [%[1]s](%[2]s) para ver la lista completa.
+features.inherited: También hereda las características de %[1]s; consulta [%[2]s](%[3]s) para ver la lista completa.
 features.untranslated: Lo sentimos, esta parte aún no está traducida.
 benchmarks.title: Pruebas de rendimiento
 benchmarks.body: Consulta [%[1]s](%[2]s) para ver las cifras.

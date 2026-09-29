@@ -16,6 +16,7 @@ import (
 	"kiota.ch/projectfile/core/v2/pkg/interp"
 	"kiota.ch/projectfile/core/v2/pkg/projectfile"
 	"projectfile.org/projectfile/bridge/internal/bridge/core"
+	"projectfile.org/projectfile/bridge/internal/bridge/fragments"
 	"projectfile.org/projectfile/bridge/internal/pfmodel"
 )
 
@@ -1055,6 +1056,15 @@ func parseFeatureSections(dir, rel string) featureOut {
 	return out
 }
 
+// parents joins the parent names of every inherited group, in document order.
+func (f featureOut) parents() string {
+	names := make([]string, 0, len(f.Inherited))
+	for _, g := range f.Inherited {
+		names = append(names, fragments.InheritedParent(g.Heading))
+	}
+	return strings.Join(names, ", ")
+}
+
 // featureHeadings reads FEATURES.md and returns the project's own H3 titles —
 // the per-feature titles features-md emits under the structural
 // "# Features" / "## Project features" headings, excluding the inherited ones.
@@ -1068,15 +1078,14 @@ func featureHeadings(dir string) []string {
 // the same-language document (docs/<lang>/FEATURES.md); when the translation
 // does not exist yet it falls back to the canonical file and says so — an
 // English bullet list under a localized heading, never a missing section.
-// Inherited features are kept apart from the project's own so the template can
-// subheader them by parent.
+// Inherited features are summarised as their parents' names, never listed.
 type featureDoc struct {
-	Label        string         // section heading, resolved in the render language
-	Name         string         // companion file's bare name (link text)
-	Filename     string         // link target, rebased to this readme's own path
-	Headings     []string       // the project's own level-3 feature titles
-	Inherited    []featureGroup // per-parent inherited feature groups
-	Untranslated bool           // true when the render fell back to the default language
+	Label        string   // section heading, resolved in the render language
+	Name         string   // companion file's bare name (link text)
+	Filename     string   // link target, rebased to this readme's own path
+	Headings     []string // the project's own level-3 feature titles
+	Parents      string   // comma-joined names of the parents features are inherited from
+	Untranslated bool     // true when the render fell back to the default language
 }
 
 // buildFeatureDoc resolves the featureDoc for one render. pathLang is the
@@ -1090,11 +1099,11 @@ func buildFeatureDoc(dir, pathLang, strLang string) *featureDoc {
 		if fileExists(dir, localized) {
 			parsed := parseFeatureSections(dir, localized)
 			return &featureDoc{
-				Label:     label,
-				Name:      fileFeatures,
-				Filename:  core.RelLink(localized, docPath),
-				Headings:  parsed.Project,
-				Inherited: parsed.Inherited,
+				Label:    label,
+				Name:     fileFeatures,
+				Filename: core.RelLink(localized, docPath),
+				Headings: parsed.Project,
+				Parents:  parsed.parents(),
 			}
 		}
 		genlog.DebugRow("features_fallback", localized, fileFeatures, "no localized document yet")
@@ -1108,7 +1117,7 @@ func buildFeatureDoc(dir, pathLang, strLang string) *featureDoc {
 		Name:         fileFeatures,
 		Filename:     core.RelLink(fileFeatures, docPath),
 		Headings:     parsed.Project,
-		Inherited:    parsed.Inherited,
+		Parents:      parsed.parents(),
 		Untranslated: pathLang != "",
 	}
 }
