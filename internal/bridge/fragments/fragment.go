@@ -83,7 +83,9 @@ func loadFragments(projectDir, dir string) ([]Fragment, error) {
 	if entries == nil {
 		return nil, nil
 	}
-	sort.Strings(entries) // deterministic order across filesystems
+	sort.Slice(entries, func(i, j int) bool { // by stem, so a.md precedes a-b.md
+		return strings.TrimSuffix(entries[i], ".md") < strings.TrimSuffix(entries[j], ".md")
+	})
 	out := make([]Fragment, 0, len(entries))
 	for _, p := range entries {
 		f, err := parseFragment(p)
