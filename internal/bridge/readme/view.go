@@ -16,7 +16,6 @@ import (
 	"kiota.ch/projectfile/core/v2/pkg/interp"
 	"kiota.ch/projectfile/core/v2/pkg/projectfile"
 	"projectfile.org/projectfile/bridge/internal/bridge/core"
-	"projectfile.org/projectfile/bridge/internal/bridge/fragments"
 	"projectfile.org/projectfile/bridge/internal/pfmodel"
 )
 
@@ -1079,7 +1078,7 @@ func parseFeatureSections(dir, rel string) featureOut {
 func (f featureOut) parents() string {
 	names := make([]string, 0, len(f.Inherited))
 	for _, g := range f.Inherited {
-		names = append(names, fragments.InheritedParent(g.Heading))
+		names = append(names, core.InheritedParent(g.Heading))
 	}
 	return strings.Join(names, ", ")
 }

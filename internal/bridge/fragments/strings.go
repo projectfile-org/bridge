@@ -9,7 +9,17 @@ import (
 	"strings"
 
 	"kiota.ch/projectfile/core/v2/pkg/genlog"
+	"projectfile.org/projectfile/bridge/internal/bridge/core"
 )
+
+func init() {
+	for _, strs := range fragmentsStrings {
+		format := strs[keyInheritedPlain]
+		if i := strings.IndexByte(format, '%'); i >= 0 {
+			core.RegisterInheritedPrefix(format[:i])
+		}
+	}
+}
 
 // The fragments bridge's structural strings, per language. Fragments are data,
 // not prose, so — unlike the health files — there is no translated template:

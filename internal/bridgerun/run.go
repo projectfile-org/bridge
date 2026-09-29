@@ -181,12 +181,20 @@ func runBridge(cmd *cobra.Command, args []string) error {
 	// A single-file binary implies its one filename; only prompt/list when the
 	// binary carries several and none was named.
 	if name == "" {
-		if names := bridgeFilenames(); len(names) == 1 {
+		names := bridgeFilenames()
+		switch {
+		case len(names) == 1:
 			name = names[0]
-		} else if !canPrompt() {
+		case bridgeCheck || bridgeDryRun || bridgePreview:
+			genlog.Debug("read-only batch mode, checking every file instead of prompting", "files", len(names))
+			name = cmdAll
+		case !canPrompt():
+			if bridgeForce || bridgeCreateAll || mode != core.ModeSync {
+				return fmt.Errorf("binary carries %d files, none named: pass a filename or %q (see --list)", len(names), cmdAll)
+			}
 			genlog.Debug("no terminal on stdin, listing instead of prompting", "files", len(names))
 			return printList(cmd, names)
-		} else {
+		default:
 			picked, err := pickBridgeTarget()
 			if err != nil {
 				if errors.Is(err, selector.ErrCancelled) {
@@ -455,10 +463,14 @@ func fillRequiredFields(filename string, missing []core.Missing, pf *projectfile
 // promptInput is the stream a prompt reads its answer from.
 var promptInput = os.Stdin
 
-// canPrompt reports whether promptInput is a terminal a person can answer on.
+// canPrompt reports whether a person can answer on promptInput.
 func canPrompt() bool {
-	fd := promptInput.Fd()
-	return isatty.IsTerminal(fd) || isatty.IsCygwinTerminal(fd)
+	inFd := promptInput.Fd()
+	if !isatty.IsTerminal(inFd) && !isatty.IsCygwinTerminal(inFd) {
+		return false
+	}
+	outFd := os.Stdout.Fd()
+	return isatty.IsTerminal(outFd) || isatty.IsCygwinTerminal(outFd)
 }
 
 // printList writes each name on its own line — used by both --list and the

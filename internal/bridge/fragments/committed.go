@@ -12,6 +12,7 @@ import (
 	"strings"
 
 	"kiota.ch/projectfile/core/v2/pkg/genlog"
+	"projectfile.org/projectfile/bridge/internal/bridge/core"
 )
 
 // The committed assembled document is the only record of inherited content:
@@ -115,13 +116,9 @@ func parseInheritedHeading(heading, defLang string) string {
 
 // InheritedParent returns the parent name of an inherited-section heading written in any shipped language.
 func InheritedParent(heading string) string {
-	text := strings.TrimSpace(strings.TrimPrefix(strings.TrimSpace(heading), "##"))
-	for _, strs := range fragmentsStrings {
-		format := strs[keyInheritedPlain]
-		if prefix := format[:strings.IndexByte(format, '%')]; strings.HasPrefix(text, prefix) {
-			return strings.TrimSpace(strings.TrimPrefix(text, prefix))
-		}
+	name := core.InheritedParent(heading)
+	if name == strings.TrimSpace(strings.TrimPrefix(strings.TrimSpace(heading), "##")) {
+		genlog.Debug("fragments: inherited heading carries no known prefix", "heading", name)
 	}
-	genlog.Debug("fragments: inherited heading carries no known prefix", "heading", text)
-	return text
+	return name
 }
