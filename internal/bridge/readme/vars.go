@@ -82,13 +82,13 @@ const syntaxDefault = "sh"
 // artifact can answer the reference. No `when:`, no per-namespace fragment
 // wiring, no Go table of package managers — a project's install instructions
 // follow from what it says it ships.
-func buildSection(doc *projectfile.Document, ext *pfmodel.ReadmeExtension, name, lang string) *sectionView {
+func buildSection(doc *projectfile.Document, ext *pfmodel.ReadmeExtension, dir, name, lang string) (*sectionView, error) {
 	if ext == nil {
-		return nil
+		return nil, nil
 	}
 	declared := ext.Sections[name]
 	if len(declared) == 0 {
-		return nil
+		return nil, nil
 	}
 	matrix := pfmodel.AllMatrix(doc, ciExtensionNS)
 	source := pfmodel.ReadmeExtensionNS + "." + name
@@ -103,7 +103,13 @@ func buildSection(doc *projectfile.Document, ext *pfmodel.ReadmeExtension, name,
 	})
 	var groups []sectionGroupView
 	for _, group := range declared {
-		view, ok := buildSectionGroup(doc, group, matrix, name, lang)
+		view, ok, err := buildFileGroup(doc, group, dir, name, lang)
+		if err != nil {
+			return nil, err
+		}
+		if group.File == "" {
+			view, ok = buildSectionGroup(doc, group, matrix, name, lang)
+		}
 		if !ok {
 			continue
 		}
@@ -111,9 +117,9 @@ func buildSection(doc *projectfile.Document, ext *pfmodel.ReadmeExtension, name,
 	}
 	if len(groups) == 0 {
 		genlog.DebugRow("readme_section", name, "no group resolved (section dropped)", source)
-		return nil
+		return nil, nil
 	}
-	return &sectionView{Title: translate(lang, name+".title"), Groups: groups}
+	return &sectionView{Title: translate(lang, name+".title"), Groups: groups}, nil
 }
 
 // buildSectionGroup renders one group. ok is false when the group declared

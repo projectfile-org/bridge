@@ -484,6 +484,8 @@ type ReadmeSectionGroup struct {
 	Priority int
 	// PerCell renders one headed fence per matrix cell instead of joining them.
 	PerCell bool
+	// File is a repo-relative file embedded verbatim as the fence body.
+	File string
 }
 
 // Shield is a badge image rendered as markdown: [![alt](img)](href). Row is

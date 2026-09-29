@@ -301,8 +301,8 @@ func execBlockTemplate(name string, body []byte, data readmeView, dir string, ex
 			// plus the groups whose commands the document could answer — by
 			// block name; nil when the document declares none or none survived,
 			// so the template's {{else}} falls back to its companion-file probe.
-			"readmeSection": func(name string) *sectionView {
-				return buildSection(data.Doc, ext, name, data.StrLang)
+			"readmeSection": func(name string) (*sectionView, error) {
+				return buildSection(data.Doc, ext, dir, name, data.StrLang)
 			},
 			// artifacts lists what the project SHIPS, from
 			// org.projectfile.artifacts: one entry per declared artifact with
