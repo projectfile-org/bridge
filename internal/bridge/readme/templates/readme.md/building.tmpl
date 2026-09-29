@@ -1,5 +1,10 @@
-{{- with readmeSection "building"}}
-## {{.Title}}
+{{- /* Declared groups lead; the entry points derived from the CI DAG always follow. */ -}}
+{{- $section := readmeSection "building" -}}
+{{- $links := buildLinks -}}
+{{- $goals := readmeGoals -}}
+{{- if or $section $links $goals}}
+## {{t "building.title"}}
+{{- with $section}}
 {{- range $g := .Groups}}
 {{- with $g.Prefix}}
 
@@ -17,24 +22,8 @@
 {{.}}
 {{- end}}
 {{- end}}
-{{- else}}
-{{- /*
-     No hand-written section: derive the entry points from the CI DAG itself,
-     so the README can never drift from what the pipeline actually runs. A goal
-     node is exactly a `make <name>` target — pf-ci renders one workflow file
-     per goal, and m6e exposes one launcher per goal.
-
-     readmeGoals prefers goals tagged `readme` (the advisory tags[] value) and
-     falls back to every goal when none are tagged, so a project that does not
-     opt in keeps the full list it always had.
-
-     The intro explains `make` with no arguments (the default target) and the
-     dev-container dev loop when the DAG declares a dev-container node.
-*/ -}}
-{{- $goals := readmeGoals -}}
-{{- if or buildLinks $goals}}
-## {{t "building.title"}}
-{{- with buildLinks}}
+{{- end}}
+{{- with $links}}
 
 {{range .}}- [{{.Label}}]({{.Filename}})
 {{end -}}
@@ -51,6 +40,5 @@
 
 {{range .}}- `make {{.Name}}`{{with .Description}} — {{.}}{{end}}
 {{end -}}
-{{- end}}
 {{- end}}
 {{- end}}

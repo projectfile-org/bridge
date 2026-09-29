@@ -65,7 +65,7 @@ rich project fills every section.
 | `installation`     | `readme.installation` groups, else `INSTALL.md` probe                                                           | yes            |
 | `usage`            | `readme.usage` groups, else `USAGE.md` probe                                                                    | yes            |
 | `configuration`    | `CONFIGURATION.md` probe                                                                                        | yes            |
-| `building`         | `readme.building` groups, else `BUILD.md` + `docs/how-to/MAKEFILE.md` + `ci` goals                              | yes            |
+| `building`         | `readme.building` groups, then `BUILD.md` + `docs/how-to/MAKEFILE.md` + `ci` goals                              | yes            |
 | `documentation`    | `docs/how-to/*.md` probe (excludes `readme-generator.md` and `MAKEFILE.md`)                                     | yes            |
 | `faq`              | `FAQ.md` probe                                                                                                  | yes            |
 | `roadmap`          | `ROADMAP.md` probe                                                                                              | yes            |
@@ -114,6 +114,8 @@ catalog](#message-catalogs). Reach for a variant only when a block has to be
 Four blocks — `installation`, `quick-start`, `usage`, `building` — render inline
 when the projectfile declares them, and fall back to their companion-file link
 (`INSTALL.md`, `QUICKSTART.md`, `USAGE.md`, `BUILD.md`) when it does not.
+`building` is the exception: its declared groups (a `git clone` step, the
+compose stack) lead, and the companion files and CI goals always follow.
 
 A section is a **list of groups**, because a project ships several things and the
 ways to install them are *alternatives, not steps* — `npm install foo` and
@@ -304,8 +306,8 @@ usage:
 
 ### Building block: which goals are highlighted
 
-When the `building` block derives its entry points from the CI DAG (no
-`readme.building` section declared), it lists one `make <name>` line per
+The `building` block derives its entry points from the CI DAG, after any
+declared `readme.building` groups, and lists one `make <name>` line per
 `goal: true` node. Two refinements narrow that list and fill in the local-dev
 story:
 

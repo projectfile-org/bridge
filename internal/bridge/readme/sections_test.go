@@ -1087,3 +1087,21 @@ func TestGetArtifactsAbsent(t *testing.T) {
 	require.NoError(t, err)
 	assert.Nil(t, got)
 }
+
+// TestBuildingGroupsLeadDerivedGoals: a declared building group renders first and the CI goals still follow it.
+func TestBuildingGroupsLeadDerivedGoals(t *testing.T) {
+	pf := minimalDoc(t)
+	pf.Extensions = ciNodes(map[string]any{keyName: nodePublished, keyGoal: true, keyDescription: descPublish})
+	pf.Extensions[readmeNS] = map[string]any{
+		"building": []any{group("clone", "Clone the repository:", "git clone "+urlExampleRepo)},
+	}
+
+	out := renderDoc(t, t.TempDir(), pf)
+
+	require.Equal(t, 1, strings.Count(out, "## Building"))
+	clone := strings.Index(out, "git clone "+urlExampleRepo)
+	goal := strings.Index(out, "`make "+nodePublished+"`")
+	require.GreaterOrEqual(t, clone, 0)
+	require.GreaterOrEqual(t, goal, 0)
+	assert.Less(t, clone, goal, "declared groups lead the derived goal list")
+}
