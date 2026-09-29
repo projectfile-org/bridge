@@ -1219,3 +1219,18 @@ func TestUsageRendersActionInputsTable(t *testing.T) {
 
 	assert.Contains(t, out, "| `token` | required | Forge token |\n| `fail_on` | `error` | none \\| error |\n")
 }
+
+// TestUsageDropsActionInputsWithUnresolvedRef: an action no step can reference shows no inputs table.
+func TestUsageDropsActionInputsWithUnresolvedRef(t *testing.T) {
+	dir := t.TempDir()
+	writeFile(t, dir, "action.yaml", "inputs:\n  token:\n    description: Forge token\n")
+	pf := minimalDoc(t)
+	pf.Extensions = map[string]any{
+		artifactsNS: map[string]any{"action": map[string]any{keyKind: artifactKindAction, "path": "action.yaml", keyRef: "${org.projectfile.forge.remotes.github.owner}/r@1"}},
+		readmeNS:    map[string]any{blockUsage: []any{group("action", "Run it:", "- uses: ${org.projectfile.artifacts{kind=action}.ref}")}},
+	}
+
+	out := renderDoc(t, dir, pf)
+
+	assert.NotContains(t, out, "`token`")
+}

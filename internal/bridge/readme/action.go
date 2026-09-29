@@ -10,6 +10,7 @@ import (
 
 	"go.yaml.in/yaml/v3"
 	"kiota.ch/projectfile/core/v2/pkg/genlog"
+	"kiota.ch/projectfile/core/v2/pkg/interp"
 	"kiota.ch/projectfile/core/v2/pkg/projectfile"
 	"projectfile.org/projectfile/bridge/internal/pfmodel"
 )
@@ -31,6 +32,10 @@ func actionInputs(doc *projectfile.Document, dir string) []actionInput {
 	var out []actionInput
 	for _, a := range pfmodel.ArtifactsOfKind(artifacts, artifactKindAction) {
 		if a.Path == "" {
+			continue
+		}
+		if _, resolved := interp.ExpandFanOut(doc, artifactAddress(a)); !resolved {
+			genlog.DebugRow("action_inputs", a.Path, "unresolved ref (skipped)", a.Ref)
 			continue
 		}
 		body, err := readFile(dir, a.Path)
