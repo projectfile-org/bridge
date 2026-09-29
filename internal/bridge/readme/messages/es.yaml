@@ -58,6 +58,11 @@ installation.sink: Descargar de
 usage.sink: Desde
 installation.cell: Descargar para
 usage.cell: En
+usage.inputs: "La acción acepta estas entradas:"
+usage.inputs.name: Entrada
+usage.inputs.default: Valor por defecto
+usage.inputs.description: Descripción
+usage.inputs.required: obligatoria
 
 # Bloque de artefactos — lo que el proyecto entrega. La clave de cada tipo se
 # deriva del `kind` declarado.

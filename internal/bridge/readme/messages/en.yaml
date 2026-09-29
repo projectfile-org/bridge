@@ -66,6 +66,12 @@ usage.sink: From
 # Heading word for a per-matrix-cell subsection, completed by the cell ("Download for linux/amd64").
 installation.cell: Download for
 usage.cell: On
+# Action inputs table under the usage snippet, read from action.yaml.
+usage.inputs: "The action takes these inputs:"
+usage.inputs.name: Input
+usage.inputs.default: Default
+usage.inputs.description: Description
+usage.inputs.required: required
 
 # Artifacts block — what the project ships. The kind key is DERIVED from the
 # declared `kind`, so a project inventing one only needs a line here (and falls

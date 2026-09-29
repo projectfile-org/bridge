@@ -31,6 +31,15 @@
 {{.}}
 {{- end}}
 {{- end}}
+{{- with actionInputs}}
+
+{{t "usage.inputs"}}
+
+| {{t "usage.inputs.name"}} | {{t "usage.inputs.default"}} | {{t "usage.inputs.description"}} |
+| --- | --- | --- |
+{{range .}}| `{{.Name}}` |{{if .Required}} {{t "usage.inputs.required"}} {{else if .Default}} `{{.Default}}` {{else}} {{end}}| {{.Description}} |
+{{end -}}
+{{- end}}
 {{- else}}
 {{- with docLink "USAGE.md" (t "usage.title")}}
 ## {{.Label}}

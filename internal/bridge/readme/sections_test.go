@@ -1161,3 +1161,19 @@ func TestBuildingGroupsLeadDerivedGoals(t *testing.T) {
 	require.GreaterOrEqual(t, goal, 0)
 	assert.Less(t, clone, goal, "declared groups lead the derived goal list")
 }
+
+// TestUsageRendersActionInputsTable: an action artifact's action.yaml inputs render
+// in file order under the usage snippet, a required one marked, a pipe escaped.
+func TestUsageRendersActionInputsTable(t *testing.T) {
+	dir := t.TempDir()
+	writeFile(t, dir, "action.yaml", "inputs:\n  token:\n    description: Forge token\n    required: true\n  fail_on:\n    description: 'none | error'\n    default: error\n")
+	pf := minimalDoc(t)
+	pf.Extensions = map[string]any{
+		artifactsNS: map[string]any{"action": map[string]any{keyKind: artifactKindAction, "path": "action.yaml", keyRef: "o/r@1"}},
+		readmeNS:    map[string]any{blockUsage: []any{group("action", "Run it:", "- uses: ${org.projectfile.artifacts{kind=action}.ref}")}},
+	}
+
+	out := renderDoc(t, dir, pf)
+
+	assert.Contains(t, out, "| `token` | required | Forge token |\n| `fail_on` | `error` | none \\| error |\n")
+}

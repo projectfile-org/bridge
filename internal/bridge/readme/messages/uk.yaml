@@ -58,6 +58,11 @@ installation.sink: Завантажити з
 usage.sink: З
 installation.cell: Завантажити для
 usage.cell: На
+usage.inputs: "Дія приймає такі вхідні параметри:"
+usage.inputs.name: Параметр
+usage.inputs.default: Типове значення
+usage.inputs.description: Опис
+usage.inputs.required: обовʼязковий
 
 # Блок артефактів — те, що проєкт постачає. Ключ типу походить від
 # оголошеного `kind`.

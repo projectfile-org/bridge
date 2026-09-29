@@ -357,6 +357,8 @@ func execBlockTemplate(name string, body []byte, data readmeView, dir string, ex
 			// render-ready credit groups; nil when the project declares none,
 			// so the block drops like every probe-driven one.
 			"acknowledgements": func() []ackGroup { return buildAcknowledgements(data.Doc, data.StrLang) },
+			// actionInputs is the usage block's inputs table, read from each action artifact's action.yaml.
+			"actionInputs": func() []actionInput { return actionInputs(data.Doc, dir) },
 		}).
 		Option("missingkey=zero").
 		Parse(string(body))

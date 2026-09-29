@@ -306,6 +306,13 @@ Prose (`prefix`/`postfix`) cannot fan out — a sentence has no per-value form �
 a multi-valued reference there leaves the sentence unresolved, and it is dropped
 rather than published with a literal `${…}` in it.
 
+### Action inputs
+
+An `action` artifact whose `path` names its `action.yaml` gets an inputs table
+under the usage section — name, default (or “required”) and description, in file
+order. The file is the declaration GitHub itself reads, so nothing is restated in
+the projectfile. Descriptions are the file’s own text and are not translated.
+
 ### `syntax`
 
 A command group renders as a fenced block tagged `sh`. Set `syntax` to change
