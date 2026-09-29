@@ -31,6 +31,7 @@ package fragments
 import (
 	"fmt"
 	"path/filepath"
+	"strconv"
 
 	"kiota.ch/projectfile/core/v2/pkg/genlog"
 	"kiota.ch/projectfile/core/v2/pkg/projectfile"
@@ -206,7 +207,10 @@ func resolveDocuments(pf *projectfile.Document) ([]pfmodel.FragmentDocument, err
 	for _, shell := range conv.Documents {
 		// Each shell carries dir/out/title; the flat Parents list is shared
 		// across every document (features and roadmap inherit the same chain).
-		shell.Parents = conv.Parents
+		if !shell.Standalone {
+			shell.Parents = conv.Parents
+		}
+		genlog.DebugRow("fragments_shell", shell.Out, "conventions.fragments.documents", "standalone="+strconv.FormatBool(shell.Standalone))
 		out = append(out, shell)
 	}
 	if len(out) > 0 {

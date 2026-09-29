@@ -37,18 +37,21 @@ var fragmentsStrings = map[string]map[string]string{
 		keyInheritedPlain:           "Inherited from %s",
 		keyTitlePrefix + "features": "Features",
 		keyTitlePrefix + "roadmap":  "Roadmap",
+		keyTitlePrefix + "usage":    "Usage",
 	},
 	"es": {
 		keyProjectHeading:           "%s del proyecto",
 		keyInheritedPlain:           "Heredado de %s",
 		keyTitlePrefix + "features": "Características",
 		keyTitlePrefix + "roadmap":  "Hoja de ruta",
+		keyTitlePrefix + "usage":    "Uso",
 	},
 	"uk": {
 		keyProjectHeading:           "%s проєкту",
 		keyInheritedPlain:           "Успадковано від %s",
 		keyTitlePrefix + "features": "Можливості",
 		keyTitlePrefix + "roadmap":  "Дорожня карта",
+		keyTitlePrefix + "usage":    "Використання",
 	},
 }
 

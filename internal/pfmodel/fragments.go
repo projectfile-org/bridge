@@ -58,9 +58,10 @@ func GetConventionsFragments(doc *projectfile.Document) (*ConventionsFragments, 
 	out := &ConventionsFragments{Parents: parentsVal(frag, "parents")}
 	for _, d := range docsAny(frag["documents"]) {
 		out.Documents = append(out.Documents, FragmentDocument{
-			Dir:   strVal(d, "dir"),
-			Out:   strVal(d, "out"),
-			Title: strVal(d, "title"),
+			Dir:        strVal(d, "dir"),
+			Out:        strVal(d, "out"),
+			Title:      strVal(d, "title"),
+			Standalone: d["inherit"] == false,
 		})
 	}
 	return out, nil

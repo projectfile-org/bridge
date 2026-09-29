@@ -404,6 +404,8 @@ type FragmentDocument struct {
 	Out     string           `toml:"out" yaml:"out" json:"out"`
 	Title   string           `toml:"title" yaml:"title" json:"title"`
 	Parents []FragmentParent `toml:"parents" yaml:"parents" json:"parents"`
+	// Standalone is a conventions shell declaring `inherit: false`: the flat parents list skips it.
+	Standalone bool `toml:"-" yaml:"-" json:"-"`
 }
 
 // FragmentParent names an upstream project whose assembled document this one

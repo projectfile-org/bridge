@@ -767,3 +767,22 @@ func TestRenderNonLocalizableDocumentSkipsVariants(t *testing.T) {
 	assert.Contains(t, out.Files, "CHANGELOG.md")
 	assert.NotContains(t, out.Files, "docs/es/CHANGELOG.md")
 }
+
+// TestRenderConventionsStandaloneShellInheritsNothing: `inherit: false` keeps the flat parents list off that shell.
+func TestRenderConventionsStandaloneShellInheritsNothing(t *testing.T) {
+	child := t.TempDir()
+	writeFragment(t, child, "docs/usage.d", "00-help", "`demo --help`", "Help body.")
+	writeCommittedDoc(t, child, "USAGE.md", "Usage", "## Project Usage",
+		[]string{"### `demo --help`\n\nHelp body."},
+		[][2]string{{headingInherited, parentFeatBody}},
+		false)
+	shell := shellMap("docs/usage.d", "USAGE.md", "Usage")
+	shell["inherit"] = false
+	doc := conventionsDoc(t, child, []map[string]any{shell}, []string{parentURL})
+
+	out, err := fragments.Bridge{}.Render(doc, offlineOptions(child))
+	require.NoError(t, err)
+	got := string(out.Files["USAGE.md"])
+	assert.Contains(t, got, "### `demo --help`")
+	assert.NotContains(t, got, headingInherited)
+}
