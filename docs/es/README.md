@@ -12,7 +12,7 @@ pf-cli-managed: yes
 
 pf-bridge es la herramienta de proyección del projectfile: deriva los archivos de identidad del forge, ensambla los fragmentos de características y hoja de ruta, y proyecta el projectfile sobre los archivos que un forge y un repositorio esperan. Binario compañero de pf-cli para las herramientas de projectfile.org.
 
-[![Stand with Ukraine](https://raw.githubusercontent.com/vshymanskyy/StandWithUkraine/main/badges/StandWithUkraine.svg)](https://damian-buho.github.io/support-ukraine/) [![Projectfile inside](https://badges.kiota.ch/static/v1?label=projectfile&message=inside&labelColor=0d0d0d&color=8c6723&style=flat-square)](https://projectfile.org) [![License](https://badges.kiota.ch/static/v1?label=license&message=MIT&color=1e5913&style=flat-square)](LICENSE) [![Commit style](https://badges.kiota.ch/static/v1?label=commits&message=conventional%20v1.0.0&color=1877aa&style=flat-square)](https://www.conventionalcommits.org/es/v1.0.0/) ![Workflow](https://badges.kiota.ch/static/v1?label=workflow&message=git-flow&color=1877aa&style=flat-square) [![Versioning](https://badges.kiota.ch/static/v1?label=versioning&message=semantic%20v2.0.0&color=1877aa&style=flat-square)](https://semver.org/lang/es/) [![Cosign](https://badges.kiota.ch/static/v1?label=cosign&message=enabled&color=1e5913&style=flat-square)](https://docs.sigstore.dev/cosign/verifying/verify/) [![PRs welcome](https://badges.kiota.ch/static/v1?label=PRs&message=welcome&color=1e5913&style=flat-square)](CONTRIBUTING.md) [![Citation](https://badges.kiota.ch/static/v1?label=citation&message=cff&color=1877aa&style=flat-square)](CITATION.cff) [![REUSE compliance](https://api.reuse.software/badge/github.com/projectfile-org/bridge)](https://api.reuse.software/info/github.com/projectfile-org/bridge)
+[![Stand with Ukraine](https://raw.githubusercontent.com/vshymanskyy/StandWithUkraine/main/badges/StandWithUkraine.svg)](https://damian-buho.github.io/support-ukraine/) [![Projectfile inside](https://badges.kiota.ch/static/v1?label=projectfile&message=inside&labelColor=0d0d0d&color=8c6723&style=flat-square)](https://projectfile.org) [![License](https://badges.kiota.ch/static/v1?label=license&message=MIT&color=1e5913&style=flat-square)](LICENSE) [![Cosign](https://badges.kiota.ch/static/v1?label=cosign&message=enabled&color=1e5913&style=flat-square)](https://docs.sigstore.dev/cosign/verifying/verify/) [![PRs welcome](https://badges.kiota.ch/static/v1?label=PRs&message=welcome&color=1e5913&style=flat-square)](CONTRIBUTING.md) [![REUSE compliance](https://api.reuse.software/badge/github.com/projectfile-org/bridge)](https://api.reuse.software/info/github.com/projectfile-org/bridge)
 
 ![Project status](https://badges.kiota.ch/static/v1?label=status&message=maintained&color=1d63ed&style=flat-square) [![Last commit on GitHub](https://badges.kiota.ch/github/last-commit/projectfile-org/bridge?label=last%20commit%20on%20GitHub&style=flat-square)](https://github.com/projectfile-org/bridge) [![Last commit on kiota.ch](https://badges.kiota.ch/gitea/last-commit/projectfile/bridge?gitea_url=https://kiota.ch&label=last%20commit%20on%20kiota.ch&style=flat-square)](https://kiota.ch/projectfile/bridge)
 
@@ -71,40 +71,12 @@ docker pull kiota.ch/projectfile/bridge:latest
 
 Descarga el binario precompilado para tu plataforma desde la última versión en GitHub:
 
-#### Descargar para linux/amd64
-
 ```sh
-curl --fail --location --output pf-bridge https://github.com/projectfile-org/bridge/releases/latest/download/pf-bridge-linux-amd64 && chmod +x pf-bridge
+curl --fail --location --output pf-bridge https://github.com/projectfile-org/bridge/releases/latest/download/pf-bridge-$(uname -s | tr A-Z a-z)-$(uname -m | sed -e s/x86_64/amd64/ -e s/aarch64/arm64/) && chmod +x pf-bridge
 ./pf-bridge --help
 ```
 
-#### Descargar para linux/arm64
-
-```sh
-curl --fail --location --output pf-bridge https://github.com/projectfile-org/bridge/releases/latest/download/pf-bridge-linux-arm64 && chmod +x pf-bridge
-./pf-bridge --help
-```
-
-#### Descargar para linux/riscv64
-
-```sh
-curl --fail --location --output pf-bridge https://github.com/projectfile-org/bridge/releases/latest/download/pf-bridge-linux-riscv64 && chmod +x pf-bridge
-./pf-bridge --help
-```
-
-#### Descargar para darwin/amd64
-
-```sh
-curl --fail --location --output pf-bridge https://github.com/projectfile-org/bridge/releases/latest/download/pf-bridge-darwin-amd64 && chmod +x pf-bridge
-./pf-bridge --help
-```
-
-#### Descargar para darwin/arm64
-
-```sh
-curl --fail --location --output pf-bridge https://github.com/projectfile-org/bridge/releases/latest/download/pf-bridge-darwin-arm64 && chmod +x pf-bridge
-./pf-bridge --help
-```
+Publicado para: `linux/amd64`, `linux/arm64`, `linux/riscv64`, `darwin/amd64`, `darwin/arm64`
 
 ## Uso
 
