@@ -18,16 +18,19 @@ import (
 
 // Repeated fixture keys, named so goconst sees one home per string.
 const (
-	keyImage       = "image"
-	keyCommands    = "commands"
-	keyPrefix      = "prefix"
-	keyKind        = "kind"
-	keyAxes        = "axes"
-	keyRef         = "ref"
-	keyMatrix      = "matrix"
-	keyLabel       = "label"
-	keyDescription = "description"
-	keyGoal        = "goal"
+	osDarwin         = "darwin"
+	archRISCV64      = "riscv64"
+	sinkRoleFallback = "fallback"
+	keyImage         = "image"
+	keyCommands      = "commands"
+	keyPrefix        = "prefix"
+	keyKind          = "kind"
+	keyAxes          = "axes"
+	keyRef           = "ref"
+	keyMatrix        = "matrix"
+	keyLabel         = "label"
+	keyDescription   = "description"
+	keyGoal          = "goal"
 	// CI node-name and field fixtures shared across the goal-filter tests.
 	nodePublished      = "published"
 	nodeAnalyze        = "analyze"
@@ -377,8 +380,8 @@ func TestExcludedCellNeverRenders(t *testing.T) {
 	pf.Extensions = map[string]any{
 		ciExtensionNS: map[string]any{
 			"nodes": map[string]any{"build": map[string]any{keyMatrix: map[string]any{
-				keyAxes:   map[string]any{axisGOARCH: []any{archAMD64, "riscv64"}, axisGOOS: []any{platformDefaultOS, "darwin"}},
-				"exclude": []any{map[string]any{axisGOARCH: "riscv64", axisGOOS: "darwin"}},
+				keyAxes:   map[string]any{axisGOARCH: []any{archAMD64, archRISCV64}, axisGOOS: []any{platformDefaultOS, osDarwin}},
+				"exclude": []any{map[string]any{axisGOARCH: archRISCV64, axisGOOS: osDarwin}},
 			}}},
 		},
 		readmeNS: map[string]any{blockInstallation: []any{perCell, joined}},
@@ -436,7 +439,7 @@ func TestBuildDocMovesBuildingOutOfReadme(t *testing.T) {
 	writeFile(t, dir, makefileDocPath, "# Makefile\n")
 	pf := minimalDoc(t)
 	pf.Extensions = map[string]any{
-		readmeNS: map[string]any{"build-doc": true, "building": []any{group("clone", "Clone it:", "git clone x")}},
+		readmeNS: map[string]any{"build-doc": true, blockBuilding: []any{group("clone", "Clone it:", "git clone x")}},
 	}
 
 	out, err := Bridge{}.Render(pf, core.Options{Dir: dir, Mode: modeWrite, Force: true})
@@ -453,7 +456,7 @@ func TestBuildDocMovesBuildingOutOfReadme(t *testing.T) {
 func TestBuildDocKeepsReadmeWhenNotCreated(t *testing.T) {
 	pf := minimalDoc(t)
 	pf.Extensions = map[string]any{
-		readmeNS: map[string]any{"build-doc": true, "building": []any{group("clone", "Clone it:", "git clone x")}},
+		readmeNS: map[string]any{"build-doc": true, blockBuilding: []any{group("clone", "Clone it:", "git clone x")}},
 	}
 
 	out, err := Bridge{}.Render(pf, core.Options{Dir: t.TempDir(), Mode: modeWrite, Force: true, NoCreate: true})
@@ -471,8 +474,8 @@ func TestCellsListsPublishedPlatforms(t *testing.T) {
 	pf.Extensions = map[string]any{
 		ciExtensionNS: map[string]any{
 			keyMatrix: map[string]any{
-				keyAxes:   map[string]any{axisGOARCH: []any{archAMD64, "riscv64"}, axisGOOS: []any{platformDefaultOS, "darwin"}},
-				"exclude": []any{map[string]any{axisGOARCH: "riscv64", axisGOOS: "darwin"}},
+				keyAxes:   map[string]any{axisGOARCH: []any{archAMD64, archRISCV64}, axisGOOS: []any{platformDefaultOS, osDarwin}},
+				"exclude": []any{map[string]any{axisGOARCH: archRISCV64, axisGOOS: osDarwin}},
 			},
 		},
 		readmeNS: map[string]any{blockInstallation: []any{release}},
@@ -529,7 +532,7 @@ func TestLoneSinkUsageDropsHeading(t *testing.T) {
 	pf := minimalDoc(t)
 	pf.Extensions = map[string]any{
 		sinksNS: map[string]any{
-			sinkKiota: map[string]any{keyRef: refSinkKiota, pfmodel.SinkRoleKey: "fallback"},
+			sinkKiota: map[string]any{keyRef: refSinkKiota, pfmodel.SinkRoleKey: sinkRoleFallback},
 			sinkGhcr:  map[string]any{keyRef: refSinkGhcr, pfmodel.SinkRoleKey: pfmodel.SinkRolePrimary, pfmodel.SinkLabelKey: labelGhcr},
 		},
 		artifactsNS: imageArtifact("${org.projectfile.sinks{role=primary}.ref}"),
@@ -550,7 +553,7 @@ func TestProseLessGroupContinuesSingleFence(t *testing.T) {
 	pf.Extensions = map[string]any{
 		readmeNS: map[string]any{blockInstallation: []any{
 			pull,
-			map[string]any{"name": "alias", "commands": []any{"alias demo='docker run kiota.ch/demo:latest'"}},
+			map[string]any{keyName: "alias", "commands": []any{"alias demo='docker run kiota.ch/demo:latest'"}},
 		}},
 	}
 
@@ -626,7 +629,7 @@ func TestSinkSubsectionsNamePlatforms(t *testing.T) {
 
 // TestSinkServingNoPlatformIsDropped: a registry serving none of the project's architectures gets no subsection.
 func TestSinkServingNoPlatformIsDropped(t *testing.T) {
-	out := renderDoc(t, t.TempDir(), platformSinkDoc(t, "riscv64"))
+	out := renderDoc(t, t.TempDir(), platformSinkDoc(t, archRISCV64))
 
 	assert.Contains(t, out, "### Pull from GHCR — linux/amd64, linux/arm64\n")
 	assert.NotContains(t, out, "Pull from kiota")
@@ -708,7 +711,7 @@ func TestFallbackSinkGroupKeepsProseAndHeading(t *testing.T) {
 	pf.Extensions = map[string]any{
 		sinksNS: map[string]any{
 			sinkGhcr:  map[string]any{keyRef: refSinkGhcr, pfmodel.SinkRoleKey: pfmodel.SinkRolePrimary, keyPriority: 90},
-			sinkKiota: map[string]any{keyRef: refSinkKiota, pfmodel.SinkRoleKey: "fallback", keyPriority: 10},
+			sinkKiota: map[string]any{keyRef: refSinkKiota, pfmodel.SinkRoleKey: sinkRoleFallback, keyPriority: 10},
 		},
 		artifactsNS: imageArtifact("${org.projectfile.sinks{role=primary}.ref}"),
 		readmeNS: map[string]any{
@@ -1389,7 +1392,7 @@ func TestBuildingGroupsLeadDerivedGoals(t *testing.T) {
 	pf := minimalDoc(t)
 	pf.Extensions = ciNodes(map[string]any{keyName: nodePublished, keyGoal: true, keyDescription: descPublish})
 	pf.Extensions[readmeNS] = map[string]any{
-		"building": []any{group("clone", "Clone the repository:", "git clone "+urlExampleRepo)},
+		blockBuilding: []any{group("clone", "Clone the repository:", "git clone "+urlExampleRepo)},
 	}
 
 	out := renderDoc(t, t.TempDir(), pf)

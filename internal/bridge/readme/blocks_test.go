@@ -186,7 +186,7 @@ func TestAcknowledgementsBlockRendersGroups(t *testing.T) {
 		pfmodel.AcknowledgementsExtensionNS: map[string]any{
 			"contributors": []any{"Jane Doe"},
 			"sponsors": []any{map[string]any{
-				"name":   "Acme Corp",
+				keyName:  "Acme Corp",
 				"url":    "https://acme.example",
 				"detail": "server time",
 			}},
@@ -643,7 +643,7 @@ func TestRenderUsesExtraContentPerLang(t *testing.T) {
 		readmeNS: map[string]any{
 			"extras": []any{
 				map[string]any{
-					"name": "special-psa",
+					keyName: "special-psa",
 					"content": map[string]any{
 						"en": "Important notice in English",
 						"es": "Aviso importante en español",

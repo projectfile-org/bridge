@@ -303,7 +303,7 @@ A sink split takes precedence; a group naming no declared axis stays one fence.
 A cell any global or per-node `matrix.exclude` entry names renders nowhere, the
 same cells CI never builds.
 
-**Cell list.** A group whose one fence picks its platform at run time (`uname`)
+**Cell list.** A group whose one fence picks its platform at runtime (`uname`)
 still has to say which platforms exist. `cells` takes any template carrying the
 axes — `"{GOOS}/{GOARCH}"`, or the artifact’s own `${…{kind=binary}.asset}` — and
 lists every non-excluded cell under the fence, labelled as a per-cell subsection
