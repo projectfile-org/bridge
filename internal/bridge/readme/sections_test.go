@@ -155,7 +155,7 @@ func TestGroupsAreAlternativesNotSteps(t *testing.T) {
 	pf.Extensions = map[string]any{
 		artifactsNS: map[string]any{
 			"primary": map[string]any{keyKind: pfmodel.ArtifactKindImage, keyRef: "kiota.ch/x/foo:latest"},
-			"lib":     map[string]any{keyKind: pfmodel.ArtifactKindPackage, "registry": "npm", keyName: "foo"},
+			"lib":     map[string]any{keyKind: pfmodel.ArtifactKindPackage, "registry": nameNpm, keyName: "foo"},
 		},
 		readmeNS: map[string]any{
 			blockInstallation: []any{
@@ -174,6 +174,20 @@ func TestGroupsAreAlternativesNotSteps(t *testing.T) {
 	assert.Contains(t, out, "```sh\ndocker pull kiota.ch/x/foo:latest\n```")
 	// Two fences, not one shared block holding both commands.
 	assert.NotContains(t, out, "npm install foo\ndocker pull")
+}
+
+// TestArtifactLineNamesExportedCommand: an artifact exporting a command says so after its address.
+func TestArtifactLineNamesExportedCommand(t *testing.T) {
+	pf := minimalDoc(t)
+	pf.Extensions = map[string]any{
+		artifactsNS: map[string]any{
+			"npm-package": map[string]any{keyKind: pfmodel.ArtifactKindPackage, "registry": nameNpm, keyName: "@scope/foo", "command": "${identity.name}"},
+		},
+	}
+
+	out := renderDoc(t, t.TempDir(), pf)
+
+	assert.Contains(t, out, "- **npm package** `@scope/foo` — command `"+minimalDoc(t).Identity.Name+"`\n", "the command is interpolated")
 }
 
 // TestGroupRedeclarationReplacesInPlace: includes union sequences, so overriding
@@ -1210,6 +1224,9 @@ func TestPlatformsBlockFallsBackToFleetDefault(t *testing.T) {
 	assert.NotContains(t, renderDoc(t, t.TempDir(), pf), "## Supported platforms")
 }
 
+// scopedPkg is a scoped package name the address cases share.
+const scopedPkg = "@scope/x"
+
 // TestArtifactAddressPicksByKind pins the per-kind address chain: the ONE string
 // that identifies each artifact to a reader.
 func TestArtifactAddressPicksByKind(t *testing.T) {
@@ -1221,7 +1238,8 @@ func TestArtifactAddressPicksByKind(t *testing.T) {
 		{"image by ref", pfmodel.Artifact{Kind: pfmodel.ArtifactKindImage, Ref: "r/i:1"}, "r/i:1"},
 		{"binary by command", pfmodel.Artifact{Kind: pfmodel.ArtifactKindBinary, Command: "pf-cli", Path: pathCLI}, "pf-cli"},
 		{"binary falls back to path", pfmodel.Artifact{Kind: pfmodel.ArtifactKindBinary, Path: pathCLI}, pathCLI},
-		{"package by name", pfmodel.Artifact{Kind: pfmodel.ArtifactKindPackage, Name: "@scope/x"}, "@scope/x"},
+		{"package by name", pfmodel.Artifact{Kind: pfmodel.ArtifactKindPackage, Name: scopedPkg}, scopedPkg},
+		{"package by name before its command", pfmodel.Artifact{Kind: pfmodel.ArtifactKindPackage, Name: scopedPkg, Command: "x"}, scopedPkg},
 		{"module by path", pfmodel.Artifact{Kind: pfmodel.ArtifactKindModule, Module: "kiota.ch/x/v2"}, "kiota.ch/x/v2"},
 		{"website by url", pfmodel.Artifact{Kind: pfmodel.ArtifactKindWebsite, URL: "https://x"}, "https://x"},
 		{"unknown kind still resolves", pfmodel.Artifact{Kind: "helm-chart", Path: "charts/x"}, "charts/x"},

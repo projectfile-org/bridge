@@ -422,6 +422,11 @@ org:
         command: pf-bridge            # what a user types
         module: kiota.ch/x/bridge     # what `go install` fetches
         path: dist/pf-bridge          # what a size analyzer measures
+      npm-package:
+        kind: package
+        registry: npm
+        name: "@scope/lint"
+        command: lint                 # a package exports a command too
       db:
         kind: service
         summary: MySQL-compatible database
@@ -435,16 +440,19 @@ renders:
 ```markdown
 ## What this provides
 
-- **Executable** `pf-bridge`
+- **Executable** `pf-bridge` — command `pf-bridge`
+- **npm package** `@scope/lint` — command `lint`
 - **Service** `db` — listens on `3306`, `9104 (metrics)` — MySQL-compatible database
 ```
 
 Each artifact is shown by the one string that identifies it to a reader: `ref`
 for an image, `command` for a binary, `name` for a package, `module` for a
 library, `url` for a site — falling back to the declared key, so a service
-identified only by its ports still has a label. The kind’s display text comes
-from the message catalog under `artifact.kind.<kind>`, so a project inventing a
-kind gets a correct line immediately and only its label needs a catalog entry.
+identified only by its ports still has a label. Any artifact exporting a
+`command` names it after that string. The kind’s display text comes from the
+message catalog under `artifact.kind.<kind>.<registry>`, else
+`artifact.kind.<kind>`, so a project inventing a kind gets a correct line
+immediately and only its label needs a catalog entry.
 
 ## Sinks
 

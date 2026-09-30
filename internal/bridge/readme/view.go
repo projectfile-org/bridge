@@ -96,13 +96,15 @@ type artifactView struct {
 	Kind    string
 	Label   string
 	Address string
+	// Command is what the artifact exports for a user to type, shown after its address.
+	Command string
 	Summary string
 	Ports   []string
 }
 
 // artifactAddress picks the ONE string that identifies an artifact to a reader.
-// The order is a fallback chain, not a preference list: a binary is named by the
-// command it installs as, and only failing that by the path it was built to.
+// The order is a fallback chain, not a preference list: a package is named by what
+// it is published as, a binary by the command it exports, and only failing that by the path it was built to.
 //
 // It is kind-BLIND on purpose, walking the same fields in the same order for
 // every artifact, which is what keeps the kind vocabulary open — declaring
@@ -110,7 +112,7 @@ type artifactView struct {
 // catalog entry. The declared Key is the last resort so a SERVICE, whose whole
 // identity is the ports it answers on, still has something to print.
 func artifactAddress(a pfmodel.Artifact) string {
-	for _, candidate := range []string{a.Ref, a.Command, a.Name, a.Module, a.URL, a.Path, a.Key} {
+	for _, candidate := range []string{a.Ref, a.Name, a.Command, a.Module, a.URL, a.Path, a.Key} {
 		if candidate != "" {
 			return candidate
 		}
@@ -141,6 +143,7 @@ func buildArtifacts(doc *projectfile.Document, lang string) []artifactView {
 				Kind:    a.Kind,
 				Label:   artifactKindLabel(a.Kind, a.Registry, lang),
 				Address: shortRef(address),
+				Command: expandProse(doc, a.Command, a.Key),
 				Summary: sectionText(a.Summary, a.SummaryByLang, lang),
 				Ports:   artifactPorts(a),
 			})

@@ -88,6 +88,7 @@ usage.inputs.required: required
 # back to the bare kind string until it gets one).
 artifacts.title: What this provides
 artifacts.ports: listens on
+artifacts.command: command
 platforms.title: Supported platforms
 artifact.kind.image: Container image
 artifact.kind.binary: Executable

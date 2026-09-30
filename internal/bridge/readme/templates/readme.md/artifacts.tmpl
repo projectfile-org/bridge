@@ -1,6 +1,6 @@
 {{- with artifacts}}
 ## {{t "artifacts.title"}}
 
-{{range .}}- {{with .Label}}**{{.}}** {{end}}`{{.Address}}`{{with .Ports}} — {{t "artifacts.ports"}} {{range $i, $p := .}}{{if $i}}, {{end}}`{{$p}}`{{end}}{{end}}{{with .Summary}} — {{.}}{{end}}
+{{range .}}- {{with .Label}}**{{.}}** {{end}}`{{.Address}}`{{with .Command}} — {{t "artifacts.command"}} `{{.}}`{{end}}{{with .Ports}} — {{t "artifacts.ports"}} {{range $i, $p := .}}{{if $i}}, {{end}}`{{$p}}`{{end}}{{end}}{{with .Summary}} — {{.}}{{end}}
 {{end -}}
 {{- end}}
