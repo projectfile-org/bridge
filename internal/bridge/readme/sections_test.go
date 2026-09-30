@@ -470,6 +470,24 @@ func TestSameSinkGroupsJoinPerSink(t *testing.T) {
 	assert.Equal(t, 1, strings.Count(out, "### Pull from GHCR"), "a joined group adds no second heading")
 }
 
+// TestLoneSinkUsageDropsHeading: usage naming one of several sinks renders one fence with no per-sink heading.
+func TestLoneSinkUsageDropsHeading(t *testing.T) {
+	pf := minimalDoc(t)
+	pf.Extensions = map[string]any{
+		sinksNS: map[string]any{
+			sinkKiota: map[string]any{keyRef: refSinkKiota, pfmodel.SinkRoleKey: "fallback"},
+			sinkGhcr:  map[string]any{keyRef: refSinkGhcr, pfmodel.SinkRoleKey: pfmodel.SinkRolePrimary, pfmodel.SinkLabelKey: labelGhcr},
+		},
+		artifactsNS: imageArtifact("${org.projectfile.sinks{role=primary}.ref}"),
+		readmeNS: map[string]any{blockUsage: []any{group(keyImage, "Run it:", "docker run ${org.projectfile.artifacts{kind=image}.ref}")}},
+	}
+
+	out := renderDoc(t, t.TempDir(), pf)
+
+	assert.Contains(t, out, "Run it:\n\n```sh\ndocker run ghcr.io/o/demo:latest\n```")
+	assert.NotContains(t, out, "### From GHCR")
+}
+
 // TestProseLessGroupContinuesSingleFence: an untitled group with no prose extends the one fence before it, ahead of that group's postfix.
 func TestProseLessGroupContinuesSingleFence(t *testing.T) {
 	pf := minimalDoc(t)

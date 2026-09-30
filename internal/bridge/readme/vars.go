@@ -262,7 +262,8 @@ func buildSectionGroup(doc *projectfile.Document, group pfmodel.ReadmeSectionGro
 	// would erase the match.
 	sinks := readmeSinks(doc)
 	subgroups, bucketed := bucketBySink(sinks, expanded)
-	if bucketed && len(sinks) > 1 {
+	// A lone sink heading only earns its place in Installation, where it names the registry’s platforms
+	if bucketed && len(sinks) > 1 && (len(subgroups) > 1 || section == blockInstallation) {
 		for i := range subgroups {
 			subgroups[i].Commands = firstCell(subgroups[i].Commands, matrix)
 			subgroups[i].Heading = translate(lang, section+".sink") + " " + subgroups[i].Label
