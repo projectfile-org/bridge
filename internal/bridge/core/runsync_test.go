@@ -77,7 +77,11 @@ func (s *stubSyncer) BuildMappers(extDoc any, pf *projectfile.Document) core.Map
 			PFKey:  "identity.name",
 			FromPF: func(force bool) string {
 				if pf.Identity.Name == "" {
-					return ""
+					if d.fields["name"] == "" || !force {
+						return ""
+					}
+					delete(d.fields, "name")
+					return core.Removed
 				}
 				if d.fields["name"] != "" && !force {
 					return ""
@@ -184,8 +188,8 @@ func TestRunSyncPFWinsRegardlessOfMtime(t *testing.T) {
 	assert.Equal(t, "from-pf", pf.Identity.Name)
 }
 
-// ModeSync gap-fills: an empty pf field takes the ext value (the backfill case).
-func TestRunSyncEmptyPFFieldGapFillsFromExt(t *testing.T) {
+// ModeSync never reads back: a field the pf lacks is cleared from ext, not imported.
+func TestRunSyncEmptyPFFieldClearsExt(t *testing.T) {
 	dir := t.TempDir()
 	pfPath := writePFFile(t, dir, "---\nidentity:\n  name: \"\"\n")
 	syn := &stubSyncer{filename: testStubJSON, exists: true}
@@ -194,8 +198,9 @@ func TestRunSyncEmptyPFFieldGapFillsFromExt(t *testing.T) {
 
 	res, err := core.RunSync(syn, pf, opts)
 	require.NoError(t, err)
-	assert.True(t, res.PFChanged, "an empty pf field must gap-fill from ext")
-	assert.Equal(t, "from-ext", pf.Identity.Name)
+	assert.False(t, res.PFChanged, "an empty pf field must never be filled from ext")
+	assert.True(t, res.ExtChanged, "an ext field the pf lacks must be cleared")
+	assert.Empty(t, pf.Identity.Name)
 }
 
 func TestRunSyncNoCreateRefuses(t *testing.T) {

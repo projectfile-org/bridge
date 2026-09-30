@@ -110,7 +110,10 @@ func mapDescription(doc *Document, pf *projectfile.Document) core.FieldMapper {
 		},
 		FromPF: func(force bool) string {
 			s := projectfile.ExtractLocalizedString(pf.Identity.Summary)
-			if s == "" || strings.TrimSpace(doc.Description) == s {
+			if s == "" {
+				return core.ClearExt(force, &doc.Description)
+			}
+			if strings.TrimSpace(doc.Description) == s {
 				return ""
 			}
 			if doc.Description != "" && !force {
@@ -147,10 +150,10 @@ func mapAuthors(doc *Document, pf *projectfile.Document) core.FieldMapper {
 			}
 			return fmt.Sprintf("%d author(s) merged", len(incoming))
 		},
-		FromPF: func(_ bool) string {
+		FromPF: func(force bool) string {
 			authors := filterByRole(pf.People, "author")
 			if len(authors) == 0 {
-				return ""
+				return core.ClearExt(force, &doc.Authors)
 			}
 			entries := make([]string, 0, len(authors))
 			for _, p := range authors {
@@ -193,11 +196,14 @@ func mapCrystal(doc *Document, pf *projectfile.Document) core.FieldMapper {
 			return doc.Crystal
 		},
 		FromPF: func(force bool) string {
-			if pf.Requirements == nil {
-				return ""
+			want := ""
+			if pf.Requirements != nil {
+				want = pf.Requirements.Runtime[crystalRequirementKey]
 			}
-			want := pf.Requirements.Runtime[crystalRequirementKey]
-			if want == "" || doc.Crystal == want {
+			if want == "" {
+				return core.ClearExt(force, &doc.Crystal)
+			}
+			if doc.Crystal == want {
 				return ""
 			}
 			if doc.Crystal != "" && !force {
@@ -233,7 +239,10 @@ func mapLicense(doc *Document, pf *projectfile.Document) core.FieldMapper {
 		},
 		FromPF: func(force bool) string {
 			if pf.License == nil || pf.License.Spdx == "" {
-				return ""
+				if isURL(doc.License) {
+					return ""
+				}
+				return core.ClearExt(force, &doc.License)
 			}
 			if doc.License == pf.License.Spdx {
 				return ""
@@ -267,7 +276,10 @@ func mapHomepage(doc *Document, pf *projectfile.Document) core.FieldMapper {
 		},
 		FromPF: func(force bool) string {
 			url := pfmodel.LinkURL(pf, projectfile.LinkHomepage)
-			if url == "" || doc.Homepage == url {
+			if url == "" {
+				return core.ClearExt(force, &doc.Homepage)
+			}
+			if doc.Homepage == url {
 				return ""
 			}
 			if doc.Homepage != "" && !force {
@@ -304,7 +316,7 @@ func mapRepository(doc *Document, pf *projectfile.Document) core.FieldMapper {
 		FromPF: func(force bool) string {
 			primary := pfmodel.PrimaryRepository(pf)
 			if primary == nil || primary.URL == "" {
-				return ""
+				return core.ClearExt(force, &doc.Repository)
 			}
 			if doc.Repository == primary.URL {
 				return ""
@@ -338,7 +350,10 @@ func mapDocumentation(doc *Document, pf *projectfile.Document) core.FieldMapper 
 		},
 		FromPF: func(force bool) string {
 			url := pfmodel.MainDocumentationURL(pf)
-			if url == "" || doc.Documentation == url {
+			if url == "" {
+				return core.ClearExt(force, &doc.Documentation)
+			}
+			if doc.Documentation == url {
 				return ""
 			}
 			if doc.Documentation != "" && !force {

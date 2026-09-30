@@ -105,7 +105,7 @@ func buildMappers(pkg *Document, pf *projectfile.Document) core.MapperList {
 			FromPF: func(force bool) string {
 				s := projectfile.ExtractLocalizedString(pf.Identity.Summary)
 				if s == "" {
-					return ""
+					return core.ClearExt(force, &pkg.Description)
 				}
 				if pkg.Description == s {
 					return ""
@@ -139,7 +139,7 @@ func buildMappers(pkg *Document, pf *projectfile.Document) core.MapperList {
 			},
 			FromPF: func(force bool) string {
 				if pf.License == nil || pf.License.Spdx == "" {
-					return ""
+					return core.ClearExt(force, &pkg.License)
 				}
 				if pkg.License == pf.License.Spdx {
 					return ""
@@ -170,7 +170,7 @@ func buildMappers(pkg *Document, pf *projectfile.Document) core.MapperList {
 			FromPF: func(force bool) string {
 				url := pfmodel.LinkURL(pf, projectfile.LinkHomepage)
 				if url == "" {
-					return ""
+					return core.ClearExt(force, &pkg.Homepage)
 				}
 				if pkg.Homepage == url {
 					return ""
@@ -209,7 +209,7 @@ func buildMappers(pkg *Document, pf *projectfile.Document) core.MapperList {
 			FromPF: func(force bool) string {
 				primary := pfmodel.PrimaryRepository(pf)
 				if primary == nil || primary.URL == "" {
-					return ""
+					return core.ClearExt(force, &pkg.Repository)
 				}
 				if pkg.Repository != nil && !force {
 					return ""
@@ -245,7 +245,7 @@ func buildMappers(pkg *Document, pf *projectfile.Document) core.MapperList {
 			FromPF: func(force bool) string {
 				url := pfmodel.LinkURL(pf, projectfile.LinkBugs)
 				if url == "" {
-					return ""
+					return core.ClearExt(force, &pkg.Bugs)
 				}
 				if pkg.Bugs != nil && !force {
 					return ""
@@ -274,7 +274,7 @@ func buildMappers(pkg *Document, pf *projectfile.Document) core.MapperList {
 			},
 			FromPF: func(force bool) string {
 				if len(pf.Keywords) == 0 {
-					return ""
+					return core.ClearExt(force, &pkg.Keywords)
 				}
 				if equalStringSlice(pkg.Keywords, pf.Keywords) {
 					return ""
@@ -324,7 +324,7 @@ func buildMappers(pkg *Document, pf *projectfile.Document) core.MapperList {
 				}
 				return fmt.Sprintf("%d person(s) merged", len(incoming))
 			},
-			FromPF: func(_ bool) string {
+			FromPF: func(force bool) string {
 				// Skip pf entries whose npm projection has no name/email/url:
 				// emitting empty `{}` placeholders into package.json is pure
 				// noise, and historical bugs (see ParsePerson) could leave
@@ -335,7 +335,11 @@ func buildMappers(pkg *Document, pf *projectfile.Document) core.MapperList {
 				// re-asserting the same value on every sync.
 				var parts []string
 
-				if authors := filterByRole(pf.People, "author"); len(authors) > 0 {
+				authors := filterByRole(pf.People, "author")
+				if len(authors) == 0 && core.ClearExt(force, &pkg.Author) != "" {
+					parts = append(parts, "author "+core.Removed)
+				}
+				if len(authors) > 0 {
 					newAuthor := pfPersonToNPM(authors[0])
 					if !newAuthor.IsEmpty() {
 						existing := ParsePerson(pkg.Author)
@@ -346,7 +350,11 @@ func buildMappers(pkg *Document, pf *projectfile.Document) core.MapperList {
 					}
 				}
 
-				if contribs := filterByRole(pf.People, "contributor"); len(contribs) > 0 {
+				contribs := filterByRole(pf.People, "contributor")
+				if len(contribs) == 0 && core.ClearExt(force, &pkg.Contributors) != "" {
+					parts = append(parts, "contributors "+core.Removed)
+				}
+				if len(contribs) > 0 {
 					var entries []Person
 					for _, c := range contribs {
 						if person := pfPersonToNPM(c); !person.IsEmpty() {
@@ -363,7 +371,11 @@ func buildMappers(pkg *Document, pf *projectfile.Document) core.MapperList {
 					}
 				}
 
-				if maintainers := filterByRole(pf.People, "maintainer"); len(maintainers) > 0 {
+				maintainers := filterByRole(pf.People, "maintainer")
+				if len(maintainers) == 0 && core.ClearExt(force, &pkg.Maintainers) != "" {
+					parts = append(parts, "maintainers "+core.Removed)
+				}
+				if len(maintainers) > 0 {
 					var entries []Person
 					for _, m := range maintainers {
 						if person := pfPersonToNPM(m); !person.IsEmpty() {
@@ -404,7 +416,7 @@ func buildMappers(pkg *Document, pf *projectfile.Document) core.MapperList {
 			},
 			FromPF: func(force bool) string {
 				if pf.Requirements == nil || len(pf.Requirements.Runtime) == 0 {
-					return ""
+					return core.ClearExt(force, &pkg.Engines)
 				}
 				if equalStringMap(pkg.Engines, pf.Requirements.Runtime) {
 					return ""
@@ -444,13 +456,12 @@ func buildMappers(pkg *Document, pf *projectfile.Document) core.MapperList {
 				return fmt.Sprintf("%d entr(y/ies)", len(entries))
 			},
 			FromPF: func(force bool) string {
-				ext, _ := pfmodel.GetFundingExtension(pf)
-				if ext == nil {
-					return ""
+				var urls []string
+				if ext, _ := pfmodel.GetFundingExtension(pf); ext != nil {
+					urls = extensionFundingURLs(ext)
 				}
-				urls := extensionFundingURLs(ext)
 				if len(urls) == 0 {
-					return ""
+					return core.ClearExt(force, &pkg.Funding)
 				}
 				if pkg.Funding != nil && !force {
 					return ""
@@ -508,7 +519,11 @@ func mapPlatformList(
 		FromPF: func(force bool) string {
 			current := extensionStringList(pf, ns)
 			if len(current) == 0 {
-				return ""
+				if !force || len(npmGet()) == 0 {
+					return ""
+				}
+				npmSet(nil)
+				return core.Removed
 			}
 			npmList := toNPM(current)
 			if equalStringSlice(npmGet(), npmList) {

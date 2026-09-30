@@ -28,6 +28,9 @@ const (
 // constant keeps the vocabulary consistent.
 const pfKeyFunding = "funding"
 
+// fundingAliases are the [project.urls] labels read as the funding URL.
+var fundingAliases = []string{pfKeyFunding, "donate"}
+
 // buildMappers returns one FieldMapper per synced PEP 621 field. The shape
 // mirrors drivers/npm and drivers/cff: per-field closure pair, force-aware,
 // returns a short display string when a change happens.
@@ -186,7 +189,10 @@ func mapDescription(py *Document, pf *projectfile.Document, dyn map[string]bool)
 				return ""
 			}
 			s := projectfile.ExtractLocalizedString(pf.Identity.Summary)
-			if s == "" || py.Project.Description == s {
+			if s == "" {
+				return core.ClearExt(force, &py.Project.Description)
+			}
+			if py.Project.Description == s {
 				return ""
 			}
 			if py.Project.Description != "" && !force {
@@ -220,11 +226,17 @@ func mapRequiresPython(py *Document, pf *projectfile.Document, dyn map[string]bo
 			return py.Project.RequiresPython
 		},
 		FromPF: func(force bool) string {
-			if dyn["requires-python"] || pf.Requirements == nil {
+			if dyn["requires-python"] {
 				return ""
 			}
-			val := pf.Requirements.Runtime["python"]
-			if val == "" || py.Project.RequiresPython == val {
+			val := ""
+			if pf.Requirements != nil {
+				val = pf.Requirements.Runtime["python"]
+			}
+			if val == "" {
+				return core.ClearExt(force, &py.Project.RequiresPython)
+			}
+			if py.Project.RequiresPython == val {
 				return ""
 			}
 			if py.Project.RequiresPython != "" && !force {
@@ -272,7 +284,7 @@ func mapLicense(py *Document, pf *projectfile.Document, dyn map[string]bool) cor
 				return ""
 			}
 			if pf.License == nil {
-				return ""
+				return core.ClearExt(force, &py.Project.License)
 			}
 			// Prefer the PEP 639 string form on write — that's the modern
 			// canonical shape and what new tooling emits.
@@ -303,7 +315,7 @@ func mapLicense(py *Document, pf *projectfile.Document, dyn map[string]bool) cor
 					return core.Trunc(s)
 				}
 			}
-			return ""
+			return core.ClearExt(force, &py.Project.License)
 		},
 	}
 }
@@ -332,12 +344,15 @@ func mapLicenseFiles(py *Document, pf *projectfile.Document, dyn map[string]bool
 			return fmt.Sprintf("%d file(s)", len(incoming))
 		},
 		FromPF: func(force bool) string {
-			if dyn["license-files"] || pf.License == nil || pf.License.File == nil {
+			if dyn["license-files"] {
 				return ""
 			}
-			files := licenseFileAsList(pf.License.File)
+			var files []string
+			if pf.License != nil && pf.License.File != nil {
+				files = licenseFileAsList(pf.License.File)
+			}
 			if len(files) == 0 {
-				return ""
+				return core.ClearExt(force, &py.Project.LicenseFiles)
 			}
 			// Only emit license-files for list-shaped values; a single string
 			// flows through mapLicense as {file: ...} legacy shape.
@@ -404,7 +419,11 @@ func mapPeopleRole(
 		FromPF: func(_ bool) string {
 			roles := filterByRole(pf.People, role)
 			if len(roles) == 0 {
-				return ""
+				if len(get()) == 0 {
+					return ""
+				}
+				set(nil)
+				return core.Removed
 			}
 			newPeople := pfPeopleToPy(roles)
 			if equalPyPersons(get(), newPeople) {
@@ -442,7 +461,7 @@ func mapKeywords(py *Document, pf *projectfile.Document) core.FieldMapper {
 		FromPF: func(force bool) string {
 			bare := extractBareKeywords(pf.Keywords)
 			if len(bare) == 0 {
-				return ""
+				return core.ClearExt(force, &py.Project.Keywords)
 			}
 			if equalStringSet(py.Project.Keywords, bare) {
 				return ""
@@ -488,7 +507,7 @@ func mapClassifiers(py *Document, pf *projectfile.Document) core.FieldMapper {
 		FromPF: func(force bool) string {
 			stored := extStringList(pf, "classifiers")
 			if len(stored) == 0 {
-				return ""
+				return core.ClearExt(force, &py.Project.Classifiers)
 			}
 			if equalStringSlice(py.Project.Classifiers, stored) {
 				return ""
@@ -571,7 +590,7 @@ func mapURLFunding(py *Document, pf *projectfile.Document) core.FieldMapper {
 	return core.FieldMapper{
 		ExtKey: "urls.Funding", PFKey: "[org.projectfile.funding]",
 		ToPF: func(force bool) string {
-			url := findURLAnyLabel(py.Project.URLs, []string{pfKeyFunding, "donate"})
+			url := findURLAnyLabel(py.Project.URLs, fundingAliases)
 			if url == "" {
 				return ""
 			}
@@ -592,15 +611,14 @@ func mapURLFunding(py *Document, pf *projectfile.Document) core.FieldMapper {
 			return core.Trunc(url)
 		},
 		FromPF: func(force bool) string {
-			ext, _ := pfmodel.GetFundingExtension(pf)
-			if ext == nil || len(ext.Custom) == 0 {
-				return ""
+			url := ""
+			if ext, _ := pfmodel.GetFundingExtension(pf); ext != nil && len(ext.Custom) > 0 {
+				url = ext.Custom[0]
 			}
-			url := ext.Custom[0]
 			if url == "" {
-				return ""
+				return dropURL(py, force, fundingAliases)
 			}
-			existingKey, existing, found := findURLEntry(py.Project.URLs, []string{pfKeyFunding, "donate"})
+			existingKey, existing, found := findURLEntry(py.Project.URLs, fundingAliases)
 			if found && existing == url {
 				return ""
 			}
@@ -738,7 +756,7 @@ func mapURLString(
 		FromPF: func(force bool) string {
 			url := getPF()
 			if url == "" {
-				return ""
+				return dropURL(py, force, aliases)
 			}
 			existingKey, existing, found := findURLEntry(py.Project.URLs, aliases)
 			if found && existing == url {
@@ -862,6 +880,16 @@ func equalPyPersons(a, b []Person) bool {
 }
 
 // --- URL lookup helpers ---
+
+// dropURL removes the [project.urls] entry any of aliases names.
+func dropURL(py *Document, force bool, aliases []string) string {
+	key, _, found := findURLEntry(py.Project.URLs, aliases)
+	if !force || !found {
+		return ""
+	}
+	delete(py.Project.URLs, key)
+	return core.Removed
+}
 
 // findURLAnyLabel is a convenience for the read path — returns the value
 // associated with any of `aliases` (case-insensitive), or "" if none match.

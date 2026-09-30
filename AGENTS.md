@@ -434,6 +434,17 @@ REUSE header when the leading comment block carries no SPDX tags. A header
 that is already there, hand-written or stale, always wins untouched: the
 projectfile is not authoritative for the file’s rights-holder.
 
+**A sync never reads the file back.** The default direction is `to`: a mapped
+field the projectfile lacks is CLEARED from the file (`core.ClearExt`, and each
+writer drops the emptied key), so deleting a link or a keyword from the
+projectfile really deletes it. A file’s values reach the projectfile only at
+creation (`pf-bridge init`, via `internal/source`) or on an explicit `from`.
+A gap-filling sync made every deletion bounce straight back from the file.
+Exempt, because the file owns them: `name`/`version` (the package’s identity),
+CFF `title`/`authors` (schema-required), the ecosystem passthroughs under
+`org.python.pep621` / `org.packagist.composer`, and composer’s platform
+`require` — a dependency set, which the projectfile no longer carries.
+
 **A single documentation slot selects by tag, never by type.** An include can
 union “a piece of documentation” onto every project (the shared spec site in
 `m6e/core/conventions.yaml`), so `links[type=documentation]` alone cannot say

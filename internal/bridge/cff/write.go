@@ -190,10 +190,23 @@ func paintTypedFieldsOntoCanvas(doc *Document, canvas *rawdoc.YAMLNode) error {
 		return fmt.Errorf("encoded CFF document is not a mapping (kind %d)", tmp.Kind)
 	}
 
+	painted := map[string]bool{}
 	for i := 0; i+1 < len(tmp.Content); i += 2 {
 		keyNode := tmp.Content[i]
 		valNode := tmp.Content[i+1]
 		canvas.SetNode(keyNode.Value, valNode)
+		painted[keyNode.Value] = true
+	}
+	for _, k := range mappedKeys {
+		if !painted[k] {
+			canvas.Delete(k)
+		}
 	}
 	return nil
+}
+
+// mappedKeys are the top-level keys the mappers own; one absent from the typed view was cleared.
+var mappedKeys = []string{
+	"abstract", "contact", "date-released", cffKeyKeywords, "license", "repository-code",
+	cffKeyURL, cffKeyDOI, "identifiers", "preferred-citation",
 }

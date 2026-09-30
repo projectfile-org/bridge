@@ -344,3 +344,22 @@ func TestPlatformFromParsedExtensionFields(t *testing.T) {
 	assert.Equal(t, []string{testLinux, "win32"}, doc.OS)
 	assert.Equal(t, []string{"x64"}, doc.CPU)
 }
+
+// TestWriteDropsClearedMappedKey pins that a cleared mapped field leaves package.json while foreign keys stay.
+func TestWriteDropsClearedMappedKey(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "package.json")
+	require.NoError(t, os.WriteFile(path, []byte(`{"name":"x","private":false,"bugs":{"url":"https://stale.test/issues"},"scripts":{"t":"true"}}`), 0o644))
+	doc, err := npm.Read(dir)
+	require.NoError(t, err)
+	doc.Bugs = nil
+	require.NoError(t, npm.Write(dir, doc))
+
+	var got map[string]any
+	data, err := os.ReadFile(path)
+	require.NoError(t, err)
+	require.NoError(t, json.Unmarshal(data, &got))
+	assert.NotContains(t, got, "bugs")
+	assert.Contains(t, got, "scripts")
+	assert.Contains(t, got, "private")
+}

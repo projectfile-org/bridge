@@ -80,6 +80,9 @@ func (r *Result) Format() string {
 }
 
 func formatField(f FieldChange) string {
+	if f.Value == Removed {
+		return fmt.Sprintf("  %s removed from %s (absent from %s)", f.Key, f.To, f.From)
+	}
 	return fmt.Sprintf("  %s (%s) copied from %s to %s", f.Key, f.Value, f.From, f.To)
 }
 

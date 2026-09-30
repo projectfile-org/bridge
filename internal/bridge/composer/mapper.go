@@ -172,7 +172,10 @@ func mapDescription(pkg *Document, pf *projectfile.Document) core.FieldMapper {
 		},
 		FromPF: func(force bool) string {
 			s := projectfile.ExtractLocalizedString(pf.Identity.Summary)
-			if s == "" || pkg.Description == s {
+			if s == "" {
+				return core.ClearExt(force, &pkg.Description)
+			}
+			if pkg.Description == s {
 				return ""
 			}
 			if pkg.Description != "" && !force {
@@ -198,7 +201,10 @@ func mapTime(pkg *Document, pf *projectfile.Document) core.FieldMapper {
 			return pkg.Time
 		},
 		FromPF: func(force bool) string {
-			if pf.Identity.Released == "" || pkg.Time == pf.Identity.Released {
+			if pf.Identity.Released == "" {
+				return core.ClearExt(force, &pkg.Time)
+			}
+			if pkg.Time == pf.Identity.Released {
 				return ""
 			}
 			if pkg.Time != "" && !force {
@@ -236,7 +242,7 @@ func mapLicense(pkg *Document, pf *projectfile.Document) core.FieldMapper {
 		},
 		FromPF: func(force bool) string {
 			if pf.License == nil || pf.License.Spdx == "" {
-				return ""
+				return core.ClearExt(force, &pkg.License)
 			}
 			cur := LicenseString(pkg.License)
 			if cur == pf.License.Spdx {
@@ -310,7 +316,10 @@ func mapSupportSource(pkg *Document, pf *projectfile.Document) core.FieldMapper 
 		FromPF: func(force bool) string {
 			primary := pfmodel.PrimaryRepository(pf)
 			if primary == nil || primary.URL == "" {
-				return ""
+				if pkg.Support == nil {
+					return ""
+				}
+				return core.ClearExt(force, &pkg.Support.Source)
 			}
 			url := primary.URL
 			existing := ""
@@ -408,7 +417,11 @@ func mapSupportURL(
 		FromPF: func(force bool) string {
 			v := pfGet()
 			if v == "" {
-				return ""
+				if !force || supportGet() == "" {
+					return ""
+				}
+				supportSet("")
+				return core.Removed
 			}
 			existing := supportGet()
 			if existing == v {
@@ -443,7 +456,7 @@ func mapKeywords(pkg *Document, pf *projectfile.Document) core.FieldMapper {
 		},
 		FromPF: func(force bool) string {
 			if len(pf.Keywords) == 0 {
-				return ""
+				return core.ClearExt(force, &pkg.Keywords)
 			}
 			if equalStringSlice(pkg.Keywords, pf.Keywords) {
 				return ""
@@ -482,10 +495,10 @@ func mapPeople(pkg *Document, pf *projectfile.Document) core.FieldMapper {
 			}
 			return fmt.Sprintf("%d author(s) merged", len(incoming))
 		},
-		FromPF: func(_ bool) string {
+		FromPF: func(force bool) string {
 			authors := filterByRole(pf.People, "author")
 			if len(authors) == 0 {
-				return ""
+				return core.ClearExt(force, &pkg.Authors)
 			}
 			entries := make([]Person, 0, len(authors))
 			for _, p := range authors {
@@ -537,13 +550,12 @@ func mapFunding(pkg *Document, pf *projectfile.Document) core.FieldMapper {
 			return fmt.Sprintf("%d entr(y/ies)", len(urls))
 		},
 		FromPF: func(force bool) string {
-			ext, _ := pfmodel.GetFundingExtension(pf)
-			if ext == nil {
-				return ""
+			var urls []string
+			if ext, _ := pfmodel.GetFundingExtension(pf); ext != nil {
+				urls = composerExtFundingURLs(ext)
 			}
-			urls := composerExtFundingURLs(ext)
 			if len(urls) == 0 {
-				return ""
+				return core.ClearExt(force, &pkg.Funding)
 			}
 			entries := make([]FundingEntry, len(urls))
 			for i, u := range urls {

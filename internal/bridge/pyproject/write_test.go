@@ -12,6 +12,9 @@ import (
 	"github.com/pelletier/go-toml/v2"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"kiota.ch/projectfile/core/v2/pkg/projectfile"
+	"projectfile.org/projectfile/bridge/internal/pfmodel"
 )
 
 // REUSE-IgnoreStart — the literal SPDX strings below are fixtures, not
@@ -189,4 +192,25 @@ func TestWriteKeepsTrailingBlankLine(t *testing.T) {
 				"trailing formatting outside the change must round-trip")
 		})
 	}
+}
+
+// TestSyncDropsURLTheProjectfileLacks pins that a bugs link removed from the projectfile leaves pyproject too.
+func TestSyncDropsURLTheProjectfileLacks(t *testing.T) {
+	dir := writeFixture(t, strings.Replace(fixturePyproject,
+		"Homepage = 'https://example.test'\n",
+		"Homepage = 'https://example.test'\nIssues = 'https://stale.test/issues'\n", 1))
+	doc, err := Read(dir)
+	require.NoError(t, err)
+	pf := &projectfile.Document{}
+	pfmodel.SetLink(pf, projectfile.LinkHomepage, "https://example.test", true)
+
+	for _, m := range buildMappers(doc, pf) {
+		m.FromPF(true)
+	}
+	require.NoError(t, Write(dir, doc))
+
+	got := readFile(t, dir)
+	assert.NotContains(t, got, "stale.test")
+	assert.Contains(t, got, "Homepage = 'https://example.test'")
+	assert.Empty(t, pfmodel.LinkURL(pf, projectfile.LinkBugs), "the stale URL must not reach the projectfile")
 }

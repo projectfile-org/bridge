@@ -9,7 +9,7 @@ import "io"
 // Mode picks the direction of a Syncer run. Renamed from the pre-bridge
 // vocabulary:
 //   - ModeSync (was ModeBidirectional) — projectfile authoritative,
-//     external gap-fills the pf fields that are empty.
+//     same as ModeWrite; importing is `from` or `pf-bridge init` only.
 //   - ModeWrite (was ModeFromPF) — push pf → external, no gap-fill.
 //   - ModeRead  (was ModeToPF)   — push external → pf, no gap-fill.
 //

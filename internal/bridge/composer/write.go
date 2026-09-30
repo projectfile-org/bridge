@@ -28,20 +28,28 @@ func Write(dir string, doc *Document) error {
 		canvas = rawdoc.NewOrderedJSON()
 	}
 
+	if doc.Support != nil && *doc.Support == (Support{}) {
+		doc.Support = nil
+	}
 	known, err := typedFieldsAsJSON(doc)
 	if err != nil {
 		return fmt.Errorf("marshal composer.json document: %w", err)
 	}
 	for _, k := range knownKeyOrder {
 		raw, present := known[k]
-		if !present {
-			continue
+		switch {
+		case present:
+			canvas.Set(k, raw)
+		case !keepWhenEmpty[k]:
+			canvas.Delete(k)
 		}
-		canvas.Set(k, raw)
 	}
 
 	return writeOrderedJSON(path, canvas)
 }
+
+// keepWhenEmpty are known keys whose empty value is meaningful, so an omitted typed field never deletes them.
+var keepWhenEmpty = map[string]bool{"require": true, "require-dev": true, "prefer-stable": true}
 
 // knownKeyOrder is the canonical insertion order applied when there is no
 // source ordering. Follows composer's own convention (identity first,

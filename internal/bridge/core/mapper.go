@@ -4,16 +4,15 @@
 
 package core
 
+import "reflect"
+
 // FieldMapper declares a bidirectional field conversion between an external
 // document and projectfile. Syncers return a list of these from BuildMappers,
 // closing over the two mutable documents.
 //
 // `force` controls whether a closure overwrites an existing target value or
-// only fills it when the target is empty (gap-fill semantics). The same
-// closure body supports both because the only difference is one guard —
-// which is what lets the sync algorithm run a "push from authoritative"
-// pass and then a "gap-fill from the other side" pass without two mapper
-// definitions.
+// only fills it when the target is empty (gap-fill semantics). A forced
+// FromPF with no projectfile value clears the external field via ClearExt.
 type FieldMapper struct {
 	ExtKey string // label rendered when destination is the external file
 	PFKey  string // label rendered when destination is projectfile
@@ -29,3 +28,16 @@ type FieldMapper struct {
 // MapperList is the slice returned by Syncer.BuildMappers; defining it as a
 // named type keeps driver signatures self-documenting.
 type MapperList []FieldMapper
+
+// Removed is the FieldChange display value of a field ClearExt dropped.
+const Removed = "removed"
+
+// ClearExt zeroes an external field the projectfile does not declare; empty slices and maps count as absent.
+func ClearExt[T any](force bool, field *T) string {
+	v := reflect.ValueOf(field).Elem()
+	if !force || v.IsZero() || ((v.Kind() == reflect.Slice || v.Kind() == reflect.Map) && v.Len() == 0) {
+		return ""
+	}
+	v.SetZero()
+	return Removed
+}

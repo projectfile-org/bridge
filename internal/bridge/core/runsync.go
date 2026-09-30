@@ -19,8 +19,8 @@ import (
 //     with force; default ModeSync makes the projectfile authoritative.
 //  2. If the external file does not exist, push every mapper's FromPF onto
 //     a fresh extDoc and mark Result.Created.
-//  3. With both files present, push pf → external with force=true, then
-//     external → pf with force=false so only empty pf fields gap-fill.
+//  3. With both files present, push pf → external with force=true; a field
+//     the projectfile lacks is cleared, never read back into it.
 //  4. Surface PersonConflicts to opts.Stderr.
 //  5. Persist via syn.Write / projectfile.Write only when !opts.DryRun.
 //
@@ -80,9 +80,6 @@ func RunSync(syn Syncer, pf *projectfile.Document, opts Options) (*Result, error
 		runToPF(mappers, true, res, extName, pfName)
 	case ModeSync:
 		return nil, fmt.Errorf("internal: sync mode not resolved")
-	case modePFAuthoritative:
-		runFromPF(mappers, true, res, extName, pfName)
-		runToPF(mappers, false, res, extName, pfName) // gap-fill PF from ext
 	}
 
 	emitConflicts(workPF, stderr, extName)
@@ -114,9 +111,6 @@ func RunSync(syn Syncer, pf *projectfile.Document, opts Options) (*Result, error
 
 	return res, nil
 }
-
-// Internal sentinel — ModeSync resolves into this before the switch dispatches.
-const modePFAuthoritative Mode = "_pf-authoritative"
 
 // syncCreate handles the "external file does not exist" branch.
 func syncCreate(syn Syncer, pf *projectfile.Document, opts Options, res *Result, stderr io.Writer) (*Result, error) {
@@ -174,7 +168,7 @@ func resolveMode(opts Options) (Mode, error) {
 	case ModeWrite, ModeRead:
 		return opts.Mode, nil
 	case ModeSync, "":
-		return modePFAuthoritative, nil
+		return ModeWrite, nil
 	default:
 		return "", fmt.Errorf("unknown sync mode %q", opts.Mode)
 	}

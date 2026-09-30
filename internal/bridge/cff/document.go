@@ -11,7 +11,7 @@ type Document struct {
 	Message            string         `yaml:"message"`
 	Type               string         `yaml:"type"`
 	Title              string         `yaml:"title"`
-	Abstract           string         `yaml:"abstract"`
+	Abstract           string         `yaml:"abstract,omitempty"`
 	Authors            []PersonEntity `yaml:"authors,omitempty"`
 	Contributors       []PersonEntity `yaml:"contributors,omitempty"`
 	Maintainers        []PersonEntity `yaml:"maintainers,omitempty"`

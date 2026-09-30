@@ -22,6 +22,8 @@ const orcidPrefix = "https://orcid.org/"
 const (
 	cffKeyURL = "url"
 	cffKeyDOI = "doi"
+	// cffKeyKeywords is the keywords key, shared by CFF and projectfile.
+	cffKeyKeywords = "keywords"
 )
 
 // buildMappers is the single source of truth for CFF ↔ projectfile field
@@ -92,7 +94,7 @@ func buildMappers(c *Document, pf *projectfile.Document) core.MapperList {
 			FromPF: func(force bool) string {
 				summary := projectfile.ExtractLocalizedString(pf.Identity.Summary)
 				if summary == "" {
-					return ""
+					return core.ClearExt(force, &c.Abstract)
 				}
 				if c.Abstract == summary {
 					return ""
@@ -140,7 +142,10 @@ func buildMappers(c *Document, pf *projectfile.Document) core.MapperList {
 				return c.DateReleased
 			},
 			FromPF: func(force bool) string {
-				if pf.Identity.Released == "" || pf.Identity.Released == c.DateReleased {
+				if pf.Identity.Released == "" {
+					return core.ClearExt(force, &c.DateReleased)
+				}
+				if pf.Identity.Released == c.DateReleased {
 					return ""
 				}
 				if c.DateReleased != "" && !force {
@@ -173,7 +178,7 @@ func buildMappers(c *Document, pf *projectfile.Document) core.MapperList {
 			},
 			FromPF: func(force bool) string {
 				if pf.License == nil || pf.License.Spdx == "" {
-					return ""
+					return core.ClearExt(force, &c.License)
 				}
 				expr := pf.License.Spdx
 				// CFF 1.2.0 license accepts a single SPDX ID or an array of IDs
@@ -227,7 +232,7 @@ func buildMappers(c *Document, pf *projectfile.Document) core.MapperList {
 			FromPF: func(force bool) string {
 				url := pfmodel.CitableRepositoryURL(pf)
 				if url == "" {
-					return ""
+					return core.ClearExt(force, &c.RepositoryCode)
 				}
 				if c.RepositoryCode == url {
 					return ""
@@ -258,7 +263,7 @@ func buildMappers(c *Document, pf *projectfile.Document) core.MapperList {
 			FromPF: func(force bool) string {
 				url := pfmodel.LinkURL(pf, projectfile.LinkHomepage)
 				if url == "" {
-					return ""
+					return core.ClearExt(force, &c.URL)
 				}
 				if c.URL == url {
 					return ""
@@ -271,7 +276,7 @@ func buildMappers(c *Document, pf *projectfile.Document) core.MapperList {
 			},
 		},
 		{
-			ExtKey: "keywords", PFKey: "keywords",
+			ExtKey: cffKeyKeywords, PFKey: cffKeyKeywords,
 			// Keywords: same semantics as old code — fill only when target empty.
 			// force=true would overwrite a non-empty list which is rarely desired;
 			// we still let it through so an explicit --mode from-pf / to-pf can
@@ -292,7 +297,7 @@ func buildMappers(c *Document, pf *projectfile.Document) core.MapperList {
 			FromPF: func(force bool) string {
 				bare := extractBareKeywords(pf.Keywords)
 				if len(bare) == 0 {
-					return ""
+					return core.ClearExt(force, &c.Keywords)
 				}
 				if len(c.Keywords) > 0 && !force {
 					return ""
@@ -387,7 +392,7 @@ func buildMappers(c *Document, pf *projectfile.Document) core.MapperList {
 			FromPF: func(force bool) string {
 				doi := citExtString(pf, cffKeyDOI)
 				if doi == "" {
-					return ""
+					return core.ClearExt(force, &c.DOI)
 				}
 				if c.DOI == doi {
 					return ""
@@ -414,7 +419,7 @@ func buildMappers(c *Document, pf *projectfile.Document) core.MapperList {
 			FromPF: func(force bool) string {
 				ext, _ := pfmodel.GetCitationExtension(pf)
 				if ext == nil || ext.Preferred == nil {
-					return ""
+					return core.ClearExt(force, &c.PreferredCitation)
 				}
 				if c.PreferredCitation != nil && !force {
 					return ""
@@ -451,7 +456,7 @@ func buildMappers(c *Document, pf *projectfile.Document) core.MapperList {
 			FromPF: func(force bool) string {
 				ids := linksToIdentifiers(pf.Links)
 				if len(ids) == 0 {
-					return ""
+					return core.ClearExt(force, &c.Identifiers)
 				}
 				if len(c.Identifiers) > 0 && !force {
 					return ""

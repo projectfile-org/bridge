@@ -35,14 +35,19 @@ func Write(dir string, doc *Document) error {
 	}
 	for _, k := range knownKeyOrder {
 		raw, present := known[k]
-		if !present {
-			continue
+		switch {
+		case present:
+			canvas.Set(k, raw)
+		case !keepWhenEmpty[k]:
+			canvas.Delete(k)
 		}
-		canvas.Set(k, raw)
 	}
 
 	return writeOrderedJSON(path, canvas)
 }
+
+// keepWhenEmpty are known keys whose empty value is meaningful, so an omitted typed field never deletes them.
+var keepWhenEmpty = map[string]bool{"private": true, "dependencies": true, "devDependencies": true, "peerDependencies": true}
 
 // WriteMerge is the legacy entry point; it now simply delegates to Write so
 // callers (cmd/sync, sync_npm) keep working until they are collapsed onto the
