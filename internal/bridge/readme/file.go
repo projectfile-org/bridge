@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"io/fs"
+	"regexp"
 	"strings"
 
 	"kiota.ch/projectfile/core/v2/pkg/genlog"
@@ -70,13 +71,21 @@ func requireSinkRef(doc *projectfile.Document, text, file string) error {
 	repos := make([]string, 0, len(sinks))
 	for _, s := range sinks {
 		repo := sinkRepository(s.Ref)
-		if strings.Contains(text, repo) {
+		if repoPattern(repo).MatchString(text) {
 			genlog.DebugRow("readme_file", file, "names sink "+s.Name, repo)
 			return nil
 		}
 		repos = append(repos, repo)
 	}
 	return fmt.Errorf("bridge: %s names none of the published images %s", file, strings.Join(repos, ", "))
+}
+
+// matrixPlaceholder is an escaped `{AXIS}` in a quoted repository, which any single path segment value satisfies.
+var matrixPlaceholder = regexp.MustCompile(`\\\{[A-Za-z0-9_]+\\\}`)
+
+// repoPattern matches a repository literally, each matrix placeholder standing for one axis value.
+func repoPattern(repo string) *regexp.Regexp {
+	return regexp.MustCompile(matrixPlaceholder.ReplaceAllString(regexp.QuoteMeta(repo), `[^/:\s]+`))
 }
 
 // sinkRepository cuts the tag off a composed reference: a pinned example stays valid across releases.

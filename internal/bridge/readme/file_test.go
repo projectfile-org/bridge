@@ -69,6 +69,18 @@ func TestFileGroupFailsOnForeignImage(t *testing.T) {
 	assert.Contains(t, err.Error(), "kiota.ch/demo")
 }
 
+// TestFileGroupAcceptsMatrixImage: a series sink matches a file naming any one of its axis values.
+func TestFileGroupAcceptsMatrixImage(t *testing.T) {
+	dir := t.TempDir()
+	writeFile(t, dir, fileExample, "services:\n  demo:\n    image: kiota.ch/demo-12:latest\n")
+	pf := fileGroupDoc(t)
+	pf.Extensions[sinksNS] = map[string]any{sinkKiota: map[string]any{keyRef: "kiota.ch/demo-{SERIES}:latest"}}
+
+	out := renderDoc(t, dir, pf)
+
+	assert.Contains(t, out, "image: kiota.ch/demo-12:latest")
+}
+
 // TestStripLicenseHeaderKeepsOrdinaryComments: a leading comment without SPDX tags is content.
 func TestStripLicenseHeaderKeepsOrdinaryComments(t *testing.T) {
 	text := "# Run with docker compose\nservices: {}\n"
