@@ -2,8 +2,12 @@
 {{- $section := readmeSection "building" -}}
 {{- $links := buildLinks -}}
 {{- $goals := readmeGoals -}}
-{{- if or $section $links $goals}}
+{{- if and (or $section $links $goals) buildDocShort}}
 ## {{t "building.title"}}
+
+{{printf (t "building.doc") buildDocLink}}
+{{- else if or $section $links $goals}}
+{{if .BuildDoc}}#{{else}}##{{end}} {{t "building.title"}}
 {{- with $section}}
 {{- range $g := .Groups}}
 {{- with $g.Prefix}}

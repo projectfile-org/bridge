@@ -28,6 +28,7 @@ building.title: Збирання
 building.goals: "Точки входу конвеєра:"
 building.intro.make: "Виконайте `make` без аргументів для типової цілі; виконайте `make help`, щоб переглянути всі цілі."
 building.intro.dev: "Для локального циклу розробки `make dev-container` піднімає dev-container."
+building.doc: "Клонуйте репозиторій і виконайте `make` — кожен крок збирання, ціль і точка входу описані в [Збирання](%s)."
 documentation.title: Документація
 faq.title: Поширені запитання
 faq.body: Див. [%[1]s](%[2]s), щоб знайти відповіді на типові питання.

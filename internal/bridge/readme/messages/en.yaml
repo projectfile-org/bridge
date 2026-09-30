@@ -35,6 +35,8 @@ building.title: Building
 building.goals: "Pipeline entry points:"
 building.intro.make: "Run `make` with no arguments for the default target; run `make help` to list every target."
 building.intro.dev: "For the local dev loop, `make dev-container` brings up the dev-container."
+# The whole Building section when it lives in docs/BUILD.md; %s is the link target.
+building.doc: "Clone the repository and run `make` — every build step, target and entry point is in [Building](%s)."
 documentation.title: Documentation
 faq.title: FAQ
 faq.body: See [%[1]s](%[2]s) for common questions.

@@ -438,6 +438,8 @@ type ReadmeExtension struct {
 	Shields   []Shield
 	Sections  map[string][]ReadmeSectionGroup
 	HowToLink bool
+	// BuildDoc renders the Building section as docs/BUILD.md and leaves the readme one line linking it.
+	BuildDoc bool
 }
 
 // ReadmeExtra is an inline content block referenced by name in Blocks.

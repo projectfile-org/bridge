@@ -413,6 +413,13 @@ To **replace** an inherited group rather than extend the section, redeclare its
 override never reorders the section. Union has no delete, so keep each recipe
 family in exactly one owning fragment.
 
+**Build document.** `build-doc: true` renders the whole Building section — its
+groups, the Makefile reference, the dev container and the pipeline entry points
+— as `docs/BUILD.md` (and `docs/<lang>/BUILD.md`), and leaves the readme one line
+linking it; CONTRIBUTING links it too. Like every fragment document it is written
+only where it exists or `--create-all` is set, and until then the readme keeps
+the full section, so no render ever links a missing file.
+
 ## Artifacts
 
 The `artifacts` block lists what the project ships, from

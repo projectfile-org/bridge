@@ -21,6 +21,7 @@ func GetReadmeExtension(doc *projectfile.Document) (*ReadmeExtension, error) {
 	ext := &ReadmeExtension{
 		Blocks:    strListVal(m, "blocks"),
 		HowToLink: boolVal(m, "how-to-link"),
+		BuildDoc:  boolVal(m, "build-doc"),
 	}
 	for _, name := range CommandSectionKeys {
 		if groups := parseReadmeSection(m, name); len(groups) > 0 {

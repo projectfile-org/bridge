@@ -430,6 +430,39 @@ func TestGroupTitleNestsSubsections(t *testing.T) {
 	assert.Contains(t, out, "### npm package\n")
 }
 
+// TestBuildDocMovesBuildingOutOfReadme: build-doc renders docs/BUILD.md with the whole section, links rebased, and leaves the readme one line.
+func TestBuildDocMovesBuildingOutOfReadme(t *testing.T) {
+	dir := t.TempDir()
+	writeFile(t, dir, makefileDocPath, "# Makefile\n")
+	pf := minimalDoc(t)
+	pf.Extensions = map[string]any{
+		readmeNS: map[string]any{"build-doc": true, "building": []any{group("clone", "Clone it:", "git clone x")}},
+	}
+
+	out, err := Bridge{}.Render(pf, core.Options{Dir: dir, Mode: modeWrite, Force: true})
+	require.NoError(t, err)
+
+	readme, build := string(out.Files[filenameReadme]), string(out.Files[buildDocOut])
+	assert.Contains(t, readme, "## Building\n\nClone the repository and run `make` — every build step, target and entry point is in [Building](docs/BUILD.md).")
+	assert.NotContains(t, readme, "git clone x")
+	assert.Contains(t, build, "# Building\n\nClone it:\n\n```sh\ngit clone x\n```")
+	assert.Contains(t, build, "(how-to/MAKEFILE.md)")
+}
+
+// TestBuildDocKeepsReadmeWhenNotCreated: a run that may not create docs/BUILD.md keeps the full section rather than link a missing file.
+func TestBuildDocKeepsReadmeWhenNotCreated(t *testing.T) {
+	pf := minimalDoc(t)
+	pf.Extensions = map[string]any{
+		readmeNS: map[string]any{"build-doc": true, "building": []any{group("clone", "Clone it:", "git clone x")}},
+	}
+
+	out, err := Bridge{}.Render(pf, core.Options{Dir: t.TempDir(), Mode: modeWrite, Force: true, NoCreate: true})
+	require.NoError(t, err)
+
+	assert.Contains(t, string(out.Files[filenameReadme]), "git clone x")
+	assert.NotContains(t, string(out.Files[filenameReadme]), "docs/BUILD.md")
+}
+
 // TestCellsListsPublishedPlatforms: `cells` lists every non-excluded matrix cell under the one fence.
 func TestCellsListsPublishedPlatforms(t *testing.T) {
 	pf := minimalDoc(t)

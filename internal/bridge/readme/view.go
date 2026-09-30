@@ -61,6 +61,10 @@ type readmeView struct {
 	Lang      string // render sentinel: "" for the canonical root render
 	StrLang   string // concrete tag for string resolution: Lang resolved to the default language
 	Languages []core.LangLink
+	DocPath   string // this document's own repo-relative path, which every emitted link is rebased against
+	BuildDoc  bool   // this render is docs/BUILD.md rather than the readme
+	// BuildDocShort leaves the readme's Building section one line linking docs/BUILD.md.
+	BuildDocShort bool
 }
 
 // screenshot pairs a repo-relative image path with its basename for alt text.
@@ -459,6 +463,7 @@ const (
 	makefileDocKey    = "build.makefile"
 	buildDocFile      = "BUILD.md"
 	buildDocKey       = "build.build"
+	buildDocOut       = "docs/BUILD.md"
 )
 
 // newReadmeView builds the per-render view-state. Only Doc/Lang/Languages
@@ -471,7 +476,17 @@ func newReadmeView(pf *projectfile.Document, lang string, langs []string) readme
 		Lang:      lang,
 		StrLang:   core.ResolveLang(lang, pf),
 		Languages: core.LanguageLinks(filenameReadme, lang, pfmodel.DefaultLanguage(pf), langs),
+		DocPath:   readmeDocPath(lang),
 	}
+}
+
+// newBuildDocView is the readme view re-aimed at docs/BUILD.md in one language.
+func newBuildDocView(pf *projectfile.Document, lang string, langs []string) readmeView {
+	v := newReadmeView(pf, lang, langs)
+	v.DocPath = core.LocalizedFilename(buildDocOut, lang)
+	v.Languages = core.LanguageLinks(buildDocOut, lang, pfmodel.DefaultLanguage(pf), langs)
+	v.BuildDoc = true
+	return v
 }
 
 // extractLSForLang wraps the core lang-aware resolver so templates stay clean.

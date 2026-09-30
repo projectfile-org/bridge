@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strconv"
 	"text/template"
 
 	"kiota.ch/projectfile/core/v2/pkg/genlog"
@@ -110,22 +111,37 @@ func (b Bridge) Render(pf *projectfile.Document, opts core.Options) (core.Output
 
 	out := core.Output{Files: map[string][]byte{}}
 	for _, lang := range renderSet {
-		rendered, err := b.renderLang(pf, ext, opts, blocks, lang, configuredLangs)
+		build := core.LocalizedFilename(buildDocOut, lang)
+		// The readme only defers to docs/BUILD.md when that file exists or this run may create it
+		lands := ext != nil && ext.BuildDoc && (!opts.NoCreate || fileExists(opts.Dir, build))
+		view := newReadmeView(pf, lang, configuredLangs)
+		view.BuildDocShort = lands
+		rendered, err := b.renderLang(pf, ext, opts, blocks, view, filenameReadme)
 		if err != nil {
 			return core.Output{}, err
 		}
 		out.Files[core.LocalizedFilename(filenameReadme, lang)] = rendered
+		if ext == nil || !ext.BuildDoc {
+			continue
+		}
+		genlog.DebugRow("build_doc", build, "org.projectfile.readme.build-doc", "lang="+lang+" readme-defers="+strconv.FormatBool(lands))
+		body, err := b.renderLang(pf, ext, opts, []string{blockLanguages, blockBuilding}, newBuildDocView(pf, lang, configuredLangs), buildDocOut)
+		if err != nil {
+			return core.Output{}, err
+		}
+		out.Files[build] = body
 	}
 	return out, nil
 }
 
-// renderLang renders the README for a single language. lang == "" is the
-// default; otherwise the output is destined for README.<lang>.md and every
+// renderLang renders one document for a single language: the README, or docs/BUILD.md
+// when data is a build-doc view. lang == "" is the default; otherwise every
 // LocalizedString is resolved in that language.
-func (Bridge) renderLang(pf *projectfile.Document, ext *pfmodel.ReadmeExtension, opts core.Options, blocks []string, lang string, langs []string) ([]byte, error) {
-	data := newReadmeView(pf, lang, langs)
-
-	formatDecisionTrace(opts.Dir, lang, data, ext)
+func (Bridge) renderLang(pf *projectfile.Document, ext *pfmodel.ReadmeExtension, opts core.Options, blocks []string, data readmeView, filename string) ([]byte, error) {
+	lang := data.Lang
+	if !data.BuildDoc {
+		formatDecisionTrace(opts.Dir, lang, data, ext)
+	}
 
 	var parts [][]byte
 	for _, blockName := range blocks {
@@ -151,7 +167,7 @@ func (Bridge) renderLang(pf *projectfile.Document, ext *pfmodel.ReadmeExtension,
 		}
 	}
 	if ext != nil && ext.HowToLink {
-		body = append(body, []byte("\n\n"+core.GeneratedFooter(filenameReadme, data.StrLang)+"\n")...)
+		body = append(body, []byte("\n\n"+core.GeneratedFooter(filename, data.StrLang)+"\n")...)
 	}
 	body = core.WrapLocalizedTextlint(body, data.StrLang)
 	out := append([]byte(core.ManagedREUSEHeader(pf)), body...)
@@ -343,19 +359,23 @@ func execBlockTemplate(name string, body []byte, data readmeView, dir string, ex
 			// link against this document's own path so a docs/<lang>/ readme
 			// links co-located siblings correctly.
 			"staticLinks": func() []staticLink {
-				return probeHealthFiles(data.Doc, dir, readmeDocPath(data.Lang), data.Lang, data.StrLang)
+				return probeHealthFiles(data.Doc, dir, data.DocPath, data.Lang, data.StrLang)
 			},
 			// docLink probes one companion file; nil when absent so
 			// {{with docLink "FILE" "Label"}} drops the block cleanly.
 			"docLink": func(filename, label string) *staticLink {
-				return docLink(dir, readmeDocPath(data.Lang), filename, label)
+				return docLink(dir, data.DocPath, filename, label)
 			},
 			// logo / screenshots / docLinks / buildLinks probe the filesystem;
 			// each returns nil/empty when its directory is absent.
 			"logo":        func() []string { return probeLogo(dir) },
 			"screenshots": func() []screenshot { return probeScreenshots(dir) },
-			"docLinks":    func() []staticLink { return listDocsMarkdown(dir, readmeDocPath(data.Lang)) },
-			"buildLinks":  func() []staticLink { return probeBuildLinks(dir, readmeDocPath(data.Lang), data.StrLang) },
+			"docLinks":    func() []staticLink { return listDocsMarkdown(dir, data.DocPath) },
+			"buildLinks":  func() []staticLink { return probeBuildLinks(dir, data.DocPath, data.StrLang) },
+			// buildDocShort reports a readme whose Building section only links docs/BUILD.md.
+			"buildDocShort": func() bool { return data.BuildDocShort },
+			// buildDocLink is this language's docs/BUILD.md, relative to the document linking it.
+			"buildDocLink": func() string { return core.RelLink(core.LocalizedFilename(buildDocOut, data.Lang), data.DocPath) },
 			// featureDoc is the features block's data source: which
 			// FEATURES.md this language links and scrapes (the localized
 			// document when it exists, else the canonical file plus the

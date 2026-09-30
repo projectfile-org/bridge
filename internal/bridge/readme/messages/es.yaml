@@ -28,6 +28,7 @@ building.title: Compilación
 building.goals: "Puntos de entrada de la canalización:"
 building.intro.make: "Ejecuta `make` sin argumentos para el destino predeterminado; ejecuta `make help` para listar todos los destinos."
 building.intro.dev: "Para el bucle de desarrollo local, `make dev-container` levanta el dev-container."
+building.doc: "Clona el repositorio y ejecuta `make`: cada paso de compilación, destino y punto de entrada está en [Compilación](%s)."
 documentation.title: Documentación
 faq.title: Preguntas frecuentes
 faq.body: Consulta [%[1]s](%[2]s) para las dudas más habituales.
