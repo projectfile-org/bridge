@@ -86,6 +86,7 @@ org:
     artifacts:
       go-binary:
         command: pf-bridge
+        help: [""]
         kind: binary
         path: dist/pf-bridge
     ignores:
@@ -164,14 +165,6 @@ org:
             exclude:
               - GOARCH: riscv64
                 GOOS: darwin
-    readme:
-      usage:
-        - commands:
-            - pf-bridge --list
-            - pf-bridge readme --force
-            - pf-bridge all
-          name: binary
-          prefix: 'Project the projectfile onto the files a forge expects:'
     status: maintained
 repositories:
   - branch: main
