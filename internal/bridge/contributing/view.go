@@ -10,7 +10,9 @@ type contribView struct {
 	// SupportFile is the SUPPORT.md cross-link resolved for this render
 	// language — SUPPORT.es.md from CONTRIBUTING.es.md when that variant is
 	// rendered, the canonical SUPPORT.md otherwise.
-	SupportFile   string
+	SupportFile string
+	// BuildDocFile is docs/BUILD.md for this language, relative to this file; empty unless the readme renders it.
+	BuildDocFile  string
 	RepoURL       string
 	SourceCodeURL string
 	DocsURL       string

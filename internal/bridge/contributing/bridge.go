@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"net/url"
 	"os"
+	"path/filepath"
 	"slices"
 	"sort"
 	"strings"
@@ -174,6 +175,7 @@ func (Bridge) Render(pf *projectfile.Document, opts core.Options) (core.Output, 
 				ProjectName:          pfmodel.DisplayNameForLang(pf, strLang),
 				Summary:              projectfile.ExtractLocalizedStringForLang(pf.Identity.Summary, strLang),
 				SupportFile:          core.RelLinkSibling(core.FileSupport, lang, core.FileContributing),
+				BuildDocFile:         buildDocFile(pf, opts.Dir, lang),
 				RepoURL:              repoURL(pf),
 				SourceCodeURL:        sourceCodeURL,
 				DocsURL:              docsURL,
@@ -222,6 +224,21 @@ func resolveURL(extVal string, pf *projectfile.Document, linkType string) string
 // suite exists to kill. The template's {{with}} then drops the pointer line
 // entirely. The name comes from the document, so a project that renamed its
 // policy file is linked to the file it actually has.
+// buildDocFile links this language's docs/BUILD.md from its CONTRIBUTING, or "" until the readme has rendered one.
+func buildDocFile(pf *projectfile.Document, dir, lang string) string {
+	build := core.LocalizedFilename("docs/BUILD.md", lang)
+	if ext, _ := pfmodel.GetReadmeExtension(pf); ext == nil || !ext.BuildDoc {
+		return ""
+	}
+	if _, err := os.Stat(filepath.Join(dir, build)); err != nil {
+		genlog.DebugRow("build_doc_link", build, "not rendered yet (no link)", "lang="+lang)
+		return ""
+	}
+	link := core.RelLink(build, core.LocalizedFilename(core.FileContributing, lang))
+	genlog.DebugRow("build_doc_link", link, "org.projectfile.readme.build-doc", "lang="+lang)
+	return link
+}
+
 func aiPolicyFile(policyName, lang string, hasConventions bool) string {
 	if policyName == "" || hasConventions {
 		return ""

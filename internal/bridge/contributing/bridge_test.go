@@ -5,6 +5,8 @@
 package contributing_test
 
 import (
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -575,4 +577,24 @@ func TestRenderAIPolicyFooterFallsBackWithoutConventions(t *testing.T) {
 	body := string(out.Files["CONTRIBUTING.md"])
 	assert.NotContains(t, body, "AI Policy:")
 	assert.Contains(t, body, "AI and LLM policy")
+}
+
+// TestBuildDocLinkedWhenReadmeRendersIt: CONTRIBUTING points at docs/BUILD.md only once the readme opts into it.
+func TestBuildDocLinkedWhenReadmeRendersIt(t *testing.T) {
+	pf := withContributing(&projectfile.Document{Identity: projectfile.Identity{Name: "demo"}}, map[string]any{"sections": []any{"build"}})
+	out, err := contributing.Bridge{}.Render(pf, core.Options{Offline: true})
+	require.NoError(t, err)
+	assert.NotContains(t, string(out.Files["CONTRIBUTING.md"]), "docs/BUILD.md")
+
+	dir := t.TempDir()
+	projectfile.SetExtension(pf, pfmodel.ReadmeExtensionNS, map[string]any{"build-doc": true})
+	out, err = contributing.Bridge{}.Render(pf, core.Options{Offline: true, Dir: dir})
+	require.NoError(t, err)
+	assert.NotContains(t, string(out.Files["CONTRIBUTING.md"]), "docs/BUILD.md", "no link before the readme has rendered it")
+
+	require.NoError(t, os.MkdirAll(filepath.Join(dir, "docs"), 0o755))
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "docs", "BUILD.md"), []byte("# Building\n"), 0o644))
+	out, err = contributing.Bridge{}.Render(pf, core.Options{Offline: true, Dir: dir})
+	require.NoError(t, err)
+	assert.Contains(t, string(out.Files["CONTRIBUTING.md"]), "is in [Building](docs/BUILD.md).")
 }

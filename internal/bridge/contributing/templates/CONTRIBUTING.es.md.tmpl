@@ -140,7 +140,9 @@ Clona el repositorio{{with $.SourceCodeURL}} desde <{{.}}>{{end}} y asegúrate d
 {{if eq . "build"}}## Compilación
 
 El proyecto incluye un `Makefile` (o una herramienta de construcción equivalente); ejecuta `make help` para descubrir los objetivos disponibles. Para proyectos en Go: `make build-binaries` compila un binario nativo en `dist/`.
-
+{{with $.BuildDocFile}}
+Cada paso de compilación, destino y punto de entrada de la canalización está en [Compilación]({{.}}).
+{{end}}
 {{end}}
 {{if eq . "test"}}## Pruebas
 

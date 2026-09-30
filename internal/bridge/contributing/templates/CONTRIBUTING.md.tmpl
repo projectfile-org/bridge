@@ -141,7 +141,9 @@ Clone the repository{{with $.SourceCodeURL}} from <{{.}}>{{end}} and ensure your
 {{if eq . "build"}}## Building
 
 The project ships with a `Makefile` (or equivalent build tool); run `make help` to discover the available targets. For Go projects: `make build-binaries` builds a host binary into `dist/`.
-
+{{with $.BuildDocFile}}
+Every build step, target and pipeline entry point is in [Building]({{.}}).
+{{end}}
 {{end}}
 {{if eq . "test"}}## Tests
 
