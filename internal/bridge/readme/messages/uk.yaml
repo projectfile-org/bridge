@@ -64,6 +64,7 @@ installation.sink: Завантажити з
 usage.sink: З
 installation.cell: Завантажити для
 usage.cell: На
+cells: Опубліковано для
 variant.series: Серія
 variant.sapi: SAPI
 variant.distro: Дистрибутив

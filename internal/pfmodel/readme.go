@@ -105,6 +105,7 @@ func parseReadmeSection(m map[string]any, key string) []ReadmeSectionGroup {
 			Syntax:        strVal(sm, "syntax"),
 			Priority:      intVal(sm, keyPriority),
 			PerCell:       boolVal(sm, "per-cell"),
+			Cells:         strVal(sm, "cells"),
 			File:          strVal(sm, "file"),
 		}
 		if len(group.Commands) == 0 && group.File == "" && group.Prefix == "" && group.Postfix == "" {

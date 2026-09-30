@@ -64,6 +64,7 @@ installation.sink: Descargar de
 usage.sink: Desde
 installation.cell: Descargar para
 usage.cell: En
+cells: Publicado para
 variant.series: Serie
 variant.sapi: SAPI
 variant.distro: Distribución

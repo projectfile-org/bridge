@@ -72,6 +72,8 @@ usage.sink: From
 # Heading word for a per-matrix-cell subsection, completed by the cell ("Download for linux/amd64").
 installation.cell: Download for
 usage.cell: On
+# Lead of the matrix cells a group lists under its fence ("Published for: `linux/amd64`, …").
+cells: Published for
 # Label of a matrix axis list, keyed by the image part naming the axis.
 variant.series: Series
 variant.sapi: SAPI

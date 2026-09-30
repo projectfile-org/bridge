@@ -257,6 +257,9 @@ func buildSectionGroup(doc *projectfile.Document, group pfmodel.ReadmeSectionGro
 	if !group.PerCell {
 		view.Variants = variantLines(doc, expanded, matrix, lang)
 	}
+	if line := cellsLine(doc, group.Cells, matrix, lang); line != "" {
+		view.Variants = append(view.Variants, line)
+	}
 	// Bucketing runs on lines still carrying {AXIS}: the composed ref is a
 	// literal substring of its own pull line at that point, and axis expansion
 	// would erase the match.
@@ -491,6 +494,29 @@ func variantLines(doc *projectfile.Document, lines []string, matrix pfmodel.Matr
 		out = append(out, label+": `"+strings.Join(values, "` | `")+"`")
 	}
 	return out
+}
+
+// cellsLine lists the label of every matrix cell the template names, such as the platforms a release publishes.
+func cellsLine(doc *projectfile.Document, tmpl string, matrix pfmodel.Matrix, lang string) string {
+	if tmpl == "" {
+		return ""
+	}
+	expanded, resolved := interp.ExpandChecked(doc, tmpl)
+	if !resolved {
+		genlog.DebugRow("readme_cells", tmpl, "unresolved reference (no list)", "lang="+lang)
+		return ""
+	}
+	cells := splitByCell([]string{expanded}, matrix)
+	if len(cells) == 0 {
+		genlog.DebugRow("readme_cells", tmpl, "names no declared axis (no list)", "lang="+lang)
+		return ""
+	}
+	labels := make([]string, 0, len(cells))
+	for _, c := range cells {
+		labels = append(labels, "`"+c.Label+"`")
+	}
+	genlog.DebugRow("readme_cells", strings.Join(labels, " "), tmpl, "lang="+lang)
+	return translate(lang, "cells") + ": " + strings.Join(labels, ", ")
 }
 
 // variantLabel names an axis by the image part declaring it (`series: "{AXIS}"`), localized when the catalog knows the part.

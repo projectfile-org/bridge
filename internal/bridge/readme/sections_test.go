@@ -430,6 +430,27 @@ func TestGroupTitleNestsSubsections(t *testing.T) {
 	assert.Contains(t, out, "### npm package\n")
 }
 
+// TestCellsListsPublishedPlatforms: `cells` lists every non-excluded matrix cell under the one fence.
+func TestCellsListsPublishedPlatforms(t *testing.T) {
+	pf := minimalDoc(t)
+	release := group("release", "Download:", "curl x-$(uname -m)")
+	release["cells"] = "{GOOS}/{GOARCH}"
+	pf.Extensions = map[string]any{
+		ciExtensionNS: map[string]any{
+			keyMatrix: map[string]any{
+				keyAxes:   map[string]any{axisGOARCH: []any{archAMD64, "riscv64"}, axisGOOS: []any{platformDefaultOS, "darwin"}},
+				"exclude": []any{map[string]any{axisGOARCH: "riscv64", axisGOOS: "darwin"}},
+			},
+		},
+		readmeNS: map[string]any{blockInstallation: []any{release}},
+	}
+
+	out := renderDoc(t, t.TempDir(), pf)
+
+	assert.Contains(t, out, "```sh\ncurl x-$(uname -m)\n```\n\nPublished for: `linux/amd64`, `linux/riscv64`, `darwin/amd64`")
+	assert.NotContains(t, out, "darwin/riscv64")
+}
+
 // TestLoneGroupTitleIsDropped: one titled group offers no choice, so neither its heading nor the nesting renders.
 func TestLoneGroupTitleIsDropped(t *testing.T) {
 	pf := minimalDoc(t)
@@ -479,7 +500,7 @@ func TestLoneSinkUsageDropsHeading(t *testing.T) {
 			sinkGhcr:  map[string]any{keyRef: refSinkGhcr, pfmodel.SinkRoleKey: pfmodel.SinkRolePrimary, pfmodel.SinkLabelKey: labelGhcr},
 		},
 		artifactsNS: imageArtifact("${org.projectfile.sinks{role=primary}.ref}"),
-		readmeNS: map[string]any{blockUsage: []any{group(keyImage, "Run it:", "docker run ${org.projectfile.artifacts{kind=image}.ref}")}},
+		readmeNS:    map[string]any{blockUsage: []any{group(keyImage, "Run it:", "docker run ${org.projectfile.artifacts{kind=image}.ref}")}},
 	}
 
 	out := renderDoc(t, t.TempDir(), pf)

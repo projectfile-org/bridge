@@ -486,6 +486,8 @@ type ReadmeSectionGroup struct {
 	Priority int
 	// PerCell renders one headed fence per matrix cell instead of joining them.
 	PerCell bool
+	// Cells is an axis template whose matrix cells the group lists under its fence (`{GOOS}/{GOARCH}`).
+	Cells string
 	// File is a repo-relative file embedded verbatim as the fence body.
 	File string
 }
