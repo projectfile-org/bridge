@@ -11,8 +11,10 @@ import (
 	"projectfile.org/projectfile/bridge/internal/bridge/core"
 )
 
-// helpTitleSuffix ends the title of every captured `<command> --help` section.
-const helpTitleSuffix = "--help`"
+// isHelpCapture reports whether a section is a captured help screen: its body opens with `$ <title> --help`.
+func isHelpCapture(s usageSection) bool {
+	return strings.HasPrefix(s.Body, "```console\n$ "+s.Title+" --help\n")
+}
 
 // usageSection is one section of USAGE.md: its heading text and its body verbatim.
 type usageSection struct {
@@ -40,7 +42,7 @@ func buildUsageDoc(dir, pathLang string) *usageDoc {
 	var help, example bool
 	out := &usageDoc{Name: fileUsage, Filename: core.RelLink(rel, readmeDocPath(pathLang))}
 	for _, s := range parseUsageSections(string(body)) {
-		isHelp := strings.HasSuffix(s.Title, helpTitleSuffix)
+		isHelp := isHelpCapture(s)
 		if (isHelp && help) || (!isHelp && example) {
 			continue
 		}

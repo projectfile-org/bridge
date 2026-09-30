@@ -12,10 +12,10 @@ import (
 
 // usageMD is an assembled USAGE.md: top-level help, two examples, a subcommand help, an inherited section.
 const usageMD = "# Usage\n\n## Project Usage\n\n" +
-	"### `demo --help`\n\n```text\nUsage: demo [PATH]\n# not a heading\n```\n\n" +
+	"### demo\n\n```console\n$ demo --help\nUsage: demo [PATH]\n# not a heading\n```\n\n" +
 	"### Lint a repository\n\n```sh\ndemo .\n```\n\n" +
 	"### Fix in place\n\n```sh\ndemo --fix .\n```\n\n" +
-	"### `demo lint --help`\n\n```text\nUsage: demo lint\n```\n\n" +
+	"### demo lint\n\n```console\n$ demo lint --help\nUsage: demo lint\n```\n\n" +
 	"## Inherited from parent\n\n### Parent example\n\nbody\n"
 
 // TestUsageExcerptShowsTopHelpAndFirstExample: the README quotes two sections of USAGE.md and links the rest.
@@ -25,7 +25,7 @@ func TestUsageExcerptShowsTopHelpAndFirstExample(t *testing.T) {
 
 	out := renderDoc(t, dir, minimalDoc(t))
 
-	assert.Contains(t, out, "## Usage\n\n### `demo --help`\n\n```text\nUsage: demo [PATH]\n# not a heading\n```")
+	assert.Contains(t, out, "## Usage\n\n### demo\n\n```console\n$ demo --help\nUsage: demo [PATH]\n# not a heading\n```")
 	assert.Contains(t, out, "### Lint a repository\n\n```sh\ndemo .\n```")
 	assert.NotContains(t, out, "Fix in place")
 	assert.NotContains(t, out, "demo lint --help")
@@ -36,12 +36,12 @@ func TestUsageExcerptShowsTopHelpAndFirstExample(t *testing.T) {
 // TestUsageExcerptReadsFlatDocument: a standalone USAGE.md carries its sections at H2 with no Project heading.
 func TestUsageExcerptReadsFlatDocument(t *testing.T) {
 	dir := t.TempDir()
-	writeFile(t, dir, fileUsage, "# Usage\n\n## `demo --help`\n\n```text\nUsage: demo\n## not a heading\n```\n\n"+
-		"## Lint a repository\n\n```sh\ndemo .\n```\n\n## `demo lint --help`\n\n```text\nUsage: demo lint\n```\n")
+	writeFile(t, dir, fileUsage, "# Usage\n\n## demo\n\n```console\n$ demo --help\nUsage: demo\n## not a heading\n```\n\n"+
+		"## Lint a repository\n\n```sh\ndemo .\n```\n\n## demo lint\n\n```console\n$ demo lint --help\nUsage: demo lint\n```\n")
 
 	out := renderDoc(t, dir, minimalDoc(t))
 
-	assert.Contains(t, out, "### `demo --help`\n\n```text\nUsage: demo\n## not a heading\n```")
+	assert.Contains(t, out, "### demo\n\n```console\n$ demo --help\nUsage: demo\n## not a heading\n```")
 	assert.Contains(t, out, "### Lint a repository\n\n```sh\ndemo .\n```")
 	assert.NotContains(t, out, "demo lint --help")
 }
@@ -49,7 +49,7 @@ func TestUsageExcerptReadsFlatDocument(t *testing.T) {
 // TestUsageExcerptDropsLintDirectives: a localized USAGE.md’s closing textlint directive stays out of the README.
 func TestUsageExcerptDropsLintDirectives(t *testing.T) {
 	dir := t.TempDir()
-	writeFile(t, dir, fileUsage, "# Usage\n\n<!-- textlint-disable terminology -->\n\n## `demo --help`\n\n```text\nUsage: demo\n```\n\n"+
+	writeFile(t, dir, fileUsage, "# Usage\n\n<!-- textlint-disable terminology -->\n\n## demo\n\n```console\n$ demo --help\nUsage: demo\n```\n\n"+
 		"## Lint a repository\n\n```sh\ndemo .\n```\n\n<!-- textlint-enable -->\n")
 
 	out := renderDoc(t, dir, minimalDoc(t))
