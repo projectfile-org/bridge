@@ -5,6 +5,7 @@
 package readme
 
 import (
+	"path"
 	"strings"
 
 	"kiota.ch/projectfile/core/v2/pkg/genlog"
@@ -51,7 +52,7 @@ func buildUsageDoc(dir, pathLang string) *usageDoc {
 		}
 	}
 	genlog.DebugRow("usage_excerpt", pick.Title, rel, "help="+boolWord(isHelpCapture(pick)))
-	return &usageDoc{Name: fileUsage, Filename: core.RelLink(rel, readmeDocPath(pathLang)), Sections: []usageSection{pick}}
+	return &usageDoc{Name: path.Base(fileUsage), Filename: core.RelLink(rel, readmeDocPath(pathLang)), Sections: []usageSection{pick}}
 }
 
 // parseUsageSections splits the project part of an assembled USAGE.md into its sections, skipping fenced code.

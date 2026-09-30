@@ -56,19 +56,19 @@ rich project fills every section.
 | `basics`           | `identity.title` + `identity.description`, else `identity.summary`                                              | yes            |
 | `badges`           | `readme.shields` (see [Badges](#badges))                                                                        | yes            |
 | `screenshots`      | `docs/screenshots/*.<img>` probe                                                                                | yes            |
-| `features`         | `FEATURES.md` probe, localized first (project H3 titles as bullets; one note naming inherited parents)          | yes            |
+| `features`         | `docs/FEATURES.md` probe, localized first (project H3 titles as bullets; one note naming inherited parents)     | yes            |
 | `benchmarks`       | `BENCHMARKS.md` probe                                                                                           | yes            |
 | `quick-start`      | `readme.quick-start` groups, else `QUICKSTART.md` probe                                                         | yes            |
 | `requirements`     | `REQUIREMENTS.md` probe                                                                                         | yes            |
 | `artifacts`        | `org.projectfile.artifacts` — what the project ships                                                            | yes            |
 | `platforms`        | `operating-system` × `architecture` (spec §4.8a) — OCI platform set                                             | yes            |
 | `installation`     | `readme.installation` groups, else `INSTALL.md` probe                                                           | yes            |
-| `usage`            | `readme.usage` groups, else `USAGE.md` probe                                                                    | yes            |
-| `configuration`    | `CONFIGURATION.md` probe                                                                                        | yes            |
+| `usage`            | `readme.usage` groups, else `docs/USAGE.md` probe                                                               | yes            |
+| `configuration`    | `docs/CONFIGURATION.md` probe                                                                                   | yes            |
 | `building`         | `readme.building` groups, then `BUILD.md` + `docs/how-to/MAKEFILE.md` + `ci` goals                              | yes            |
 | `documentation`    | `docs/how-to/*.md` probe (excludes `readme-generator.md` and `MAKEFILE.md`)                                     | yes            |
 | `faq`              | `FAQ.md` probe                                                                                                  | yes            |
-| `roadmap`          | `ROADMAP.md` probe                                                                                              | yes            |
+| `roadmap`          | `docs/ROADMAP.md` probe                                                                                         | yes            |
 | `policies`         | CONTRIBUTING / SECURITY / SUPPORT / CODE_OF_CONDUCT `.md` probe (human-readable labels)                         | yes            |
 | `related`          | `links[]` tagged `tags: [related]` — “Related projects” bar (fixed after `badges`)                              | yes            |
 | `links`            | top-level `links[]` tagged `tags: [readme]`, categorized                                                        | yes            |
@@ -1045,7 +1045,7 @@ Localization scope:
     `docs/<lang>/FEATURES.md` when it exists (built by the fragments bridge
     from `docs/<lang>/features.d/`), so both the bullets and the link target
     stay in the reader’s language. When the translation does not exist yet the
-    block falls back to the canonical `FEATURES.md` — English bullets under a
+    block falls back to the canonical `docs/FEATURES.md` — English bullets under a
     localized heading — and says so with the localized
     `features.untranslated` note.
 - **Untranslatable** — labels taken from a document’s first heading

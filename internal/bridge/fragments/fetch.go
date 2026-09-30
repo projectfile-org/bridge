@@ -12,6 +12,7 @@ import (
 	"fmt"
 	"io"
 	"os/exec"
+	"path"
 	"regexp"
 	"sort"
 	"strings"
@@ -215,6 +216,11 @@ var fetchParent = func(ctx context.Context, parent pfmodel.FragmentParent, docum
 		title = parentTitle(ctx, parent.URL, aref)
 	}()
 	wg.Wait()
+	// A parent that keeps the document at its root publishes it under the bare basename.
+	if errors.Is(bodyErr, errNotPublished) && path.Base(document) != document {
+		genlog.Debug("fragments: parent misses document, trying its root", "parent", name, "document", document)
+		body, bodyErr = fetchDocument(ctx, parent.URL, aref, path.Base(document))
+	}
 	if bodyErr != nil {
 		return inheritedCopy{}, nil, bodyErr
 	}

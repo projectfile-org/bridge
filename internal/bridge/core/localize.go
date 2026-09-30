@@ -100,7 +100,7 @@ func LocalizedFilename(base, lang string) string {
 	if lang == "" {
 		return base
 	}
-	return LocalizedDir + "/" + lang + "/" + base
+	return LocalizedDir + "/" + lang + "/" + strings.TrimPrefix(base, LocalizedDir+"/")
 }
 
 // LocalizedTemplateName is the template backing a variant. Template names keep

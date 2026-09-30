@@ -6,6 +6,7 @@ package fragments
 
 import (
 	"fmt"
+	"path"
 	"strings"
 
 	"kiota.ch/projectfile/core/v2/pkg/genlog"
@@ -73,7 +74,7 @@ func fragmentString(lang, key string) (string, bool) {
 // localizedTitle resolves the document's H1 title for lang: the catalog entry
 // keyed by the out stem when one exists, else the declared title verbatim.
 func localizedDocTitle(title, out, lang string) string {
-	stem := strings.ToLower(strings.TrimSuffix(out, pathExt(out)))
+	stem := strings.ToLower(strings.TrimSuffix(path.Base(out), pathExt(out)))
 	if v, ok := fragmentString(lang, keyTitlePrefix+stem); ok {
 		return v
 	}

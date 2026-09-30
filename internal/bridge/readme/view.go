@@ -7,6 +7,7 @@ package readme
 import (
 	"fmt"
 	"os"
+	"path"
 	"path/filepath"
 	"slices"
 	"strconv"
@@ -395,16 +396,16 @@ func healthFileLabel(file, lang string) string {
 // canonical home for each. Used in docLinkSpecs, the switch in
 // newReadmeView, and the parallel switch in formatDecisionTrace.
 const (
-	fileFeatures      = "FEATURES.md"
+	fileFeatures      = "docs/FEATURES.md"
 	fileBenchmarks    = "BENCHMARKS.md"
 	fileQuickStart    = "QUICKSTART.md"
 	fileRequirements  = "REQUIREMENTS.md"
 	fileInstall       = "INSTALL.md"
-	fileUsage         = "USAGE.md"
+	fileUsage         = "docs/USAGE.md"
 	fileFAQ           = "FAQ.md"
 	fileFunding       = "FUNDING.md"
-	fileRoadmap       = "ROADMAP.md"
-	fileConfiguration = "CONFIGURATION.md"
+	fileRoadmap       = "docs/ROADMAP.md"
+	fileConfiguration = "docs/CONFIGURATION.md"
 )
 
 // docLinkSpecs lists the uppercase companion files the single-link blocks
@@ -851,7 +852,7 @@ func docLink(dir, docPath, filename, label string) *staticLink {
 	if !fileExists(dir, filename) {
 		return nil
 	}
-	return &staticLink{Name: filename, Filename: core.RelLink(filename, docPath), Label: label}
+	return &staticLink{Name: path.Base(filename), Filename: core.RelLink(filename, docPath), Label: label}
 }
 
 // probeHealthFiles walks healthFiles and returns a staticLink per existing
@@ -1145,7 +1146,7 @@ func buildFeatureDoc(dir, pathLang, strLang string) *featureDoc {
 			parsed := parseFeatureSections(dir, localized)
 			return &featureDoc{
 				Label:    label,
-				Name:     fileFeatures,
+				Name:     path.Base(fileFeatures),
 				Filename: core.RelLink(localized, docPath),
 				Headings: parsed.Project,
 				Parents:  parsed.parents(),
@@ -1159,7 +1160,7 @@ func buildFeatureDoc(dir, pathLang, strLang string) *featureDoc {
 	parsed := parseFeatureSections(dir, fileFeatures)
 	return &featureDoc{
 		Label:        label,
-		Name:         fileFeatures,
+		Name:         path.Base(fileFeatures),
 		Filename:     core.RelLink(fileFeatures, docPath),
 		Headings:     parsed.Project,
 		Parents:      parsed.parents(),

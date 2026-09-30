@@ -43,7 +43,7 @@ func localizedFragDir(dir, lang string) string {
 // Custom override documents outside the convention stay single-language by
 // decision, not by error.
 func docLocalizable(doc pfmodel.FragmentDocument) bool {
-	return !strings.Contains(doc.Out, "/") && strings.HasPrefix(doc.Dir, core.LocalizedDir+"/")
+	return !strings.Contains(strings.TrimPrefix(doc.Out, core.LocalizedDir+"/"), "/") && strings.HasPrefix(doc.Dir, core.LocalizedDir+"/")
 }
 
 // variantFragments is one declared language's render set: its own translated

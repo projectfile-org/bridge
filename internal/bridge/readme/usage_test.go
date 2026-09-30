@@ -30,7 +30,7 @@ func TestUsageExcerptShowsTopHelpOnly(t *testing.T) {
 	assert.NotContains(t, out, "Fix in place")
 	assert.NotContains(t, out, "demo lint --help")
 	assert.NotContains(t, out, "Parent example")
-	assert.Contains(t, out, "[USAGE.md](USAGE.md)")
+	assert.Contains(t, out, "[USAGE.md](docs/USAGE.md)")
 }
 
 // TestUsageExcerptReadsFlatDocument: a standalone USAGE.md carries its sections at H2 with no Project heading.
@@ -76,5 +76,5 @@ func TestUsageWithoutSectionsFallsBackToLink(t *testing.T) {
 
 	out := renderDoc(t, dir, minimalDoc(t))
 
-	assert.Contains(t, out, "See [USAGE.md](USAGE.md) for examples.")
+	assert.Contains(t, out, "See [USAGE.md](docs/USAGE.md) for examples.")
 }

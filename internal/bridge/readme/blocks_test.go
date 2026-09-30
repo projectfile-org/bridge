@@ -78,11 +78,11 @@ func writeFile(t *testing.T, dir, rel, content string) {
 // heading + link with no bullets.
 func TestProbeFeaturesLinkPresent(t *testing.T) {
 	dir := t.TempDir()
-	writeFile(t, dir, "FEATURES.md", "# Features\n")
+	writeFile(t, dir, fileFeatures, "# Features\n")
 	pf := minimalDoc(t)
 	body := renderDoc(t, dir, pf)
 	assert.Contains(t, body, "## Features")
-	assert.Contains(t, body, "[FEATURES.md](FEATURES.md)")
+	assert.Contains(t, body, "[FEATURES.md](docs/FEATURES.md)")
 }
 
 // TestProbeFeaturesLinkAbsent verifies the block is silently omitted when
@@ -99,7 +99,7 @@ func TestProbeFeaturesLinkAbsent(t *testing.T) {
 // the FEATURES.md link. The structural H1/H2 are skipped.
 func TestFeaturesBlockListsHeadings(t *testing.T) {
 	dir := t.TempDir()
-	writeFile(t, dir, "FEATURES.md",
+	writeFile(t, dir, fileFeatures,
 		"# Features\n\n## Project features\n\n### Persistent APT cache\n\n### Non-root by default\n")
 	pf := minimalDoc(t)
 	body := renderDoc(t, dir, pf)
@@ -107,7 +107,7 @@ func TestFeaturesBlockListsHeadings(t *testing.T) {
 	assert.Contains(t, body, "## Features")
 	assert.Contains(t, body, "- Persistent APT cache")
 	assert.Contains(t, body, "- Non-root by default")
-	assert.Contains(t, body, "[FEATURES.md](FEATURES.md)")
+	assert.Contains(t, body, "[FEATURES.md](docs/FEATURES.md)")
 	assert.NotContains(t, body, "- Features\n",
 		"the H1 document title must not appear as a bullet")
 	assert.NotContains(t, body, "- Project features",
@@ -129,7 +129,7 @@ func TestExtractFirstHeading(t *testing.T) {
 // level-3 headings are returned, H1/H2 are skipped, and an absent file is nil.
 func TestFeatureHeadingsFiltersH3(t *testing.T) {
 	dir := t.TempDir()
-	writeFile(t, dir, "FEATURES.md", "# Features\n## Project features\n### One\n#### Nested\n### Two\n")
+	writeFile(t, dir, fileFeatures, "# Features\n## Project features\n### One\n#### Nested\n### Two\n")
 	assert.Equal(t, []string{"One", "Two"}, featureHeadings(dir))
 
 	assert.Nil(t, featureHeadings(t.TempDir()), "absent FEATURES.md → nil")
@@ -138,7 +138,7 @@ func TestFeatureHeadingsFiltersH3(t *testing.T) {
 // TestFeaturesBlockSummarisesInherited: inherited features collapse into one note naming each parent.
 func TestFeaturesBlockSummarisesInherited(t *testing.T) {
 	dir := t.TempDir()
-	writeFile(t, dir, "FEATURES.md",
+	writeFile(t, dir, fileFeatures,
 		"# Features\n\n## Project features\n\n### Own feature\n\n"+
 			"## Inherited from B19/Ubuntu\n\n### Persistent APT cache\n\n"+
 			"## Inherited from B19/Go\n\n### Warm module cache\n")
@@ -148,7 +148,7 @@ func TestFeaturesBlockSummarisesInherited(t *testing.T) {
 	assert.Contains(t, body, "- Own feature")
 	assert.NotContains(t, body, "Persistent APT cache")
 	assert.NotContains(t, body, "### Inherited from")
-	assert.Contains(t, body, "It also inherits the features of B19/Ubuntu, B19/Go — see [FEATURES.md](FEATURES.md) for the full list.")
+	assert.Contains(t, body, "It also inherits the features of B19/Ubuntu, B19/Go — see [FEATURES.md](docs/FEATURES.md) for the full list.")
 	assert.NotContains(t, body, "See [FEATURES.md]")
 }
 
@@ -165,10 +165,10 @@ func TestInheritedParentLocalized(t *testing.T) {
 // matching any heading text.
 func TestParseFeatureSectionsLocalizedHeadings(t *testing.T) {
 	dir := t.TempDir()
-	writeFile(t, dir, "FEATURES.md",
+	writeFile(t, dir, fileFeatures,
 		"# Características\n\n## Características del proyecto\n\n### Propia\n\n"+
 			"## Heredado de B19/Ubuntu\n\n### Caché APT\n")
-	parsed := parseFeatureSections(dir, "FEATURES.md")
+	parsed := parseFeatureSections(dir, fileFeatures)
 	assert.Equal(t, []string{"Propia"}, parsed.Project)
 	require.Len(t, parsed.Inherited, 1)
 	assert.Equal(t, "Heredado de B19/Ubuntu", parsed.Inherited[0].Heading)
@@ -720,7 +720,7 @@ func renderLangBody(t *testing.T, dir string, pf *projectfile.Document, lang str
 // no untranslated note.
 func TestFeaturesBlockPrefersLocalizedDoc(t *testing.T) {
 	dir := t.TempDir()
-	writeFile(t, dir, "FEATURES.md", "# Features\n\n## Project Features\n\n### Persistent APT cache\n")
+	writeFile(t, dir, fileFeatures, "# Features\n\n## Project Features\n\n### Persistent APT cache\n")
 	writeFile(t, dir, "docs/es/FEATURES.md", "# Características\n\n## Características del proyecto\n\n### Función Alfa\n")
 	body := renderLangBody(t, dir, minimalDoc(t), "es")
 
@@ -737,12 +737,12 @@ func TestFeaturesBlockPrefersLocalizedDoc(t *testing.T) {
 // not yet translated — in the render language.
 func TestFeaturesBlockFallsBackWithNote(t *testing.T) {
 	dir := t.TempDir()
-	writeFile(t, dir, "FEATURES.md", "# Features\n\n## Project Features\n\n### Persistent APT cache\n")
+	writeFile(t, dir, fileFeatures, "# Features\n\n## Project Features\n\n### Persistent APT cache\n")
 	body := renderLangBody(t, dir, minimalDoc(t), "es")
 
 	assert.Contains(t, body, "## Características")
 	assert.Contains(t, body, "- Persistent APT cache")
-	assert.Contains(t, body, "[FEATURES.md](../../FEATURES.md)", "fallback links the canonical file")
+	assert.Contains(t, body, "[FEATURES.md](../FEATURES.md)", "fallback links the canonical file")
 	assert.Contains(t, body, "Lo sentimos, esta parte aún no está traducida.")
 }
 
@@ -750,7 +750,7 @@ func TestFeaturesBlockFallsBackWithNote(t *testing.T) {
 // Ukrainian catalog — the note is reader-facing prose, not a fixed string.
 func TestFeaturesBlockFallbackNoteInUkrainian(t *testing.T) {
 	dir := t.TempDir()
-	writeFile(t, dir, "FEATURES.md", "# Features\n\n## Project Features\n\n### Persistent APT cache\n")
+	writeFile(t, dir, fileFeatures, "# Features\n\n## Project Features\n\n### Persistent APT cache\n")
 	body := renderLangBody(t, dir, minimalDoc(t), "uk")
 	assert.Contains(t, body, "Вибачте, цю частину ще не перекладено.")
 }
@@ -760,16 +760,16 @@ func TestFeaturesBlockFallbackNoteInUkrainian(t *testing.T) {
 // file falls back with Untranslated set, and a missing canonical file is nil.
 func TestBuildFeatureDocProbes(t *testing.T) {
 	dir := t.TempDir()
-	writeFile(t, dir, "FEATURES.md", "# Features\n\n### Root Feature\n")
+	writeFile(t, dir, fileFeatures, "# Features\n\n### Root Feature\n")
 
 	doc := buildFeatureDoc(dir, "", "en")
 	require.NotNil(t, doc)
-	assert.Equal(t, "FEATURES.md", doc.Filename)
+	assert.Equal(t, "docs/FEATURES.md", doc.Filename)
 	assert.False(t, doc.Untranslated)
 
 	doc = buildFeatureDoc(dir, "es", "es")
 	require.NotNil(t, doc)
-	assert.Equal(t, "../../FEATURES.md", doc.Filename)
+	assert.Equal(t, "../FEATURES.md", doc.Filename)
 	assert.True(t, doc.Untranslated)
 
 	writeFile(t, dir, "docs/es/FEATURES.md", "# Características\n\n### Característica\n")
