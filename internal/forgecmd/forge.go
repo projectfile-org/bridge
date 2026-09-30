@@ -15,11 +15,11 @@ import (
 	"strings"
 	"syscall"
 	"text/tabwriter"
-	"time"
 
 	"github.com/spf13/cobra"
 
 	"kiota.ch/projectfile/core/v2/pkg/genlog"
+	"kiota.ch/projectfile/core/v2/pkg/netfetch"
 	"kiota.ch/projectfile/core/v2/pkg/projectfile"
 	"projectfile.org/projectfile/bridge/internal/buildinfo"
 	"projectfile.org/projectfile/bridge/internal/describe"
@@ -39,7 +39,6 @@ var (
 	forgePushDryRun      bool
 	forgePushRepos       []string
 	forgePushFields      []string
-	forgePushTimeout     time.Duration
 	forgePushInsecureTLS bool
 )
 
@@ -98,7 +97,7 @@ var forgePushCmd = &cobra.Command{
 			Fields: forgePushFields,
 			Forge:  forge,
 			Resolve: forgecore.NewResolver(forgecore.HTTPOptions{
-				Timeout:         forgePushTimeout,
+				Timeout:         netfetch.Timeout(),
 				UserAgent:       "pf-cli/" + buildinfo.Version,
 				InsecureSkipTLS: forgePushInsecureTLS,
 			}),
@@ -179,7 +178,6 @@ func Main(binName string) {
 		"restrict to specific fields: "+strings.Join(forgecore.AllFields, ", ")+" (repeatable)")
 	forgePushCmd.Flags().BoolVar(&forgePushInsecureTLS, "insecure-skip-tls", false,
 		"skip TLS verification (for self-hosted instances with self-signed certs)")
-	forgePushCmd.Flags().DurationVar(&forgePushTimeout, "timeout", 10*time.Second, "per-request HTTP timeout")
 
 	forgeCmd.AddCommand(forgePushCmd)
 	forgeCmd.AddCommand(forgeListCmd)

@@ -19,6 +19,7 @@ import (
 	"time"
 
 	"kiota.ch/projectfile/core/v2/pkg/genlog"
+	"kiota.ch/projectfile/core/v2/pkg/netfetch"
 	"projectfile.org/projectfile/bridge/internal/bridge/core"
 
 	"github.com/ProtonMail/go-crypto/openpgp/armor"
@@ -29,10 +30,6 @@ import (
 // application/pgp-keys for a by-keyid lookup; a self-hosted pubkey (preferred,
 // via links[].type=pgp-key) is tried first.
 const keysOpenPGPKeyByID = "https://keys.openpgp.org/vks/v1/by-keyid/"
-
-// pgpFetchTimeout caps a single derive fetch. Mirrors the include-resolver and
-// forge HTTP surfaces so the three network code paths behave the same.
-const pgpFetchTimeout = 10 * time.Second
 
 // deriveFingerprint fills an empty fingerprint by fetching the armored public
 // key and parsing its primary-key packet. It tries the links[].type=pgp-key URL
@@ -91,7 +88,7 @@ func deriveFromURL(keyURL string, opts core.Options) (string, error) {
 		return fp, nil
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), pgpFetchTimeout)
+	ctx, cancel := context.WithTimeout(context.Background(), netfetch.Timeout())
 	defer cancel()
 	armored, err := fetchArmored(ctx, keyURL, pgpClient())
 	if err != nil {
@@ -117,7 +114,7 @@ func deriveFromURL(keyURL string, opts core.Options) (string, error) {
 // answering for a public pubkey URL).
 func pgpClient() *http.Client {
 	return &http.Client{
-		Timeout: pgpFetchTimeout,
+		Timeout: netfetch.Timeout(),
 		CheckRedirect: func(req *http.Request, via []*http.Request) error {
 			if len(via) >= 10 {
 				return fmt.Errorf("too many redirects")
