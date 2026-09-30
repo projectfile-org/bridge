@@ -29,7 +29,7 @@ type usageDoc struct {
 	Sections []usageSection
 }
 
-// buildUsageDoc picks the top-level help and the first example from this language's USAGE.md; nil when neither exists.
+// buildUsageDoc picks the top-level help from this language's USAGE.md, else its first example; nil when neither exists.
 func buildUsageDoc(dir, pathLang string) *usageDoc {
 	rel := fileUsage
 	if localized := core.LocalizedFilename(fileUsage, pathLang); pathLang != "" && fileExists(dir, localized) {
@@ -39,21 +39,19 @@ func buildUsageDoc(dir, pathLang string) *usageDoc {
 	if err != nil {
 		return nil
 	}
-	var help, example bool
-	out := &usageDoc{Name: fileUsage, Filename: core.RelLink(rel, readmeDocPath(pathLang))}
-	for _, s := range parseUsageSections(string(body)) {
-		isHelp := isHelpCapture(s)
-		if (isHelp && help) || (!isHelp && example) {
-			continue
-		}
-		help, example = help || isHelp, example || !isHelp
-		genlog.DebugRow("usage_excerpt", s.Title, rel, "help="+boolWord(isHelp))
-		out.Sections = append(out.Sections, s)
-	}
-	if len(out.Sections) == 0 {
+	sections := parseUsageSections(string(body))
+	if len(sections) == 0 {
 		return nil
 	}
-	return out
+	pick := sections[0]
+	for _, s := range sections {
+		if isHelpCapture(s) {
+			pick = s
+			break
+		}
+	}
+	genlog.DebugRow("usage_excerpt", pick.Title, rel, "help="+boolWord(isHelpCapture(pick)))
+	return &usageDoc{Name: fileUsage, Filename: core.RelLink(rel, readmeDocPath(pathLang)), Sections: []usageSection{pick}}
 }
 
 // parseUsageSections splits the project part of an assembled USAGE.md into its sections, skipping fenced code.

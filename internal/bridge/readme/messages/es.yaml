@@ -23,7 +23,7 @@ installation.title: Instalación
 installation.body: Consulta [%[1]s](%[2]s) para ver los pasos de instalación.
 usage.title: Uso
 usage.body: Consulta [%[1]s](%[2]s) para ver ejemplos.
-usage.more: Todos los comandos y más ejemplos están en [%[1]s](%[2]s).
+usage.more: Los ejemplos y la ayuda de cada comando están en [%[1]s](%[2]s).
 building.title: Compilación
 building.goals: "Puntos de entrada de la canalización:"
 building.intro.make: "Ejecuta `make` sin argumentos para el destino predeterminado; ejecuta `make help` para listar todos los destinos."
