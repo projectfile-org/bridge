@@ -470,6 +470,23 @@ func TestSameSinkGroupsJoinPerSink(t *testing.T) {
 	assert.Equal(t, 1, strings.Count(out, "### Pull from GHCR"), "a joined group adds no second heading")
 }
 
+// TestProseLessGroupContinuesSingleFence: an untitled group with no prose extends the one fence before it, ahead of that group's postfix.
+func TestProseLessGroupContinuesSingleFence(t *testing.T) {
+	pf := minimalDoc(t)
+	pull := group(keyImage, "Pull the published image:", "docker pull kiota.ch/demo:latest")
+	pull["postfix"] = "Pin a tag."
+	pf.Extensions = map[string]any{
+		readmeNS: map[string]any{blockInstallation: []any{
+			pull,
+			map[string]any{"name": "alias", "commands": []any{"alias demo='docker run kiota.ch/demo:latest'"}},
+		}},
+	}
+
+	out := renderDoc(t, t.TempDir(), pf)
+
+	assert.Contains(t, out, "Pull the published image:\n\n```sh\ndocker pull kiota.ch/demo:latest\nalias demo='docker run kiota.ch/demo:latest'\n```\n\nPin a tag.")
+}
+
 // TestMultiSinkGroupRendersPerSinkSubsections: when a group's commands fan out
 // over several sinks, each destination renders its own "<verb> <label>"
 // subsection with one joined fence, ordered by the fan-out — which is sink

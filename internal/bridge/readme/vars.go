@@ -102,6 +102,11 @@ func joinSinkRuns(groups []sectionGroupView, source string) []sectionGroupView {
 	var out []sectionGroupView
 	for _, g := range groups {
 		last := len(out) - 1
+		if last >= 0 && continuesFence(out[last], g) {
+			genlog.DebugRow("readme_group", g.Name, "continues the single fence", source+" into="+out[last].Name)
+			out[last].Commands = append(out[last].Commands, g.Commands...)
+			continue
+		}
 		if last < 0 || g.Title != "" || !g.bySink || !out[last].bySink || !sameSinks(out[last].Subgroups, g.Subgroups) {
 			out = append(out, g)
 			continue
@@ -114,6 +119,13 @@ func joinSinkRuns(groups []sectionGroupView, source string) []sectionGroupView {
 		out[last].Postfix = joinProse(out[last].Postfix, g.Postfix)
 	}
 	return out
+}
+
+// continuesFence reports whether g, an untitled group with no prose, extends prev's single fence.
+func continuesFence(prev, g sectionGroupView) bool {
+	return g.Title == "" && g.Prefix == "" && g.Postfix == "" && len(g.Commands) > 0 && len(prev.Commands) > 0 &&
+		len(g.Subgroups) == 0 && len(prev.Subgroups) == 0 && len(g.Variants) == 0 && len(prev.Variants) == 0 &&
+		g.Syntax == prev.Syntax
 }
 
 // sameSinks reports whether two per-sink splits name the same sinks in the same order.
