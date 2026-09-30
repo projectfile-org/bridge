@@ -127,7 +127,7 @@ func TestRenderLocalizedSections(t *testing.T) {
 	es := string(out.Files["docs/es/README.md"])
 	assert.Contains(t, es, "## Instalación")
 	// Body doc-link uses the filename as text, rebased from docs/es/.
-	assert.Contains(t, es, "Consulta [INSTALL.md](../../INSTALL.md)")
+	assert.Contains(t, es, "Consulta [Instalación](../../INSTALL.md)")
 	assert.Contains(t, es, "## Políticas")
 	// Health-file link keeps its localized label, rebased from docs/es/.
 	assert.Contains(t, es, "[Cómo contribuir](../../CONTRIBUTING.md)")

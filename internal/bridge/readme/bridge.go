@@ -362,7 +362,7 @@ func execBlockTemplate(name string, body []byte, data readmeView, dir string, ex
 			// not-yet-translated note); nil when neither exists.
 			"featureDoc": func() *featureDoc { return buildFeatureDoc(dir, data.Lang, data.StrLang) },
 			// usageDoc is the usage block's excerpt of USAGE.md: top-level help and first example; nil without one.
-			"usageDoc": func() *usageDoc { return buildUsageDoc(dir, data.Lang) },
+			"usageDoc": func() *usageDoc { return buildUsageDoc(dir, data.Lang, data.StrLang) },
 			// acknowledgements resolves org.projectfile.acknowledgements into
 			// render-ready credit groups; nil when the project declares none,
 			// so the block drops like every probe-driven one.

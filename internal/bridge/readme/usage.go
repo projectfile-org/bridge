@@ -5,7 +5,6 @@
 package readme
 
 import (
-	"path"
 	"strings"
 
 	"kiota.ch/projectfile/core/v2/pkg/genlog"
@@ -31,7 +30,7 @@ type usageDoc struct {
 }
 
 // buildUsageDoc picks the top-level help from this language's USAGE.md, else its first example; nil when neither exists.
-func buildUsageDoc(dir, pathLang string) *usageDoc {
+func buildUsageDoc(dir, pathLang, strLang string) *usageDoc {
 	rel := fileUsage
 	if localized := core.LocalizedFilename(fileUsage, pathLang); pathLang != "" && fileExists(dir, localized) {
 		rel = localized
@@ -52,7 +51,7 @@ func buildUsageDoc(dir, pathLang string) *usageDoc {
 		}
 	}
 	genlog.DebugRow("usage_excerpt", pick.Title, rel, "help="+boolWord(isHelpCapture(pick)))
-	return &usageDoc{Name: path.Base(fileUsage), Filename: core.RelLink(rel, readmeDocPath(pathLang)), Sections: []usageSection{pick}}
+	return &usageDoc{Name: translate(strLang, "usage.title"), Filename: core.RelLink(rel, readmeDocPath(pathLang)), Sections: []usageSection{pick}}
 }
 
 // parseUsageSections splits the project part of an assembled USAGE.md into its sections, skipping fenced code.

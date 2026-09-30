@@ -7,7 +7,6 @@ package readme
 import (
 	"fmt"
 	"os"
-	"path"
 	"path/filepath"
 	"slices"
 	"strconv"
@@ -852,7 +851,7 @@ func docLink(dir, docPath, filename, label string) *staticLink {
 	if !fileExists(dir, filename) {
 		return nil
 	}
-	return &staticLink{Name: path.Base(filename), Filename: core.RelLink(filename, docPath), Label: label}
+	return &staticLink{Name: label, Filename: core.RelLink(filename, docPath), Label: label}
 }
 
 // probeHealthFiles walks healthFiles and returns a staticLink per existing
@@ -1146,7 +1145,7 @@ func buildFeatureDoc(dir, pathLang, strLang string) *featureDoc {
 			parsed := parseFeatureSections(dir, localized)
 			return &featureDoc{
 				Label:    label,
-				Name:     path.Base(fileFeatures),
+				Name:     label,
 				Filename: core.RelLink(localized, docPath),
 				Headings: parsed.Project,
 				Parents:  parsed.parents(),
@@ -1160,7 +1159,7 @@ func buildFeatureDoc(dir, pathLang, strLang string) *featureDoc {
 	parsed := parseFeatureSections(dir, fileFeatures)
 	return &featureDoc{
 		Label:        label,
-		Name:         path.Base(fileFeatures),
+		Name:         label,
 		Filename:     core.RelLink(fileFeatures, docPath),
 		Headings:     parsed.Project,
 		Parents:      parsed.parents(),

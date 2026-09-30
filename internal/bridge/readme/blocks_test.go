@@ -82,7 +82,7 @@ func TestProbeFeaturesLinkPresent(t *testing.T) {
 	pf := minimalDoc(t)
 	body := renderDoc(t, dir, pf)
 	assert.Contains(t, body, "## Features")
-	assert.Contains(t, body, "[FEATURES.md](docs/FEATURES.md)")
+	assert.Contains(t, body, "[Features](docs/FEATURES.md)")
 }
 
 // TestProbeFeaturesLinkAbsent verifies the block is silently omitted when
@@ -107,7 +107,7 @@ func TestFeaturesBlockListsHeadings(t *testing.T) {
 	assert.Contains(t, body, "## Features")
 	assert.Contains(t, body, "- Persistent APT cache")
 	assert.Contains(t, body, "- Non-root by default")
-	assert.Contains(t, body, "[FEATURES.md](docs/FEATURES.md)")
+	assert.Contains(t, body, "[Features](docs/FEATURES.md)")
 	assert.NotContains(t, body, "- Features\n",
 		"the H1 document title must not appear as a bullet")
 	assert.NotContains(t, body, "- Project features",
@@ -148,8 +148,8 @@ func TestFeaturesBlockSummarisesInherited(t *testing.T) {
 	assert.Contains(t, body, "- Own feature")
 	assert.NotContains(t, body, "Persistent APT cache")
 	assert.NotContains(t, body, "### Inherited from")
-	assert.Contains(t, body, "It also inherits the features of B19/Ubuntu, B19/Go — see [FEATURES.md](docs/FEATURES.md) for the full list.")
-	assert.NotContains(t, body, "See [FEATURES.md]")
+	assert.Contains(t, body, "It also inherits the features of B19/Ubuntu, B19/Go — see [Features](docs/FEATURES.md) for the full list.")
+	assert.NotContains(t, body, "See [Features]")
 }
 
 // TestInheritedParentLocalized: the parent name parses out of a heading in any shipped language.
@@ -726,7 +726,7 @@ func TestFeaturesBlockPrefersLocalizedDoc(t *testing.T) {
 
 	assert.Contains(t, body, "## Características")
 	assert.Contains(t, body, "- Función Alfa")
-	assert.Contains(t, body, "[FEATURES.md](FEATURES.md)", "docs/es/README.md links its co-located sibling")
+	assert.Contains(t, body, "[Características](FEATURES.md)", "docs/es/README.md links its co-located sibling")
 	assert.NotContains(t, body, "- Persistent APT cache")
 	assert.NotContains(t, body, "not yet translated")
 }
@@ -742,7 +742,7 @@ func TestFeaturesBlockFallsBackWithNote(t *testing.T) {
 
 	assert.Contains(t, body, "## Características")
 	assert.Contains(t, body, "- Persistent APT cache")
-	assert.Contains(t, body, "[FEATURES.md](../FEATURES.md)", "fallback links the canonical file")
+	assert.Contains(t, body, "[Características](../FEATURES.md)", "fallback links the canonical file")
 	assert.Contains(t, body, "Lo sentimos, esta parte aún no está traducida.")
 }
 
