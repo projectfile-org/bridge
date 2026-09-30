@@ -81,6 +81,8 @@ platforms.title: Підтримувані платформи
 artifact.kind.image: Образ контейнера
 artifact.kind.binary: Виконуваний файл
 artifact.kind.package: Пакет
+artifact.kind.package.npm: Пакунок npm
+artifact.kind.package.pypi: Пакунок PyPI
 artifact.kind.service: Служба
 artifact.kind.website: Вебсайт
 artifact.kind.ssh: SSH-сервер

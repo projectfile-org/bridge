@@ -92,6 +92,8 @@ platforms.title: Supported platforms
 artifact.kind.image: Container image
 artifact.kind.binary: Executable
 artifact.kind.package: Package
+artifact.kind.package.npm: npm package
+artifact.kind.package.pypi: PyPI package
 artifact.kind.service: Service
 artifact.kind.website: Site
 artifact.kind.ssh: SSH server

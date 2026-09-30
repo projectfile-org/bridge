@@ -139,7 +139,7 @@ func buildArtifacts(doc *projectfile.Document, lang string) []artifactView {
 		for _, address := range pfmodel.ExpandAxes(expanded, axes) {
 			out = append(out, artifactView{
 				Kind:    a.Kind,
-				Label:   artifactKindLabel(a.Kind, lang),
+				Label:   artifactKindLabel(a.Kind, a.Registry, lang),
 				Address: shortRef(address),
 				Summary: sectionText(a.Summary, a.SummaryByLang, lang),
 				Ports:   artifactPorts(a),
@@ -253,11 +253,14 @@ func strList(v any) []string {
 
 // artifactKindLabel is an artifact kind's display text in lang. The catalog key
 // is derived from the kind (`artifact.kind.image`) rather than mapped, so a new
-// kind needs no Go edit. An unknown — or untranslated — kind falls back to the
-// bare kind string, never to an empty label.
-func artifactKindLabel(kind, lang string) string {
+// kind needs no Go edit; `artifact.kind.<kind>.<registry>` wins when present. An
+// unknown — or untranslated — kind falls back to the bare kind string, never to an empty label.
+func artifactKindLabel(kind, registry, lang string) string {
 	if kind == "" {
 		return ""
+	}
+	if label, ok := lookupMessage(lang, keyPrefixArtifactKind+kind+"."+registry); registry != "" && ok {
+		return label
 	}
 	if label, ok := lookupMessage(lang, keyPrefixArtifactKind+kind); ok {
 		return label

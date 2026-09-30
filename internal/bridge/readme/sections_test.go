@@ -167,6 +167,7 @@ func TestGroupsAreAlternativesNotSteps(t *testing.T) {
 
 	out := renderDoc(t, t.TempDir(), pf)
 
+	assert.Contains(t, out, "- **npm package** `foo`", "a registry-specific label wins over the kind's")
 	assert.Contains(t, out, "Install the package:")
 	assert.Contains(t, out, "```sh\nnpm install foo\n```")
 	assert.Contains(t, out, "Or pull the image:")

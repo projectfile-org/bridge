@@ -81,6 +81,8 @@ platforms.title: Plataformas admitidas
 artifact.kind.image: Imagen de contenedor
 artifact.kind.binary: Ejecutable
 artifact.kind.package: Paquete
+artifact.kind.package.npm: Paquete npm
+artifact.kind.package.pypi: Paquete de PyPI
 artifact.kind.service: Servicio
 artifact.kind.website: Sitio web
 artifact.kind.ssh: Servidor SSH
