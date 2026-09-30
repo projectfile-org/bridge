@@ -12,15 +12,6 @@ import (
 	"projectfile.org/projectfile/bridge/internal/bridge/core"
 )
 
-func init() {
-	for _, strs := range fragmentsStrings {
-		format := strs[keyInheritedPlain]
-		if i := strings.IndexByte(format, '%'); i >= 0 {
-			core.RegisterInheritedPrefix(format[:i])
-		}
-	}
-}
-
 // The fragments bridge's structural strings, per language. Fragments are data,
 // not prose, so — unlike the health files — there is no translated template:
 // one structural template serves every language and only the strings the
@@ -44,21 +35,21 @@ const (
 var fragmentsStrings = map[string]map[string]string{
 	"en": {
 		keyProjectHeading:           "Project %s",
-		keyInheritedPlain:           "Inherited from %s",
+		keyInheritedPlain:           core.InheritedFormats["en"],
 		keyTitlePrefix + "features": "Features",
 		keyTitlePrefix + "roadmap":  "Roadmap",
 		keyTitlePrefix + "usage":    "Usage",
 	},
 	"es": {
 		keyProjectHeading:           "%s del proyecto",
-		keyInheritedPlain:           "Heredado de %s",
+		keyInheritedPlain:           core.InheritedFormats["es"],
 		keyTitlePrefix + "features": "Características",
 		keyTitlePrefix + "roadmap":  "Hoja de ruta",
 		keyTitlePrefix + "usage":    "Uso",
 	},
 	"uk": {
 		keyProjectHeading:           "%s проєкту",
-		keyInheritedPlain:           "Успадковано від %s",
+		keyInheritedPlain:           core.InheritedFormats["uk"],
 		keyTitlePrefix + "features": "Можливості",
 		keyTitlePrefix + "roadmap":  "Дорожня карта",
 		keyTitlePrefix + "usage":    "Використання",

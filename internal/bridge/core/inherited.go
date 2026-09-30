@@ -8,32 +8,18 @@ import (
 	"strings"
 )
 
-// inheritedPrefixes are the per-language "Inherited from %s" heading prefixes
-// a fragments-assembled document nests parent sections under. Registered by
-// the fragments package from its own string catalog at init, so the table
-// lives in one place and consumers (readme's parent-name summary) read it
-// without importing the fragments bridge — importing that package registers
-// its bridge and turns a single-file binary multi-file, which prompts.
-var inheritedPrefixes []string
-
-// RegisterInheritedPrefix enrolls one heading prefix for InheritedParent.
-func RegisterInheritedPrefix(prefix string) {
-	if prefix == "" {
-		return
-	}
-	for _, p := range inheritedPrefixes {
-		if p == prefix {
-			return
-		}
-	}
-	inheritedPrefixes = append(inheritedPrefixes, prefix)
+// InheritedFormats are the per-language "Inherited from %s" headings a fragments-assembled document nests parent sections under.
+var InheritedFormats = map[string]string{
+	"en": "Inherited from %s",
+	"es": "Heredado de %s",
+	"uk": "Успадковано від %s",
 }
 
 // InheritedParent returns the parent name of an inherited-section heading.
 func InheritedParent(heading string) string {
 	text := strings.TrimSpace(strings.TrimPrefix(strings.TrimSpace(heading), "##"))
-	for _, prefix := range inheritedPrefixes {
-		if strings.HasPrefix(text, prefix) {
+	for _, format := range InheritedFormats {
+		if prefix, _, _ := strings.Cut(format, "%"); strings.HasPrefix(text, prefix) {
 			return strings.TrimSpace(strings.TrimPrefix(text, prefix))
 		}
 	}
