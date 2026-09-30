@@ -140,7 +140,7 @@ func buildArtifacts(doc *projectfile.Document, lang string) []artifactView {
 			out = append(out, artifactView{
 				Kind:    a.Kind,
 				Label:   artifactKindLabel(a.Kind, lang),
-				Address: address,
+				Address: shortRef(address),
 				Summary: sectionText(a.Summary, a.SummaryByLang, lang),
 				Ports:   artifactPorts(a),
 			})

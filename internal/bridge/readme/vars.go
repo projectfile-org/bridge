@@ -6,6 +6,7 @@ package readme
 
 import (
 	"maps"
+	"regexp"
 	"slices"
 	"strconv"
 	"strings"
@@ -39,6 +40,30 @@ type sectionGroupView struct {
 	Subgroups []sectionSubgroupView
 	// Variants lists each fanned-out axis as `<label>: `a` | `b``, once under the whole group.
 	Variants []string
+}
+
+// dockerHubHost matches the default-registry host where an image reference starts.
+var dockerHubHost = regexp.MustCompile(`(^|[\s'"=])docker\.io/`)
+
+// shortRef spells an image reference the way docker prints it, without the default-registry host.
+func shortRef(line string) string {
+	short := dockerHubHost.ReplaceAllString(line, "$1")
+	if short != line {
+		genlog.DebugRow("readme_ref", short, "default registry host dropped", line)
+	}
+	return short
+}
+
+// shortenRefs applies shortRef to every rendered command, after sink bucketing has matched the full refs.
+func (v *sectionGroupView) shortenRefs() {
+	for i := range v.Commands {
+		v.Commands[i] = shortRef(v.Commands[i])
+	}
+	for i := range v.Subgroups {
+		for j := range v.Subgroups[i].Commands {
+			v.Subgroups[i].Commands[j] = shortRef(v.Subgroups[i].Commands[j])
+		}
+	}
 }
 
 // sectionSubgroupView is one sink's or one matrix cell's slice of a group:
@@ -109,6 +134,7 @@ func buildSection(doc *projectfile.Document, ext *pfmodel.ReadmeExtension, dir, 
 		}
 		if group.File == "" {
 			view, ok = buildSectionGroup(doc, group, matrix, name, lang)
+			view.shortenRefs()
 		}
 		if !ok {
 			continue
