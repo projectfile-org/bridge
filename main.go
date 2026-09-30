@@ -25,7 +25,7 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/mattn/go-isatty"
+	"github.com/charmbracelet/colorprofile"
 
 	"kiota.ch/projectfile/core/v2/pkg/genlog"
 	"kiota.ch/projectfile/core/v2/pkg/projectfile"
@@ -572,10 +572,9 @@ func renderList(w io.Writer, entries []bridgeEntry, color bool) {
 	renderEntries(w, entries, color)
 }
 
-// useColor reports whether w is an interactive terminal that has not opted out
-// via NO_COLOR.
+// useColor reports whether core’s one colour decision gives w at least ANSI colour.
 func useColor(w *os.File) bool {
-	return os.Getenv("NO_COLOR") == "" && isatty.IsTerminal(w.Fd())
+	return genlog.Profile(w) >= colorprofile.ANSI
 }
 
 func usage(w *os.File) {

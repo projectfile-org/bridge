@@ -27,7 +27,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/charmbracelet/lipgloss"
+	"charm.land/lipgloss/v2"
 
 	"kiota.ch/projectfile/core/v2/pkg/genlog"
 )
@@ -128,6 +128,7 @@ func WriteSummary(w io.Writer, list, hintList []string) {
 	if w == nil || len(list) == 0 {
 		return
 	}
+	w = genlog.Styled(w)
 	title := fmt.Sprintf("%d warning(s) — the command did not fail", len(list))
 	if len(list) == 1 {
 		title = "1 warning — the command did not fail"

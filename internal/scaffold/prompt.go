@@ -10,9 +10,9 @@ import (
 	"os"
 	"strings"
 
-	"github.com/charmbracelet/bubbles/textinput"
-	tea "github.com/charmbracelet/bubbletea"
-	"github.com/charmbracelet/lipgloss"
+	"charm.land/bubbles/v2/textinput"
+	tea "charm.land/bubbletea/v2"
+	"charm.land/lipgloss/v2"
 
 	"kiota.ch/projectfile/core/v2/pkg/selector"
 	"projectfile.org/projectfile/bridge/internal/source"
@@ -73,8 +73,10 @@ func newFieldPromptModel(fields []MissingField) fieldPromptModel {
 	for i, f := range fields {
 		ti := textinput.New()
 		ti.Placeholder = f.Description
-		ti.PromptStyle = highlight
-		ti.Width = 40
+		st := textinput.DefaultStyles(true)
+		st.Focused.Prompt, st.Blurred.Prompt = highlight, highlight
+		ti.SetStyles(st)
+		ti.SetWidth(40)
 		// Prefill carries forward user-config defaults as editable text —
 		// not as a placeholder (which would vanish on first keystroke).
 		// CursorEnd so the user lands ready to extend or backspace through
@@ -102,11 +104,11 @@ func (m fieldPromptModel) Init() tea.Cmd {
 }
 
 func (m fieldPromptModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
-	if km, ok := msg.(tea.KeyMsg); ok {
-		switch km.Type {
-		case tea.KeyCtrlC, tea.KeyEsc:
+	if km, ok := msg.(tea.KeyPressMsg); ok {
+		switch km.String() {
+		case "ctrl+c", "esc":
 			return m, tea.Quit
-		case tea.KeyEnter:
+		case "enter":
 			for i, ti := range m.multi.Inputs() {
 				if strings.TrimSpace(ti.Value()) == "" {
 					m.err = fmt.Sprintf("%s is required", m.labels[i])
@@ -116,11 +118,11 @@ func (m fieldPromptModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 			m.submitted = true
 			return m, tea.Quit
-		case tea.KeyTab, tea.KeyDown:
+		case "tab", "down":
 			m.err = ""
 			m.multi.Next()
 			return m, nil
-		case tea.KeyShiftTab, tea.KeyUp:
+		case "shift+tab", "up":
 			m.err = ""
 			m.multi.Prev()
 			return m, nil
@@ -131,7 +133,7 @@ func (m fieldPromptModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, cmd
 }
 
-func (m fieldPromptModel) View() string {
+func (m fieldPromptModel) View() tea.View {
 	var b strings.Builder
 	b.WriteString("\n  Provide required fields:\n\n")
 	focused := m.multi.Focused()
@@ -148,7 +150,7 @@ func (m fieldPromptModel) View() string {
 		fmt.Fprintf(&b, "  %s\n", errStyle.Render(m.err))
 	}
 	b.WriteString("  tab/↑↓ next field, enter confirm, ctrl+c cancel\n")
-	return b.String()
+	return tea.NewView(b.String())
 }
 
 func promptMissingFields(_ *source.Partial, fields []MissingField) error {
@@ -187,13 +189,13 @@ type optionalFieldsModel struct {
 func newOptionalFieldsModel(p *source.Partial) optionalFieldsModel {
 	li := textinput.New()
 	li.Placeholder = "e.g. MIT, Apache-2.0"
-	li.Width = 40
+	li.SetWidth(40)
 	ti := textinput.New()
 	ti.Placeholder = "e.g. My Cool Project"
-	ti.Width = 40
+	ti.SetWidth(40)
 	si := textinput.New()
 	si.Placeholder = "e.g. A tool that does X for Y"
-	si.Width = 60
+	si.SetWidth(60)
 
 	var focusable []int
 	if p.License == nil || *p.License == "" {
@@ -217,17 +219,17 @@ func (m optionalFieldsModel) Init() tea.Cmd {
 }
 
 func (m optionalFieldsModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
-	if km, ok := msg.(tea.KeyMsg); ok {
-		switch km.Type {
-		case tea.KeyCtrlC, tea.KeyEsc:
+	if km, ok := msg.(tea.KeyPressMsg); ok {
+		switch km.String() {
+		case "ctrl+c", "esc":
 			return m, tea.Quit
-		case tea.KeyEnter:
+		case "enter":
 			m.submitted = true
 			return m, tea.Quit
-		case tea.KeyTab:
+		case "tab":
 			m.multi.Next()
 			return m, nil
-		case tea.KeyShiftTab:
+		case "shift+tab":
 			m.multi.Prev()
 			return m, nil
 		}
@@ -237,7 +239,7 @@ func (m optionalFieldsModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, cmd
 }
 
-func (m optionalFieldsModel) View() string {
+func (m optionalFieldsModel) View() tea.View {
 	var b strings.Builder
 	b.WriteString("\n  Optional fields (enter to accept, leave blank to skip):\n\n")
 	focused := m.multi.Focused()
@@ -282,7 +284,7 @@ func (m optionalFieldsModel) View() string {
 	}
 
 	b.WriteString("  tab switch, enter accept all, ctrl+c cancel\n")
-	return b.String()
+	return tea.NewView(b.String())
 }
 
 func extractLS(ls *source.LocalizedString) string {

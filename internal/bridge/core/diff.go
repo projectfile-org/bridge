@@ -11,8 +11,10 @@ import (
 	"strings"
 	"unicode/utf8"
 
-	"github.com/charmbracelet/lipgloss"
+	"charm.land/lipgloss/v2"
 	"github.com/pmezard/go-difflib/difflib"
+
+	"kiota.ch/projectfile/core/v2/pkg/genlog"
 )
 
 // Shape of the drift diff. Three lines of context place a hunk inside the
@@ -42,6 +44,7 @@ var (
 // config, and a bare "drifted" verdict sends the reader hunting through all
 // four — usually by regenerating, which destroys the evidence.
 func WriteDiff(w io.Writer, rel string, onDisk, rendered []byte) {
+	w = genlog.Styled(w)
 	if w == nil {
 		return
 	}
