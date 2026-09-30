@@ -78,7 +78,9 @@ rich project fills every section.
 
 `platforms` has one fallback: a project that publishes an image but declares
 neither list shows `readme.default-platforms`, the fleet’s runner platform.
-Silence would read as “runs everywhere”.
+Silence would read as “runs everywhere”. An image project with more than one
+sink drops the block instead: each install subsection names the platforms its
+registry serves (see Per-sink subsections).
 
 Override the list to reorder, drop, or add blocks:
 
@@ -285,7 +287,10 @@ consumer. A document carrying a single sink (the legacy
 `readme.registry` projects) keeps the plain one-fence shape — a sole
 destination needs no heading naming it — and a group referencing anything no
 sink declares (an npm artifact, a hand-written host) never gains a destination
-heading nobody declared for it.
+heading nobody declared for it. An install heading also names the platforms its
+registry serves — the project’s set, narrowed by the `architecture` list of the
+`org.projectfile.publish` routes pushing there — and a registry serving none of
+them loses its subsection. A sink any unnarrowed route pushes to serves them all.
 
 **Per-cell subsections.** One line is wrong when each cell is a different
 artifact: N `curl --output <cmd>` lines write the same file, so pasting the fence

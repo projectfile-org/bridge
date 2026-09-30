@@ -75,6 +75,8 @@ const (
 	SinkLabelKey   = "label"
 	// PublishPushKey is the sink-name list a publish route pushes to.
 	PublishPushKey = "push"
+	// PublishArchitectureKey lists the OCI architectures a publish route builds; absent builds every one the project declares.
+	PublishArchitectureKey = "architecture"
 
 	// SinkRolePrimary is the role an entry carries when it declares none: the
 	// ordinary destination, as opposed to the fallback a reader is told to try

@@ -193,6 +193,23 @@ func buildPlatforms(doc *projectfile.Document) []string {
 	return out
 }
 
+// platformsOnArch keeps the `os/arch` platforms whose architecture is one of arches.
+func platformsOnArch(platforms, arches []string) []string {
+	var out []string
+	for _, p := range platforms {
+		if _, arch, _ := strings.Cut(p, "/"); slices.Contains(arches, arch) {
+			out = append(out, p)
+		}
+	}
+	return out
+}
+
+// platformsOnSinks reports whether the installation section names each registry's platforms, making the block redundant.
+func platformsOnSinks(doc *projectfile.Document) bool {
+	artifacts, _ := pfmodel.GetArtifacts(doc)
+	return len(pfmodel.ArtifactsOfKind(artifacts, pfmodel.ArtifactKindImage)) > 0 && len(readmeSinks(doc)) > 1
+}
+
 // defaultPlatformsKey names the platforms an image declaring none is built for — the runner's, a fleet fact.
 const defaultPlatformsKey = pfmodel.ReadmeExtensionNS + ".default-platforms"
 
@@ -216,7 +233,11 @@ func defaultPlatforms(doc *projectfile.Document) []string {
 // returns it coerced, mirroring the matrix-axis coercion: YAML integer items are
 // rendered as their plain form. Returns nil for an absent or non-list extension.
 func strFieldList(doc *projectfile.Document, ns string) []string {
-	v := pfLookup(doc, ns)
+	return strList(pfLookup(doc, ns))
+}
+
+// strList coerces a YAML list value to strings, rendering integer items plainly; nil for a non-list.
+func strList(v any) []string {
 	items, ok := v.([]any)
 	if !ok {
 		return nil

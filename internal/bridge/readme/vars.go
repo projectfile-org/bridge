@@ -71,9 +71,10 @@ func (v *sectionGroupView) shortenRefs() {
 // sectionSubgroupView is one sink's or one matrix cell's slice of a group:
 // the heading it renders under and the commands belonging to it.
 type sectionSubgroupView struct {
-	Label    string
-	Heading  string
-	Commands []string
+	Label     string
+	Heading   string
+	Commands  []string
+	Platforms []string
 }
 
 // sinkView is one sink as the readme names it: the composed pull reference and
@@ -82,6 +83,10 @@ type sinkView struct {
 	Name  string
 	Label string
 	Ref   string
+	// Platforms is the project's platform set narrowed to the architectures this sink serves.
+	Platforms []string
+	// narrowed marks a sink declaring its architectures, so an empty Platforms means it serves none of the project's.
+	narrowed bool
 }
 
 // sectionView is a whole section: its localized title plus the groups that
@@ -249,6 +254,9 @@ func buildSectionGroup(doc *projectfile.Document, group pfmodel.ReadmeSectionGro
 		for i := range subgroups {
 			subgroups[i].Commands = firstCell(subgroups[i].Commands, matrix)
 			subgroups[i].Heading = translate(lang, section+".sink") + " " + subgroups[i].Label
+			if section == blockInstallation && len(subgroups[i].Platforms) > 0 {
+				subgroups[i].Heading += " — " + strings.Join(subgroups[i].Platforms, ", ")
+			}
 		}
 		view.Subgroups = subgroups
 		view.bySink = true
@@ -294,6 +302,8 @@ func readmeSinks(doc *projectfile.Document) []sinkView {
 	if !ok {
 		return nil
 	}
+	platforms := buildPlatforms(doc)
+	routed := routeArches(doc)
 	out := make([]sinkView, 0, len(m))
 	for name, v := range m {
 		entry, ok := v.(map[string]any)
@@ -308,9 +318,42 @@ func readmeSinks(doc *projectfile.Document) []sinkView {
 		if label == "" {
 			label = name
 		}
-		out = append(out, sinkView{Name: name, Label: label, Ref: ref})
+		view := sinkView{Name: name, Label: label, Ref: ref, Platforms: platforms}
+		if arches, narrowed := routed[name]; narrowed {
+			view.Platforms, view.narrowed = platformsOnArch(platforms, arches), true
+			genlog.DebugRow("sink_platforms", strings.Join(view.Platforms, " "), name, "architecture="+strings.Join(arches, " "))
+		}
+		out = append(out, view)
 	}
 	slices.SortFunc(out, func(a, b sinkView) int { return len(b.Ref) - len(a.Ref) })
+	return out
+}
+
+// routeArches maps each sink to the architectures its publish routes build; a sink any unnarrowed route pushes to is absent.
+func routeArches(doc *projectfile.Document) map[string][]string {
+	raw, _ := projectfile.LookupExtension(doc, pfmodel.PublishExtensionNS)
+	routes, _ := raw.(map[string]any)
+	out := map[string][]string{}
+	open := map[string]bool{}
+	for forge, v := range routes {
+		route, _ := v.(map[string]any)
+		arches := strList(route[pfmodel.PublishArchitectureKey])
+		for _, sink := range strList(route[pfmodel.PublishPushKey]) {
+			genlog.DebugRow("route_arches", sink, forge, "architecture="+strings.Join(arches, " "))
+			if len(arches) == 0 {
+				open[sink] = true
+				continue
+			}
+			for _, a := range arches {
+				if !slices.Contains(out[sink], a) {
+					out[sink] = append(out[sink], a)
+				}
+			}
+		}
+	}
+	for sink := range open {
+		delete(out, sink)
+	}
 	return out
 }
 
@@ -337,12 +380,16 @@ func bucketBySink(sinks []sinkView, lines []string) ([]sectionSubgroupView, bool
 		if owner == nil {
 			return nil, false
 		}
+		if owner.narrowed && len(owner.Platforms) == 0 {
+			genlog.DebugRow("readme_command", line, "sink serves none of the project's platforms (dropped)", owner.Name)
+			continue
+		}
 		if pos, seen := at[owner.Name]; seen {
 			buckets[pos].Commands = append(buckets[pos].Commands, line)
 			continue
 		}
 		at[owner.Name] = len(buckets)
-		buckets = append(buckets, sectionSubgroupView{Label: owner.Label, Commands: []string{line}})
+		buckets = append(buckets, sectionSubgroupView{Label: owner.Label, Commands: []string{line}, Platforms: owner.Platforms})
 	}
 	return buckets, true
 }

@@ -314,7 +314,13 @@ func execBlockTemplate(name string, body []byte, data readmeView, dir string, ex
 			// org.projectfile.operating-system × org.projectfile.architecture
 			// (spec §4.8a). Empty when neither extension is declared, so the
 			// block drops for a non-shipping project.
-			"platforms": func() []string { return buildPlatforms(data.Doc) },
+			"platforms": func() []string {
+				if platformsOnSinks(data.Doc) {
+					genlog.DebugRow("platforms", "shown per registry", pfmodel.SinksExtensionNS, "block dropped")
+					return nil
+				}
+				return buildPlatforms(data.Doc)
+			},
 			// linkGroups buckets Doc.Links by category in render order.
 			"linkGroups": func() []linkGroup { return buildLinkGroups(data.Doc, data.StrLang) },
 			// relatedLinks is the "Related projects" bar: top-level links[]

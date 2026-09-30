@@ -488,6 +488,46 @@ func TestMultiSinkGroupRendersPerSinkSubsections(t *testing.T) {
 		"install and usage must not repeat a heading")
 }
 
+// platformSinkDoc is a two-sink image project built for amd64 and arm64 whose kiota sink is pushed by a route building kiotaArches.
+func platformSinkDoc(t *testing.T, kiotaArches ...any) *projectfile.Document {
+	pf := minimalDoc(t)
+	pf.Extensions = map[string]any{
+		archExtensionNS: []any{archAMD64, archARM64},
+		pfmodel.PublishExtensionNS: map[string]any{
+			sinkKiota: map[string]any{pfmodel.PublishPushKey: []any{sinkKiota}, pfmodel.PublishArchitectureKey: kiotaArches},
+			"github":  map[string]any{pfmodel.PublishPushKey: []any{sinkGhcr}},
+		},
+		sinksNS: map[string]any{
+			sinkKiota: map[string]any{keyRef: refSinkKiota, pfmodel.SinkRoleKey: pfmodel.SinkRolePrimary, keyPriority: 10},
+			sinkGhcr:  map[string]any{keyRef: refSinkGhcr, pfmodel.SinkRoleKey: pfmodel.SinkRolePrimary, keyPriority: 90, pfmodel.SinkLabelKey: labelGhcr},
+		},
+		artifactsNS: imageArtifact("${org.projectfile.sinks{role=primary}.ref}"),
+		readmeNS: map[string]any{
+			blockInstallation: []any{group(keyImage, "Pull the published image:", refImage)},
+			blockUsage:        []any{group(keyImage, "Build on it:", "FROM ${org.projectfile.sinks{role=primary}.ref}")},
+		},
+	}
+	return pf
+}
+
+// TestSinkSubsectionsNamePlatforms: each registry heading carries the platforms it serves, replacing the project-wide block.
+func TestSinkSubsectionsNamePlatforms(t *testing.T) {
+	out := renderDoc(t, t.TempDir(), platformSinkDoc(t, archAMD64))
+
+	assert.Contains(t, out, "### Pull from GHCR — linux/amd64, linux/arm64\n")
+	assert.Contains(t, out, "### Pull from kiota — linux/amd64\n")
+	assert.Contains(t, out, "### From GHCR\n", "usage headings name no platforms")
+	assert.NotContains(t, out, "## Supported platforms")
+}
+
+// TestSinkServingNoPlatformIsDropped: a registry serving none of the project's architectures gets no subsection.
+func TestSinkServingNoPlatformIsDropped(t *testing.T) {
+	out := renderDoc(t, t.TempDir(), platformSinkDoc(t, "riscv64"))
+
+	assert.Contains(t, out, "### Pull from GHCR — linux/amd64, linux/arm64\n")
+	assert.NotContains(t, out, "Pull from kiota")
+}
+
 // TestSinkSubsectionsShowFirstCellThenVariants: each registry's fence holds its first cell; the axis list follows once.
 func TestSinkSubsectionsShowFirstCellThenVariants(t *testing.T) {
 	pf := minimalDoc(t)
