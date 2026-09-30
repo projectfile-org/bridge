@@ -3,8 +3,10 @@
 {{- if or $section $excerpt}}
 ## {{with $section}}{{.Title}}{{else}}{{t "usage.title"}}{{end}}
 {{- with $section}}
+{{- $nested := false}}
 {{- range $g := .Groups}}
 {{- with $g.Title}}
+{{- $nested = true}}
 
 ### {{.}}
 {{- end}}
@@ -15,7 +17,7 @@
 {{- if $g.Subgroups}}
 {{- range $sg := $g.Subgroups}}
 
-{{if $g.Title}}#{{end}}### {{$sg.Heading}}
+{{if $nested}}#{{end}}### {{$sg.Heading}}
 
 ```{{$g.Syntax}}
 {{range $sg.Commands}}{{.}}

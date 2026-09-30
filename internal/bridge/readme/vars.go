@@ -40,6 +40,8 @@ type sectionGroupView struct {
 	Subgroups []sectionSubgroupView
 	// Variants lists each fanned-out axis as `<label>: `a` | `b``, once under the whole group.
 	Variants []string
+	// bySink marks Subgroups as the per-sink split, which a following group may join.
+	bySink bool
 }
 
 // dockerHubHost matches the default-registry host where an image reference starts.
@@ -88,6 +90,55 @@ type sinkView struct {
 type sectionView struct {
 	Title  string
 	Groups []sectionGroupView
+}
+
+// joinSinkRuns folds an untitled group into the one before it when both split over the same sinks, one fence per sink.
+func joinSinkRuns(groups []sectionGroupView, source string) []sectionGroupView {
+	var out []sectionGroupView
+	for _, g := range groups {
+		last := len(out) - 1
+		if last < 0 || g.Title != "" || !g.bySink || !out[last].bySink || !sameSinks(out[last].Subgroups, g.Subgroups) {
+			out = append(out, g)
+			continue
+		}
+		genlog.DebugRow("readme_group", g.Name, "joined into per-sink fences", source+" into="+out[last].Name)
+		for i := range g.Subgroups {
+			out[last].Subgroups[i].Commands = append(out[last].Subgroups[i].Commands, g.Subgroups[i].Commands...)
+		}
+		out[last].Prefix = joinProse(out[last].Prefix, g.Prefix)
+		out[last].Postfix = joinProse(out[last].Postfix, g.Postfix)
+	}
+	return out
+}
+
+// sameSinks reports whether two per-sink splits name the same sinks in the same order.
+func sameSinks(a, b []sectionSubgroupView) bool {
+	return slices.EqualFunc(a, b, func(x, y sectionSubgroupView) bool { return x.Label == y.Label })
+}
+
+// joinProse puts two paragraphs one after the other, skipping an empty one.
+func joinProse(a, b string) string {
+	if a == "" || b == "" {
+		return a + b
+	}
+	return a + "\n\n" + b
+}
+
+// dropLoneTitle clears group titles unless at least two survive, so a heading only appears where there is a choice.
+func dropLoneTitle(groups []sectionGroupView, source string) {
+	titled := 0
+	for _, g := range groups {
+		if g.Title != "" {
+			titled++
+		}
+	}
+	genlog.DebugRow("readme_titles", strconv.Itoa(titled), source, "titles render from 2")
+	if titled >= 2 {
+		return
+	}
+	for i := range groups {
+		groups[i].Title = ""
+	}
 }
 
 // syntaxDefault is the fenced-block info string for a group that declares none.
@@ -141,6 +192,8 @@ func buildSection(doc *projectfile.Document, ext *pfmodel.ReadmeExtension, dir, 
 		}
 		groups = append(groups, view)
 	}
+	groups = joinSinkRuns(groups, source)
+	dropLoneTitle(groups, source)
 	if len(groups) == 0 {
 		genlog.DebugRow("readme_section", name, "no group resolved (section dropped)", source)
 		return nil, nil
@@ -198,6 +251,7 @@ func buildSectionGroup(doc *projectfile.Document, group pfmodel.ReadmeSectionGro
 			subgroups[i].Heading = translate(lang, section+".sink") + " " + subgroups[i].Label
 		}
 		view.Subgroups = subgroups
+		view.bySink = true
 		genlog.DebugRow("readme_group", label, "commands grouped by sink", source+" sinks="+strconv.Itoa(len(subgroups)))
 		for _, sg := range subgroups {
 			for _, line := range sg.Commands {

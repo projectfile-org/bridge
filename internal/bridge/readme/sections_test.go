@@ -55,6 +55,7 @@ const (
 	archARM64  = "arm64"
 	// Sink-fixture refs and series values, same goconst rule.
 	refSinkGhcr    = "ghcr.io/o/demo:latest"
+	labelGhcr      = "GHCR"
 	refSinkKiota   = "kiota.ch/demo:latest"
 	seriesResolute = "resolute"
 	seriesNoble    = "noble"
@@ -405,12 +406,53 @@ func TestGroupTitleNestsSubsections(t *testing.T) {
 		ciExtensionNS: map[string]any{
 			keyMatrix: map[string]any{keyAxes: map[string]any{axisGOARCH: []any{archAMD64, archARM64}}},
 		},
-		readmeNS: map[string]any{blockInstallation: []any{titled}},
+		readmeNS: map[string]any{blockInstallation: []any{titled, map[string]any{keyName: "npm", "title": "npm package", "commands": []any{"npm install x"}}}},
 	}
 
 	out := renderDoc(t, t.TempDir(), pf)
 
 	assert.Contains(t, out, "### Prebuilt binary\n\nDownload:\n\n#### Download for amd64\n")
+	assert.Contains(t, out, "### npm package\n")
+}
+
+// TestLoneGroupTitleIsDropped: one titled group offers no choice, so neither its heading nor the nesting renders.
+func TestLoneGroupTitleIsDropped(t *testing.T) {
+	pf := minimalDoc(t)
+	titled := group("release", "Download:", "curl x-{GOARCH}")
+	titled["per-cell"] = true
+	titled["title"] = "Prebuilt binary"
+	pf.Extensions = map[string]any{
+		ciExtensionNS: map[string]any{
+			keyMatrix: map[string]any{keyAxes: map[string]any{axisGOARCH: []any{archAMD64, archARM64}}},
+		},
+		readmeNS: map[string]any{blockInstallation: []any{titled}},
+	}
+
+	out := renderDoc(t, t.TempDir(), pf)
+
+	assert.NotContains(t, out, "Prebuilt binary")
+	assert.Contains(t, out, "Download:\n\n### Download for amd64\n")
+}
+
+// TestSameSinkGroupsJoinPerSink: an untitled group splitting over the same sinks joins the one before it, one fence per sink.
+func TestSameSinkGroupsJoinPerSink(t *testing.T) {
+	pf := minimalDoc(t)
+	pf.Extensions = map[string]any{
+		sinksNS: map[string]any{
+			sinkKiota: map[string]any{keyRef: refSinkKiota, pfmodel.SinkRoleKey: pfmodel.SinkRolePrimary, keyPriority: 10},
+			sinkGhcr:  map[string]any{keyRef: refSinkGhcr, pfmodel.SinkRoleKey: pfmodel.SinkRolePrimary, keyPriority: 90, pfmodel.SinkLabelKey: labelGhcr},
+		},
+		artifactsNS: imageArtifact("${org.projectfile.sinks{role=primary}.ref}"),
+		readmeNS: map[string]any{blockInstallation: []any{
+			group(keyImage, "Pull the published image:", refImage),
+			group("alias", "Alias it:", "alias demo='docker run ${org.projectfile.artifacts{kind=image}.ref}'"),
+		}},
+	}
+
+	out := renderDoc(t, t.TempDir(), pf)
+
+	assert.Contains(t, out, "Pull the published image:\n\nAlias it:\n\n### Pull from GHCR\n\n```sh\ndocker pull ghcr.io/o/demo:latest\nalias demo='docker run ghcr.io/o/demo:latest'\n```")
+	assert.Equal(t, 1, strings.Count(out, "### Pull from GHCR"), "a joined group adds no second heading")
 }
 
 // TestMultiSinkGroupRendersPerSinkSubsections: when a group's commands fan out
@@ -424,7 +466,7 @@ func TestMultiSinkGroupRendersPerSinkSubsections(t *testing.T) {
 	pf.Extensions = map[string]any{
 		sinksNS: map[string]any{
 			sinkKiota: map[string]any{keyRef: refSinkKiota, pfmodel.SinkRoleKey: pfmodel.SinkRolePrimary, keyPriority: 10},
-			sinkGhcr:  map[string]any{keyRef: refSinkGhcr, pfmodel.SinkRoleKey: pfmodel.SinkRolePrimary, keyPriority: 90, pfmodel.SinkLabelKey: "GHCR"},
+			sinkGhcr:  map[string]any{keyRef: refSinkGhcr, pfmodel.SinkRoleKey: pfmodel.SinkRolePrimary, keyPriority: 90, pfmodel.SinkLabelKey: labelGhcr},
 		},
 		artifactsNS: imageArtifact("${org.projectfile.sinks{role=primary}.ref}"),
 		readmeNS: map[string]any{
@@ -456,7 +498,7 @@ func TestSinkSubsectionsShowFirstCellThenVariants(t *testing.T) {
 			}},
 		},
 		sinksNS: map[string]any{
-			sinkGhcr:  map[string]any{keyRef: "ghcr.io/o/demo/{B19_UBUNTU_SERIES}:latest", pfmodel.SinkRoleKey: pfmodel.SinkRolePrimary, keyPriority: 90, pfmodel.SinkLabelKey: "GHCR"},
+			sinkGhcr:  map[string]any{keyRef: "ghcr.io/o/demo/{B19_UBUNTU_SERIES}:latest", pfmodel.SinkRoleKey: pfmodel.SinkRolePrimary, keyPriority: 90, pfmodel.SinkLabelKey: labelGhcr},
 			sinkKiota: map[string]any{keyRef: "kiota.ch/demo/{B19_UBUNTU_SERIES}:latest", pfmodel.SinkRoleKey: pfmodel.SinkRolePrimary, keyPriority: 10},
 		},
 		artifactsNS: imageArtifact("${org.projectfile.sinks{role=primary}.ref}"),
