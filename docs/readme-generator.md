@@ -705,6 +705,12 @@ These are Markdown image links of the form `[![alt](img)](href)`, declared
 under `readme.shields`. The built-in `badges` block renders them space-separated,
 one line per `row`.
 
+A shield renders on the readme unless it names other documents:
+`documents: [contributing]` moves it under the CONTRIBUTING title instead, so a
+badge only a contributor acts on (commit style, workflow, versioning, citation)
+stays out of the reader’s way. The name dedupes before the filter, so redeclaring
+an inherited badge with `documents` moves it rather than copying it.
+
 ```yaml
 org:
   projectfile:

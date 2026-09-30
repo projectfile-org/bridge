@@ -176,6 +176,7 @@ func (Bridge) Render(pf *projectfile.Document, opts core.Options) (core.Output, 
 				Summary:              projectfile.ExtractLocalizedStringForLang(pf.Identity.Summary, strLang),
 				SupportFile:          core.RelLinkSibling(core.FileSupport, lang, core.FileContributing),
 				BuildDocFile:         buildDocFile(pf, opts.Dir, lang),
+				Badges:               contributingBadges(pf, strLang),
 				RepoURL:              repoURL(pf),
 				SourceCodeURL:        sourceCodeURL,
 				DocsURL:              docsURL,
@@ -224,6 +225,15 @@ func resolveURL(extVal string, pf *projectfile.Document, linkType string) string
 // suite exists to kill. The template's {{with}} then drops the pointer line
 // entirely. The name comes from the document, so a project that renamed its
 // policy file is linked to the file it actually has.
+// contributingBadges renders the readme shields declared for CONTRIBUTING.
+func contributingBadges(pf *projectfile.Document, lang string) string {
+	ext, _ := pfmodel.GetReadmeExtension(pf)
+	if ext == nil {
+		return ""
+	}
+	return core.BadgeMarkdown(core.BadgeRows(pf, ext.Shields, "contributing", lang))
+}
+
 // buildDocFile links this language's docs/BUILD.md from its CONTRIBUTING, or "" until the readme has rendered one.
 func buildDocFile(pf *projectfile.Document, dir, lang string) string {
 	build := core.LocalizedFilename("docs/BUILD.md", lang)

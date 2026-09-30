@@ -58,6 +58,7 @@ func GetReadmeExtension(doc *projectfile.Document) (*ReadmeExtension, error) {
 				Alt:        strVal(em, "alt"),
 				Row:        strVal(em, "row"),
 				Priority:   intVal(em, keyPriority),
+				Documents:  strListVal(em, "documents"),
 			})
 		}
 	}

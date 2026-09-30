@@ -73,24 +73,11 @@ type screenshot struct {
 	Name string
 }
 
-type badge struct {
-	Alt  string
-	Img  string
-	Href string
-	Row  string
-	// Priority orders this badge within its row; resolved from the shield's
-	// Priority with the unset→PriorityDefault promotion, so the sort sees one
-	// consistent value.
-	Priority int
-}
-
-// badgeRow is one rendered line of badges. Name is the declared row identity,
-// kept for the decision trace; Badges holds that row's members in declaration
-// order.
-type badgeRow struct {
-	Name   string
-	Badges []badge
-}
+// badge and badgeRow are the shared badge model, rendered here by badges.tmpl.
+type (
+	badge    = core.Badge
+	badgeRow = core.BadgeRow
+)
 
 // artifactView is one line of the artifacts block: what the project ships, said
 // once. Label is the artifact's kind resolved in the active language; Address is
@@ -584,143 +571,20 @@ func extraContentForLang(extra pfmodel.ReadmeExtra, lang string) string {
 	return extra.Content
 }
 
-// hrefForLang resolves a Shield's href for a specific lang, mirroring
-// extraContentForLang: falls back to the default Href when HrefByLang is nil
-// or has no entry for the requested language. This is what lets one badge
-// declaration (conventionalcommits.org, semver.org) link each render to its
-// own language's page instead of always the English one.
-func hrefForLang(s pfmodel.Shield, lang string) string {
-	if lang != "" && s.HrefByLang != nil {
-		if v, ok := s.HrefByLang[lang]; ok && v != "" {
-			return v
-		}
-	}
-	return s.Href
-}
-
-// buildBadges maps declared shields to the template's badge view model, with
-// every `${…}` reference resolved against the document (spec §3.8). This is
-// what lets ONE badge row in a shared m6e fragment serve the whole fleet: the
-// URL names fields, and each consumer answers them from its own projectfile.
-//
-// Three rules make that fragment safe across heterogeneous projects:
-//
-//   - A shield whose img or href still carries an unresolved reference is
-//     DROPPED. A project with no Codeberg mirror cannot answer
-//     ${…forge.remotes.codeberg.url}, and a badge pointing at a literal `${…}`
-//     is a broken image in every README that renders it. An href that is simply
-//     ABSENT is fine — a pure indicator (project status) links nowhere, and the
-//     template renders it unlinked.
-//   - A shield whose img/href still names a CI matrix axis (`{B19_RUBY_SERIES}`,
-//     via ${org.projectfile.image.*}) is DROPPED too, rather than fanned out to
-//     one badge per series: a language image with a dozen supported versions
-//     would otherwise turn one badge into a whole row of near-identical ones.
-//     A single-image project never names an axis, so this never touches it.
-//   - Shields are deduplicated by `name`, LAST wins. Includes union sequences
-//     with include entries first and the base document last (spec §4.9a), so
-//     redeclaring a name in the project's own projectfile replaces the
-//     inherited badge — the only way to override one, since includes cannot
-//     delete. The first position is kept so overriding never reorders the row.
-//
-// Alt defaults to Name so a missing alt-text never yields an empty `![ ](...)`.
-// href resolves per lang first (HrefByLang), so a shared badge can link each
-// render to its own language's page.
+// buildBadges resolves the shields that render on the readme.
 func buildBadges(doc *projectfile.Document, ext *pfmodel.ReadmeExtension, lang string) []badge {
 	if ext == nil || len(ext.Shields) == 0 {
 		return nil
 	}
-	axes := pfmodel.MatrixAxes(doc, ciExtensionNS)
-	out := make([]badge, 0, len(ext.Shields))
-	position := make(map[string]int, len(ext.Shields))
-	for _, s := range ext.Shields {
-		img, href := interp.Expand(doc, s.Img), interp.Expand(doc, hrefForLang(s, lang))
-		if img == "" || interp.Unresolved(img) || interp.Unresolved(href) {
-			genlog.DebugRow("badge", s.Name, "unresolved reference (dropped)", img)
-			continue
-		}
-		if namesMatrixAxis(img, axes) || namesMatrixAxis(href, axes) {
-			genlog.DebugRow("badge", s.Name, "names a CI-matrix series (dropped)", img)
-			continue
-		}
-		alt := interp.Expand(doc, s.Alt)
-		if alt == "" {
-			alt = s.Name
-		}
-		b := badge{Alt: alt, Img: img, Href: href, Row: s.Row, Priority: pfmodel.RankOf(s.Priority)}
-		if at, seen := position[s.Name]; seen {
-			genlog.DebugRow("badge", s.Name, "redeclared (last wins)", out[at].Img)
-			out[at] = b
-			continue
-		}
-		position[s.Name] = len(out)
-		out = append(out, b)
-	}
-	return out
+	return core.Badges(doc, ext.Shields, core.DocumentReadme, lang)
 }
 
-// namesMatrixAxis reports whether s still carries a `{AXIS}` placeholder for
-// any axis the CI matrix declares — the signal that a badge would need one
-// instance per series, which buildBadges drops rather than renders.
-func namesMatrixAxis(s string, axes map[string][]string) bool {
-	for axis := range axes {
-		if strings.Contains(s, "{"+axis+"}") {
-			return true
-		}
-	}
-	return false
-}
-
-// rowUnnamed labels the row a shield joins when it declares no `row`, for the
-// decision trace only — the empty string groups like any other row name.
-const rowUnnamed = "(unnamed)"
-
-// buildBadgeRows groups the resolved badges into rendered lines by their `row`.
-// One README carries badges of three different natures — static facts (licence,
-// compliance), dynamic project signals (status, last release), ecosystem
-// signals (npm version, dependency freshness) — and a fleet fragment that owns
-// only one of them still has to land it beside its own kind.
-//
-// The row ORDER is the order each row name is first seen, so it needs no
-// second key to declare it: includes merge in declared order with the base
-// document last (spec §4.9a), which is already the order the rows want to read
-// in — core's static row, then dynamic, then whatever a language or publish
-// fragment appends. A fragment that invents a row name simply gets a new line
-// at the point it enters.
-//
-// Grouping runs AFTER buildBadges has deduplicated, so redeclaring a name also
-// moves that badge to the row the redeclaration names.
+// buildBadgeRows groups the readme's badges into rendered lines by their `row`.
 func buildBadgeRows(doc *projectfile.Document, ext *pfmodel.ReadmeExtension, lang string) []badgeRow {
-	var rows []badgeRow
-	at := make(map[string]int)
-	for _, b := range buildBadges(doc, ext, lang) {
-		i, seen := at[b.Row]
-		if !seen {
-			i = len(rows)
-			at[b.Row] = i
-			rows = append(rows, badgeRow{Name: b.Row})
-			genlog.DebugRow("badge_row", rowLabel(b.Row), "first appearance", strconv.Itoa(i+1))
-		}
-		rows[i].Badges = append(rows[i].Badges, b)
+	if ext == nil || len(ext.Shields) == 0 {
+		return nil
 	}
-	// Priority orders badges WITHIN a row (higher first), stable so equal
-	// priorities — including every unset one at PriorityDefault — keep the
-	// declaration order buildBadges produced. Row order and first-appearance
-	// grouping are untouched: priority reorders peers inside a line, never the
-	// lines themselves.
-	for i := range rows {
-		slices.SortStableFunc(rows[i].Badges, func(a, b badge) int {
-			return pfmodel.ByPriorityDesc(a.Priority, b.Priority)
-		})
-	}
-	return rows
-}
-
-// rowLabel renders a row name for logs, naming the unnamed row.
-func rowLabel(row string) string {
-	if row == "" {
-		return rowUnnamed
-	}
-	return row
+	return core.BadgeRows(doc, ext.Shields, core.DocumentReadme, lang)
 }
 
 func buildLinkGroups(pf *projectfile.Document, lang string) []linkGroup {
@@ -1278,7 +1142,7 @@ func formatDecisionTrace(dir, lang string, v readmeView, ext *pfmodel.ReadmeExte
 	}
 	for _, r := range buildBadgeRows(v.Doc, ext, v.StrLang) {
 		for _, b := range r.Badges {
-			genlog.DebugRow("badge", b.Alt+" → "+b.Img, "readme.shields[]", rowLabel(r.Name))
+			genlog.DebugRow("badge", b.Alt+" → "+b.Img, "readme.shields[]", core.BadgeRowLabel(r.Name))
 		}
 	}
 	for _, l := range probeLogo(dir) {

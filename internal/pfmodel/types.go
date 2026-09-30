@@ -514,4 +514,6 @@ type Shield struct {
 	// Priority is the advisory render order within a row. Higher = first; the
 	// zero value (unset) means PriorityDefault and stays in declaration order.
 	Priority int
+	// Documents names the documents the badge renders on (readme, contributing); empty means the readme.
+	Documents []string
 }
