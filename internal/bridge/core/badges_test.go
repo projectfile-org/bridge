@@ -28,6 +28,12 @@ func TestBadgesRenderOnTheirDocument(t *testing.T) {
 	assert.Equal(t, "![commits](https://img.test/commits)", BadgeMarkdown(BadgeRows(nil, shields, "contributing", "")))
 }
 
+// TestBadgeEncodesSpaces: an SPDX expression in a badge URL stays one markdown link destination.
+func TestBadgeEncodesSpaces(t *testing.T) {
+	shields := []pfmodel.Shield{{Name: "license", Img: "https://img.test/?message=MIT OR CC-BY-4.0", Href: "https://l.test/a b"}}
+	assert.Equal(t, "[![license](https://img.test/?message=MIT%20OR%20CC-BY-4.0)](https://l.test/a%20b)", BadgeMarkdown(BadgeRows(nil, shields, DocumentReadme, "")))
+}
+
 // TestRedeclaredBadgeMovesDocument: redeclaring an inherited name with documents moves the badge, it does not copy it.
 func TestRedeclaredBadgeMovesDocument(t *testing.T) {
 	shields := []pfmodel.Shield{

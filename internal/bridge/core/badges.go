@@ -59,7 +59,7 @@ func Badges(doc *projectfile.Document, shields []pfmodel.Shield, document, lang 
 		if alt == "" {
 			alt = s.Name
 		}
-		r := resolvedShield{Badge{Alt: alt, Img: img, Href: href, Row: s.Row, Priority: pfmodel.RankOf(s.Priority)}, s.Documents}
+		r := resolvedShield{Badge{Alt: alt, Img: linkDestination(img), Href: linkDestination(href), Row: s.Row, Priority: pfmodel.RankOf(s.Priority)}, s.Documents}
 		if at, seen := position[s.Name]; seen {
 			genlog.DebugRow("badge", s.Name, "redeclared (last wins)", resolved[at].Img)
 			resolved[at] = r
@@ -120,6 +120,11 @@ func BadgeMarkdown(rows []BadgeRow) string {
 		lines = append(lines, strings.Join(cells, " "))
 	}
 	return strings.Join(lines, "\n\n")
+}
+
+// linkDestination percent-encodes the spaces an interpolated value (`MIT OR CC-BY-4.0`) leaves in a markdown link destination.
+func linkDestination(url string) string {
+	return strings.ReplaceAll(url, " ", "%20")
 }
 
 // BadgeRowLabel renders a row name for logs, naming the unnamed row.
