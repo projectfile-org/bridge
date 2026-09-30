@@ -5,7 +5,7 @@ SPDX-License-Identifier: MIT
 
 <!-- textlint-disable terminology,common-misspellings -->
 
-[English](../../USAGE.md) · [Español](../es/USAGE.md)
+[English](../USAGE.md) · [Español](../es/USAGE.md)
 
 # Використання
 
@@ -60,7 +60,7 @@ Documentation:
   contributing  [ro]  CONTRIBUTING.md — one-way render
   dei           [ro]  DEI.md — one-way render
   fragments     [ro]  FEATURES.md, ROADMAP.md, … assembled from docs/<name>.d fragments (one-way render)
-  readme        [ro]  FEATURES.md, ROADMAP.md, … assembled from docs/<name>.d fragments (one-way render), README.md — one-way render
+  readme        [ro]  README.md — one-way render
   security      [ro]  SECURITY.md — one-way render
   support       [ro]  SUPPORT.md — one-way render
 Repository setup:

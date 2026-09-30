@@ -3,7 +3,7 @@ SPDX-FileCopyrightText: 2026 Damián Búho <damian.buho@proton.me>
 SPDX-License-Identifier: MIT
 -->
 
-[Español](docs/es/USAGE.md) · [Українська](docs/uk/USAGE.md)
+[Español](es/USAGE.md) · [Українська](uk/USAGE.md)
 
 # Usage
 
@@ -58,7 +58,7 @@ Documentation:
   contributing  [ro]  CONTRIBUTING.md — one-way render
   dei           [ro]  DEI.md — one-way render
   fragments     [ro]  FEATURES.md, ROADMAP.md, … assembled from docs/<name>.d fragments (one-way render)
-  readme        [ro]  FEATURES.md, ROADMAP.md, … assembled from docs/<name>.d fragments (one-way render), README.md — one-way render
+  readme        [ro]  README.md — one-way render
   security      [ro]  SECURITY.md — one-way render
   support       [ro]  SUPPORT.md — one-way render
 Repository setup:

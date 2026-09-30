@@ -29,7 +29,7 @@ pf-bridge is the projection tool of the projectfile: it derives forge identity f
 - Start in minutes, stay in sync afterwards
 - Every tool reads the same lists
 
-See [FEATURES.md](FEATURES.md) for the full list.
+See [Features](docs/FEATURES.md) for the full list.
 
 ## What this provides
 
@@ -172,7 +172,7 @@ Repository setup:
 Help per bridge: pf-bridge <bridge> --help
 ```
 
-Examples and every command’s help are in [USAGE.md](USAGE.md).
+Examples and every command’s help are in [Usage](docs/USAGE.md).
 
 ## Building
 

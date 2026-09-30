@@ -31,7 +31,7 @@ pf-bridge es la herramienta de proyección del projectfile: deriva los archivos 
 - Empieza en minutos, mantén la sincronía después
 - Cada herramienta lee las mismas listas
 
-Consulta [FEATURES.md](FEATURES.md) para ver la lista completa.
+Consulta [Características](FEATURES.md) para ver la lista completa.
 
 ## Qué entrega este proyecto
 
@@ -174,7 +174,7 @@ Repository setup:
 Help per bridge: pf-bridge <bridge> --help
 ```
 
-Los ejemplos y la ayuda de cada comando están en [USAGE.md](USAGE.md).
+Los ejemplos y la ayuda de cada comando están en [Uso](USAGE.md).
 
 ## Compilación
 
