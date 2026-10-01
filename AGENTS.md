@@ -232,8 +232,7 @@ a project decision. Force what the scanner wrote; hand-edit what a human added.
 **Do not point a shared m6e fragment at an alias until the fleet declares it.**
 Slugs are unchanged and keep working, so the mechanism is purely additive; but a
 fragment flipped to `remotes.badges` renders NOTHING for every project that has
-not tagged its links, and the drop rule makes that silent. See
-[the rollout plan](../../.agents/FORGES-REGISTRIES.md).
+not tagged its links, and the drop rule makes that silent.
 
 ### The drift gate (`--check`)
 
