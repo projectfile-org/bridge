@@ -413,6 +413,23 @@ func TestVariantListNamedByImagePart(t *testing.T) {
 	assert.Contains(t, out, "```dockerfile\nFROM kiota.ch/b19/llvm/22:latest\n```\n\nSeries: `22` | `21`")
 }
 
+// TestVariantListCarriesImagePartMark: a part embedding the axis (`n{AXIS}`) names the line and marks every value.
+func TestVariantListCarriesImagePartMark(t *testing.T) {
+	pf := minimalDoc(t)
+	from := group("base-image", "Build on top of this image:", "FROM kiota.ch/b19/node:n{B19_LLVM_SERIES}")
+	pf.Extensions = map[string]any{
+		pfmodel.ImageExtensionNS: map[string]any{"series": "n{" + axisLLVM + "}"},
+		ciExtensionNS: map[string]any{
+			keyMatrix: map[string]any{keyAxes: map[string]any{axisLLVM: []any{"24", "26"}}},
+		},
+		readmeNS: map[string]any{blockUsage: []any{from}},
+	}
+
+	out := renderDoc(t, t.TempDir(), pf)
+
+	assert.Contains(t, out, "Series: `n24` | `n26`")
+}
+
 // TestGroupTitleNestsSubsections: a titled group renders its own heading, and
 // its subsections drop one level so they sit under it, not beside it.
 func TestGroupTitleNestsSubsections(t *testing.T) {

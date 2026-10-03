@@ -489,9 +489,13 @@ func variantLines(doc *projectfile.Document, lines []string, matrix pfmodel.Matr
 			genlog.DebugRow("readme_variant", axis, "single value (no list)", "value="+values[0])
 			continue
 		}
-		label := variantLabel(doc, axis, lang)
-		genlog.DebugRow("readme_variant", axis, "listed", "label="+label+" values="+strings.Join(values, ","))
-		out = append(out, label+": `"+strings.Join(values, "` | `")+"`")
+		label, tmpl := variantLabel(doc, axis, lang)
+		marked := make([]string, 0, len(values))
+		for _, value := range values {
+			marked = append(marked, strings.ReplaceAll(tmpl, "{"+axis+"}", value))
+		}
+		genlog.DebugRow("readme_variant", axis, "listed", "label="+label+" values="+strings.Join(marked, ","))
+		out = append(out, label+": `"+strings.Join(marked, "` | `")+"`")
 	}
 	return out
 }
@@ -519,19 +523,19 @@ func cellsLine(doc *projectfile.Document, tmpl string, matrix pfmodel.Matrix, la
 	return translate(lang, "cells") + ": " + strings.Join(labels, ", ")
 }
 
-// variantLabel names an axis by the image part declaring it (`series: "{AXIS}"`), localized when the catalog knows the part.
-func variantLabel(doc *projectfile.Document, axis, lang string) string {
+// variantLabel names an axis by the image part embedding it (`series: "n{AXIS}"`) and returns that part as the value template.
+func variantLabel(doc *projectfile.Document, axis, lang string) (string, string) {
 	raw, _ := projectfile.LookupExtension(doc, pfmodel.ImageExtensionNS)
 	parts, _ := raw.(map[string]any)
 	for _, part := range slices.Sorted(maps.Keys(parts)) {
-		if value, _ := parts[part].(string); value == "{"+axis+"}" {
+		if value, _ := parts[part].(string); strings.Contains(value, "{"+axis+"}") {
 			if label, ok := lookupMessage(lang, "variant."+part); ok {
-				return label
+				return label, value
 			}
-			return part
+			return part, value
 		}
 	}
-	return axis
+	return axis, "{" + axis + "}"
 }
 
 // groupUnnamed labels a group that declares no name, for the decision trace only.
