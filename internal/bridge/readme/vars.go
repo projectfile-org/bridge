@@ -655,7 +655,7 @@ func hasTag(tags any, tag string) bool {
 // hasDevContainer reports whether the CI DAG declares a dev-container node,
 // which the building block advertises as the local dev loop. A dev-container is
 // a selectable (non-goal) node contributed by the container plane
-// (m6e/container/goals/publish.yaml); its presence is the signal a project
+// (m6e/container/goals/published.yaml); its presence is the signal a project
 // supports `make ci-dag M6E_CI_TARGETS=dev`.
 func hasDevContainer(doc *projectfile.Document) bool {
 	nodes, ok := ciSubtree(doc)["nodes"].(map[string]any)

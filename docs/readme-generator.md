@@ -357,7 +357,7 @@ story:
     for a purely-local entry point such as `ready-to-publish` (the pseudo-CI run
     a workstation `make` performs). The block prefers tagged nodes and falls back
     to **every** goal when none are tagged, so a project that never opts in keeps
-    the full list it always had. `m6e/core/goals/publish.yaml` tags
+    the full list it always had. `m6e/core/goals/published.yaml` tags
     `ready-to-publish` by default; a project tags further nodes to surface them.
 - **The intro explains `make` and the dev loop.** A line notes that bare `make`
     runs the default target (`make help` lists them all); when the DAG declares
@@ -366,7 +366,7 @@ story:
     launcher m6e derives for that node.
 
 ```yaml
-# m6e/core/goals/publish.yaml
+# m6e/core/goals/published.yaml
 org:
   projectfile:
     ci:
