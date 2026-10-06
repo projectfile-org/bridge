@@ -9,6 +9,7 @@ import (
 	"context"
 	"fmt"
 	"os/exec"
+	"path"
 	"regexp"
 	"slices"
 	"strconv"
@@ -45,7 +46,6 @@ var sections = []struct{ kind, title string }{
 	{"fix", "Bug fixes"},
 	{"perf", "Performance"},
 	{"revert", "Reverts"},
-	{"docs", "Documentation"},
 }
 
 var (
@@ -53,6 +53,9 @@ var (
 	breakingRe = regexp.MustCompile(`(?m)^BREAKING[ -]CHANGE: ?`)
 	trailerRe  = regexp.MustCompile(`^[A-Z][A-Za-z-]+: \S`)
 	headingRe  = regexp.MustCompile(`^(#{1,4}) `)
+	advisoryRe = regexp.MustCompile(`^(CVE|GHSA|GO|RUSTSEC|PYSEC)-`)
+	linkRe     = regexp.MustCompile(`\]\(([^)\s]+)\)`)
+	schemeRe   = regexp.MustCompile(`^[A-Za-z][A-Za-z0-9+.-]*:`)
 )
 
 type commit struct {
@@ -118,23 +121,24 @@ func Render(opts Options) (string, error) {
 		b.WriteString("\n" + note + "\n")
 	}
 	writeBreaking(&b, commits)
-	for _, s := range []struct {
-		title, dir, filter, at string
-	}{
-		{"What’s new", featuresDir, "A", opts.To},
-		{"Roadmap delivered", roadmapDir, "D", opts.From},
-	} {
-		frags, err := changedFragments(g, base, opts.To, s.dir, s.filter, s.at)
-		if err != nil {
-			return "", err
-		}
-		writeFragments(&b, s.title, frags)
-	}
-	frags, err := presentFragments(g, opts.To)
+	highlights, err := presentFragments(g, opts.To)
 	if err != nil {
 		return "", err
 	}
-	writeFragments(&b, "Highlights", frags)
+	writeFragments(&b, "Highlights", highlights)
+	added, err := changedFragments(g, base, opts.To, featuresDir, "A", opts.To)
+	if err != nil {
+		return "", err
+	}
+	if added, err = introduced(g, opts.From, opts.To, added); err != nil {
+		return "", err
+	}
+	writeFragments(&b, "What’s new", added)
+	delivered, err := changedFragments(g, base, opts.To, roadmapDir, "D", opts.From)
+	if err != nil {
+		return "", err
+	}
+	writeTitles(&b, "Roadmap delivered", delivered)
 	writeChanges(&b, commits)
 	if err := writeSecurity(&b, g, opts.From, opts.To); err != nil {
 		return "", err
@@ -395,7 +399,33 @@ func changedFragments(g git, from, to, dir, filter, at string) ([]fragment, erro
 	if err != nil {
 		return nil, err
 	}
-	return readFragments(g, at, strings.Fields(out))
+	var own []string
+	for _, p := range strings.Fields(out) {
+		if path.Dir(p)+"/" != dir {
+			genlog.Debug("fragment skipped, nested", "path", p)
+			continue
+		}
+		own = append(own, p)
+	}
+	return readFragments(g, at, own)
+}
+
+// introduced keeps the fragments a feat commit added; any other type documents an existing feature.
+func introduced(g git, from, to string, frags []fragment) ([]fragment, error) {
+	var kept []fragment
+	for _, f := range frags {
+		subject, err := g.run("log", "--diff-filter=A", "--max-count=1", "--format=%s", rangeArg(from, to), "--", f.path)
+		if err != nil {
+			return nil, err
+		}
+		m := subjectRe.FindStringSubmatch(strings.TrimSpace(subject))
+		if m == nil || m[1] != "feat" {
+			genlog.Debug("fragment skipped, not added by a feat commit", "path", f.path, "subject", strings.TrimSpace(subject))
+			continue
+		}
+		kept = append(kept, f)
+	}
+	return kept, nil
 }
 
 func presentFragments(g git, to string) ([]fragment, error) {
@@ -419,13 +449,13 @@ func readFragments(g git, ref string, paths []string) ([]fragment, error) {
 			return nil, err
 		}
 		genlog.Debug("fragment read", "path", p, "ref", ref)
-		frags = append(frags, fragment{p, demote(text)})
+		frags = append(frags, fragment{p, demote(text, path.Dir(p))})
 	}
 	return frags, nil
 }
 
-// demote strips the leading licence comment and lowers headings two levels outside fences.
-func demote(text string) string {
+// demote strips the licence comment, lowers headings two levels and roots relative links, outside fences.
+func demote(text, dir string) string {
 	text = strings.TrimSpace(text)
 	if strings.HasPrefix(text, "<!--") {
 		if _, rest, ok := strings.Cut(text, "-->"); ok {
@@ -439,10 +469,29 @@ func demote(text string) string {
 			fenced = !fenced
 		}
 		if !fenced {
-			lines[i] = headingRe.ReplaceAllString(l, "$1## ")
+			lines[i] = linkRe.ReplaceAllStringFunc(headingRe.ReplaceAllString(l, "$1## "), func(m string) string {
+				return "](" + rootLink(linkRe.FindStringSubmatch(m)[1], dir) + ")"
+			})
 		}
 	}
 	return strings.Join(lines, "\n")
+}
+
+// rootLink rewrites a link relative to dir as relative to the repository root.
+func rootLink(target, dir string) string {
+	if target == "" || strings.HasPrefix(target, "#") || strings.HasPrefix(target, "/") || schemeRe.MatchString(target) {
+		return target
+	}
+	file, anchor, hasAnchor := strings.Cut(target, "#")
+	rooted := path.Join(dir, file)
+	if strings.HasPrefix(rooted, "../") {
+		genlog.Debug("link left alone, outside the repository", "target", target, "dir", dir)
+		return target
+	}
+	if hasAnchor {
+		rooted += "#" + anchor
+	}
+	return rooted
 }
 
 func writeFragments(b *strings.Builder, title string, frags []fragment) {
@@ -451,6 +500,16 @@ func writeFragments(b *strings.Builder, title string, frags []fragment) {
 		parts = append(parts, f.text)
 	}
 	writeSection(b, title, parts, "\n\n")
+}
+
+// writeTitles lists each fragment by its heading alone.
+func writeTitles(b *strings.Builder, title string, frags []fragment) {
+	var lines []string
+	for _, f := range frags {
+		heading, _, _ := strings.Cut(f.text, "\n")
+		lines = append(lines, "- "+strings.TrimLeft(heading, "# "))
+	}
+	writeSection(b, title, lines, "\n")
 }
 
 func suppressed(g git, ref string) (map[string]bool, error) {
@@ -485,6 +544,10 @@ func suppressed(g git, ref string) (map[string]bool, error) {
 		return nil, fmt.Errorf("parse %s at %s: %w", vulnerabilities, ref, err)
 	}
 	for _, s := range doc.Org.Projectfile.Vulnerabilities.Suppress {
+		if !advisoryRe.MatchString(s.ID) {
+			genlog.Debug("suppression skipped, not an advisory", "id", s.ID, "ref", ref)
+			continue
+		}
 		ids[s.ID] = true
 	}
 	return ids, nil

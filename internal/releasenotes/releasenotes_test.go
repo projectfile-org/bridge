@@ -107,11 +107,13 @@ func TestRenderRange(t *testing.T) {
 	r.commit("Ann", "feat(cli)!: drop the old flag\n\nBREAKING CHANGE: use the new flag:\n\n```sh\ntool --new\n```\n\nSigned-off-by: Ann <ann@example.org>", nil)
 	r.commit("Bob", "fix(api): stop leaking sockets", map[string]string{
 		"docs/roadmap.d/later.md":           "",
-		"docs/features.d/later.md":          licence + "# Later\n\n- Here.\n",
-		".projectfile/vulnerabilities.yaml": suppress + "        - id: CVE-2026-2\n        - id: CVE-2026-3\n",
+		"docs/features.d/.inherited/up.md":  licence + "# Upstream\n",
+		".projectfile/vulnerabilities.yaml": suppress + "        - id: CVE-2026-2\n        - id: CVE-2026-3\n        - id: private-key\n",
 	})
-	r.commit("Ann", "docs: refresh help", nil)
-	r.commit("Ann", "docs: refresh help", nil)
+	r.commit("Ann", "feat: later lands", map[string]string{"docs/features.d/later.md": licence + "# Later\n\n- Here, see [how](../how-to/later.md#use) and [site](https://example.org).\n"})
+	r.commit("Ann", "docs: document an old feature", map[string]string{"docs/features.d/old.md": licence + "# Old\n"})
+	r.commit("Ann", "fix: refresh help", nil)
+	r.commit("Ann", "fix: refresh help", nil)
 	r.commit("Ann", "chore(deps): bump a", nil)
 	r.commit("Ann", "chore(deps): bump b", nil)
 	r.commit("Ann", "test: cover it", nil)
@@ -120,11 +122,11 @@ func TestRenderRange(t *testing.T) {
 	got, err := Render(Options{Dir: r.dir, Tag: "2.0.0", Note: "Smaller and faster."})
 	require.NoError(t, err)
 	for _, want := range []string{
-		"8 commits, 2 contributors, 8 days since 1.0.0.\n\nSmaller and faster.\n",
+		"10 commits, 2 contributors, 10 days since 1.0.0.\n\nSmaller and faster.\n",
 		"## Upgrade notes\n\n- **cli:** drop the old flag (",
 		"\n\n  use the new flag:\n\n  ```sh\n  tool --new\n  ```\n",
-		"## What’s new\n\n### Later\n\n- Here.\n",
-		"## Roadmap delivered\n\n### Later\n\n- Soon.\n",
+		"## What’s new\n\n### Later\n\n- Here, see [how](docs/how-to/later.md#use) and [site](https://example.org).\n",
+		"## Roadmap delivered\n\n- Later\n",
 		"## Highlights\n\n### Thanks\n\nTo everyone.\n",
 		"## Bug fixes\n\n- **api:** stop leaking sockets (",
 		"## Dependencies\n\n- 2 dependency updates\n",
@@ -134,10 +136,16 @@ func TestRenderRange(t *testing.T) {
 		assert.Contains(t, got, want)
 	}
 	assert.Regexp(t, `- refresh help \([0-9a-f]+, [0-9a-f]+\)`, got)
-	assert.NotContains(t, got, "## Features")
+	assert.NotContains(t, got, "### Old")
+	assert.NotContains(t, got, "Documentation")
+	assert.Equal(t, 1, strings.Count(got, "drop the old flag ("), "breaking change repeated under its type")
 	assert.NotContains(t, got, "Signed-off-by")
 	assert.NotContains(t, got, "cover it")
-	assert.Less(t, strings.Index(got, "Upgrade notes"), strings.Index(got, "What’s new"))
+	assert.NotContains(t, got, "private-key")
+	assert.NotContains(t, got, "Upstream")
+	assert.NotContains(t, got, "Soon.")
+	assert.Less(t, strings.Index(got, "Upgrade notes"), strings.Index(got, "Highlights"))
+	assert.Less(t, strings.Index(got, "Highlights"), strings.Index(got, "What’s new"))
 }
 
 func TestPreviousTag(t *testing.T) {
@@ -174,5 +182,5 @@ func TestCompare(t *testing.T) {
 }
 
 func TestDemoteKeepsFences(t *testing.T) {
-	assert.Equal(t, "### Title\n\n```sh\n# comment\n```\n\n#### Sub", demote(licence+"# Title\n\n```sh\n# comment\n```\n\n## Sub\n"))
+	assert.Equal(t, "### Title\n\n```sh\n# comment\n```\n\n#### Sub [a](docs/a.md)", demote(licence+"# Title\n\n```sh\n# comment\n```\n\n## Sub [a](a.md)\n", "docs"))
 }
