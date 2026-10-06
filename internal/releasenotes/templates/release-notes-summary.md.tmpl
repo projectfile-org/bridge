@@ -1,0 +1,10 @@
+{{ plural .Commits "commit" "commits" }}, {{ plural .Contributors "contributor" "contributors" }}
+{{- with .From }}, {{ with $.Elapsed }}
+{{- if lt .Minutes 1 }}under a minute
+{{- else if lt .Hours 1 }}{{ plural .Minutes "minute" "minutes" }}
+{{- else if lt .Days 1 }}{{ plural .Hours "hour" "hours" }}
+{{- else if lt .Days 14 }}{{ plural .Days "day" "days" }}
+{{- else if lt .Days 61 }}{{ plural .Weeks "week" "weeks" }}
+{{- else if lt .Days 730 }}{{ plural .Months "month" "months" }}
+{{- else }}{{ plural .Years "year" "years" }}
+{{- end }}{{ end }} since {{ . }}{{ end }}.

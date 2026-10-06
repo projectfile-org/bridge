@@ -14,6 +14,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"projectfile.org/projectfile/bridge/internal/bridge/core"
 )
 
 // isolate drops every inherited GIT_* variable so a hook's GIT_DIR never reaches the fixture.
@@ -217,4 +219,28 @@ org:
 	preview, err := Render(Options{Dir: r.dir})
 	require.NoError(t, err)
 	assert.NotContains(t, preview, "Installation")
+}
+
+func TestSummaryElapsed(t *testing.T) {
+	for seconds, want := range map[int64]string{
+		30:              "under a minute",
+		60:              "1 minute",
+		59 * 60:         "59 minutes",
+		3600:            "1 hour",
+		23 * 3600:       "23 hours",
+		86400:           "1 day",
+		13 * 86400:      "13 days",
+		14 * 86400:      "2 weeks",
+		61 * 86400:      "2 months",
+		729 * 86400:     "24 months",
+		3 * 365 * 86400: "3 years",
+	} {
+		out, err := core.Render("", summaryTemplate, struct {
+			Commits, Contributors int
+			From                  string
+			Elapsed               elapsed
+		}{1, 2, "1.0.0", newElapsed(seconds)})
+		require.NoError(t, err)
+		assert.Equal(t, "1 commit, 2 contributors, "+want+" since 1.0.0.", strings.TrimSpace(string(out)), seconds)
+	}
 }

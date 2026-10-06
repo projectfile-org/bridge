@@ -20,6 +20,7 @@ import (
 
 	"kiota.ch/projectfile/core/v2/pkg/genlog"
 	"kiota.ch/projectfile/core/v2/pkg/projectfile"
+	"projectfile.org/projectfile/bridge/internal/bridge/core"
 	"projectfile.org/projectfile/bridge/internal/bridge/readme"
 	"projectfile.org/projectfile/bridge/internal/derive"
 )
@@ -116,7 +117,7 @@ func Render(opts Options) (string, error) {
 	}
 
 	var b strings.Builder
-	summary, err := summaryLine(g, commits, opts.From, opts.To)
+	summary, err := summaryLine(g, commits, opts.Dir, opts.From, opts.To)
 	if err != nil {
 		return "", err
 	}
@@ -299,33 +300,39 @@ func stripTrailers(s string) string {
 	return strings.TrimSpace(strings.Join(lines, "\n"))
 }
 
-func plural(n int, one, many string) string {
-	if n == 1 {
-		return "1 " + one
-	}
-	return fmt.Sprintf("%d %s", n, many)
+// elapsed is the time between two tags, whole in every unit the summary template may pick.
+type elapsed struct{ Minutes, Hours, Days, Weeks, Months, Years int }
+
+func newElapsed(seconds int64) elapsed {
+	days := int(seconds / 86400)
+	return elapsed{int(seconds / 60), int(seconds / 3600), days, days / 7, days / 30, days / 365}
 }
 
-func summaryLine(g git, commits []commit, from, to string) (string, error) {
+func summaryLine(g git, commits []commit, dir, from, to string) (string, error) {
 	people := map[string]bool{}
 	for _, c := range commits {
 		people[c.email] = true
 	}
-	line := plural(len(commits), "commit", "commits") + ", " + plural(len(people), "contributor", "contributors")
-	if from == "" {
-		return line + ".", nil
+	data := struct {
+		Commits, Contributors int
+		From                  string
+		Elapsed               elapsed
+	}{Commits: len(commits), Contributors: len(people), From: from}
+	if from != "" {
+		out, err := g.run("log", "--max-count=1", "--format=%ct", from, "--")
+		if err != nil {
+			return "", err
+		}
+		start, _ := strconv.ParseInt(strings.TrimSpace(out), 10, 64)
+		if out, err = g.run("log", "--max-count=1", "--format=%ct", to, "--"); err != nil {
+			return "", err
+		}
+		end, _ := strconv.ParseInt(strings.TrimSpace(out), 10, 64)
+		data.Elapsed = newElapsed(end - start)
+		genlog.Debug("summary elapsed", "from", from, "to", to, "seconds", end-start)
 	}
-	out, err := g.run("log", "--max-count=1", "--format=%ct", from, "--")
-	if err != nil {
-		return "", err
-	}
-	start, _ := strconv.ParseInt(strings.TrimSpace(out), 10, 64)
-	if out, err = g.run("log", "--max-count=1", "--format=%ct", to, "--"); err != nil {
-		return "", err
-	}
-	end, _ := strconv.ParseInt(strings.TrimSpace(out), 10, 64)
-	days := int((end - start) / 86400)
-	return fmt.Sprintf("%s, %s since %s.", line, plural(days, "day", "days"), from), nil
+	out, err := core.Render(dir, summaryTemplate, data)
+	return strings.TrimSpace(string(out)), err
 }
 
 func label(c commit) string {
@@ -398,7 +405,7 @@ func writeChanges(b *strings.Builder, commits []commit) {
 		writeSection(b, s.title, lines, "\n")
 	}
 	if deps > 0 {
-		writeSection(b, "Dependencies", []string{"- " + plural(deps, "dependency update", "dependency updates")}, "\n")
+		writeSection(b, "Dependencies", []string{"- " + core.Plural(deps, "dependency update", "dependency updates")}, "\n")
 	}
 }
 

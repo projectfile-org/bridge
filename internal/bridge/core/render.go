@@ -81,6 +81,17 @@ type templateLoader func(name string) ([]byte, error)
 
 var loaders = map[string]templateLoader{}
 
+// funcs is the FuncMap every registered and project-local template parses with.
+var funcs = template.FuncMap{"plural": Plural}
+
+// Plural renders n with the singular or plural noun: 1 commit, 2 commits.
+func Plural(n int, one, many string) string {
+	if n == 1 {
+		return "1 " + one
+	}
+	return fmt.Sprintf("%d %s", n, many)
+}
+
 // parsedMu guards both parsed and parsedLocal.
 var parsedMu sync.RWMutex
 
@@ -154,7 +165,7 @@ func lookup(dir, name string) (*template.Template, error) {
 			if cached {
 				return tpl, nil
 			}
-			tpl, err = template.New(name).Option("missingkey=zero").Parse(string(body))
+			tpl, err = template.New(name).Funcs(funcs).Option("missingkey=zero").Parse(string(body))
 			if err != nil {
 				return nil, fmt.Errorf("bridge: parse local %s: %w", name, err)
 			}
@@ -180,7 +191,7 @@ func lookup(dir, name string) (*template.Template, error) {
 	if err != nil {
 		return nil, fmt.Errorf("bridge: read %s: %w", name, err)
 	}
-	tpl, err = template.New(name).Option("missingkey=zero").Parse(string(body))
+	tpl, err = template.New(name).Funcs(funcs).Option("missingkey=zero").Parse(string(body))
 	if err != nil {
 		return nil, fmt.Errorf("bridge: parse %s: %w", name, err)
 	}
