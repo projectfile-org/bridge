@@ -33,11 +33,12 @@ const (
 // ForgeOptions names the forge whose release the forge half describes and what that release holds.
 type ForgeOptions struct {
 	Options
-	Forge   string
-	Server  string
-	Repo    string
-	Assets  []string
-	Magnets map[string]string
+	Forge    string
+	Server   string
+	Repo     string
+	Previous string
+	Assets   []string
+	Magnets  map[string]string
 }
 
 // RenderForge returns the forge half: what this forge published for the tag and how to fetch and verify it.
@@ -67,9 +68,11 @@ func RenderForge(fo ForgeOptions) (string, error) {
 	}
 	writeVerify(&b, pf, fo.Assets)
 	writeTorrents(&b, fo.Magnets)
-	prev, err := previousTag(git{dir: fo.Dir, timeout: fo.Timeout}, fo.Tag, fo.Tag, fo.Prefix)
-	if err != nil {
-		return "", err
+	prev := fo.Previous
+	if prev == "" {
+		if prev, err = previousTag(git{dir: fo.Dir, timeout: fo.Timeout}, fo.Tag, fo.Tag, fo.Prefix); err != nil {
+			genlog.Warn("compare link omitted, previous tag unreadable", "tag", fo.Tag, "err", err.Error())
+		}
 	}
 	if prev != "" {
 		fmt.Fprintf(&b, "\n**Full changes:** %s/compare/%s...%s\n", repoURL, prev, fo.Tag)

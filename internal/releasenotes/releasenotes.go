@@ -165,10 +165,15 @@ func previousTag(g git, to, tag, prefix string) (string, error) {
 	if err != nil {
 		return "", err
 	}
+	return previousOf(strings.Fields(out), tag, prefix), nil
+}
+
+// previousOf picks the newest prefixed version among names that the release of tag follows.
+func previousOf(names []string, tag, prefix string) string {
 	cur, curOK := parseVersion(strings.TrimPrefix(tag, prefix))
 	final := !curOK || cur.pre == ""
 	best, bestName := version{}, ""
-	for _, name := range strings.Fields(out) {
+	for _, name := range names {
 		v, ok := parseVersion(strings.TrimPrefix(name, prefix))
 		switch {
 		case !ok:
@@ -182,7 +187,7 @@ func previousTag(g git, to, tag, prefix string) (string, error) {
 		}
 	}
 	genlog.Info("previous tag", "tag", or(bestName, "<none>"), "final", final)
-	return bestName, nil
+	return bestName
 }
 
 type version struct {

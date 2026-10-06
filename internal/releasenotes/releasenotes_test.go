@@ -285,6 +285,10 @@ func TestPublishPatchesOnce(t *testing.T) {
 			_ = json.NewEncoder(w).Encode(map[string]any{"id": 7, "body": body, "assets": []map[string]string{
 				{"name": "o-x.magnet", "browser_download_url": srv.URL + "/dl/o-x.magnet"},
 			}})
+		case req.Method == http.MethodGet && req.URL.Path == "/repos/o/x/releases":
+			_ = json.NewEncoder(w).Encode([]struct {
+				Tag string `json:"tag_name"`
+			}{{fixtureTag}, {"v1.1.0"}, {"v1.3.0"}})
 		case req.URL.Path == "/dl/o-x.magnet":
 			_, _ = w.Write([]byte("magnet:?xt=urn:btih:abc\n"))
 		case req.Method == http.MethodPatch && req.URL.Path == "/repos/o/x/releases/7":
@@ -307,6 +311,7 @@ func TestPublishPatchesOnce(t *testing.T) {
 	assert.Equal(t, 1, patches)
 	assert.True(t, strings.HasPrefix(body, "Human half.\n\n"+ForgeMarker))
 	assert.Contains(t, body, "- o-x: `magnet:?xt=urn:btih:abc`")
+	assert.Contains(t, body, "/compare/v1.1.0..."+fixtureTag+"\n")
 }
 
 func TestSummaryElapsed(t *testing.T) {

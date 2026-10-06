@@ -48,6 +48,17 @@ func Publish(ctx context.Context, po PublishOptions) (string, error) {
 		return "", err
 	}
 	genlog.Info("release found", "repo", po.Repo, "tag", po.Tag, "id", rel.ID, "assets", len(rel.Assets))
+	var listed []struct {
+		Tag string `json:"tag_name"`
+	}
+	if err := call(ctx, client, po.Token, http.MethodGet, base+"?limit=50&per_page=50", nil, &listed); err != nil {
+		genlog.Warn("releases unlisted, previous tag read from git", "err", err.Error())
+	}
+	tags := make([]string, 0, len(listed))
+	for _, l := range listed {
+		tags = append(tags, l.Tag)
+	}
+	po.Previous = previousOf(tags, po.Tag, po.Prefix)
 	po.Magnets = map[string]string{}
 	for _, a := range rel.Assets {
 		po.Assets = append(po.Assets, a.Name)
