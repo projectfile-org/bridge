@@ -51,6 +51,14 @@ func DoWithRetry(ctx context.Context, client *http.Client, req *http.Request) (*
 				return nil, ctx.Err()
 			case <-time.After(250*time.Millisecond + jitter):
 			}
+			// Rewind the body the failed attempt consumed, so a retried PATCH is not sent empty.
+			if req.GetBody != nil {
+				body, err := req.GetBody()
+				if err != nil {
+					return nil, fmt.Errorf("rewind request body: %w", err)
+				}
+				req.Body = body
+			}
 		}
 		// #nosec G107,G704 -- URL is constructed by the forge driver from a parsed repo URL the user explicitly listed in projectfile.toml; this command's whole job is to talk to that forge
 		resp, err := client.Do(req)
