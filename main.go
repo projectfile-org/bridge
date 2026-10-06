@@ -59,7 +59,7 @@ const (
 )
 
 // toolBinaries are pf-bridge-* siblings with their own grammar, so `all` skips them.
-var toolBinaries = map[string]bool{"forge": true, "scan": true, "init": true, "cache": true}
+var toolBinaries = map[string]bool{"forge": true, "scan": true, "init": true, "cache": true, "release-notes": true}
 
 func main() {
 	args := os.Args[1:]
@@ -417,7 +417,7 @@ func printCompletion(w io.Writer, args []string) error {
 	if !slices.Contains(completionShells, shell) {
 		return fmt.Errorf("unsupported shell %q for completion (supported: %s)", shell, strings.Join(completionShells, ", "))
 	}
-	names := append([]string{cmdAll, cmdCheck, dirTo, dirFrom, "forge", "scan", "init", "cache"}, discover()...)
+	names := append([]string{cmdAll, cmdCheck, dirTo, dirFrom, "forge", "scan", "init", "cache", "release-notes"}, discover()...)
 	seen := map[string]bool{}
 	uniq := []string{}
 	for _, n := range names {
