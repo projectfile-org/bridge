@@ -35,9 +35,9 @@ var renderCmd = &cobra.Command{
 	Long: "Print the human half of a release body to stdout: a summary line, the\n" +
 		"maintainer note, upgrade notes, the features.d fragments the range adds,\n" +
 		"the roadmap.d fragments it deletes, the release-notes.d fragments, the\n" +
+		"installation and usage blocks of the README pinned to --tag, the\n" +
 		"Conventional Commits grouped by type, suppression changes and new\n" +
-		"contributors. Empty sections are left out. Reads git only, so it works\n" +
-		"offline.\n" +
+		"contributors. Empty sections are left out.\n" +
 		"\n" +
 		"With no --from, the range starts at the newest tag below --tag: a\n" +
 		"candidate (-rc.N) follows the previous tag, a final the previous final.",
@@ -56,6 +56,7 @@ var renderCmd = &cobra.Command{
 			}
 			opts.Note = string(note)
 		}
+		opts.Read = rootflags.ReadOpts()
 		body, err := releasenotes.Render(opts)
 		if err != nil {
 			return err

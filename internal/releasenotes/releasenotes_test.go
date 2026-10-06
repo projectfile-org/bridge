@@ -184,3 +184,34 @@ func TestCompare(t *testing.T) {
 func TestDemoteKeepsFences(t *testing.T) {
 	assert.Equal(t, "### Title\n\n```sh\n# comment\n```\n\n#### Sub [a](docs/a.md)", demote(licence+"# Title\n\n```sh\n# comment\n```\n\n## Sub [a](a.md)\n", "docs"))
 }
+
+func TestRenderPinsInstallBlocks(t *testing.T) {
+	r := newRepo(t)
+	r.commit("Ann", "feat: ship", map[string]string{"projectfile.yaml": `identity:
+  name: x
+org:
+  projectfile:
+    image:
+      tag: latest
+    readme:
+      tag: latest
+      download: latest/download
+      installation:
+        - name: image
+          commands:
+            - docker pull example.org/x:${org.projectfile.image.tag}
+            - curl --output x https://example.org/releases/${org.projectfile.readme.download}/x
+            - go install example.org/x@${org.projectfile.readme.tag}
+`})
+	got, err := Render(Options{Dir: r.dir, Tag: "v1.2.0", Prefix: "v"})
+	require.NoError(t, err)
+	assert.Contains(t, got, "## Installation\n")
+	assert.Contains(t, got, "docker pull example.org/x:1.2.0\n")
+	assert.Contains(t, got, "https://example.org/releases/download/v1.2.0/x\n")
+	assert.Contains(t, got, "go install example.org/x@v1.2.0\n")
+	assert.NotContains(t, got, "latest")
+
+	preview, err := Render(Options{Dir: r.dir})
+	require.NoError(t, err)
+	assert.NotContains(t, preview, "Installation")
+}

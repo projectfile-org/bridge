@@ -104,7 +104,7 @@ bridge/
     │                        forge, funding, ...) — moved out of core in the core-2.0 cut
     ├── bridge/             every projectfile↔external-file bridge + core/ contract + registry
     ├── forge/              forge push (core/ + drivers/{github,gitlab,forgejo} + hostmatch/)
-    ├── releasenotes/       release notes from git: range, commit grouping, fragments, suppression delta
+    ├── releasenotes/       release notes: range, commit grouping, fragments, suppression delta, README install/usage pinned to the tag
     ├── scanners/           stack + git + forge + sinks scanners (core registry)
     ├── source/             `init` ecosystem auto-detection (reuses bridge parsers)
     ├── scaffold/           interactive `init` TUI (runs scanners)
