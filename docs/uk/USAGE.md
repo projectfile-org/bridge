@@ -40,10 +40,11 @@ Shared flags (also accepted after a bridge name):
   Drift warns by default; --fail-on-drift makes it fatal.
 
 Tools:
-  cache        Manage the local SPDX and include cache
-  forge        Push projectfile metadata out to the repository forge
-  init         Scaffold a new projectfile document (prefer pf-cli init)
-  scan         Run scanners to refresh projectfile metadata from filesystem signals
+  cache                Manage the local SPDX and include cache
+  forge                Push projectfile metadata out to the repository forge
+  init                 Scaffold a new projectfile document (prefer pf-cli init)
+  release-notes        Render release notes from git
+  scan                 Run scanners to refresh projectfile metadata from filesystem signals
 Package manifests:
   composer   [rw]  composer.json — two-way sync
   npm        [rw]  package.json — two-way sync
