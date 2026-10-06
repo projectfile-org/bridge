@@ -5,7 +5,10 @@
 package releasenotes
 
 import (
+	"encoding/json"
 	"fmt"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -190,9 +193,10 @@ func TestDemoteKeepsFences(t *testing.T) {
 	assert.Equal(t, "### Title\n\n```sh\n# comment\n```\n\n#### Sub [a](docs/a.md)", demote(licence+"# Title\n\n```sh\n# comment\n```\n\n## Sub [a](a.md)\n", "docs"))
 }
 
-func TestRenderPinsInstallBlocks(t *testing.T) {
-	r := newRepo(t)
-	r.commit("Ann", "feat: ship", map[string]string{"projectfile.yaml": `identity:
+// fixtureTag is the release the forge-half tests describe.
+const fixtureTag = "v1.2.0"
+
+const forgeDoc = `identity:
   name: x
 org:
   projectfile:
@@ -205,20 +209,104 @@ org:
         - name: image
           commands:
             - docker pull example.org/x:${org.projectfile.image.tag}
-            - curl --output x https://example.org/releases/${org.projectfile.readme.download}/x
             - go install example.org/x@${org.projectfile.readme.tag}
-`})
-	got, err := Render(Options{Dir: r.dir, Tag: "v1.2.0", Prefix: "v"})
-	require.NoError(t, err)
-	assert.Contains(t, got, "## Installation\n")
-	assert.Contains(t, got, "docker pull example.org/x:1.2.0\n")
-	assert.Contains(t, got, "https://example.org/releases/download/v1.2.0/x\n")
-	assert.Contains(t, got, "go install example.org/x@v1.2.0\n")
-	assert.NotContains(t, got, "latest")
+        - name: release-binary
+          prefix:
+            en: "From GitHub:"
+          commands:
+            - curl --output x ${org.projectfile.forge.remotes.github.url}/releases/${org.projectfile.readme.download}/x
+    sinks:
+      ghcr:
+        ref: ghcr.example/x:${tag}
+        role: primary
+      kiota:
+        ref: kiota.example/x:${tag}
+        role: primary
+    publish:
+      github:
+        push: [ghcr]
+      kiota:
+        push: [kiota]
+    signing:
+      cosign:
+        public-key: https://example.org/cosign.pub
+    ci:
+      nodes:
+        image-is-signed: {}
+`
 
-	preview, err := Render(Options{Dir: r.dir})
+func TestRenderForge(t *testing.T) {
+	r := newRepo(t)
+	r.commit("Ann", "feat: first", map[string]string{"projectfile.yaml": forgeDoc})
+	r.git("Ann", "tag", "v1.1.0")
+	r.commit("Ann", "feat: ship", nil)
+	r.git("Ann", "tag", fixtureTag)
+
+	human, err := Render(Options{Dir: r.dir, Tag: fixtureTag, Prefix: "v"})
 	require.NoError(t, err)
-	assert.NotContains(t, preview, "Installation")
+	assert.NotContains(t, human, "Installation")
+
+	got, err := RenderForge(ForgeOptions{
+		Options: Options{Dir: r.dir, Tag: fixtureTag, Prefix: "v"},
+		Forge:   "kiota", Server: "https://kiota.example", Repo: "o/x",
+		Assets:  []string{"x-linux-amd64", "x-linux-amd64.asc"},
+		Magnets: map[string]string{"o-x-1.2.0.magnet": "magnet:?xt=urn:btih:abc\n"},
+	})
+	require.NoError(t, err)
+	assert.True(t, strings.HasPrefix(got, ForgeMarker+"\n"))
+	assert.Contains(t, got, "docker pull example.org/x:1.2.0\n")
+	assert.Contains(t, got, "go install example.org/x@v1.2.0\n")
+	assert.Contains(t, got, "this release:")
+	assert.Contains(t, got, "curl --output x https://kiota.example/o/x/releases/download/v1.2.0/x\n")
+	assert.Contains(t, got, "cosign verify --key https://example.org/cosign.pub kiota.example/x:1.2.0\n")
+	assert.NotContains(t, got, "ghcr.example")
+	assert.NotContains(t, got, "verify-attestation")
+	assert.Contains(t, got, "- o-x-1.2.0: `magnet:?xt=urn:btih:abc`\n")
+	assert.Contains(t, got, "**Full changes:** https://kiota.example/o/x/compare/v1.1.0...v1.2.0\n")
+	assert.NotContains(t, got, "latest")
+}
+
+func TestMergeBodyReplacesForgeHalf(t *testing.T) {
+	once := MergeBody("Human half.\n", ForgeMarker+"\nold\n")
+	assert.Equal(t, "Human half.\n\n"+ForgeMarker+"\nold\n", once)
+	assert.Equal(t, "Human half.\n\n"+ForgeMarker+"\nnew\n", MergeBody(once, ForgeMarker+"\nnew\n"))
+}
+
+func TestPublishPatchesOnce(t *testing.T) {
+	r := newRepo(t)
+	r.commit("Ann", "feat: first", map[string]string{"projectfile.yaml": forgeDoc})
+	r.git("Ann", "tag", fixtureTag)
+	body, patches := "Human half.\n", 0
+	var srv *httptest.Server
+	srv = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+		assert.Equal(t, "token secret", req.Header.Get("Authorization"))
+		switch {
+		case req.Method == http.MethodGet && req.URL.Path == "/repos/o/x/releases/tags/"+fixtureTag:
+			_ = json.NewEncoder(w).Encode(map[string]any{"id": 7, "body": body, "assets": []map[string]string{
+				{"name": "o-x.magnet", "browser_download_url": srv.URL + "/dl/o-x.magnet"},
+			}})
+		case req.URL.Path == "/dl/o-x.magnet":
+			_, _ = w.Write([]byte("magnet:?xt=urn:btih:abc\n"))
+		case req.Method == http.MethodPatch && req.URL.Path == "/repos/o/x/releases/7":
+			var in map[string]string
+			require.NoError(t, json.NewDecoder(req.Body).Decode(&in))
+			body, patches = in["body"], patches+1
+		default:
+			t.Errorf("unexpected %s %s", req.Method, req.URL.Path)
+		}
+	}))
+	defer srv.Close()
+	po := PublishOptions{
+		ForgeOptions: ForgeOptions{Options: Options{Dir: r.dir, Tag: fixtureTag, Prefix: "v"}, Forge: "kiota", Server: "https://kiota.example", Repo: "o/x"},
+		API:          srv.URL, Token: "secret",
+	}
+	for range 2 {
+		_, err := Publish(t.Context(), po)
+		require.NoError(t, err)
+	}
+	assert.Equal(t, 1, patches)
+	assert.True(t, strings.HasPrefix(body, "Human half.\n\n"+ForgeMarker))
+	assert.Contains(t, body, "- o-x: `magnet:?xt=urn:btih:abc`")
 }
 
 func TestSummaryElapsed(t *testing.T) {

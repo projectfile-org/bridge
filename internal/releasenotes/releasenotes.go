@@ -21,8 +21,6 @@ import (
 	"kiota.ch/projectfile/core/v2/pkg/genlog"
 	"kiota.ch/projectfile/core/v2/pkg/projectfile"
 	"projectfile.org/projectfile/bridge/internal/bridge/core"
-	"projectfile.org/projectfile/bridge/internal/bridge/readme"
-	"projectfile.org/projectfile/bridge/internal/derive"
 )
 
 // Options selects the range and the release the notes describe.
@@ -144,13 +142,6 @@ func Render(opts Options) (string, error) {
 		return "", err
 	}
 	writeTitles(&b, "Roadmap delivered", delivered)
-	install, err := pinnedBlocks(opts)
-	if err != nil {
-		return "", err
-	}
-	if install != "" {
-		b.WriteString("\n" + install + "\n")
-	}
 	writeChanges(&b, commits)
 	if err := writeSecurity(&b, g, opts.From, opts.To); err != nil {
 		return "", err
@@ -628,30 +619,6 @@ func writeContributors(b *strings.Builder, g git, commits []commit, from string)
 	}
 	writeSection(b, "New contributors", lines, "\n")
 	return nil
-}
-
-// pinnedBlocks renders the README installation and usage blocks with every latest pinned to this release.
-func pinnedBlocks(opts Options) (string, error) {
-	if opts.Tag == "" {
-		genlog.Debug("install blocks omitted, no release tag")
-		return "", nil
-	}
-	pf, _, err := projectfile.ReadWithOptions(opts.Dir, opts.Read)
-	if err != nil {
-		genlog.Warn("install blocks omitted, projectfile unreadable", "dir", opts.Dir, "err", err.Error())
-		return "", nil
-	}
-	version := strings.TrimPrefix(opts.Tag, opts.Prefix)
-	for _, pin := range []struct{ value, path string }{
-		{version, "org.projectfile.image.tag"},
-		{opts.Tag, "org.projectfile.readme.tag"},
-		{"download/" + opts.Tag, "org.projectfile.readme.download"},
-	} {
-		setPath(pf.Extensions, pin.value, strings.Split(pin.path, ".")...)
-		genlog.Debug("install pinned", "path", pin.path, "value", pin.value)
-	}
-	derive.AddVirtual(pf)
-	return readme.Blocks(pf, opts.Dir, "installation", "usage")
 }
 
 // setPath stores value at the nested map path, creating the maps it lacks.

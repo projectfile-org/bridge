@@ -1,0 +1,196 @@
+// SPDX-FileCopyrightText: 2026 Damián Búho <damian.buho@proton.me>
+//
+// SPDX-License-Identifier: MIT
+
+package releasenotes
+
+import (
+	"fmt"
+	"slices"
+	"strings"
+
+	"kiota.ch/projectfile/core/v2/pkg/genlog"
+	"kiota.ch/projectfile/core/v2/pkg/interp"
+	"kiota.ch/projectfile/core/v2/pkg/projectfile"
+	"projectfile.org/projectfile/bridge/internal/bridge/readme"
+	"projectfile.org/projectfile/bridge/internal/derive"
+	"projectfile.org/projectfile/bridge/internal/derive/ocisinks"
+	"projectfile.org/projectfile/bridge/internal/pfmodel"
+)
+
+// ForgeMarker opens the forge half in a release body; publish replaces everything after it.
+const ForgeMarker = "<!-- pf-bridge release-notes forge -->"
+
+const (
+	cosignKeyPath = "org.projectfile.signing.cosign.public-key"
+	signedNode    = "org.projectfile.ci.nodes.image-is-signed"
+	attestedNode  = "org.projectfile.ci.nodes.image-is-attested"
+	gpgReleaseKey = "${people[0].handles.gpg-key.release}"
+	binaryEntry   = "release-binary"
+	binaryPrefix  = "Download the prebuilt binary for your platform from this release:"
+)
+
+// ForgeOptions names the forge whose release the forge half describes and what that release holds.
+type ForgeOptions struct {
+	Options
+	Forge   string
+	Server  string
+	Repo    string
+	Assets  []string
+	Magnets map[string]string
+}
+
+// RenderForge returns the forge half: what this forge published for the tag and how to fetch and verify it.
+func RenderForge(fo ForgeOptions) (string, error) {
+	if fo.Timeout == 0 {
+		fo.Timeout = defaultTimeout
+	}
+	pf, _, err := projectfile.ReadWithOptions(fo.Dir, fo.Read)
+	if err != nil {
+		return "", fmt.Errorf("read projectfile: %w", err)
+	}
+	narrowPublish(pf, fo.Forge)
+	pinRelease(pf, fo.Options)
+	derive.AddVirtual(pf)
+	repoURL := strings.TrimSuffix(fo.Server, "/") + "/" + fo.Repo
+	setPath(pf.Extensions, repoURL, strings.Split("org.projectfile.forge.remotes.github.url", ".")...)
+	setBinaryPrefix(pf)
+
+	var b strings.Builder
+	b.WriteString(ForgeMarker + "\n")
+	blocks, err := readme.Blocks(pf, fo.Dir, "installation", "usage")
+	if err != nil {
+		return "", err
+	}
+	if blocks != "" {
+		b.WriteString("\n" + blocks + "\n")
+	}
+	writeVerify(&b, pf, fo.Assets)
+	writeTorrents(&b, fo.Magnets)
+	prev, err := previousTag(git{dir: fo.Dir, timeout: fo.Timeout}, fo.Tag, fo.Tag, fo.Prefix)
+	if err != nil {
+		return "", err
+	}
+	if prev != "" {
+		fmt.Fprintf(&b, "\n**Full changes:** %s/compare/%s...%s\n", repoURL, prev, fo.Tag)
+	}
+	return b.String(), nil
+}
+
+// narrowPublish keeps only this forge's publish route, so every sink another forge pushes to drops out.
+func narrowPublish(pf *projectfile.Document, forge string) {
+	raw, ok := projectfile.LookupExtension(pf, pfmodel.PublishExtensionNS)
+	routes, _ := raw.(map[string]any)
+	if !ok || routes[forge] == nil {
+		genlog.Warn("forge has no publish route, every sink kept", "forge", forge)
+		return
+	}
+	for name := range routes {
+		if name != forge {
+			delete(routes, name)
+			genlog.Debug("publish route dropped", "route", name, "forge", forge)
+		}
+	}
+}
+
+// pinRelease points every image tag, readme tag and download at this release.
+func pinRelease(pf *projectfile.Document, opts Options) {
+	for _, pin := range []struct{ value, path string }{
+		{strings.TrimPrefix(opts.Tag, opts.Prefix), "org.projectfile.image.tag"},
+		{opts.Tag, "org.projectfile.readme.tag"},
+		{"download/" + opts.Tag, "org.projectfile.readme.download"},
+	} {
+		setPath(pf.Extensions, pin.value, strings.Split(pin.path, ".")...)
+		genlog.Debug("install pinned", "path", pin.path, "value", pin.value)
+	}
+}
+
+// setBinaryPrefix rewords the binary block for a release page, which is the download.
+func setBinaryPrefix(pf *projectfile.Document) {
+	raw, _ := projectfile.LookupExtension(pf, pfmodel.ReadmeExtensionNS+".installation")
+	entries, _ := raw.([]any)
+	for _, e := range entries {
+		if m, ok := e.(map[string]any); ok && m["name"] == binaryEntry {
+			m["prefix"] = map[string]any{"en": binaryPrefix}
+			genlog.Debug("binary prefix reworded", "entry", binaryEntry)
+		}
+	}
+}
+
+// writeVerify lists the cosign and gpg commands that prove the published artifacts.
+func writeVerify(b *strings.Builder, pf *projectfile.Document, assets []string) {
+	var lines []string
+	key, _ := projectfile.LookupExtension(pf, cosignKeyPath)
+	keyURL, _ := key.(string)
+	_, signed := projectfile.LookupExtension(pf, signedNode)
+	_, attested := projectfile.LookupExtension(pf, attestedNode)
+	if signed && keyURL != "" {
+		refs := sinkRefs(pf)
+		for _, ref := range refs {
+			lines = append(lines, "cosign verify --key "+keyURL+" "+ref)
+		}
+		if attested {
+			for _, ref := range refs {
+				lines = append(lines, "cosign verify-attestation --key "+keyURL+" --type cyclonedx "+ref)
+			}
+		}
+	}
+	genlog.Debug("cosign verify", "signed", signed, "attested", attested, "key", or(keyURL, "<none>"), "lines", len(lines))
+	var sigs []string
+	for _, a := range assets {
+		if strings.HasSuffix(a, ".asc") {
+			sigs = append(sigs, a)
+		}
+	}
+	if fpr := interp.Expand(pf, gpgReleaseKey); len(sigs) > 0 && fpr != "" && !strings.Contains(fpr, "${") {
+		lines = append(lines, "gpg --keyserver hkps://keys.openpgp.org --recv-keys "+fpr)
+		for _, s := range sigs {
+			lines = append(lines, "gpg --verify "+s+" "+strings.TrimSuffix(s, ".asc"))
+		}
+	}
+	genlog.Debug("gpg verify", "signatures", len(sigs))
+	if len(lines) == 0 {
+		return
+	}
+	b.WriteString("\n## Verify\n\nCheck that what you downloaded is what this project published:\n\n```sh\n")
+	b.WriteString(strings.Join(lines, "\n") + "\n```\n")
+}
+
+// sinkRefs returns the composed image ref of every sink this forge pushed to, in name order.
+func sinkRefs(pf *projectfile.Document) []string {
+	var refs []string
+	for name, v := range ocisinks.Refs(pf) {
+		entry, _ := v.(map[string]any)
+		if ref, ok := entry[pfmodel.SinkRefKey].(string); ok && ref != "" {
+			refs = append(refs, ref)
+			genlog.Debug("verify ref", "sink", name, "ref", ref)
+		}
+	}
+	slices.Sort(refs)
+	return refs
+}
+
+// writeTorrents lists one magnet link per torrented asset.
+func writeTorrents(b *strings.Builder, magnets map[string]string) {
+	if len(magnets) == 0 {
+		return
+	}
+	names := make([]string, 0, len(magnets))
+	for name := range magnets {
+		names = append(names, name)
+	}
+	slices.Sort(names)
+	b.WriteString("\n## Download via BitTorrent\n\nFetch this release over BitTorrent with a magnet link, or with the attached `.torrent` file:\n\n")
+	for _, name := range names {
+		fmt.Fprintf(b, "- %s: `%s`\n", strings.TrimSuffix(name, ".magnet"), strings.TrimSpace(magnets[name]))
+	}
+	genlog.Debug("torrents listed", "count", len(names))
+}
+
+// MergeBody replaces the forge half of body with half, keeping the tag's human half above it.
+func MergeBody(body, half string) string {
+	if i := strings.Index(body, ForgeMarker); i >= 0 {
+		body = body[:i]
+	}
+	return strings.TrimRight(body, "\n") + "\n\n" + strings.TrimRight(half, "\n") + "\n"
+}
