@@ -77,7 +77,10 @@ func (r *repo) commit(author, message string, files map[string]string) {
 	r.git(author, "commit", "--quiet", "--allow-empty", "--message", message)
 }
 
+// REUSE-IgnoreStart
 const licence = "<!--\nSPDX-License-Identifier: MIT\n-->\n\n"
+
+// REUSE-IgnoreEnd
 
 const first = "1.0.0"
 
