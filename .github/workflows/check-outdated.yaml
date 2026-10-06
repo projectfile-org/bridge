@@ -41,7 +41,7 @@ jobs:
             ci-cache-go-
       - name: check-outdated-go
         if: vars.CI_SKIP_CHECK_OUTDATED != 'true' && vars.CI_SKIP_CHECK_OUTDATED_GO != 'true'
-        uses: projectfile-org/actions/run-tool@994493ff42fc5491d6d39b793af9a54d7e352a15 # v1
+        uses: projectfile-org/actions/run-tool@e3c7a78be7ca6045a9932fa4aba608aa6529f50d # v1
         with:
           image: ${{ vars.D9T_GO_TOOLS_IMAGE || format('{0}/d9t/go-tools', vars.SOURCE_DOCKER_REGISTRY || 'ghcr.io/damian-buho') }}
           version: ${{ env.M6E_TAG }}
