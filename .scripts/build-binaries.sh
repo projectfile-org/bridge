@@ -25,7 +25,7 @@ goarch="${GOARCH:-${hostarch}}"
 
 build() { # $1 output basename   $2 package path
     log "building $1 ${version} for ${goos}/${goarch}"
-    go build -ldflags="${ldflags}" -o "dist/$1-${goos}-${goarch}" "$2"
+    go build -ldflags="${ldflags}" -o "$(GOOS="${goos}" GOARCH="${goarch}" .makefile/core/scripts/asset-name.sh "dist/$1")" "$2"
 }
 
 build pf-bridge . # the dispatcher, at the module root

@@ -10,14 +10,10 @@ set -eu
 
 dst="${HOME}/.local/bin"
 
-# Host-native cell — the one build-binaries.sh itself defaults to with no GOOS/GOARCH set.
-hostos="$(go env GOHOSTOS)"
-hostarch="$(go env GOHOSTARCH)"
-
 log() { printf '[install-binary] %s\n' "$*" >&2; }
 
 install_one() { # $1 = binary basename
-	bin="dist/$1-${hostos}-${hostarch}"
+	bin="$(.makefile/core/scripts/asset-name.sh "dist/$1")" # no cell bound, so the host name
 	if [ ! -f "${bin}" ]; then
 		log "missing ${bin} after build"
 		exit 1
