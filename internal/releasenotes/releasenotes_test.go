@@ -261,9 +261,16 @@ func TestRenderForge(t *testing.T) {
 	assert.Contains(t, got, "cosign verify --key https://example.org/cosign.pub --insecure-ignore-tlog=true kiota.example/x:1.2.0\n")
 	assert.NotContains(t, got, "ghcr.example")
 	assert.NotContains(t, got, "verify-attestation")
-	assert.Contains(t, got, "- o-x-1.2.0: `magnet:?xt=urn:btih:abc`\n")
+	assert.Contains(t, got, "- [🧲 o-x-1.2.0](magnet:?xt=urn:btih:abc)\n")
 	assert.Contains(t, got, "**Full changes:** https://kiota.example/o/x/compare/v1.1.0...v1.2.0\n")
 	assert.NotContains(t, got, "latest")
+}
+
+func TestWriteTorrentsFencesOnGitHub(t *testing.T) {
+	var b strings.Builder
+	writeTorrents(&b, map[string]string{"o-x.magnet": "magnet:?xt=urn:btih:abc\n"}, true)
+	assert.Contains(t, b.String(), "- 🧲 o-x\n\n  ```text\n  magnet:?xt=urn:btih:abc\n  ```\n")
+	assert.NotContains(t, b.String(), "](magnet:")
 }
 
 func TestMergeBodyReplacesForgeHalf(t *testing.T) {
@@ -310,7 +317,7 @@ func TestPublishPatchesOnce(t *testing.T) {
 	}
 	assert.Equal(t, 1, patches)
 	assert.True(t, strings.HasPrefix(body, "Human half.\n\n"+ForgeMarker))
-	assert.Contains(t, body, "- o-x: `magnet:?xt=urn:btih:abc`")
+	assert.Contains(t, body, "- [🧲 o-x](magnet:?xt=urn:btih:abc)")
 	assert.Contains(t, body, "/compare/v1.1.0..."+fixtureTag+"\n")
 }
 

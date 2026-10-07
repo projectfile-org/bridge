@@ -15,6 +15,7 @@ import (
 	"projectfile.org/projectfile/bridge/internal/bridge/readme"
 	"projectfile.org/projectfile/bridge/internal/derive"
 	"projectfile.org/projectfile/bridge/internal/derive/ocisinks"
+	"projectfile.org/projectfile/bridge/internal/forge/hostmatch"
 	"projectfile.org/projectfile/bridge/internal/pfmodel"
 )
 
@@ -68,7 +69,7 @@ func RenderForge(fo ForgeOptions) (string, error) {
 		b.WriteString("\n" + blocks + "\n")
 	}
 	writeVerify(&b, pf, fo.Assets)
-	writeTorrents(&b, fo.Magnets)
+	writeTorrents(&b, fo.Magnets, hostmatch.ResolveKind(fo.Server) == hostmatch.KindGitHub)
 	prev := fo.Previous
 	if prev == "" {
 		if prev, err = previousTag(git{dir: fo.Dir, timeout: fo.Timeout}, fo.Tag, fo.Tag, fo.Prefix); err != nil {
@@ -178,8 +179,8 @@ func sinkRefs(pf *projectfile.Document) []string {
 	return refs
 }
 
-// writeTorrents lists one magnet link per torrented asset.
-func writeTorrents(b *strings.Builder, magnets map[string]string) {
+// writeTorrents lists one magnet link per torrented asset, fenced where the forge strips the magnet scheme.
+func writeTorrents(b *strings.Builder, magnets map[string]string, fenced bool) {
 	if len(magnets) == 0 {
 		return
 	}
@@ -190,9 +191,14 @@ func writeTorrents(b *strings.Builder, magnets map[string]string) {
 	slices.Sort(names)
 	b.WriteString("\n## Download via BitTorrent\n\nFetch this release over BitTorrent with a magnet link, or with the attached `.torrent` file:\n\n")
 	for _, name := range names {
-		fmt.Fprintf(b, "- %s: `%s`\n", strings.TrimSuffix(name, ".magnet"), strings.TrimSpace(magnets[name]))
+		label, uri := strings.TrimSuffix(name, ".magnet"), strings.TrimSpace(magnets[name])
+		if fenced {
+			fmt.Fprintf(b, "- 🧲 %s\n\n  ```text\n  %s\n  ```\n\n", label, uri)
+			continue
+		}
+		fmt.Fprintf(b, "- [🧲 %s](%s)\n", label, uri)
 	}
-	genlog.Debug("torrents listed", "count", len(names))
+	genlog.Debug("torrents listed", "count", len(names), "fenced", fenced)
 }
 
 // MergeBody replaces the forge half of body with half, keeping the tag's human half above it.
