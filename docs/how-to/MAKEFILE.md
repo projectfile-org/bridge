@@ -911,11 +911,19 @@ Lint YAML for syntax and style
 
 > Image: D9T_PYTHON_TOOLS_IMAGE
 
-### `auto-zizmor`
+### `auto-zizmor-forgejo`
+
+Audit Forgejo Actions workflows for security issues
+
+`auto-zizmor --forge forgejo`
+
+> Image: D9T_RUST_TOOLS_IMAGE
+
+### `auto-zizmor-github`
 
 Audit GitHub Actions workflows for security issues
 
-`auto-zizmor`
+`auto-zizmor --forge github`
 
 > Image: D9T_RUST_TOOLS_IMAGE
 
