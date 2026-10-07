@@ -72,7 +72,9 @@ docker pull kiota.ch/projectfile/bridge:latest
 Descarga el binario precompilado para tu plataforma desde las versiones de GitHub:
 
 ```sh
-mkdir -p ~/.local/bin && curl --fail --location --output ~/.local/bin/pf-bridge https://github.com/projectfile-org/bridge/releases/latest/download/pf-bridge-$(uname -s | tr A-Z a-z)-$(uname -m) && chmod +x ~/.local/bin/pf-bridge
+mkdir -p ~/.local/bin
+curl --fail --location --output ~/.local/bin/pf-bridge https://github.com/projectfile-org/bridge/releases/latest/download/pf-bridge-$(uname -s | tr A-Z a-z)-$(uname -m)
+chmod +x ~/.local/bin/pf-bridge
 ~/.local/bin/pf-bridge --help
 ```
 
