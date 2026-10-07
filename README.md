@@ -70,8 +70,8 @@ docker pull kiota.ch/projectfile/bridge:latest
 Download the prebuilt binary for your platform from GitHub Releases:
 
 ```sh
-curl --fail --location --output pf-bridge https://github.com/projectfile-org/bridge/releases/latest/download/pf-bridge-$(uname -s | tr A-Z a-z)-$(uname -m | sed -e s/x86_64/amd64/ -e s/aarch64/arm64/) && chmod +x pf-bridge
-./pf-bridge --help
+mkdir -p ~/.local/bin && curl --fail --location --output ~/.local/bin/pf-bridge https://github.com/projectfile-org/bridge/releases/latest/download/pf-bridge-$(uname -s | tr A-Z a-z)-$(uname -m) && chmod +x ~/.local/bin/pf-bridge
+~/.local/bin/pf-bridge --help
 ```
 
 Published for: `linux/amd64`, `linux/arm64`, `linux/riscv64`, `darwin/amd64`, `darwin/arm64`
