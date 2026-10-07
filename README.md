@@ -55,7 +55,7 @@ docker pull ghcr.io/projectfile-org/bridge:latest
 docker pull damianbuho/projectfile-bridge:latest
 ```
 
-Stable releases also publish `X.Y.Z`, `X.Y` and `X` tags — pull the precision you want to pin.
+Stable releases also publish `3.3` and `3` tags — pull the precision you want to pin.
 
 If the registries above are unreachable, pull from the origin instead:
 
@@ -67,7 +67,7 @@ docker pull kiota.ch/projectfile/bridge:latest
 
 ### Prebuilt binary
 
-Download the prebuilt binary for your platform from the latest GitHub release:
+Download the prebuilt binary for your platform from GitHub Releases:
 
 ```sh
 curl --fail --location --output pf-bridge https://github.com/projectfile-org/bridge/releases/latest/download/pf-bridge-$(uname -s | tr A-Z a-z)-$(uname -m | sed -e s/x86_64/amd64/ -e s/aarch64/arm64/) && chmod +x pf-bridge

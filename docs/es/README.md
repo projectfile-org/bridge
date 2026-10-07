@@ -57,7 +57,7 @@ docker pull ghcr.io/projectfile-org/bridge:latest
 docker pull damianbuho/projectfile-bridge:latest
 ```
 
-Las versiones estables también publican las etiquetas `X.Y.Z`, `X.Y` y `X`: descarga el nivel de precisión que quieras fijar.
+Las versiones estables también publican las etiquetas `3.3` y `3`: descarga el nivel de precisión que quieras fijar.
 
 Si los registros anteriores no están disponibles, descarga desde el origen:
 
@@ -69,7 +69,7 @@ docker pull kiota.ch/projectfile/bridge:latest
 
 ### Binario precompilado
 
-Descarga el binario precompilado para tu plataforma desde la última versión en GitHub:
+Descarga el binario precompilado para tu plataforma desde las versiones de GitHub:
 
 ```sh
 curl --fail --location --output pf-bridge https://github.com/projectfile-org/bridge/releases/latest/download/pf-bridge-$(uname -s | tr A-Z a-z)-$(uname -m | sed -e s/x86_64/amd64/ -e s/aarch64/arm64/) && chmod +x pf-bridge

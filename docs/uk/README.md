@@ -57,7 +57,7 @@ docker pull ghcr.io/projectfile-org/bridge:latest
 docker pull damianbuho/projectfile-bridge:latest
 ```
 
-Стабільні випуски також публікують теґи `X.Y.Z`, `X.Y` і `X` — завантажте той рівень точності, який хочете зафіксувати.
+Стабільні випуски також публікують теґи `3.3` і `3` — завантажте той рівень точності, який хочете зафіксувати.
 
 Якщо наведені вище реєстри недоступні, завантажте з джерела:
 
@@ -69,7 +69,7 @@ docker pull kiota.ch/projectfile/bridge:latest
 
 ### Готовий бінарний файл
 
-Завантажте готовий бінарний файл для своєї платформи з останнього випуску на GitHub:
+Завантажте готовий бінарний файл для своєї платформи з випусків на GitHub:
 
 ```sh
 curl --fail --location --output pf-bridge https://github.com/projectfile-org/bridge/releases/latest/download/pf-bridge-$(uname -s | tr A-Z a-z)-$(uname -m | sed -e s/x86_64/amd64/ -e s/aarch64/arm64/) && chmod +x pf-bridge
