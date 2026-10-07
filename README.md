@@ -55,7 +55,7 @@ docker pull ghcr.io/projectfile-org/bridge:latest
 docker pull damianbuho/projectfile-bridge:latest
 ```
 
-Stable releases also publish `3.3` and `3` tags — pull the precision you want to pin.
+Stable releases also publish `X.Y.Z`, `X.Y` and `X` tags — pull the precision you want to pin.
 
 If the registries above are unreachable, pull from the origin instead:
 

@@ -57,7 +57,7 @@ docker pull ghcr.io/projectfile-org/bridge:latest
 docker pull damianbuho/projectfile-bridge:latest
 ```
 
-Las versiones estables también publican las etiquetas `3.3` y `3`: descarga el nivel de precisión que quieras fijar.
+Las versiones estables también publican las etiquetas `X.Y.Z`, `X.Y` y `X`: descarga el nivel de precisión que quieras fijar.
 
 Si los registros anteriores no están disponibles, descarga desde el origen:
 
