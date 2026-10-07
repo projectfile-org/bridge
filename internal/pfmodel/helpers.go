@@ -57,8 +57,6 @@ const (
 	// template says `${path}` where it would otherwise spell the whole address.
 	SinksExtensionNS = "org.projectfile.sinks"
 	ImageExtensionNS = "org.projectfile.image"
-	// SemverExtensionNS is read-time only: derive splits identity.version into it.
-	SemverExtensionNS = "org.projectfile.semver"
 	// PublishExtensionNS routes each forge’s pipeline to the sinks it pushes to.
 	PublishExtensionNS = "org.projectfile.publish"
 )

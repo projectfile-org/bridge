@@ -17,8 +17,11 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"kiota.ch/projectfile/core/v2/pkg/interp"
+	"kiota.ch/projectfile/core/v2/pkg/projectfile"
 
 	"projectfile.org/projectfile/bridge/internal/bridge/core"
+	"projectfile.org/projectfile/bridge/internal/pfmodel"
 )
 
 // isolate drops every inherited GIT_* variable so a hook's GIT_DIR never reaches the fixture.
@@ -215,11 +218,16 @@ org:
     readme:
       tag: latest
       download: latest/download
+      ladder:
+        minor: X.Y
+        major: X
       installation:
         - name: image
           commands:
             - docker pull example.org/x:${org.projectfile.image.tag}
             - go install example.org/x@${org.projectfile.readme.tag}
+          postfix:
+            en: "Also tagged ${org.projectfile.readme.ladder.minor} and ${org.projectfile.readme.ladder.major}."
         - name: release-binary
           prefix:
             en: "From GitHub:"
@@ -266,6 +274,7 @@ func TestRenderForge(t *testing.T) {
 	assert.True(t, strings.HasPrefix(got, ForgeMarker+"\n"))
 	assert.Contains(t, got, "docker pull example.org/x:1.2.0\n")
 	assert.Contains(t, got, "go install example.org/x@v1.2.0\n")
+	assert.Contains(t, got, "Also tagged 1.2 and 1.")
 	assert.Contains(t, got, "this release:")
 	assert.Contains(t, got, "curl --output x https://kiota.example/o/x/releases/download/v1.2.0/x\n")
 	assert.Contains(t, got, "### Container image\n\nThe signature proves this project’s CI built and pushed the image.\n")
@@ -284,6 +293,18 @@ func TestWriteTorrentsFencesOnGitHub(t *testing.T) {
 	writeTorrents(&b, map[string]string{"o-x.magnet": "magnet:?xt=urn:btih:abc\n"}, true)
 	assert.Contains(t, b.String(), "- 🧲 o-x\n\n  ```text\n  magnet:?xt=urn:btih:abc\n  ```\n")
 	assert.NotContains(t, b.String(), "](magnet:")
+}
+
+func TestPinLadderDropsOnPrerelease(t *testing.T) {
+	pf := &projectfile.Document{}
+	projectfile.SetExtension(pf, pfmodel.ReadmeExtensionNS, map[string]any{"ladder": map[string]any{"major": "X"}})
+	pinLadder(pf, "1.3.0-rc.1")
+	_, ok := interp.ExpandChecked(pf, "${org.projectfile.readme.ladder.major}")
+	assert.False(t, ok)
+	pinLadder(pf, "1.3.0")
+	got, ok := interp.ExpandChecked(pf, "${org.projectfile.readme.ladder.minor}")
+	assert.True(t, ok)
+	assert.Equal(t, "1.3", got)
 }
 
 func TestMergeBodyReplacesForgeHalf(t *testing.T) {

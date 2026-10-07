@@ -6,6 +6,7 @@ package releasenotes
 
 import (
 	"fmt"
+	"regexp"
 	"slices"
 	"strings"
 
@@ -111,6 +112,23 @@ func pinRelease(pf *projectfile.Document, opts Options) {
 		setPath(pf.Extensions, pin.value, strings.Split(pin.path, ".")...)
 		genlog.Debug("install pinned", "path", pin.path, "value", pin.value)
 	}
+	pinLadder(pf, strings.TrimPrefix(opts.Tag, opts.Prefix))
+}
+
+// stableVersion matches a release version with no prerelease or build suffix.
+var stableVersion = regexp.MustCompile(`^(\d+)\.(\d+)\.(\d+)$`)
+
+// pinLadder replaces the readme.ladder placeholders with this release's tags; a prerelease publishes none, so prose naming them drops.
+func pinLadder(pf *projectfile.Document, version string) {
+	ladder := map[string]any{}
+	if m := stableVersion.FindStringSubmatch(version); m != nil {
+		ladder = map[string]any{"patch": version, "minor": m[1] + "." + m[2], "major": m[1]}
+	}
+	readme, _ := projectfile.LookupExtension(pf, pfmodel.ReadmeExtensionNS)
+	if m, ok := readme.(map[string]any); ok {
+		m["ladder"] = ladder
+	}
+	genlog.Debug("ladder pinned", "version", version, "tags", len(ladder))
 }
 
 // setBinaryPrefix rewords the binary block for a release page, which is the download.
