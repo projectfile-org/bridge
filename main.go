@@ -337,7 +337,7 @@ func runChildren(children []child) error {
 }
 
 // goosKnown / goarchKnown are Go's platform vocabulary, used only to recognise
-// release artifacts (pf-bridge-npm-linux-amd64) so discovery lists commands,
+// release artifacts (pf-bridge-npm-linux-x86_64) so discovery lists commands,
 // not their cross-compile copies. A bridge genuinely named "<goos>-<goarch>"
 // would be hidden — none is.
 var goosKnown = map[string]bool{
@@ -352,11 +352,12 @@ var goarchKnown = map[string]bool{
 	"loong64": true, "mips": true, "mipsle": true, "mips64": true,
 	"mips64le": true, "ppc64": true, "ppc64le": true, "riscv64": true,
 	"s390x": true, "sparc": true, "sparc64": true, "wasm": true,
+	"x86_64": true, "aarch64": true, "i686": true, "i386": true, // uname -m spellings of the release assets
 }
 
 // isPlatformArtifact reports whether name ends in a <goos>-<goarch> pair — the
 // suffix every dist/release binary carries from the cross-compile matrix. The
-// suffixed dispatcher copy (pf-bridge-linux-amd64) matches too, which matters:
+// suffixed dispatcher copy (pf-bridge-linux-x86_64) matches too, which matters:
 // listed as a "bridge" it would fan out into itself, forever.
 func isPlatformArtifact(name string) bool {
 	parts := strings.Split(name, "-")

@@ -32,6 +32,8 @@ func TestIsPlatformArtifact(t *testing.T) {
 		want bool
 	}{
 		{"npm-linux-amd64", true},
+		{"npm-linux-x86_64", true},
+		{"npm-linux-aarch64", true},
 		{"npm-darwin-arm64", true},
 		{"linux-amd64", true}, // the suffixed dispatcher copy
 		{npmName, false},
@@ -57,6 +59,8 @@ func TestDiscoverSkipsPlatformArtifacts(t *testing.T) {
 		"pf-bridge-npm",
 		"pf-bridge-npm-linux-amd64",
 		"pf-bridge-linux-amd64",
+		"pf-bridge-npm-linux-aarch64",
+		"pf-bridge-linux-x86_64",
 		"pf-bridge-forge",
 		"pf-bridge-fragments-darwin-arm64",
 		"unrelated",
