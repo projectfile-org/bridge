@@ -28,8 +28,11 @@ const (
 	signedNode    = "org.projectfile.ci.nodes.image-is-signed"
 	attestedNode  = "org.projectfile.ci.nodes.image-is-attested"
 	gpgReleaseKey = "${people[0].handles.gpg-key.release}"
-	binaryEntry   = "release-binary"
-	binaryPrefix  = "Download the prebuilt binary for your platform from this release:"
+	hostCommand   = "${org.projectfile.artifacts{kind=binary}.command}"
+	// hostSignatureURL mirrors the release-binary install command in m6e/library traits/binary-release.yaml.
+	hostSignatureURL = "${org.projectfile.forge.remotes.github.url}/releases/${org.projectfile.readme.download}/${org.projectfile.artifacts{kind=binary}.host-asset}.asc"
+	binaryEntry      = "release-binary"
+	binaryPrefix     = "Download the prebuilt binary for your platform from this release:"
 )
 
 // ForgeOptions names the forge whose release the forge half describes and what that release holds.
@@ -122,47 +125,82 @@ func setBinaryPrefix(pf *projectfile.Document) {
 	}
 }
 
-// writeVerify lists the cosign and gpg commands that prove the published artifacts.
+// writeVerify lists the cosign and gpg commands that prove the published artifacts, one subsection per kind.
 func writeVerify(b *strings.Builder, pf *projectfile.Document, assets []string) {
-	var lines []string
+	image, binary := imageVerify(pf), binaryVerify(pf, assets)
+	if len(image) == 0 && len(binary) == 0 {
+		return
+	}
+	b.WriteString("\n## Verify\n\nCheck that what you downloaded is what this project published.\n")
+	if len(image) > 0 {
+		proof := "The signature proves this project’s CI built and pushed the image."
+		if _, attested := projectfile.LookupExtension(pf, attestedNode); attested {
+			proof = "The signature proves this project’s CI built and pushed the image; the attestation carries its software bill of materials."
+		}
+		b.WriteString("\n### Container image\n\n" + proof + "\n\n```sh\n" + strings.Join(image, "\n") + "\n```\n")
+	}
+	if len(binary) > 0 {
+		b.WriteString("\n### Prebuilt binary\n\nThe signature proves the binary is the one the maintainer’s release key signed.\n\n```sh\n" + strings.Join(binary, "\n") + "\n```\n")
+	}
+}
+
+// imageVerify returns the cosign commands for every sink ref, naming the key once.
+func imageVerify(pf *projectfile.Document) []string {
 	key, _ := projectfile.LookupExtension(pf, cosignKeyPath)
 	keyURL, _ := key.(string)
 	_, signed := projectfile.LookupExtension(pf, signedNode)
 	_, attested := projectfile.LookupExtension(pf, attestedNode)
-	if signed && keyURL != "" {
-		// A signature never uploaded to Rekor verifies only with the transparency-log check off.
-		if tlog, _ := projectfile.LookupExtension(pf, cosignTlog); tlog != true {
-			keyURL += " --insecure-ignore-tlog=true"
-		}
-		refs := sinkRefs(pf)
+	genlog.Debug("cosign verify", "signed", signed, "attested", attested, "key", or(keyURL, "<none>"))
+	if !signed || keyURL == "" {
+		return nil
+	}
+	flags := `--key "$COSIGN_KEY"`
+	// A signature never uploaded to Rekor verifies only with the transparency-log check off.
+	if tlog, _ := projectfile.LookupExtension(pf, cosignTlog); tlog != true {
+		flags += " --insecure-ignore-tlog=true"
+	}
+	lines := []string{"COSIGN_KEY=" + keyURL}
+	refs := sinkRefs(pf)
+	for _, ref := range refs {
+		lines = append(lines, "cosign verify "+flags+" "+ref)
+	}
+	if attested {
 		for _, ref := range refs {
-			lines = append(lines, "cosign verify --key "+keyURL+" "+ref)
-		}
-		if attested {
-			for _, ref := range refs {
-				lines = append(lines, "cosign verify-attestation --key "+keyURL+" --type cyclonedx "+ref)
-			}
+			lines = append(lines, "cosign verify-attestation "+flags+" --type cyclonedx "+ref)
 		}
 	}
-	genlog.Debug("cosign verify", "signed", signed, "attested", attested, "key", or(keyURL, "<none>"), "lines", len(lines))
+	return lines
+}
+
+// binaryVerify returns the gpg commands for the host binary the install block downloaded, else for every signed asset.
+func binaryVerify(pf *projectfile.Document, assets []string) []string {
 	var sigs []string
 	for _, a := range assets {
 		if strings.HasSuffix(a, ".asc") {
 			sigs = append(sigs, a)
 		}
 	}
-	if fpr := interp.Expand(pf, gpgReleaseKey); len(sigs) > 0 && fpr != "" && !strings.Contains(fpr, "${") {
-		lines = append(lines, "gpg --keyserver hkps://keys.openpgp.org --recv-keys "+fpr)
-		for _, s := range sigs {
-			lines = append(lines, "gpg --verify "+s+" "+strings.TrimSuffix(s, ".asc"))
-		}
+	fpr, ok := interp.ExpandChecked(pf, gpgReleaseKey)
+	genlog.Debug("gpg verify", "signatures", len(sigs), "key", ok)
+	if len(sigs) == 0 || !ok || fpr == "" {
+		return nil
 	}
-	genlog.Debug("gpg verify", "signatures", len(sigs))
-	if len(lines) == 0 {
-		return
+	lines := []string{"gpg --keyserver hkps://keys.openpgp.org --recv-keys " + fpr}
+	if cmd, sig, ok := hostSignature(pf); ok {
+		return append(lines, "curl --fail --location --output "+cmd+".asc "+sig, "gpg --verify "+cmd+".asc "+cmd)
 	}
-	b.WriteString("\n## Verify\n\nCheck that what you downloaded is what this project published:\n\n```sh\n")
-	b.WriteString(strings.Join(lines, "\n") + "\n```\n")
+	for _, s := range sigs {
+		lines = append(lines, "gpg --verify "+s+" "+strings.TrimSuffix(s, ".asc"))
+	}
+	return lines
+}
+
+// hostSignature resolves the installed file name and the URL of its host asset’s signature.
+func hostSignature(pf *projectfile.Document) (cmd, url string, ok bool) {
+	cmd, okCmd := interp.ExpandChecked(pf, hostCommand)
+	url, okURL := interp.ExpandChecked(pf, hostSignatureURL)
+	genlog.Debug("host signature", "command", cmd, "resolved", okCmd && okURL)
+	return cmd, url, okCmd && okURL && cmd != ""
 }
 
 // sinkRefs returns the composed image ref of every sink this forge pushed to, in name order.

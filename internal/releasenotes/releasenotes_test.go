@@ -198,8 +198,18 @@ const fixtureTag = "v1.2.0"
 
 const forgeDoc = `identity:
   name: x
+people:
+  - name: Ann
+    handles:
+      gpg-key:
+        release: ABCD1234
 org:
   projectfile:
+    artifacts:
+      x:
+        kind: binary
+        command: x
+        host-asset: x-$(uname -s)
     image:
       tag: latest
     readme:
@@ -258,7 +268,10 @@ func TestRenderForge(t *testing.T) {
 	assert.Contains(t, got, "go install example.org/x@v1.2.0\n")
 	assert.Contains(t, got, "this release:")
 	assert.Contains(t, got, "curl --output x https://kiota.example/o/x/releases/download/v1.2.0/x\n")
-	assert.Contains(t, got, "cosign verify --key https://example.org/cosign.pub --insecure-ignore-tlog=true kiota.example/x:1.2.0\n")
+	assert.Contains(t, got, "### Container image\n\nThe signature proves this project’s CI built and pushed the image.\n")
+	assert.Contains(t, got, "COSIGN_KEY=https://example.org/cosign.pub\ncosign verify --key \"$COSIGN_KEY\" --insecure-ignore-tlog=true kiota.example/x:1.2.0\n")
+	assert.Contains(t, got, "### Prebuilt binary\n")
+	assert.Contains(t, got, "gpg --keyserver hkps://keys.openpgp.org --recv-keys ABCD1234\ncurl --fail --location --output x.asc https://kiota.example/o/x/releases/download/v1.2.0/x-$(uname -s).asc\ngpg --verify x.asc x\n")
 	assert.NotContains(t, got, "ghcr.example")
 	assert.NotContains(t, got, "verify-attestation")
 	assert.Contains(t, got, "- [🧲 o-x-1.2.0](magnet:?xt=urn:btih:abc)\n")
