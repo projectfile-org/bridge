@@ -70,7 +70,7 @@ fi
 
 changed=0
 for f in "${FILES[@]}"; do
-	if grep -qE '\bpfmodel\.' "$f" || ! sed -n '1,40p' "$f" | grep -q 'projectfile'; then
+	if grep -qE '\bpfmodel\.' "$f" || ! grep -q 'projectfile' <<<"$(sed -n '1,40p' "$f")"; then
 		# Quick pre-check: only touch files that actually reference a moved symbol.
 		:
 	fi
