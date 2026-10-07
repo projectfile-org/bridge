@@ -258,7 +258,7 @@ func TestRenderForge(t *testing.T) {
 	assert.Contains(t, got, "go install example.org/x@v1.2.0\n")
 	assert.Contains(t, got, "this release:")
 	assert.Contains(t, got, "curl --output x https://kiota.example/o/x/releases/download/v1.2.0/x\n")
-	assert.Contains(t, got, "cosign verify --key https://example.org/cosign.pub kiota.example/x:1.2.0\n")
+	assert.Contains(t, got, "cosign verify --key https://example.org/cosign.pub --insecure-ignore-tlog=true kiota.example/x:1.2.0\n")
 	assert.NotContains(t, got, "ghcr.example")
 	assert.NotContains(t, got, "verify-attestation")
 	assert.Contains(t, got, "- o-x-1.2.0: `magnet:?xt=urn:btih:abc`\n")

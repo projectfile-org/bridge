@@ -23,6 +23,7 @@ const ForgeMarker = "<!-- pf-bridge release-notes forge -->"
 
 const (
 	cosignKeyPath = "org.projectfile.signing.cosign.public-key"
+	cosignTlog    = "org.projectfile.signing.cosign.tlog"
 	signedNode    = "org.projectfile.ci.nodes.image-is-signed"
 	attestedNode  = "org.projectfile.ci.nodes.image-is-attested"
 	gpgReleaseKey = "${people[0].handles.gpg-key.release}"
@@ -128,6 +129,10 @@ func writeVerify(b *strings.Builder, pf *projectfile.Document, assets []string) 
 	_, signed := projectfile.LookupExtension(pf, signedNode)
 	_, attested := projectfile.LookupExtension(pf, attestedNode)
 	if signed && keyURL != "" {
+		// A signature never uploaded to Rekor verifies only with the transparency-log check off.
+		if tlog, _ := projectfile.LookupExtension(pf, cosignTlog); tlog != true {
+			keyURL += " --insecure-ignore-tlog=true"
+		}
 		refs := sinkRefs(pf)
 		for _, ref := range refs {
 			lines = append(lines, "cosign verify --key "+keyURL+" "+ref)
