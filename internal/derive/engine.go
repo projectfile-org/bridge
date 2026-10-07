@@ -6,6 +6,8 @@
 package derive
 
 import (
+	"regexp"
+
 	"kiota.ch/projectfile/core/v2/pkg/genlog"
 	"kiota.ch/projectfile/core/v2/pkg/projectfile"
 	"projectfile.org/projectfile/bridge/internal/derive/forges"
@@ -31,6 +33,7 @@ const remotesKey = "remotes"
 //     every source-code mirror.
 //   - org.projectfile.sinks.<name>.ref — the composed pull reference of every
 //     destination the project publishes its images to.
+//   - org.projectfile.semver — major, minor and patch of a stable identity.version.
 //
 // Callers run it right after reading the merged document, so both the templates
 // (via `pf`) and the ${…} interpolator (via the address grammar) see the derived
@@ -44,6 +47,20 @@ func AddVirtual(pf *projectfile.Document) {
 	}
 	addForgeRemotes(pf)
 	addSinkRefs(pf)
+	addSemver(pf)
+}
+
+// stableVersion matches a release version with no prerelease or build suffix.
+var stableVersion = regexp.MustCompile(`^(\d+)\.(\d+)\.(\d+)$`)
+
+// addSemver splits a stable identity.version into parts; a prerelease gets none, so prose naming them drops.
+func addSemver(pf *projectfile.Document) {
+	m := stableVersion.FindStringSubmatch(pf.Identity.Version)
+	if m == nil {
+		genlog.Debug("derive: semver parts skipped", "version", pf.Identity.Version)
+		return
+	}
+	projectfile.SetExtension(pf, pfmodel.SemverExtensionNS, map[string]any{"major": m[1], "minor": m[2], "patch": m[3]})
 }
 
 // addForgeRemotes parks the mirror coordinates under the forge namespace.

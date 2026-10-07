@@ -108,7 +108,7 @@ bridge/
     ├── scanners/           stack + git + forge + sinks scanners (core registry)
     ├── source/             `init` ecosystem auto-detection (reuses bridge parsers)
     ├── scaffold/           interactive `init` TUI (runs scanners)
-    ├── derive/             read-time fields (forge remotes, sink refs) + containers (registry pages, run by `scan sinks`)
+    ├── derive/             read-time fields (forge remotes, sink refs, `org.projectfile.semver` parts of a stable version) + containers (registry pages, run by `scan sinks`)
     └── warn/               warning ledger + end-of-run summary (+ fan-out handoff)
 ```
 
