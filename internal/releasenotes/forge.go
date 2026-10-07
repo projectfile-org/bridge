@@ -62,6 +62,7 @@ func RenderForge(fo ForgeOptions) (string, error) {
 	repoURL := strings.TrimSuffix(fo.Server, "/") + "/" + fo.Repo
 	setPath(pf.Extensions, repoURL, strings.Split("org.projectfile.forge.remotes.github.url", ".")...)
 	setBinaryPrefix(pf)
+	applyReleaseProse(pf)
 
 	var b strings.Builder
 	b.WriteString(ForgeMarker + "\n")
@@ -118,11 +119,11 @@ func pinRelease(pf *projectfile.Document, opts Options) {
 // stableVersion matches a release version with no prerelease or build suffix.
 var stableVersion = regexp.MustCompile(`^(\d+)\.(\d+)\.(\d+)$`)
 
-// pinLadder replaces the readme.ladder placeholders with this release's tags; a prerelease publishes none, so prose naming them drops.
+// pinLadder names this release's shorter tags in readme.ladder; a prerelease publishes none, so prose naming them drops.
 func pinLadder(pf *projectfile.Document, version string) {
 	ladder := map[string]any{}
 	if m := stableVersion.FindStringSubmatch(version); m != nil {
-		ladder = map[string]any{"patch": version, "minor": m[1] + "." + m[2], "major": m[1]}
+		ladder = map[string]any{"minor": m[1] + "." + m[2], "major": m[1]}
 	}
 	readme, _ := projectfile.LookupExtension(pf, pfmodel.ReadmeExtensionNS)
 	if m, ok := readme.(map[string]any); ok {
@@ -140,6 +141,26 @@ func setBinaryPrefix(pf *projectfile.Document) {
 			m["prefix"] = map[string]any{"en": binaryPrefix}
 			genlog.Debug("binary prefix reworded", "entry", binaryEntry)
 		}
+	}
+}
+
+// applyReleaseProse swaps in the prefix and postfix an installation entry declares under `release` for a release page.
+func applyReleaseProse(pf *projectfile.Document) {
+	raw, _ := projectfile.LookupExtension(pf, pfmodel.ReadmeExtensionNS+".installation")
+	entries, _ := raw.([]any)
+	for _, e := range entries {
+		m, _ := e.(map[string]any)
+		release, ok := m["release"].(map[string]any)
+		if !ok {
+			continue
+		}
+		for _, key := range []string{"prefix", "postfix"} {
+			if v, ok := release[key]; ok {
+				m[key] = v
+				genlog.Debug("release prose applied", "entry", m["name"], "field", key)
+			}
+		}
+		delete(m, "release")
 	}
 }
 

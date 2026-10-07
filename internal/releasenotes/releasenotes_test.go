@@ -218,16 +218,16 @@ org:
     readme:
       tag: latest
       download: latest/download
-      ladder:
-        minor: X.Y
-        major: X
       installation:
         - name: image
           commands:
             - docker pull example.org/x:${org.projectfile.image.tag}
             - go install example.org/x@${org.projectfile.readme.tag}
           postfix:
-            en: "Also tagged ${org.projectfile.readme.ladder.minor} and ${org.projectfile.readme.ladder.major}."
+            en: "Stable releases also publish X.Y and X."
+          release:
+            postfix:
+              en: "Also tagged ${org.projectfile.readme.ladder.minor} and ${org.projectfile.readme.ladder.major}."
         - name: release-binary
           prefix:
             en: "From GitHub:"
@@ -275,6 +275,7 @@ func TestRenderForge(t *testing.T) {
 	assert.Contains(t, got, "docker pull example.org/x:1.2.0\n")
 	assert.Contains(t, got, "go install example.org/x@v1.2.0\n")
 	assert.Contains(t, got, "Also tagged 1.2 and 1.")
+	assert.NotContains(t, got, "Stable releases")
 	assert.Contains(t, got, "this release:")
 	assert.Contains(t, got, "curl --output x https://kiota.example/o/x/releases/download/v1.2.0/x\n")
 	assert.Contains(t, got, "### Container image\n\nThe signature proves this project’s CI built and pushed the image.\n")
@@ -297,7 +298,7 @@ func TestWriteTorrentsFencesOnGitHub(t *testing.T) {
 
 func TestPinLadderDropsOnPrerelease(t *testing.T) {
 	pf := &projectfile.Document{}
-	projectfile.SetExtension(pf, pfmodel.ReadmeExtensionNS, map[string]any{"ladder": map[string]any{"major": "X"}})
+	projectfile.SetExtension(pf, pfmodel.ReadmeExtensionNS, map[string]any{})
 	pinLadder(pf, "1.3.0-rc.1")
 	_, ok := interp.ExpandChecked(pf, "${org.projectfile.readme.ladder.major}")
 	assert.False(t, ok)
