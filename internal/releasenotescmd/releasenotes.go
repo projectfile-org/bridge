@@ -102,6 +102,9 @@ var publishCmd = &cobra.Command{
 			pub.Forge = forgeSlug(pub.Server)
 		}
 		pub.Token = firstEnv("FORGEJO_TOKEN", "GH_TOKEN", "GITHUB_TOKEN")
+		if pub.Token == "" && !pub.DryRun {
+			return fmt.Errorf("no token: set FORGEJO_TOKEN, GH_TOKEN or GITHUB_TOKEN to write the release")
+		}
 		pub.Read = rootflags.ReadOpts()
 		genlog.Info("publish", "forge", pub.Forge, "repo", pub.Repo, "tag", pub.Tag, "dry-run", pub.DryRun)
 		ctx, cancel := context.WithTimeout(cmd.Context(), 5*pub.Timeout)
@@ -132,7 +135,7 @@ func forgeSlug(server string) string {
 func firstEnv(names ...string) string {
 	for _, n := range names {
 		if v := os.Getenv(n); v != "" {
-			genlog.Debug("token read", "env", n)
+			genlog.Info("token read", "env", n)
 			return v
 		}
 	}
