@@ -23,6 +23,7 @@ const (
 	fixtureDoc   = "projectfile.yaml"
 	fixtureHost  = "https://kiota.example"
 	fixtureDig   = "digest"
+	fixtureAmd   = "linux/amd64"
 	fixturePlat  = "platform"
 	fixtureForge = "kiota"
 )
@@ -61,7 +62,7 @@ func TestInspectImageReadsPlatformsBehindTokenChallenge(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, "sha256:index", info.Digest)
 	assert.Equal(t, []Platform{
-		{Name: "linux/amd64", Digest: "sha256:amd", Size: 2000},
+		{Name: fixtureAmd, Digest: "sha256:amd", Size: 2000},
 		{Name: "linux/arm64/v8", Digest: "sha256:arm", Size: 500},
 	}, info.Platforms)
 }
@@ -82,13 +83,17 @@ func TestRenderForgePinsDigests(t *testing.T) {
 	got, err := RenderForge(ForgeOptions{
 		Options: Options{Dir: r.dir, Tag: fixtureTag, Prefix: "v"},
 		Forge:   fixtureForge, Server: fixtureHost, Repo: fixtureRepo,
-		Inspect: func(string) (ImageInfo, error) {
-			return ImageInfo{Digest: "sha256:abc", Platforms: []Platform{{Name: "linux/amd64", Digest: "sha256:def", Size: 2_500_000}}}, nil
+		Previous: "v1.1.0",
+		Inspect: func(ref string) (ImageInfo, error) {
+			if strings.HasSuffix(ref, ":1.1.0") {
+				return ImageInfo{Digest: "sha256:old", Platforms: []Platform{{Name: fixtureAmd, Digest: "sha256:ghi", Size: 3_000_000}}}, nil
+			}
+			return ImageInfo{Digest: "sha256:abc", Platforms: []Platform{{Name: fixtureAmd, Digest: "sha256:def", Size: 2_500_000}}}, nil
 		},
 	})
 	require.NoError(t, err)
 	assert.Contains(t, got, "docker pull kiota.example/x@sha256:abc\n")
-	assert.Contains(t, got, "| linux/amd64 | `sha256:def` | 2.5 MB |\n")
+	assert.Contains(t, got, "| linux/amd64 | `sha256:def` | 2.5 MB (−0.5 MB) |\n")
 	assert.Contains(t, got, "--insecure-ignore-tlog=true kiota.example/x@sha256:abc\n")
 	assert.NotContains(t, got, "ghcr.example")
 }

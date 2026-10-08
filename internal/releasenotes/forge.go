@@ -75,16 +75,16 @@ func RenderForge(fo ForgeOptions) (string, error) {
 	if blocks != "" {
 		b.WriteString("\n" + blocks + "\n")
 	}
-	images := inspectSinks(pf, fo.Inspect)
-	writeDigests(&b, images)
-	writeVerify(&b, pf, fo.Assets, images)
-	writeTorrents(&b, fo.Magnets, hostmatch.ResolveKind(fo.Server) == hostmatch.KindGitHub)
 	prev := fo.Previous
 	if prev == "" {
 		if prev, err = previousTag(git{dir: fo.Dir, timeout: fo.Timeout}, fo.Tag, fo.Tag, fo.Prefix); err != nil {
 			genlog.Warn("compare link omitted, previous tag unreadable", "tag", fo.Tag, "err", err.Error())
 		}
 	}
+	images := inspectSinks(pf, fo.Inspect, strings.TrimPrefix(prev, fo.Prefix))
+	writeDigests(&b, images)
+	writeVerify(&b, pf, fo.Assets, images)
+	writeTorrents(&b, fo.Magnets, hostmatch.ResolveKind(fo.Server) == hostmatch.KindGitHub)
 	if prev != "" {
 		fmt.Fprintf(&b, "\n**Full changes:** %s/compare/%s...%s\n", repoURL, prev, fo.Tag)
 	}
@@ -297,10 +297,11 @@ func MergeBody(body, half string) string {
 type sinkImage struct {
 	Ref  string
 	Info ImageInfo
+	Prev *ImageInfo
 }
 
-// inspectSinks reads every sink ref through inspect; an unreadable one is skipped, so the notes degrade to tags.
-func inspectSinks(pf *projectfile.Document, inspect func(string) (ImageInfo, error)) []sinkImage {
+// inspectSinks reads every sink ref, and its previous version's, through inspect; an unreadable ref is skipped, so the notes degrade to tags.
+func inspectSinks(pf *projectfile.Document, inspect func(string) (ImageInfo, error), prevVersion string) []sinkImage {
 	if inspect == nil {
 		return nil
 	}
@@ -311,7 +312,15 @@ func inspectSinks(pf *projectfile.Document, inspect func(string) (ImageInfo, err
 			genlog.Warn("image digest omitted, registry unreadable", "ref", ref, "err", fmt.Sprint(err))
 			continue
 		}
-		out = append(out, sinkImage{Ref: ref, Info: info})
+		si := sinkImage{Ref: ref, Info: info}
+		if prevVersion != "" {
+			if p, err := inspect(repoOf(ref) + ":" + prevVersion); err == nil {
+				si.Prev = &p
+			} else {
+				genlog.Debug("previous image unreadable, no size delta", "ref", ref, "previous", prevVersion, "err", err.Error())
+			}
+		}
+		out = append(out, si)
 		genlog.Debug("image inspected", "ref", ref, "digest", info.Digest, "platforms", len(info.Platforms))
 	}
 	return out
@@ -342,11 +351,11 @@ func writeDigests(b *strings.Builder, images []sinkImage) {
 		return
 	}
 	b.WriteString("\n## Image digests\n\nA tag can move; a digest cannot. Pull this exact build:\n\n```sh\n")
-	var table *ImageInfo
+	var table, prev *ImageInfo
 	for i, im := range images {
 		fmt.Fprintf(b, "docker pull %s@%s\n", repoOf(im.Ref), im.Info.Digest)
 		if table == nil && len(im.Info.Platforms) > 0 {
-			table = &images[i].Info
+			table, prev = &images[i].Info, images[i].Prev
 		}
 	}
 	b.WriteString("```\n")
@@ -355,11 +364,32 @@ func writeDigests(b *strings.Builder, images []sinkImage) {
 	}
 	b.WriteString("\n| Platform | Digest | Size |\n| --- | --- | --- |\n")
 	for _, p := range table.Platforms {
-		size := "—"
-		if p.Size > 0 {
-			size = fmt.Sprintf("%.1f MB", float64(p.Size)/1e6)
-		}
-		fmt.Fprintf(b, "| %s | `%s` | %s |\n", p.Name, p.Digest, size)
+		fmt.Fprintf(b, "| %s | `%s` | %s |\n", p.Name, p.Digest, sizeCell(p, prev))
 	}
 	b.WriteString("\nSizes are compressed layer bytes as stored in the registry.\n")
+}
+
+// sizeCell renders a platform's size, with the change against the same platform of the previous release when known.
+func sizeCell(p Platform, prev *ImageInfo) string {
+	if p.Size <= 0 {
+		return "—"
+	}
+	cell := fmt.Sprintf("%.1f MB", float64(p.Size)/1e6)
+	if prev == nil {
+		return cell
+	}
+	for _, q := range prev.Platforms {
+		if q.Name == p.Name && q.Size > 0 {
+			return fmt.Sprintf("%s (%s)", cell, signedMB(p.Size-q.Size))
+		}
+	}
+	return cell
+}
+
+// signedMB formats a byte delta in megabytes with an explicit sign and a true minus.
+func signedMB(delta int64) string {
+	if delta < 0 {
+		return fmt.Sprintf("−%.1f MB", float64(-delta)/1e6)
+	}
+	return fmt.Sprintf("+%.1f MB", float64(delta)/1e6)
 }
