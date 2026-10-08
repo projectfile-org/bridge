@@ -51,6 +51,13 @@ SPDX-License-Identifier: MIT
 - Las insignias, los proyectos relacionados y los enlaces a los documentos comunitarios se ensamblan solos desde la misma declaración.
 - La lista de características aparece dentro del readme, en el idioma del lector cuando existe una traducción.
 
+### Notas de versión escritas desde tu historial
+
+- Cada página de versión lleva las mismas notas en todas las forjas: qué cambió, qué es nuevo y qué rompe actualizar.
+- Los comandos de instalación y verificación quedan fijados a esa versión exacta y al digest de la imagen, así que puedes pegarlos tal cual.
+- Cada arquitectura muestra su digest y tamaño, y la página indica qué creció, se redujo o se actualizó desde la versión anterior.
+- Previsualiza las notas antes de etiquetar; la página que se publica es la que revisaste.
+
 ### Empieza en minutos, mantén la sincronía después
 
 - Un proyecto nuevo parte de un asistente interactivo que detecta el ecosistema y propone enlaces de forja y registros desde la dirección del repositorio y la pila.

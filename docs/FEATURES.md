@@ -49,6 +49,13 @@ SPDX-License-Identifier: MIT
 - Badges, related projects, and links to the community files assemble themselves from the same declaration.
 - The feature list appears inside the readme too, in the reader’s language whenever a translation exists.
 
+### Release notes written from your history
+
+- Every release page carries the same notes on every forge: what changed, what is new, and what upgrading breaks.
+- Install and verify commands are pinned to that exact version and image digest, so you can paste them as they are.
+- Each architecture lists its digest and size, and the page shows what grew, shrank or updated since the previous release.
+- Preview the notes before you tag; the page that ships is the one you reviewed.
+
 ### Start in minutes, stay in sync afterwards
 
 - A new project starts from an interactive scaffold that detects the ecosystem and proposes forge links and registries from the repository address and the stack.
