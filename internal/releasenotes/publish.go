@@ -28,9 +28,11 @@ type PublishOptions struct {
 }
 
 type release struct {
-	ID     int64  `json:"id"`
-	Body   string `json:"body"`
-	Assets []struct {
+	ID        int64  `json:"id"`
+	Body      string `json:"body"`
+	UploadURL string `json:"upload_url"`
+	Assets    []struct {
+		ID   int64  `json:"id"`
 		Name string `json:"name"`
 		URL  string `json:"browser_download_url"`
 	} `json:"assets"`
@@ -88,6 +90,9 @@ func Publish(ctx context.Context, po PublishOptions) (string, error) {
 			return "", err
 		}
 		genlog.Info("release body written", "tag", po.Tag, "id", rel.ID, "bytes", len(body))
+	}
+	if err := attachAssets(ctx, client, po, rel, base); err != nil {
+		return "", err
 	}
 	return body, nil
 }

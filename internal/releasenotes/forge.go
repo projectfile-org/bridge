@@ -421,7 +421,10 @@ func sizeCell(p Platform, prev *ImageInfo) string {
 	}
 	for _, q := range prev.Platforms {
 		if q.Name == p.Name && q.Size > 0 {
-			return fmt.Sprintf("%s (%s)", cell, signedMB(p.Size-q.Size))
+			if delta := p.Size - q.Size; delta >= 50_000 || delta <= -50_000 {
+				return fmt.Sprintf("%s (%s)", cell, signedMB(delta))
+			}
+			return cell
 		}
 	}
 	return cell

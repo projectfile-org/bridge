@@ -76,6 +76,10 @@ func InspectImage(ctx context.Context, client *http.Client, ref string) (ImageIn
 	if err != nil {
 		return ImageInfo{}, err
 	}
+	// Docker Hub names images under docker.io but serves the registry API from registry-1.docker.io.
+	if host == "docker.io" || host == "index.docker.io" {
+		host = "registry-1.docker.io"
+	}
 	scheme := "https"
 	if strings.HasPrefix(host, "127.0.0.1") || strings.HasPrefix(host, "localhost") {
 		scheme = "http"
