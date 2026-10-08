@@ -43,14 +43,6 @@ const (
 	defaultTimeout  = 30 * time.Second
 )
 
-// sections are the shown commit types, in render order.
-var sections = []struct{ kind, title string }{
-	{"feat", "Features"},
-	{"fix", "Bug fixes"},
-	{"perf", "Performance"},
-	{"revert", "Reverts"},
-}
-
 var (
 	subjectRe  = regexp.MustCompile(`^([a-z]+)(?:\(([^)]*)\))?(!)?: (.+)$`)
 	breakingRe = regexp.MustCompile(`(?m)^BREAKING[ -]CHANGE: ?`)
@@ -142,7 +134,7 @@ func Render(opts Options) (string, error) {
 		return "", err
 	}
 	writeTitles(&b, "Roadmap delivered", delivered)
-	writeChanges(&b, commits)
+	writeChanges(&b, commits, commitSections(opts))
 	if err := writeSecurity(&b, g, opts.From, opts.To); err != nil {
 		return "", err
 	}
@@ -374,7 +366,7 @@ func writeSection(b *strings.Builder, title string, lines []string, sep string) 
 	b.WriteString("\n## " + title + "\n\n" + strings.Join(lines, sep) + "\n")
 }
 
-func writeChanges(b *strings.Builder, commits []commit) {
+func writeChanges(b *strings.Builder, commits []commit, sections []section) {
 	deps := 0
 	for _, c := range commits {
 		if c.kind == "chore" && c.scope == "deps" {

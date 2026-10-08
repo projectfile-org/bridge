@@ -379,3 +379,12 @@ func TestSummaryElapsed(t *testing.T) {
 		assert.Equal(t, "1 commit, 2 contributors, "+want+" since 1.0.0.", strings.TrimSpace(string(out)), seconds)
 	}
 }
+
+func TestCommitSectionsConfig(t *testing.T) {
+	r := newRepo(t)
+	doc := "org:\n  projectfile:\n    release:\n      notes:\n        sections: {fix: Fixes, docs: Documentation}\n        hidden: [perf, revert]\n"
+	r.commit("Ann", "feat: first", map[string]string{fixtureDoc: doc})
+	got := commitSections(Options{Dir: r.dir})
+	assert.Equal(t, []section{{"feat", "Features"}, {"fix", "Fixes"}, {"docs", "Documentation"}}, got)
+	assert.Equal(t, defaultSections, commitSections(Options{Dir: t.TempDir()}))
+}
