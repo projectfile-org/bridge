@@ -15,7 +15,7 @@ identity:
     en: 'pf-bridge is the projection tool of the projectfile: it derives forge identity files, assembles feature and roadmap fragments, and projects the projectfile onto the files a forge and repository expect. Companion binary to pf-cli for the projectfile.org tooling.'
     es: 'pf-bridge es la herramienta de proyección del projectfile: deriva los archivos de identidad del forge, ensambla los fragmentos de características y hoja de ruta, y proyecta el projectfile sobre los archivos que un forge y un repositorio esperan. Binario compañero de pf-cli para las herramientas de projectfile.org.'
     uk: 'pf-bridge — інструмент проєктування projectfile: він створює файли ідентичності forge-майданчика, збирає фрагменти функцій і дорожньої карти та проєктує projectfile на файли, яких очікують forge і репозиторій. Бінарник-компаньйон pf-cli в інструментарії projectfile.org.'
-  version: 3.5.0
+  version: 3.5.1
   released: "2026-10-08"
 includes:
   - .makefile/b19/ci.yaml
