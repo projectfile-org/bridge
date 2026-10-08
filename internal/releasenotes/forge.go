@@ -367,6 +367,47 @@ func writeDigests(b *strings.Builder, images []sinkImage) {
 		fmt.Fprintf(b, "| %s | `%s` | %s |\n", p.Name, p.Digest, sizeCell(p, prev))
 	}
 	b.WriteString("\nSizes are compressed layer bytes as stored in the registry.\n")
+	if prev != nil {
+		writePackageDelta(b, prev.Packages, table.Packages)
+	}
+}
+
+// maxChangedListed caps the version changes named one by one; the rest are only counted.
+const maxChangedListed = 12
+
+// writePackageDelta states which packages the SBOM gained, lost or moved to another version since the previous release.
+func writePackageDelta(b *strings.Builder, before, after map[string]string) {
+	if before == nil || after == nil {
+		return
+	}
+	var added, removed, changed []string
+	for name, v := range after {
+		switch old, ok := before[name]; {
+		case !ok:
+			added = append(added, name)
+		case old != v:
+			changed = append(changed, fmt.Sprintf("%s %s → %s", name, old, v))
+		}
+	}
+	for name := range before {
+		if _, ok := after[name]; !ok {
+			removed = append(removed, name)
+		}
+	}
+	genlog.Debug("package delta", "added", len(added), "removed", len(removed), "changed", len(changed))
+	if len(added)+len(removed)+len(changed) == 0 {
+		b.WriteString("\nNo package changed since the previous release.\n")
+		return
+	}
+	slices.Sort(changed)
+	fmt.Fprintf(b, "\n**Packages since the previous release:** %d updated, %d added, %d removed.\n", len(changed), len(added), len(removed))
+	for i, c := range changed {
+		if i == maxChangedListed {
+			fmt.Fprintf(b, "- … and %d more\n", len(changed)-i)
+			break
+		}
+		b.WriteString("- " + c + "\n")
+	}
 }
 
 // sizeCell renders a platform's size, with the change against the same platform of the previous release when known.

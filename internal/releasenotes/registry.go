@@ -7,10 +7,12 @@ package releasenotes
 import (
 	"context"
 	"crypto/sha256"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/url"
+	"slices"
 	"strings"
 
 	"kiota.ch/projectfile/core/v2/pkg/genlog"
@@ -30,6 +32,8 @@ type Platform struct {
 type ImageInfo struct {
 	Digest    string
 	Platforms []Platform
+	// Packages maps a package name to its sorted, comma-joined versions, read from the image's attested SBOM; nil when none.
+	Packages map[string]string
 }
 
 type descriptor struct {
@@ -87,6 +91,9 @@ func InspectImage(ctx context.Context, client *http.Client, ref string) (ImageIn
 		return ImageInfo{}, fmt.Errorf("manifest of %s: %w", ref, err)
 	}
 	info := ImageInfo{Digest: digest}
+	if info.Packages, err = attestedPackages(ctx, client, scheme+"://"+host+"/v2/"+repo, digest, &token); err != nil {
+		genlog.Debug("sbom attestation unreadable, no package delta", "ref", ref, "digest", digest, "err", err.Error())
+	}
 	for _, m := range top.Manifests {
 		// Attestation and signature manifests carry no platform; they are not architectures.
 		if m.Platform.Architecture == "" || m.Platform.Architecture == "unknown" {
@@ -205,4 +212,74 @@ func anonymousToken(ctx context.Context, client *http.Client, challenge string) 
 		tok.Token = tok.AccessToken
 	}
 	return tok.Token, nil
+}
+
+// attestedPackages reads the CycloneDX packages of the cosign attestation stored under the image digest's `.att` tag.
+func attestedPackages(ctx context.Context, client *http.Client, repoURL, digest string, token *string) (map[string]string, error) {
+	raw, _, err := fetchManifest(ctx, client, repoURL+"/manifests/"+strings.Replace(digest, ":", "-", 1)+".att", token)
+	if err != nil {
+		return nil, err
+	}
+	var att manifest
+	if err := json.Unmarshal(raw, &att); err != nil {
+		return nil, err
+	}
+	versions := map[string][]string{}
+	for _, layer := range att.Layers {
+		blob, _, err := fetchManifest(ctx, client, repoURL+"/blobs/"+layer.Digest, token)
+		if err != nil {
+			return nil, err
+		}
+		addComponents(blob, versions)
+	}
+	if len(versions) == 0 {
+		return nil, fmt.Errorf("attestation %s holds no CycloneDX components", digest)
+	}
+	out := make(map[string]string, len(versions))
+	for name, v := range versions {
+		slices.Sort(v)
+		out[name] = strings.Join(slices.Compact(v), ", ")
+	}
+	return out, nil
+}
+
+// addComponents collects name and version of every non-file component of one DSSE-wrapped CycloneDX statement.
+func addComponents(envelope []byte, into map[string][]string) {
+	var env struct {
+		Payload string `json:"payload"`
+	}
+	if json.Unmarshal(envelope, &env) != nil {
+		return
+	}
+	payload, err := base64.StdEncoding.DecodeString(env.Payload)
+	if err != nil {
+		return
+	}
+	var stmt struct {
+		Predicate json.RawMessage `json:"predicate"`
+	}
+	if json.Unmarshal(payload, &stmt) != nil {
+		return
+	}
+	var bom struct {
+		Components []struct{ Type, Name, Version string } `json:"components"`
+		Data       json.RawMessage                        `json:"Data"`
+	}
+	if json.Unmarshal(stmt.Predicate, &bom) != nil {
+		return
+	}
+	// Older cosign wraps the BOM as predicate.Data, sometimes as a JSON string.
+	if len(bom.Components) == 0 && len(bom.Data) > 0 {
+		inner := bom.Data
+		var str string
+		if json.Unmarshal(inner, &str) == nil {
+			inner = []byte(str)
+		}
+		_ = json.Unmarshal(inner, &bom)
+	}
+	for _, c := range bom.Components {
+		if c.Type != "file" && c.Name != "" {
+			into[c.Name] = append(into[c.Name], c.Version)
+		}
+	}
 }
