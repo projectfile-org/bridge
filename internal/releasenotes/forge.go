@@ -45,6 +45,8 @@ type ForgeOptions struct {
 	Previous string
 	Assets   []string
 	Magnets  map[string]string
+	// Inspect reads one image reference from its registry; nil omits digests and the platform table.
+	Inspect func(ref string) (ImageInfo, error)
 }
 
 // RenderForge returns the forge half: what this forge published for the tag and how to fetch and verify it.
@@ -73,7 +75,9 @@ func RenderForge(fo ForgeOptions) (string, error) {
 	if blocks != "" {
 		b.WriteString("\n" + blocks + "\n")
 	}
-	writeVerify(&b, pf, fo.Assets)
+	images := inspectSinks(pf, fo.Inspect)
+	writeDigests(&b, images)
+	writeVerify(&b, pf, fo.Assets, images)
 	writeTorrents(&b, fo.Magnets, hostmatch.ResolveKind(fo.Server) == hostmatch.KindGitHub)
 	prev := fo.Previous
 	if prev == "" {
@@ -165,8 +169,8 @@ func applyReleaseProse(pf *projectfile.Document) {
 }
 
 // writeVerify lists the cosign and gpg commands that prove the published artifacts, one subsection per kind.
-func writeVerify(b *strings.Builder, pf *projectfile.Document, assets []string) {
-	image, binary := imageVerify(pf), binaryVerify(pf, assets)
+func writeVerify(b *strings.Builder, pf *projectfile.Document, assets []string, images []sinkImage) {
+	image, binary := imageVerify(pf, images), binaryVerify(pf, assets)
 	if len(image) == 0 && len(binary) == 0 {
 		return
 	}
@@ -184,7 +188,7 @@ func writeVerify(b *strings.Builder, pf *projectfile.Document, assets []string) 
 }
 
 // imageVerify returns the cosign commands for every sink ref, naming the key once.
-func imageVerify(pf *projectfile.Document) []string {
+func imageVerify(pf *projectfile.Document, images []sinkImage) []string {
 	key, _ := projectfile.LookupExtension(pf, cosignKeyPath)
 	keyURL, _ := key.(string)
 	_, signed := projectfile.LookupExtension(pf, signedNode)
@@ -200,6 +204,9 @@ func imageVerify(pf *projectfile.Document) []string {
 	}
 	lines := []string{"COSIGN_KEY=" + keyURL}
 	refs := sinkRefs(pf)
+	for i, ref := range refs {
+		refs[i] = pinned(ref, images)
+	}
 	for _, ref := range refs {
 		lines = append(lines, "cosign verify "+flags+" "+ref)
 	}
@@ -284,4 +291,75 @@ func MergeBody(body, half string) string {
 		body = body[:i]
 	}
 	return strings.TrimRight(body, "\n") + "\n\n" + strings.TrimRight(half, "\n") + "\n"
+}
+
+// sinkImage is one sink's image reference with what its registry holds for it.
+type sinkImage struct {
+	Ref  string
+	Info ImageInfo
+}
+
+// inspectSinks reads every sink ref through inspect; an unreadable one is skipped, so the notes degrade to tags.
+func inspectSinks(pf *projectfile.Document, inspect func(string) (ImageInfo, error)) []sinkImage {
+	if inspect == nil {
+		return nil
+	}
+	var out []sinkImage
+	for _, ref := range sinkRefs(pf) {
+		info, err := inspect(ref)
+		if err != nil || info.Digest == "" {
+			genlog.Warn("image digest omitted, registry unreadable", "ref", ref, "err", fmt.Sprint(err))
+			continue
+		}
+		out = append(out, sinkImage{Ref: ref, Info: info})
+		genlog.Debug("image inspected", "ref", ref, "digest", info.Digest, "platforms", len(info.Platforms))
+	}
+	return out
+}
+
+// repoOf drops the tag or digest from a reference.
+func repoOf(ref string) string {
+	ref, _, _ = strings.Cut(ref, "@")
+	if i := strings.LastIndex(ref, ":"); i > strings.LastIndex(ref, "/") {
+		ref = ref[:i]
+	}
+	return ref
+}
+
+// pinned returns ref as repo@digest when its registry was read, else ref unchanged.
+func pinned(ref string, images []sinkImage) string {
+	for _, im := range images {
+		if im.Ref == ref {
+			return repoOf(ref) + "@" + im.Info.Digest
+		}
+	}
+	return ref
+}
+
+// writeDigests pins each sink's image by digest and tabulates the platforms of the first multi-arch one.
+func writeDigests(b *strings.Builder, images []sinkImage) {
+	if len(images) == 0 {
+		return
+	}
+	b.WriteString("\n## Image digests\n\nA tag can move; a digest cannot. Pull this exact build:\n\n```sh\n")
+	var table *ImageInfo
+	for i, im := range images {
+		fmt.Fprintf(b, "docker pull %s@%s\n", repoOf(im.Ref), im.Info.Digest)
+		if table == nil && len(im.Info.Platforms) > 0 {
+			table = &images[i].Info
+		}
+	}
+	b.WriteString("```\n")
+	if table == nil {
+		return
+	}
+	b.WriteString("\n| Platform | Digest | Size |\n| --- | --- | --- |\n")
+	for _, p := range table.Platforms {
+		size := "—"
+		if p.Size > 0 {
+			size = fmt.Sprintf("%.1f MB", float64(p.Size)/1e6)
+		}
+		fmt.Fprintf(b, "| %s | `%s` | %s |\n", p.Name, p.Digest, size)
+	}
+	b.WriteString("\nSizes are compressed layer bytes as stored in the registry.\n")
 }

@@ -72,6 +72,7 @@ func Publish(ctx context.Context, po PublishOptions) (string, error) {
 		}
 		po.Magnets[a.Name] = magnet
 	}
+	po.Inspect = func(ref string) (ImageInfo, error) { return InspectImage(ctx, client, ref) }
 	half, err := RenderForge(po.ForgeOptions)
 	if err != nil {
 		return "", err

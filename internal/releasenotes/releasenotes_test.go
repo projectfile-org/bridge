@@ -255,7 +255,7 @@ org:
 
 func TestRenderForge(t *testing.T) {
 	r := newRepo(t)
-	r.commit("Ann", "feat: first", map[string]string{"projectfile.yaml": forgeDoc})
+	r.commit("Ann", "feat: first", map[string]string{fixtureDoc: forgeDoc})
 	r.git("Ann", "tag", "v1.1.0")
 	r.commit("Ann", "feat: ship", nil)
 	r.git("Ann", "tag", fixtureTag)
@@ -266,7 +266,7 @@ func TestRenderForge(t *testing.T) {
 
 	got, err := RenderForge(ForgeOptions{
 		Options: Options{Dir: r.dir, Tag: fixtureTag, Prefix: "v"},
-		Forge:   "kiota", Server: "https://kiota.example", Repo: "o/x",
+		Forge:   fixtureForge, Server: fixtureHost, Repo: fixtureRepo,
 		Assets:  []string{"x-linux-amd64", "x-linux-amd64.asc"},
 		Magnets: map[string]string{"o-x-1.2.0.magnet": "magnet:?xt=urn:btih:abc\n"},
 	})
@@ -316,7 +316,7 @@ func TestMergeBodyReplacesForgeHalf(t *testing.T) {
 
 func TestPublishPatchesOnce(t *testing.T) {
 	r := newRepo(t)
-	r.commit("Ann", "feat: first", map[string]string{"projectfile.yaml": forgeDoc})
+	r.commit("Ann", "feat: first", map[string]string{fixtureDoc: forgeDoc})
 	r.git("Ann", "tag", fixtureTag)
 	body, patches := "Human half.\n", 0
 	var srv *httptest.Server
@@ -343,7 +343,7 @@ func TestPublishPatchesOnce(t *testing.T) {
 	}))
 	defer srv.Close()
 	po := PublishOptions{
-		ForgeOptions: ForgeOptions{Options: Options{Dir: r.dir, Tag: fixtureTag, Prefix: "v"}, Forge: "kiota", Server: "https://kiota.example", Repo: "o/x"},
+		ForgeOptions: ForgeOptions{Options: Options{Dir: r.dir, Tag: fixtureTag, Prefix: "v"}, Forge: "kiota", Server: fixtureHost, Repo: fixtureRepo},
 		API:          srv.URL, Token: "secret",
 	}
 	for range 2 {
