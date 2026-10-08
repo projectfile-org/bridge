@@ -28,6 +28,7 @@ pf-bridge es la herramienta de proyección del projectfile: deriva los archivos 
 - Licenciado y citable
 - Un solo lugar para los metadatos de tu paquete
 - Un readme que sigue el ritmo del proyecto
+- Notas de versión escritas desde tu historial
 - Empieza en minutos, mantén la sincronía después
 - Cada herramienta lee las mismas listas
 

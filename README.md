@@ -26,6 +26,7 @@ pf-bridge is the projection tool of the projectfile: it derives forge identity f
 - Licensed and citable
 - One place for your package metadata
 - A readme that keeps up with the project
+- Release notes written from your history
 - Start in minutes, stay in sync afterwards
 - Every tool reads the same lists
 
