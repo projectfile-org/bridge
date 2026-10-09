@@ -70,8 +70,6 @@ ARG M6E_NEAR_CACHE_HOST=""
 ARG M6E_PROJECT
 ARG TARGETARCH
 
-ENV M6E_VERSION=${M6E_VERSION}
-
 COPY --chown=${B19_UID}:${B19_GID} .container/base/ /
 COPY --from=projectfile-bridge-builder /export /
 
@@ -96,6 +94,7 @@ RUN --mount=type=bind,from=fetch,source=.,target=/fetch                         
     --mount=type=cache,target=${B19_DOWNLOAD_PATH},sharing=shared,uid=${B19_UID},gid=${B19_GID}     \
     --mount=type=tmpfs,target=${B19_TEMP_PATH}                                                      \
     build-stage user
+ENV M6E_VERSION=${M6E_VERSION}
 
 # ENTRYPOINT ["entrypoint.d"] is inherited
 # HEALTHCHECK CMD ["healthcheck.d"] is inherited
