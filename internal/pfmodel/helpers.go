@@ -50,6 +50,7 @@ const (
 	FragmentsExtensionNS        = "org.projectfile.fragments"
 	ArtifactsExtensionNS        = "org.projectfile.artifacts"
 	AcknowledgementsExtensionNS = "org.projectfile.acknowledgements"
+	BridgeExtensionNS           = "org.projectfile.bridge"
 
 	// SinksExtensionNS holds the named destinations a project publishes its
 	// container images to. ImageExtensionNS holds the PARTS those destinations

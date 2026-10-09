@@ -49,11 +49,8 @@ func mapName(doc *Document, pf *projectfile.Document) core.FieldMapper {
 			pf.Identity.Name = doc.Name
 			return doc.Name
 		},
-		FromPF: func(force bool) string {
+		FromPF: func(_ bool) string {
 			if pf.Identity.Name == "" || doc.Name == pf.Identity.Name {
-				return ""
-			}
-			if doc.Name != "" && !force {
 				return ""
 			}
 			doc.Name = pf.Identity.Name
@@ -76,11 +73,8 @@ func mapVersion(doc *Document, pf *projectfile.Document) core.FieldMapper {
 			pf.Identity.Version = doc.Version
 			return doc.Version
 		},
-		FromPF: func(force bool) string {
+		FromPF: func(_ bool) string {
 			if pf.Identity.Version == "" || doc.Version == pf.Identity.Version {
-				return ""
-			}
-			if doc.Version != "" && !force {
 				return ""
 			}
 			doc.Version = pf.Identity.Version
@@ -114,9 +108,6 @@ func mapDescription(doc *Document, pf *projectfile.Document) core.FieldMapper {
 				return core.ClearExt(force, &doc.Description)
 			}
 			if strings.TrimSpace(doc.Description) == s {
-				return ""
-			}
-			if doc.Description != "" && !force {
 				return ""
 			}
 			doc.Description = s
@@ -206,9 +197,6 @@ func mapCrystal(doc *Document, pf *projectfile.Document) core.FieldMapper {
 			if doc.Crystal == want {
 				return ""
 			}
-			if doc.Crystal != "" && !force {
-				return ""
-			}
 			doc.Crystal = want
 			return want
 		},
@@ -247,9 +235,6 @@ func mapLicense(doc *Document, pf *projectfile.Document) core.FieldMapper {
 			if doc.License == pf.License.Spdx {
 				return ""
 			}
-			if doc.License != "" && !force {
-				return ""
-			}
 			doc.License = pf.License.Spdx
 			return pf.License.Spdx
 		},
@@ -280,9 +265,6 @@ func mapHomepage(doc *Document, pf *projectfile.Document) core.FieldMapper {
 				return core.ClearExt(force, &doc.Homepage)
 			}
 			if doc.Homepage == url {
-				return ""
-			}
-			if doc.Homepage != "" && !force {
 				return ""
 			}
 			doc.Homepage = url
@@ -321,9 +303,6 @@ func mapRepository(doc *Document, pf *projectfile.Document) core.FieldMapper {
 			if doc.Repository == primary.URL {
 				return ""
 			}
-			if doc.Repository != "" && !force {
-				return ""
-			}
 			doc.Repository = primary.URL
 			return core.Trunc(primary.URL)
 		},
@@ -354,9 +333,6 @@ func mapDocumentation(doc *Document, pf *projectfile.Document) core.FieldMapper 
 				return core.ClearExt(force, &doc.Documentation)
 			}
 			if doc.Documentation == url {
-				return ""
-			}
-			if doc.Documentation != "" && !force {
 				return ""
 			}
 			doc.Documentation = url

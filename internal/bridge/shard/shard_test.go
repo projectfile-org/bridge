@@ -171,7 +171,7 @@ func TestFullSyncFromPFIsIdempotent(t *testing.T) {
 	}
 }
 
-func TestSyncNoForceSkipsExisting(t *testing.T) {
+func TestSyncNoForceConverges(t *testing.T) {
 	dir := t.TempDir()
 	writeShardYML(t, dir, "shard.yml", fixtureYAML)
 	doc, err := shard.Read(dir)
@@ -183,7 +183,7 @@ func TestSyncNoForceSkipsExisting(t *testing.T) {
 			m.FromPF(false)
 		}
 	}
-	assert.Equal(t, "demo-shard", doc.Name, "force=false must not overwrite existing ext field")
+	assert.Equal(t, "new-name", doc.Name, "force=false must converge a modeled pf value")
 }
 
 func TestAuthorsMergeIntoPeople(t *testing.T) {

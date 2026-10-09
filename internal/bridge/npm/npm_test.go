@@ -176,7 +176,7 @@ links:
 	}
 }
 
-func TestBuildMappersFromPFNoForceSkipsExisting(t *testing.T) {
+func TestBuildMappersFromPFNoForceConverges(t *testing.T) {
 	dir := t.TempDir()
 	writePackageJSON(t, dir, fixtureJSON)
 	doc, err := npm.Read(dir)
@@ -188,13 +188,13 @@ func TestBuildMappersFromPFNoForceSkipsExisting(t *testing.T) {
 	bridge := npm.Bridge{}
 	mappers := bridge.BuildMappers(doc, pf)
 
-	// force=false: existing doc.Name="my-package" must not be overwritten.
+	// force=false: a modeled pf value still converges, only clears are withheld.
 	for _, m := range mappers {
 		if m.FromPF != nil {
 			m.FromPF(false)
 		}
 	}
-	assert.Equal(t, "my-package", doc.Name, "force=false must not overwrite existing ext field")
+	assert.Equal(t, "new-name", doc.Name, "force=false must converge a modeled pf value")
 }
 
 // ── ParsePerson ──────────────────────────────────────────────────────────────

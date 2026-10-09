@@ -60,15 +60,12 @@ func buildMappers(c *Document, pf *projectfile.Document) core.MapperList {
 				projectfile.SetLocalizedEN(&pf.Identity.Title, c.Title)
 				return core.Trunc(c.Title)
 			},
-			FromPF: func(force bool) string {
+			FromPF: func(_ bool) string {
 				title := projectfile.ExtractLocalizedString(pf.Identity.Title)
 				if title == "" {
 					return ""
 				}
 				if c.Title == title {
-					return ""
-				}
-				if c.Title != "" && !force {
 					return ""
 				}
 				c.Title = title
@@ -99,9 +96,6 @@ func buildMappers(c *Document, pf *projectfile.Document) core.MapperList {
 				if c.Abstract == summary {
 					return ""
 				}
-				if c.Abstract != "" && !force {
-					return ""
-				}
 				c.Abstract = summary
 				return core.Trunc(summary)
 			},
@@ -118,11 +112,8 @@ func buildMappers(c *Document, pf *projectfile.Document) core.MapperList {
 				pf.Identity.Version = c.Version
 				return c.Version
 			},
-			FromPF: func(force bool) string {
+			FromPF: func(_ bool) string {
 				if pf.Identity.Version == "" || pf.Identity.Version == c.Version {
-					return ""
-				}
-				if c.Version != "" && !force {
 					return ""
 				}
 				c.Version = pf.Identity.Version
@@ -146,9 +137,6 @@ func buildMappers(c *Document, pf *projectfile.Document) core.MapperList {
 					return core.ClearExt(force, &c.DateReleased)
 				}
 				if pf.Identity.Released == c.DateReleased {
-					return ""
-				}
-				if c.DateReleased != "" && !force {
 					return ""
 				}
 				c.DateReleased = pf.Identity.Released
@@ -205,9 +193,6 @@ func buildMappers(c *Document, pf *projectfile.Document) core.MapperList {
 				if cffLicenseToSPDX(c.License) == expr {
 					return ""
 				}
-				if c.License != nil && c.License != "" && !force {
-					return ""
-				}
 				c.License = newVal
 				return expr
 			},
@@ -235,9 +220,6 @@ func buildMappers(c *Document, pf *projectfile.Document) core.MapperList {
 					return core.ClearExt(force, &c.RepositoryCode)
 				}
 				if c.RepositoryCode == url {
-					return ""
-				}
-				if c.RepositoryCode != "" && !force {
 					return ""
 				}
 				c.RepositoryCode = url
@@ -268,9 +250,6 @@ func buildMappers(c *Document, pf *projectfile.Document) core.MapperList {
 				if c.URL == url {
 					return ""
 				}
-				if c.URL != "" && !force {
-					return ""
-				}
 				c.URL = url
 				return core.Trunc(c.URL)
 			},
@@ -298,9 +277,6 @@ func buildMappers(c *Document, pf *projectfile.Document) core.MapperList {
 				bare := extractBareKeywords(pf.Keywords)
 				if len(bare) == 0 {
 					return core.ClearExt(force, &c.Keywords)
-				}
-				if len(c.Keywords) > 0 && !force {
-					return ""
 				}
 				if sameStringSet(c.Keywords, bare) {
 					return ""
@@ -347,7 +323,10 @@ func buildMappers(c *Document, pf *projectfile.Document) core.MapperList {
 				}
 				return fmt.Sprintf("%d person(s), %d org(s) merged", len(allPeople), len(allOrgs))
 			},
-			FromPF: func(_ bool) string {
+			FromPF: func(force bool) string {
+				if len(pf.People) == 0 && len(pf.Organizations) == 0 && !force {
+					return ""
+				}
 				touched := 0
 				peopleForAuthors := filterByAnyRole(pf.People, "author", "maintainer", "contributor")
 				orgsForAuthors := filterOrgsByAnyRole(pf.Organizations, "author", "maintainer", "contributor")
@@ -397,9 +376,6 @@ func buildMappers(c *Document, pf *projectfile.Document) core.MapperList {
 				if c.DOI == doi {
 					return ""
 				}
-				if c.DOI != "" && !force {
-					return ""
-				}
 				c.DOI = doi
 				return core.Trunc(doi)
 			},
@@ -420,9 +396,6 @@ func buildMappers(c *Document, pf *projectfile.Document) core.MapperList {
 				ext, _ := pfmodel.GetCitationExtension(pf)
 				if ext == nil || ext.Preferred == nil {
 					return core.ClearExt(force, &c.PreferredCitation)
-				}
-				if c.PreferredCitation != nil && !force {
-					return ""
 				}
 				c.PreferredCitation = &Reference{
 					Type:    ext.Preferred.Type,
@@ -457,9 +430,6 @@ func buildMappers(c *Document, pf *projectfile.Document) core.MapperList {
 				ids := linksToIdentifiers(pf.Links)
 				if len(ids) == 0 {
 					return core.ClearExt(force, &c.Identifiers)
-				}
-				if len(c.Identifiers) > 0 && !force {
-					return ""
 				}
 				c.Identifiers = ids
 				return fmt.Sprintf("%d identifier(s)", len(ids))

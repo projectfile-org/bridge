@@ -434,16 +434,10 @@ REUSE header when the leading comment block carries no SPDX tags. A header
 that is already there, hand-written or stale, always wins untouched: the
 projectfile is not authoritative for the file’s rights-holder.
 
-**A sync never reads the file back.** The default direction is `to`: a mapped
-field the projectfile lacks is CLEARED from the file (`core.ClearExt`, and each
-writer drops the emptied key), so deleting a link or a keyword from the
-projectfile really deletes it. A file’s values reach the projectfile only at
-creation (`pf-bridge init`, via `internal/source`) or on an explicit `from`.
-A gap-filling sync made every deletion bounce straight back from the file.
-Exempt, because the file owns them: `name`/`version` (the package’s identity),
-CFF `title`/`authors` (schema-required), the ecosystem passthroughs under
-`org.python.pep621` / `org.packagist.composer`, and composer’s platform
-`require` — a dependency set, which the projectfile no longer carries.
+**A sync never reads the file back.** Values flow pf → file on write paths; a file’s values reach the projectfile only at creation (`pf-bridge init`, via `internal/source`) or on an explicit `from`. A gap-filling sync made every deletion bounce straight back from the file.
+**A default sync converges without destroying.** A pf value fills and overwrites; a field the projectfile lacks is PRESERVED in the file — `core.ClearExt` only acts on force, which a default sync withholds, and every mapper’s update path ignores force. `check` therefore stays green on file values the projectfile does not model. An explicit `to` stays fully authoritative: a mapped field the projectfile lacks is CLEARED there (`core.ClearExt`, and each writer drops the emptied key), so deleting a link or a keyword from the projectfile deletes it from the file only via `to`.
+Exempt, because the file owns them even on `to`: `name`/`version` (the package’s identity), CFF `title`/`authors` (schema-required), the ecosystem passthroughs under `org.python.pep621` / `org.packagist.composer`, and composer’s platform `require` — a dependency set, which the projectfile no longer carries.
+Per-field authority overrides live under `org.projectfile.bridge.authority`: `"projectfile"` opts one field back into clearing on a default sync, while a bridge name (or `external`) withholds clearing even on `to` (`requires-python = "pyproject"`). `pfmodel.ExternalOwns` / `ProjectfileOwns` are the readers and `core.RunSync` resolves them per mapper, so an override holds on every bridge. Mappers may additionally hold a value conflict for an explicit file owner — requires-python does — otherwise a modeled pf value always converges pf-wins.
 
 **A single documentation slot selects by tag, never by type.** An include can
 union “a piece of documentation” onto every project (the shared spec site in

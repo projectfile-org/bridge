@@ -125,14 +125,11 @@ func mapName(py *Document, pf *projectfile.Document, dyn map[string]bool) core.F
 			pf.Identity.Name = incoming
 			return incoming
 		},
-		FromPF: func(force bool) string {
+		FromPF: func(_ bool) string {
 			if dyn["name"] || pf.Identity.Name == "" {
 				return ""
 			}
 			if normalizePyPIName(py.Project.Name) == normalizePyPIName(pf.Identity.Name) {
-				return ""
-			}
-			if py.Project.Name != "" && !force {
 				return ""
 			}
 			py.Project.Name = pf.Identity.Name
@@ -154,11 +151,8 @@ func mapVersion(py *Document, pf *projectfile.Document, dyn map[string]bool) cor
 			pf.Identity.Version = py.Project.Version
 			return py.Project.Version
 		},
-		FromPF: func(force bool) string {
+		FromPF: func(_ bool) string {
 			if dyn["version"] || pf.Identity.Version == "" || py.Project.Version == pf.Identity.Version {
-				return ""
-			}
-			if py.Project.Version != "" && !force {
 				return ""
 			}
 			py.Project.Version = pf.Identity.Version
@@ -195,9 +189,6 @@ func mapDescription(py *Document, pf *projectfile.Document, dyn map[string]bool)
 			if py.Project.Description == s {
 				return ""
 			}
-			if py.Project.Description != "" && !force {
-				return ""
-			}
 			py.Project.Description = s
 			return core.Trunc(s)
 		},
@@ -205,8 +196,11 @@ func mapDescription(py *Document, pf *projectfile.Document, dyn map[string]bool)
 }
 
 func mapRequiresPython(py *Document, pf *projectfile.Document, dyn map[string]bool) core.FieldMapper {
+	// No-destroy rule: with no pf value the file keeps requires-python in every mode; only authority "projectfile" restores the clear, and a file owner also wins a value conflict.
+	const extKey = "requires-python"
+	const pfKey = "requirements.runtime.python"
 	return core.FieldMapper{
-		ExtKey: "requires-python", PFKey: "requirements.runtime.python",
+		ExtKey: extKey, PFKey: pfKey,
 		ToPF: func(force bool) string {
 			if dyn["requires-python"] || py.Project.RequiresPython == "" {
 				return ""
@@ -234,12 +228,15 @@ func mapRequiresPython(py *Document, pf *projectfile.Document, dyn map[string]bo
 				val = pf.Requirements.Runtime["python"]
 			}
 			if val == "" {
-				return core.ClearExt(force, &py.Project.RequiresPython)
+				if pfmodel.ProjectfileOwns(pf, "pyproject", extKey, pfKey) {
+					return core.ClearExt(force, &py.Project.RequiresPython)
+				}
+				return ""
 			}
 			if py.Project.RequiresPython == val {
 				return ""
 			}
-			if py.Project.RequiresPython != "" && !force {
+			if py.Project.RequiresPython != "" && pfmodel.ExternalOwns(pf, "pyproject", Filename, extKey, pfKey) {
 				return ""
 			}
 			py.Project.RequiresPython = val
@@ -293,9 +290,6 @@ func mapLicense(py *Document, pf *projectfile.Document, dyn map[string]bool) cor
 				if cur == pf.License.Spdx {
 					return ""
 				}
-				if cur != "" && !force {
-					return ""
-				}
 				py.Project.License = pf.License.Spdx
 				return pf.License.Spdx
 			}
@@ -306,9 +300,6 @@ func mapLicense(py *Document, pf *projectfile.Document, dyn map[string]bool) cor
 				if s, ok := pf.License.File.(string); ok && s != "" {
 					existing, _ := licenseValueAsTable(py.Project.License)
 					if existing["file"] == s {
-						return ""
-					}
-					if py.Project.License != nil && !force {
 						return ""
 					}
 					py.Project.License = map[string]any{"file": s}
@@ -362,9 +353,6 @@ func mapLicenseFiles(py *Document, pf *projectfile.Document, dyn map[string]bool
 			if equalStringSlice(py.Project.LicenseFiles, files) {
 				return ""
 			}
-			if len(py.Project.LicenseFiles) > 0 && !force {
-				return ""
-			}
 			py.Project.LicenseFiles = files
 			return fmt.Sprintf("%d file(s)", len(files))
 		},
@@ -389,9 +377,7 @@ func mapMaintainers(py *Document, pf *projectfile.Document) core.FieldMapper {
 	)
 }
 
-// mapPeopleRole builds the author/maintainer mapper. People always merge via
-// projectfile.MergePeople — `force` has no effect because the merge is
-// non-destructive by design (existing-wins on conflicts).
+// mapPeopleRole builds the author/maintainer mapper; people merge with existing-wins, and an unmodeled role preserves the file list except on a forced push.
 func mapPeopleRole(
 	_ *Document,
 	pf *projectfile.Document,
@@ -416,10 +402,13 @@ func mapPeopleRole(
 			}
 			return fmt.Sprintf("%d %s(s) merged", len(incoming), role)
 		},
-		FromPF: func(_ bool) string {
+		FromPF: func(force bool) string {
 			roles := filterByRole(pf.People, role)
 			if len(roles) == 0 {
 				if len(get()) == 0 {
+					return ""
+				}
+				if !force {
 					return ""
 				}
 				set(nil)
@@ -466,9 +455,6 @@ func mapKeywords(py *Document, pf *projectfile.Document) core.FieldMapper {
 			if equalStringSet(py.Project.Keywords, bare) {
 				return ""
 			}
-			if len(py.Project.Keywords) > 0 && !force {
-				return ""
-			}
 			py.Project.Keywords = bare
 			return fmt.Sprintf("%d keyword(s)", len(bare))
 		},
@@ -510,9 +496,6 @@ func mapClassifiers(py *Document, pf *projectfile.Document) core.FieldMapper {
 				return core.ClearExt(force, &py.Project.Classifiers)
 			}
 			if equalStringSlice(py.Project.Classifiers, stored) {
-				return ""
-			}
-			if len(py.Project.Classifiers) > 0 && !force {
 				return ""
 			}
 			py.Project.Classifiers = append([]string(nil), stored...)
@@ -622,9 +605,6 @@ func mapURLFunding(py *Document, pf *projectfile.Document) core.FieldMapper {
 			if found && existing == url {
 				return ""
 			}
-			if found && !force {
-				return ""
-			}
 			if py.Project.URLs == nil {
 				py.Project.URLs = map[string]string{}
 			}
@@ -706,16 +686,13 @@ func mapExtensionField(
 			setExtAny(pf, key, val)
 			return core.Trunc(formatAny(val))
 		},
-		FromPF: func(force bool) string {
+		FromPF: func(_ bool) string {
 			existing, exists := extGet(pf, key)
 			if !exists || isEmptyAny(existing) {
 				return ""
 			}
 			cur := get()
 			if deepEqualAny(cur, existing) {
-				return ""
-			}
-			if !isEmptyAny(cur) && !force {
 				return ""
 			}
 			set(existing)
@@ -760,9 +737,6 @@ func mapURLString(
 			}
 			existingKey, existing, found := findURLEntry(py.Project.URLs, aliases)
 			if found && existing == url {
-				return ""
-			}
-			if found && !force {
 				return ""
 			}
 			if py.Project.URLs == nil {

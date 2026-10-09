@@ -110,15 +110,12 @@ func mapName(pkg *Document, pf *projectfile.Document) core.FieldMapper {
 			}
 			return pkg.Name
 		},
-		FromPF: func(force bool) string {
+		FromPF: func(_ bool) string {
 			name := pfNameToComposer(pf.Identity.Namespace, pf.Identity.Name)
 			if name == "" {
 				return ""
 			}
 			if pkg.Name == name {
-				return ""
-			}
-			if pkg.Name != "" && !force {
 				return ""
 			}
 			pkg.Name = name
@@ -140,11 +137,8 @@ func mapVersion(pkg *Document, pf *projectfile.Document) core.FieldMapper {
 			pf.Identity.Version = pkg.Version
 			return pkg.Version
 		},
-		FromPF: func(force bool) string {
+		FromPF: func(_ bool) string {
 			if pf.Identity.Version == "" || pkg.Version == pf.Identity.Version {
-				return ""
-			}
-			if pkg.Version != "" && !force {
 				return ""
 			}
 			pkg.Version = pf.Identity.Version
@@ -178,9 +172,6 @@ func mapDescription(pkg *Document, pf *projectfile.Document) core.FieldMapper {
 			if pkg.Description == s {
 				return ""
 			}
-			if pkg.Description != "" && !force {
-				return ""
-			}
 			pkg.Description = s
 			return core.Trunc(s)
 		},
@@ -205,9 +196,6 @@ func mapTime(pkg *Document, pf *projectfile.Document) core.FieldMapper {
 				return core.ClearExt(force, &pkg.Time)
 			}
 			if pkg.Time == pf.Identity.Released {
-				return ""
-			}
-			if pkg.Time != "" && !force {
 				return ""
 			}
 			pkg.Time = pf.Identity.Released
@@ -246,9 +234,6 @@ func mapLicense(pkg *Document, pf *projectfile.Document) core.FieldMapper {
 			}
 			cur := LicenseString(pkg.License)
 			if cur == pf.License.Spdx {
-				return ""
-			}
-			if pkg.License != nil && !force {
 				return ""
 			}
 			pkg.License = ParseLicense(pf.License.Spdx)
@@ -327,9 +312,6 @@ func mapSupportSource(pkg *Document, pf *projectfile.Document) core.FieldMapper 
 				existing = pkg.Support.Source
 			}
 			if existing == url {
-				return ""
-			}
-			if existing != "" && !force {
 				return ""
 			}
 			ensureSupport(pkg)
@@ -427,9 +409,6 @@ func mapSupportURL(
 			if existing == v {
 				return ""
 			}
-			if existing != "" && !force {
-				return ""
-			}
 			supportSet(v)
 			return core.Trunc(v)
 		},
@@ -459,9 +438,6 @@ func mapKeywords(pkg *Document, pf *projectfile.Document) core.FieldMapper {
 				return core.ClearExt(force, &pkg.Keywords)
 			}
 			if equalStringSlice(pkg.Keywords, pf.Keywords) {
-				return ""
-			}
-			if len(pkg.Keywords) > 0 && !force {
 				return ""
 			}
 			pkg.Keywords = append([]string(nil), pf.Keywords...)
@@ -564,9 +540,6 @@ func mapFunding(pkg *Document, pf *projectfile.Document) core.FieldMapper {
 			if equalFundingComposer(pkg.Funding, entries) {
 				return ""
 			}
-			if len(pkg.Funding) > 0 && !force {
-				return ""
-			}
 			pkg.Funding = entries
 			return fmt.Sprintf("%d entr(y/ies)", len(entries))
 		},
@@ -611,7 +584,7 @@ func mapRequirementsRuntime(pkg *Document, pf *projectfile.Document) core.FieldM
 			}
 			return fmt.Sprintf("%d requirement(s)", len(platform))
 		},
-		FromPF: func(force bool) string {
+		FromPF: func(_ bool) string {
 			if pf.Requirements == nil {
 				return ""
 			}
@@ -625,9 +598,6 @@ func mapRequirementsRuntime(pkg *Document, pf *projectfile.Document) core.FieldM
 			anyChange := false
 			for k, v := range platform {
 				if cur, ok := pkg.Require[k]; ok && cur == v {
-					continue
-				}
-				if _, ok := pkg.Require[k]; ok && !force {
 					continue
 				}
 				pkg.Require[k] = v
@@ -672,16 +642,13 @@ func mapExtField(
 			setExtAny(pf, key, val)
 			return core.Trunc(formatAny(val))
 		},
-		FromPF: func(force bool) string {
+		FromPF: func(_ bool) string {
 			existing, exists := extGet(pf, key)
 			if !exists || isEmptyAny(existing) {
 				return ""
 			}
 			cur := get()
 			if deepEqualAny(cur, existing) {
-				return ""
-			}
-			if !isEmptyAny(cur) && !force {
 				return ""
 			}
 			set(existing)

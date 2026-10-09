@@ -48,15 +48,12 @@ func buildMappers(pkg *Document, pf *projectfile.Document) core.MapperList {
 				}
 				return pkg.Name
 			},
-			FromPF: func(force bool) string {
+			FromPF: func(_ bool) string {
 				name := pfNameToNPM(pf.Identity.Namespace, pf.Identity.Name)
 				if name == "" {
 					return ""
 				}
 				if pkg.Name == name {
-					return ""
-				}
-				if pkg.Name != "" && !force {
 					return ""
 				}
 				pkg.Name = name
@@ -75,11 +72,8 @@ func buildMappers(pkg *Document, pf *projectfile.Document) core.MapperList {
 				pf.Identity.Version = pkg.Version
 				return pkg.Version
 			},
-			FromPF: func(force bool) string {
+			FromPF: func(_ bool) string {
 				if pf.Identity.Version == "" || pkg.Version == pf.Identity.Version {
-					return ""
-				}
-				if pkg.Version != "" && !force {
 					return ""
 				}
 				pkg.Version = pf.Identity.Version
@@ -108,9 +102,6 @@ func buildMappers(pkg *Document, pf *projectfile.Document) core.MapperList {
 					return core.ClearExt(force, &pkg.Description)
 				}
 				if pkg.Description == s {
-					return ""
-				}
-				if pkg.Description != "" && !force {
 					return ""
 				}
 				pkg.Description = s
@@ -144,9 +135,6 @@ func buildMappers(pkg *Document, pf *projectfile.Document) core.MapperList {
 				if pkg.License == pf.License.Spdx {
 					return ""
 				}
-				if pkg.License != "" && !force {
-					return ""
-				}
 				pkg.License = pf.License.Spdx
 				return pf.License.Spdx
 			},
@@ -173,9 +161,6 @@ func buildMappers(pkg *Document, pf *projectfile.Document) core.MapperList {
 					return core.ClearExt(force, &pkg.Homepage)
 				}
 				if pkg.Homepage == url {
-					return ""
-				}
-				if pkg.Homepage != "" && !force {
 					return ""
 				}
 				pkg.Homepage = url
@@ -211,9 +196,6 @@ func buildMappers(pkg *Document, pf *projectfile.Document) core.MapperList {
 				if primary == nil || primary.URL == "" {
 					return core.ClearExt(force, &pkg.Repository)
 				}
-				if pkg.Repository != nil && !force {
-					return ""
-				}
 				repoType := primary.Type
 				if repoType == "" {
 					repoType = "git"
@@ -247,9 +229,6 @@ func buildMappers(pkg *Document, pf *projectfile.Document) core.MapperList {
 				if url == "" {
 					return core.ClearExt(force, &pkg.Bugs)
 				}
-				if pkg.Bugs != nil && !force {
-					return ""
-				}
 				if ParseBugs(pkg.Bugs).URL == url {
 					return ""
 				}
@@ -277,9 +256,6 @@ func buildMappers(pkg *Document, pf *projectfile.Document) core.MapperList {
 					return core.ClearExt(force, &pkg.Keywords)
 				}
 				if equalStringSlice(pkg.Keywords, pf.Keywords) {
-					return ""
-				}
-				if len(pkg.Keywords) > 0 && !force {
 					return ""
 				}
 				pkg.Keywords = append([]string(nil), pf.Keywords...)
@@ -421,9 +397,6 @@ func buildMappers(pkg *Document, pf *projectfile.Document) core.MapperList {
 				if equalStringMap(pkg.Engines, pf.Requirements.Runtime) {
 					return ""
 				}
-				if len(pkg.Engines) > 0 && !force {
-					return ""
-				}
 				pkg.Engines = copyStringMap(pf.Requirements.Runtime)
 				return fmt.Sprintf("%v", pkg.Engines)
 			},
@@ -462,9 +435,6 @@ func buildMappers(pkg *Document, pf *projectfile.Document) core.MapperList {
 				}
 				if len(urls) == 0 {
 					return core.ClearExt(force, &pkg.Funding)
-				}
-				if pkg.Funding != nil && !force {
-					return ""
 				}
 				pkg.Funding = urlsToFundingEntries(urls)
 				return fmt.Sprintf("%d entr(y/ies)", len(urls))
@@ -527,9 +497,6 @@ func mapPlatformList(
 			}
 			npmList := toNPM(current)
 			if equalStringSlice(npmGet(), npmList) {
-				return ""
-			}
-			if len(npmGet()) > 0 && !force {
 				return ""
 			}
 			npmSet(npmList)

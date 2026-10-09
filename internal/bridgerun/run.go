@@ -102,10 +102,11 @@ func Main(binName string) {
 		Short: "Bridge projectfile with the external file(s) this binary carries",
 		Long: "Two-way bridge between projectfile and the metadata file(s) this\n" +
 			"binary provides. The first positional may be the preposition 'to' or\n" +
-			"'from' to force direction; otherwise the projectfile is authoritative.\n" +
+			"'from' to force direction; otherwise the sync converges without\n" +
+			"destroying (pf values fill and overwrite, fields pf lacks keep the file).\n" +
 			"\n" +
-			"  " + binName + "                 (sync — pf wins, fields it lacks leave the file)\n" +
-			"  " + binName + " to             (write — pf → external)\n" +
+			"  " + binName + "                 (sync — converge, never clear)\n" +
+			"  " + binName + " to             (write — pf → external, authoritative)\n" +
 			"  " + binName + " from           (read  — external → pf)\n" +
 			"\n" +
 			"For derive-only bridges the direction auto-resolves to 'to'. When this\n" +

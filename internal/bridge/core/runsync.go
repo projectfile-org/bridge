@@ -10,19 +10,21 @@ import (
 
 	"kiota.ch/projectfile/core/v2/pkg/genlog"
 	"kiota.ch/projectfile/core/v2/pkg/projectfile"
+	"projectfile.org/projectfile/bridge/internal/pfmodel"
 )
 
 // RunSync drives a single round-trip between projectfile and the external
 // file owned by syn. Algorithm:
 //
 //  1. Resolve the effective mode. Explicit --to / --from run one direction
-//     with force; default ModeSync makes the projectfile authoritative.
+//     with force; a default sync converges without destroying (force=false).
 //  2. If the external file does not exist, push every mapper's FromPF onto
 //     a fresh extDoc and mark Result.Created.
-//  3. With both files present, push pf → external with force=true; a field
-//     the projectfile lacks is cleared, never read back into it.
+//  3. With both files present, push pf → external: explicit `to` is authoritative (force=true, missing pf fields clear); a default sync converges without destroying (force=false, missing pf fields preserve, values still fill and overwrite) — unless an authority override says otherwise (see below).
 //  4. Surface PersonConflicts to opts.Stderr.
 //  5. Persist via syn.Write / projectfile.Write only when !opts.DryRun.
+//
+// Per-field force: each mapper runs with the mode force unless an authority override names another winner — file owner downgrades to gap-fill even on --to, projectfile owner upgrades to force even on a default sync; no-destroy mappers (requires-python today) preserve a file value pf lacks regardless of force without a pf-wins opt-in.
 //
 // Dry-run safety: work documents are cloned, so the caller's pf and extDoc
 // are never mutated.
@@ -75,11 +77,11 @@ func RunSync(syn Syncer, pf *projectfile.Document, opts Options) (*Result, error
 
 	switch mode {
 	case ModeWrite:
-		runFromPF(mappers, true, res, extName, pfName)
+		runFromPF(syn, workPF, mappers, true, res, extName, pfName)
+	case ModeSync:
+		runFromPF(syn, workPF, mappers, false, res, extName, pfName)
 	case ModeRead:
 		runToPF(mappers, true, res, extName, pfName)
-	case ModeSync:
-		return nil, fmt.Errorf("internal: sync mode not resolved")
 	}
 
 	emitConflicts(workPF, stderr, extName)
@@ -139,16 +141,28 @@ func syncCreate(syn Syncer, pf *projectfile.Document, opts Options, res *Result,
 	return res, nil
 }
 
-func runFromPF(mappers MapperList, force bool, res *Result, extName, pfName string) {
+func runFromPF(syn Syncer, pf *projectfile.Document, mappers MapperList, force bool, res *Result, extName, pfName string) {
 	for _, m := range mappers {
 		if m.FromPF == nil {
 			continue
 		}
-		if desc := m.FromPF(force); desc != "" {
+		if desc := m.FromPF(effectiveForce(syn, pf, m, force)); desc != "" {
 			res.ExtFields = append(res.ExtFields, FieldChange{m.ExtKey, desc, pfName, extName})
 			res.ExtChanged = true
 		}
 	}
+}
+
+// effectiveForce resolves the force one mapper runs with: the mode default,
+// unless an authority override names a different winner for that field.
+func effectiveForce(syn Syncer, pf *projectfile.Document, m FieldMapper, force bool) bool {
+	if pfmodel.ExternalOwns(pf, syn.Name(), syn.Filename(), m.ExtKey, m.PFKey) {
+		return false
+	}
+	if pfmodel.ProjectfileOwns(pf, syn.Name(), m.ExtKey, m.PFKey) {
+		return true
+	}
+	return force
 }
 
 func runToPF(mappers MapperList, force bool, res *Result, extName, pfName string) {
@@ -165,10 +179,10 @@ func runToPF(mappers MapperList, force bool, res *Result, extName, pfName string
 
 func resolveMode(opts Options) (Mode, error) {
 	switch opts.Mode {
-	case ModeWrite, ModeRead:
+	case ModeWrite, ModeRead, ModeSync:
 		return opts.Mode, nil
-	case ModeSync, "":
-		return ModeWrite, nil
+	case "":
+		return ModeSync, nil
 	default:
 		return "", fmt.Errorf("unknown sync mode %q", opts.Mode)
 	}

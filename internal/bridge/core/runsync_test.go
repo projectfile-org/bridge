@@ -18,8 +18,12 @@ import (
 )
 
 const (
-	testStubJSON = "stub.json"
-	testAppName  = "my-app"
+	testStubJSON     = "stub.json"
+	testAppName      = "my-app"
+	testStubField    = "name"
+	testFromPFValue  = "from-pf"
+	testAuthorityNS  = "org.projectfile.bridge"
+	testAuthorityKey = "authority"
 )
 
 // ── Stub Syncer ──────────────────────────────────────────────────────────────
@@ -61,7 +65,7 @@ func (s *stubSyncer) Clone(doc any) any {
 }
 
 func (s *stubSyncer) Read(_ string) (any, error) {
-	return &memDoc{fields: map[string]string{"name": "from-ext"}}, nil
+	return &memDoc{fields: map[string]string{testStubField: "from-ext"}}, nil
 }
 
 func (s *stubSyncer) Write(_ string, _ any) error {
@@ -73,24 +77,27 @@ func (s *stubSyncer) BuildMappers(extDoc any, pf *projectfile.Document) core.Map
 	d := extDoc.(*memDoc)
 	return core.MapperList{
 		{
-			ExtKey: "name",
+			ExtKey: testStubField,
 			PFKey:  "identity.name",
 			FromPF: func(force bool) string {
 				if pf.Identity.Name == "" {
-					if d.fields["name"] == "" || !force {
+					if d.fields[testStubField] == "" {
 						return ""
 					}
-					delete(d.fields, "name")
+					if !force {
+						return ""
+					}
+					delete(d.fields, testStubField)
 					return core.Removed
 				}
-				if d.fields["name"] != "" && !force {
+				if d.fields[testStubField] == pf.Identity.Name {
 					return ""
 				}
-				d.fields["name"] = pf.Identity.Name
+				d.fields[testStubField] = pf.Identity.Name
 				return pf.Identity.Name
 			},
 			ToPF: func(force bool) string {
-				v := d.fields["name"]
+				v := d.fields[testStubField]
 				if v == "" {
 					return ""
 				}
@@ -146,7 +153,7 @@ func TestRunSyncModeWritePushesToExt(t *testing.T) {
 	pfPath := writePFFile(t, dir, "---\nidentity:\n  name: from-pf\n")
 	// ext file must exist for Syncer.Read to be called; Exists() is stubbed to true.
 	syn := &stubSyncer{filename: testStubJSON, exists: true}
-	pf := &projectfile.Document{Identity: projectfile.Identity{Name: "from-pf"}}
+	pf := &projectfile.Document{Identity: projectfile.Identity{Name: testFromPFValue}}
 	opts := core.Options{Dir: dir, PFPath: pfPath, Mode: core.ModeWrite}
 
 	res, err := core.RunSync(syn, pf, opts)
@@ -178,18 +185,18 @@ func TestRunSyncPFWinsRegardlessOfMtime(t *testing.T) {
 	newer := time.Now().Add(time.Hour)
 	require.NoError(t, os.Chtimes(extPath, newer, newer))
 	syn := &stubSyncer{filename: testStubJSON, exists: true}
-	pf := &projectfile.Document{Identity: projectfile.Identity{Name: "from-pf"}}
+	pf := &projectfile.Document{Identity: projectfile.Identity{Name: testFromPFValue}}
 	opts := core.Options{Dir: dir, PFPath: pfPath, Mode: core.ModeSync}
 
 	res, err := core.RunSync(syn, pf, opts)
 	require.NoError(t, err)
 	assert.True(t, res.ExtChanged, "the newer ext file must still take the pf value")
 	assert.False(t, res.PFChanged, "a set pf field must never be overwritten from ext")
-	assert.Equal(t, "from-pf", pf.Identity.Name)
+	assert.Equal(t, testFromPFValue, pf.Identity.Name)
 }
 
-// ModeSync never reads back: a field the pf lacks is cleared from ext, not imported.
-func TestRunSyncEmptyPFFieldClearsExt(t *testing.T) {
+// ModeSync never clears back: a field the pf lacks is preserved in ext, not imported and not removed.
+func TestRunSyncEmptyPFFieldPreservesExt(t *testing.T) {
 	dir := t.TempDir()
 	pfPath := writePFFile(t, dir, "---\nidentity:\n  name: \"\"\n")
 	syn := &stubSyncer{filename: testStubJSON, exists: true}
@@ -199,8 +206,65 @@ func TestRunSyncEmptyPFFieldClearsExt(t *testing.T) {
 	res, err := core.RunSync(syn, pf, opts)
 	require.NoError(t, err)
 	assert.False(t, res.PFChanged, "an empty pf field must never be filled from ext")
-	assert.True(t, res.ExtChanged, "an ext field the pf lacks must be cleared")
+	assert.False(t, res.ExtChanged, "an ext field the pf lacks must be preserved")
 	assert.Empty(t, pf.Identity.Name)
+}
+
+// ModeWrite stays fully authoritative: a field the pf lacks is cleared from ext.
+func TestRunSyncWriteClearsEmptyPFField(t *testing.T) {
+	dir := t.TempDir()
+	pfPath := writePFFile(t, dir, "---\nidentity:\n  name: \"\"\n")
+	syn := &stubSyncer{filename: testStubJSON, exists: true}
+	pf := &projectfile.Document{Identity: projectfile.Identity{Name: ""}}
+	opts := core.Options{Dir: dir, PFPath: pfPath, Mode: core.ModeWrite}
+
+	res, err := core.RunSync(syn, pf, opts)
+	require.NoError(t, err)
+	assert.False(t, res.PFChanged, "an empty pf field must never be filled from ext")
+	assert.True(t, res.ExtChanged, "an explicit push clears what the pf lacks")
+	assert.Empty(t, pf.Identity.Name)
+}
+
+// An explicit file owner downgrades one mapper to gap-fill even on --to, so the ext value survives a pf that carries nothing for the field.
+func TestRunSyncAuthorityExternalPreservesOnWrite(t *testing.T) {
+	dir := t.TempDir()
+	pfPath := writePFFile(t, dir, "---\nidentity:\n  name: \"\"\n")
+	syn := &stubSyncer{filename: testStubJSON, exists: true}
+	pf := &projectfile.Document{Identity: projectfile.Identity{Name: ""}}
+	projectfile.SetExtension(pf, testAuthorityNS, map[string]any{testAuthorityKey: map[string]any{testStubField: "stub-syncer"}})
+	opts := core.Options{Dir: dir, PFPath: pfPath, Mode: core.ModeWrite}
+
+	res, err := core.RunSync(syn, pf, opts)
+	require.NoError(t, err)
+	assert.False(t, res.ExtChanged, "a file-owned field must survive --to")
+}
+
+// An explicit pf owner upgrades one mapper to force on a default sync, so the ext value clears even though the mode alone would gap-fill it.
+func TestRunSyncAuthorityProjectfileClearsOnSync(t *testing.T) {
+	dir := t.TempDir()
+	pfPath := writePFFile(t, dir, "---\nidentity:\n  name: \"\"\n")
+	syn := &stubSyncer{filename: testStubJSON, exists: true}
+	pf := &projectfile.Document{Identity: projectfile.Identity{Name: ""}}
+	projectfile.SetExtension(pf, testAuthorityNS, map[string]any{testAuthorityKey: map[string]any{"identity.name": "projectfile"}})
+	opts := core.Options{Dir: dir, PFPath: pfPath, Mode: core.ModeSync}
+
+	res, err := core.RunSync(syn, pf, opts)
+	require.NoError(t, err)
+	assert.True(t, res.ExtChanged, "a pf-owned field must clear on sync")
+}
+
+// A file owner still takes a value update on a default sync: authority governs the clear path, while a pf value both sides model always converges pf-wins.
+func TestRunSyncAuthorityExternalStillUpdates(t *testing.T) {
+	dir := t.TempDir()
+	pfPath := writePFFile(t, dir, "---\nidentity:\n  name: from-pf\n")
+	syn := &stubSyncer{filename: testStubJSON, exists: true}
+	pf := &projectfile.Document{Identity: projectfile.Identity{Name: testFromPFValue}}
+	projectfile.SetExtension(pf, testAuthorityNS, map[string]any{testAuthorityKey: map[string]any{"stub-syncer.name": "external"}})
+	opts := core.Options{Dir: dir, PFPath: pfPath, Mode: core.ModeSync}
+
+	res, err := core.RunSync(syn, pf, opts)
+	require.NoError(t, err)
+	assert.True(t, res.ExtChanged, "a modeled pf value converges even for a file-owned field")
 }
 
 func TestRunSyncNoCreateRefuses(t *testing.T) {

@@ -50,10 +50,14 @@ func buildMappers(extDoc *Document, pf *projectfile.Document) core.MapperList {
 					incoming = defaultOwnerEntries(pf)
 				}
 				existing := docEntries(extDoc)
-				if !force && len(existing) > 0 {
-					return "" // gap-fill skip — file already populated
-				}
-				if entriesEqual(incoming, existing) {
+				if len(incoming) == 0 {
+					if len(existing) == 0 {
+						return ""
+					}
+					if !force {
+						return ""
+					}
+				} else if entriesEqual(incoming, existing) {
 					return ""
 				}
 				// Replace the doc's lines wholesale: pf has no slot for

@@ -10,9 +10,7 @@ import "reflect"
 // document and projectfile. Syncers return a list of these from BuildMappers,
 // closing over the two mutable documents.
 //
-// `force` controls whether a closure overwrites an existing target value or
-// only fills it when the target is empty (gap-fill semantics). A forced
-// FromPF with no projectfile value clears the external field via ClearExt.
+// FromPF force=false converges without destroying (pf values fill and overwrite, missing pf values preserve); force=true is fully authoritative (missing pf values clear via ClearExt).
 type FieldMapper struct {
 	ExtKey string // label rendered when destination is the external file
 	PFKey  string // label rendered when destination is projectfile
