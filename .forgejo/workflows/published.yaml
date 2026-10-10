@@ -208,7 +208,7 @@ jobs:
           run: test.d
       - name: usage-check
         if: (vars.CI_ONLY_M6E_ARCH == '' || contains(format(',{0},', vars.CI_ONLY_M6E_ARCH), format(',{0},', matrix.M6E_ARCH))) && vars.CI_SKIP_CONTAINER_READY_TO_TEST != 'true' && vars.CI_SKIP_USAGE_CHECK != 'true'
-        run: .makefile/container/scripts/usage-capture.sh --check --default-lang= es uk
+        run: .makefile/container/scripts/usage-capture.sh --check --image --default-lang= es uk
       - name: dc-diagnose
         if: ${{ always() }}
         run: .makefile/container/scripts/compose-diagnose.sh
