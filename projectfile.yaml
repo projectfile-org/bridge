@@ -87,7 +87,7 @@ org:
     artifacts:
       go-binary:
         command: pf-bridge
-        help: [""]
+        executable: dist/pf-bridge
         kind: binary
         path: dist/pf-bridge
     ignores:
