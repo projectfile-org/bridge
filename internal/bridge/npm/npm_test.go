@@ -363,3 +363,36 @@ func TestWriteDropsClearedMappedKey(t *testing.T) {
 	assert.Contains(t, got, "scripts")
 	assert.Contains(t, got, "private")
 }
+
+// TestDeclaredArtifactNameWins pins that a declared npm package artifact names the package and is never read back into identity.
+func TestDeclaredArtifactNameWins(t *testing.T) {
+	dir := t.TempDir()
+	writePackageJSON(t, dir, `{"name": "acme-tool"}`)
+	pfPath := filepath.Join(dir, "projectfile.yaml")
+	require.NoError(t, os.WriteFile(pfPath, []byte(`---
+identity:
+  name: tool
+  namespace: org.acme
+org:
+  projectfile:
+    artifacts:
+      npm-package:
+        kind: package
+        registry: npm
+        name: ${identity.name}
+`), 0o644))
+	pf, err := projectfile.Read(pfPath)
+	require.NoError(t, err)
+	doc, err := npm.Read(dir)
+	require.NoError(t, err)
+
+	for _, m := range (npm.Bridge{}).BuildMappers(doc, pf) {
+		if m.ExtKey == "name" {
+			assert.Empty(t, m.ToPF(true), "a declared artifact owns the npm name")
+			assert.Equal(t, "tool", m.FromPF(true))
+		}
+	}
+	assert.Equal(t, "tool", doc.Name)
+	assert.Equal(t, "org.acme", pf.Identity.Namespace)
+	assert.Equal(t, "tool", pf.Identity.Name)
+}

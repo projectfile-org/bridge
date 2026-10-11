@@ -8,6 +8,8 @@ import (
 	"fmt"
 	"strings"
 
+	"kiota.ch/projectfile/core/v2/pkg/genlog"
+	"kiota.ch/projectfile/core/v2/pkg/interp"
 	"kiota.ch/projectfile/core/v2/pkg/projectfile"
 	"projectfile.org/projectfile/bridge/internal/bridge/core"
 	"projectfile.org/projectfile/bridge/internal/pfmodel"
@@ -30,7 +32,7 @@ func buildMappers(pkg *Document, pf *projectfile.Document) core.MapperList {
 		{
 			ExtKey: npmKeyName, PFKey: "identity.name",
 			ToPF: func(force bool) string {
-				if pkg.Name == "" {
+				if pkg.Name == "" || declaredNPMName(pf) != "" {
 					return ""
 				}
 				ns, name := npmNameToPFName(pkg.Name, pf.Identity.Namespace)
@@ -49,7 +51,10 @@ func buildMappers(pkg *Document, pf *projectfile.Document) core.MapperList {
 				return pkg.Name
 			},
 			FromPF: func(_ bool) string {
-				name := pfNameToNPM(pf.Identity.Namespace, pf.Identity.Name)
+				name := declaredNPMName(pf)
+				if name == "" {
+					name = pfNameToNPM(pf.Identity.Namespace, pf.Identity.Name)
+				}
 				if name == "" {
 					return ""
 				}
@@ -753,6 +758,26 @@ func npmNameToPFName(npmName, pfNamespace string) (namespace, name string) {
 		}
 	}
 	return "", npmName
+}
+
+// declaredNPMName returns the expanded name of the declared npm package artifact, or "" when none resolves.
+func declaredNPMName(pf *projectfile.Document) string {
+	artifacts, err := pfmodel.GetArtifacts(pf)
+	if err != nil {
+		genlog.Warn("unreadable artifacts namespace", "error", err.Error())
+		return ""
+	}
+	for _, a := range pfmodel.ArtifactsOfKind(artifacts, pfmodel.ArtifactKindPackage) {
+		if a.Registry != "npm" || a.Name == "" {
+			continue
+		}
+		name, resolved := interp.ExpandChecked(pf, a.Name)
+		genlog.DebugRow("npm-name", a.Key, "declared artifact", name)
+		if resolved {
+			return name
+		}
+	}
+	return ""
 }
 
 // pfNameToNPM is the inverse of npmNameToPFName. For the npm-flavoured case
