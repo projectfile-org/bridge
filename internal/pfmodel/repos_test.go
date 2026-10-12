@@ -124,3 +124,31 @@ func TestCitableRepositoryURLNil(t *testing.T) {
 	assert.Equal(t, "", pfmodel.CitableRepositoryURL(nil))
 	assert.Equal(t, "", pfmodel.CitableRepositoryURL(&projectfile.Document{}))
 }
+
+func TestPackagesRepositoryExplicit(t *testing.T) {
+	doc := &projectfile.Document{
+		Repositories: []projectfile.Repository{
+			{URL: testProjRepoURL, Role: projectfile.RepositoryRoleOrigin},
+			{URL: testCodebergRepoURL, Packages: true},
+		},
+	}
+	assert.Equal(t, testCodebergRepoURL, pfmodel.PackagesRepository(doc).URL)
+	assert.Equal(t, testCodebergRepoURL, pfmodel.EnsurePackagesRepository(doc).URL)
+}
+
+func TestPackagesRepositoryFallsBackToPrimary(t *testing.T) {
+	doc := &projectfile.Document{
+		Repositories: []projectfile.Repository{
+			{URL: testCodebergRepoURL},
+			{URL: testProjRepoURL, Role: projectfile.RepositoryRoleOrigin},
+		},
+	}
+	assert.Equal(t, testProjRepoURL, pfmodel.PackagesRepository(doc).URL)
+	assert.Equal(t, testProjRepoURL, pfmodel.EnsurePackagesRepository(doc).URL)
+}
+
+func TestPackagesRepositoryNil(t *testing.T) {
+	assert.Nil(t, pfmodel.PackagesRepository(nil))
+	assert.Nil(t, pfmodel.PackagesRepository(&projectfile.Document{}))
+	assert.Equal(t, projectfile.RepositoryRoleOrigin, pfmodel.EnsurePackagesRepository(&projectfile.Document{}).Role)
+}

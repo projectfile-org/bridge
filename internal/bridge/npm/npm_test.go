@@ -135,6 +135,26 @@ func TestBuildMappersFromPFForce(t *testing.T) {
 	assert.Equal(t, "overridden-name", doc.Name)
 }
 
+func TestBuildMappersFromPFRepositoryFollowsPackages(t *testing.T) {
+	dir := t.TempDir()
+	writePackageJSON(t, dir, fixtureJSON)
+	doc, err := npm.Read(dir)
+	require.NoError(t, err)
+
+	pf := &projectfile.Document{
+		Repositories: []projectfile.Repository{
+			{URL: "ssh://git@kiota.ch/acme/pkg.git", Role: projectfile.RepositoryRoleOrigin},
+			{URL: "https://github.com/acme/pkg.git", Packages: true},
+		},
+	}
+	for _, m := range (npm.Bridge{}).BuildMappers(doc, pf) {
+		if m.FromPF != nil {
+			m.FromPF(true)
+		}
+	}
+	assert.Equal(t, "https://github.com/acme/pkg.git", npm.ParseRepository(doc.Repository).URL)
+}
+
 // A forced FromPF pass over a document the previous pass just wrote must be
 // silent — otherwise every --check reports drift on an in-sync project.
 func TestBuildMappersFromPFIsIdempotent(t *testing.T) {

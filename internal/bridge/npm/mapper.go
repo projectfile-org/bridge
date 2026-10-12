@@ -179,14 +179,14 @@ func buildMappers(pkg *Document, pf *projectfile.Document) core.MapperList {
 				if repo.URL == "" {
 					return ""
 				}
-				primary := pfmodel.PrimaryRepository(pf)
+				primary := pfmodel.PackagesRepository(pf)
 				if primary != nil && primary.URL != "" && !force {
 					return ""
 				}
 				if primary != nil && primary.URL == repo.URL {
 					return ""
 				}
-				slot := pfmodel.EnsurePrimaryRepository(pf)
+				slot := pfmodel.EnsurePackagesRepository(pf)
 				slot.URL = repo.URL
 				if slot.Type == "" {
 					slot.Type = repo.Type
@@ -197,7 +197,7 @@ func buildMappers(pkg *Document, pf *projectfile.Document) core.MapperList {
 				return core.Trunc(repo.URL)
 			},
 			FromPF: func(force bool) string {
-				primary := pfmodel.PrimaryRepository(pf)
+				primary := pfmodel.PackagesRepository(pf)
 				if primary == nil || primary.URL == "" {
 					return core.ClearExt(force, &pkg.Repository)
 				}

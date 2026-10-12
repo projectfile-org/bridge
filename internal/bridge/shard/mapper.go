@@ -281,14 +281,14 @@ func mapRepository(doc *Document, pf *projectfile.Document) core.FieldMapper {
 			if doc.Repository == "" {
 				return ""
 			}
-			primary := pfmodel.PrimaryRepository(pf)
+			primary := pfmodel.PackagesRepository(pf)
 			if primary != nil && primary.URL == doc.Repository {
 				return ""
 			}
 			if primary != nil && primary.URL != "" && !force {
 				return ""
 			}
-			slot := pfmodel.EnsurePrimaryRepository(pf)
+			slot := pfmodel.EnsurePackagesRepository(pf)
 			slot.URL = doc.Repository
 			if slot.Type == "" {
 				slot.Type = "git"
@@ -296,7 +296,7 @@ func mapRepository(doc *Document, pf *projectfile.Document) core.FieldMapper {
 			return core.Trunc(doc.Repository)
 		},
 		FromPF: func(force bool) string {
-			primary := pfmodel.PrimaryRepository(pf)
+			primary := pfmodel.PackagesRepository(pf)
 			if primary == nil || primary.URL == "" {
 				return core.ClearExt(force, &doc.Repository)
 			}

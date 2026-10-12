@@ -59,6 +59,19 @@ func IssuesRepository(doc *projectfile.Document) *projectfile.Repository {
 	return PrimaryRepository(doc)
 }
 
+// PackagesRepository returns the entry package manifests name as the source: packages == true, else PrimaryRepository (spec §4.3a).
+func PackagesRepository(doc *projectfile.Document) *projectfile.Repository {
+	if doc == nil {
+		return nil
+	}
+	for i := range doc.Repositories {
+		if doc.Repositories[i].Packages {
+			return &doc.Repositories[i]
+		}
+	}
+	return PrimaryRepository(doc)
+}
+
 // CitableRepositoryURL returns the forge landing-page URL for the repository
 // the citation chain should cite — the schemes (http/ftp) acceptable in
 // CITATION.cff repository-code, SPDX VCS expressions, and public package
@@ -187,4 +200,12 @@ func EnsurePrimaryRepository(doc *projectfile.Document) *projectfile.Repository 
 		}
 	}
 	return &doc.Repositories[0]
+}
+
+// EnsurePackagesRepository returns the packages == true entry, else the slot EnsurePrimaryRepository yields.
+func EnsurePackagesRepository(doc *projectfile.Document) *projectfile.Repository {
+	if r := PackagesRepository(doc); r != nil {
+		return r
+	}
+	return EnsurePrimaryRepository(doc)
 }

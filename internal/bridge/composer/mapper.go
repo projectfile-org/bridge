@@ -284,14 +284,14 @@ func mapSupportSource(pkg *Document, pf *projectfile.Document) core.FieldMapper 
 			if src == "" {
 				return ""
 			}
-			primary := pfmodel.PrimaryRepository(pf)
+			primary := pfmodel.PackagesRepository(pf)
 			if primary != nil && primary.URL != "" && !force {
 				return ""
 			}
 			if primary != nil && primary.URL == src {
 				return ""
 			}
-			slot := pfmodel.EnsurePrimaryRepository(pf)
+			slot := pfmodel.EnsurePackagesRepository(pf)
 			slot.URL = src
 			if slot.Type == "" {
 				slot.Type = "git"
@@ -299,7 +299,7 @@ func mapSupportSource(pkg *Document, pf *projectfile.Document) core.FieldMapper 
 			return core.Trunc(src)
 		},
 		FromPF: func(force bool) string {
-			primary := pfmodel.PrimaryRepository(pf)
+			primary := pfmodel.PackagesRepository(pf)
 			if primary == nil || primary.URL == "" {
 				if pkg.Support == nil {
 					return ""

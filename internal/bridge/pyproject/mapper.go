@@ -521,14 +521,14 @@ func mapURLRepository(py *Document, pf *projectfile.Document) core.FieldMapper {
 		py, pf,
 		"Repository", []string{"repository", "source"}, "repositories[role=origin]",
 		func() string {
-			primary := pfmodel.PrimaryRepository(pf)
+			primary := pfmodel.PackagesRepository(pf)
 			if primary == nil {
 				return ""
 			}
 			return primary.URL
 		},
 		func(v string) {
-			slot := pfmodel.EnsurePrimaryRepository(pf)
+			slot := pfmodel.EnsurePackagesRepository(pf)
 			slot.URL = v
 			if slot.Type == "" {
 				slot.Type = "git"
