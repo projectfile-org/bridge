@@ -21,6 +21,8 @@ const testAliceSmith = "Alice Smith"
 
 const testLinux = "linux"
 
+const testAMD64 = "amd64"
+
 // fixtureJSON includes known fields AND unknown keys (scripts, volta) to verify
 // that the round-trip canvas preserves them.
 const fixtureJSON = `{
@@ -153,6 +155,40 @@ func TestBuildMappersFromPFRepositoryFollowsPackages(t *testing.T) {
 		}
 	}
 	assert.Equal(t, "https://github.com/acme/pkg.git", npm.ParseRepository(doc.Repository).URL)
+}
+
+func TestBuildMappersPlatformFollowsArtifact(t *testing.T) {
+	dir := t.TempDir()
+	writePackageJSON(t, dir, fixtureJSON)
+	doc, err := npm.Read(dir)
+	require.NoError(t, err)
+
+	pf := &projectfile.Document{}
+	projectfile.SetExtension(pf, "org.projectfile.architecture", []string{testAMD64})
+	projectfile.SetExtension(pf, "org.projectfile.operating-system", []string{testLinux})
+	projectfile.SetExtension(pf, "org.projectfile.artifacts", map[string]any{
+		"npm-package": map[string]any{
+			"kind": "package", "registry": "npm",
+			"architecture":     []any{testAMD64, "arm64"},
+			"operating-system": []any{testLinux, "darwin"},
+		},
+	})
+	for _, m := range (npm.Bridge{}).BuildMappers(doc, pf) {
+		if m.FromPF != nil {
+			m.FromPF(true)
+		}
+	}
+	assert.Equal(t, []string{"x64", "arm64"}, doc.CPU)
+	assert.Equal(t, []string{testLinux, "darwin"}, doc.OS)
+
+	doc.CPU = []string{"riscv64"}
+	for _, m := range (npm.Bridge{}).BuildMappers(doc, pf) {
+		if m.ToPF != nil {
+			m.ToPF(true)
+		}
+	}
+	got, _ := projectfile.LookupExtension(pf, "org.projectfile.architecture")
+	assert.Equal(t, []string{testAMD64}, got, "package.json must not overwrite the project-level list")
 }
 
 // A forced FromPF pass over a document the previous pass just wrote must be
@@ -336,7 +372,7 @@ func TestPlatformMapsToExtensionFields(t *testing.T) {
 	assert.Equal(t, []string{testLinux, "windows"}, gotOS, "npm win32 normalises to windows")
 	gotArch, ok := projectfile.LookupExtension(pf, "org.projectfile.architecture")
 	require.True(t, ok, "architecture extension written")
-	assert.Equal(t, []string{"amd64"}, gotArch, "npm x64 normalises to amd64")
+	assert.Equal(t, []string{testAMD64}, gotArch, "npm x64 normalises to amd64")
 	assert.Nil(t, pf.Requirements, "nothing lands in requirements")
 }
 
@@ -352,7 +388,7 @@ func TestPlatformFromParsedExtensionFields(t *testing.T) {
 		Identity: projectfile.Identity{Name: "p"},
 		Extensions: map[string]any{
 			"org.projectfile.operating-system": []any{testLinux, "windows"},
-			"org.projectfile.architecture":     []any{"amd64"},
+			"org.projectfile.architecture":     []any{testAMD64},
 		},
 	}
 	for _, m := range (npm.Bridge{}).BuildMappers(doc, pf) {

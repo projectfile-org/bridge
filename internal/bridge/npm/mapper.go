@@ -408,10 +408,10 @@ func buildMappers(pkg *Document, pf *projectfile.Document) core.MapperList {
 		},
 		mapPlatformList(pf, "os", nsOperatingSystem,
 			func() []string { return pkg.OS }, func(v []string) { pkg.OS = v },
-			npmOSToPF, osListToNPM),
+			npmOSToPF, osListToNPM, func(a pfmodel.Artifact) []string { return a.OperatingSystem }),
 		mapPlatformList(pf, "cpu", nsArchitecture,
 			func() []string { return pkg.CPU }, func(v []string) { pkg.CPU = v },
-			npmCPUToPF, archListToNPM),
+			npmCPUToPF, archListToNPM, func(a pfmodel.Artifact) []string { return a.Architecture }),
 		{
 			ExtKey: "funding", PFKey: "[org.projectfile.funding]",
 			ToPF: func(force bool) string {
@@ -473,10 +473,15 @@ func mapPlatformList(
 	extKey, ns string,
 	npmGet func() []string, npmSet func([]string),
 	toPF func([]string) []string, toNPM func([]string) []string,
+	artifactList func(pfmodel.Artifact) []string,
 ) core.FieldMapper {
 	return core.FieldMapper{
 		ExtKey: extKey, PFKey: "[" + ns + "]",
 		ToPF: func(force bool) string {
+			// skip the import when the npm artifact declares its own list
+			if len(declaredNPMPlatform(pf, artifactList)) > 0 {
+				return ""
+			}
 			list := toPF(npmGet())
 			if len(list) == 0 {
 				return ""
@@ -492,7 +497,11 @@ func mapPlatformList(
 			return fmt.Sprintf("%v", list)
 		},
 		FromPF: func(force bool) string {
-			current := extensionStringList(pf, ns)
+			current := declaredNPMPlatform(pf, artifactList)
+			if len(current) == 0 {
+				current = extensionStringList(pf, ns)
+			}
+			genlog.DebugRow(extKey, fmt.Sprintf("%v", current), "platform list", ns)
 			if len(current) == 0 {
 				if !force || len(npmGet()) == 0 {
 					return ""
@@ -760,6 +769,25 @@ func npmNameToPFName(npmName, pfNamespace string) (namespace, name string) {
 	return "", npmName
 }
 
+// registryNPM is the artifact registry, and bridge name, this package serves.
+const registryNPM = "npm"
+
+// declaredNPMPlatform returns the platform list the declared npm package artifact overrides, or nil.
+func declaredNPMPlatform(pf *projectfile.Document, list func(pfmodel.Artifact) []string) []string {
+	artifacts, err := pfmodel.GetArtifacts(pf)
+	if err != nil {
+		genlog.Warn("unreadable artifacts namespace", "error", err.Error())
+		return nil
+	}
+	for _, a := range pfmodel.ArtifactsOfKind(artifacts, pfmodel.ArtifactKindPackage) {
+		if a.Registry == registryNPM && len(list(a)) > 0 {
+			genlog.DebugRow("npm-platform", a.Key, "declared artifact", fmt.Sprintf("%v", list(a)))
+			return list(a)
+		}
+	}
+	return nil
+}
+
 // declaredNPMName returns the expanded name of the declared npm package artifact, or "" when none resolves.
 func declaredNPMName(pf *projectfile.Document) string {
 	artifacts, err := pfmodel.GetArtifacts(pf)
@@ -768,7 +796,7 @@ func declaredNPMName(pf *projectfile.Document) string {
 		return ""
 	}
 	for _, a := range pfmodel.ArtifactsOfKind(artifacts, pfmodel.ArtifactKindPackage) {
-		if a.Registry != "npm" || a.Name == "" {
+		if a.Registry != registryNPM || a.Name == "" {
 			continue
 		}
 		name, resolved := interp.ExpandChecked(pf, a.Name)

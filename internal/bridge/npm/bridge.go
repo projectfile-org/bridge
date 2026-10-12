@@ -14,7 +14,7 @@ import (
 // Bridge implements core.Syncer for package.json.
 type Bridge struct{}
 
-func (Bridge) Name() string             { return "npm" }
+func (Bridge) Name() string             { return registryNPM }
 func (Bridge) Filename() string         { return Filename }
 func (Bridge) Aliases() []string        { return nil }
 func (Bridge) Labels() (string, string) { return Filename, "projectfile" }

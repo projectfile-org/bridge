@@ -67,6 +67,9 @@ type Artifact struct {
 	Module   string
 	Version  string
 	Ports    []ArtifactPort
+	// Architecture and OperatingSystem override the project-level platform lists for this artifact alone.
+	Architecture    []string
+	OperatingSystem []string
 }
 
 // ArtifactPort is one listening port of a service artifact. Name distinguishes
@@ -106,19 +109,21 @@ func GetArtifacts(doc *projectfile.Document) ([]Artifact, error) {
 			continue
 		}
 		out = append(out, Artifact{
-			Key:           name,
-			Kind:          strVal(em, "kind"),
-			Summary:       extractLocalizedVal(em, "summary"),
-			SummaryByLang: extractLocalizedMap(em, "summary"),
-			Path:          strVal(em, "path"),
-			URL:           strVal(em, "url"),
-			Ref:           strVal(em, "ref"),
-			Command:       strVal(em, "command"),
-			Name:          strVal(em, "name"),
-			Registry:      strVal(em, "registry"),
-			Module:        strVal(em, "module"),
-			Version:       strVal(em, "version"),
-			Ports:         parseArtifactPorts(em),
+			Key:             name,
+			Kind:            strVal(em, "kind"),
+			Summary:         extractLocalizedVal(em, "summary"),
+			SummaryByLang:   extractLocalizedMap(em, "summary"),
+			Path:            strVal(em, "path"),
+			URL:             strVal(em, "url"),
+			Ref:             strVal(em, "ref"),
+			Command:         strVal(em, "command"),
+			Name:            strVal(em, "name"),
+			Registry:        strVal(em, "registry"),
+			Module:          strVal(em, "module"),
+			Version:         strVal(em, "version"),
+			Ports:           parseArtifactPorts(em),
+			Architecture:    strListVal(em, "architecture"),
+			OperatingSystem: strListVal(em, "operating-system"),
 		})
 	}
 	return out, nil
