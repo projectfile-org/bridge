@@ -232,13 +232,36 @@ func binaryVerify(pf *projectfile.Document, assets []string) []string {
 		return nil
 	}
 	lines := []string{"gpg --keyserver hkps://keys.openpgp.org --recv-keys " + fpr}
+	sums := checksumList(assets)
+	genlog.Debug("checksum list", "file", or(sums, "<none>"))
 	if cmd, sig, ok := hostSignature(pf); ok {
-		return append(lines, "curl --fail --location --output "+cmd+".asc "+sig, "gpg --verify "+cmd+".asc "+cmd)
+		lines = append(lines, "curl --fail --location --output "+cmd+".asc "+sig, "gpg --verify "+cmd+".asc "+cmd)
+		if sums == "" {
+			return lines
+		}
+		return append(lines, "", "# every downloaded asset at once", "gpg --verify "+sums+".asc "+sums, "sha256sum --check --ignore-missing "+sums)
+	}
+	if sums != "" {
+		return append(lines, "gpg --verify "+sums+".asc "+sums, "sha256sum --check --ignore-missing "+sums)
 	}
 	for _, s := range sigs {
 		lines = append(lines, "gpg --verify "+s+" "+strings.TrimSuffix(s, ".asc"))
 	}
 	return lines
+}
+
+// checksumList returns the signed `<path>-SHA256SUMS` asset of the release, empty when it carries none.
+func checksumList(assets []string) string {
+	have := make(map[string]bool, len(assets))
+	for _, a := range assets {
+		have[a] = true
+	}
+	for _, a := range assets {
+		if strings.HasSuffix(a, "-SHA256SUMS") && have[a+".asc"] {
+			return a
+		}
+	}
+	return ""
 }
 
 // hostSignature resolves the installed file name and the URL of its host asset’s signature.

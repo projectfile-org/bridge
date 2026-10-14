@@ -253,6 +253,9 @@ org:
         image-is-signed: {}
 `
 
+// sums is the checksum list asset of the fixture release.
+const sums = "x-SHA256SUMS"
+
 func TestRenderForge(t *testing.T) {
 	r := newRepo(t)
 	r.commit("Ann", "feat: first", map[string]string{fixtureDoc: forgeDoc})
@@ -267,7 +270,7 @@ func TestRenderForge(t *testing.T) {
 	got, err := RenderForge(ForgeOptions{
 		Options: Options{Dir: r.dir, Tag: fixtureTag, Prefix: "v"},
 		Forge:   fixtureForge, Server: fixtureHost, Repo: fixtureRepo,
-		Assets:  []string{"x-linux-amd64", "x-linux-amd64.asc"},
+		Assets:  []string{"x-linux-amd64", "x-linux-amd64.asc", sums, sums + ".asc"},
 		Magnets: map[string]string{"o-x-1.2.0.magnet": "magnet:?xt=urn:btih:abc\n"},
 	})
 	require.NoError(t, err)
@@ -282,11 +285,19 @@ func TestRenderForge(t *testing.T) {
 	assert.Contains(t, got, "COSIGN_KEY=https://example.org/cosign.pub\ncosign verify --key \"$COSIGN_KEY\" --insecure-ignore-tlog=true kiota.example/x:1.2.0\n")
 	assert.Contains(t, got, "### Prebuilt binary\n")
 	assert.Contains(t, got, "gpg --keyserver hkps://keys.openpgp.org --recv-keys ABCD1234\ncurl --fail --location --output x.asc https://kiota.example/o/x/releases/download/v1.2.0/x-$(uname -s).asc\ngpg --verify x.asc x\n")
+	assert.Contains(t, got, "gpg --verify x-SHA256SUMS.asc x-SHA256SUMS\nsha256sum --check --ignore-missing x-SHA256SUMS\n")
 	assert.NotContains(t, got, "ghcr.example")
 	assert.NotContains(t, got, "verify-attestation")
 	assert.Contains(t, got, "- [🧲 o-x-1.2.0](magnet:?xt=urn:btih:abc)\n")
 	assert.Contains(t, got, "**Full changes:** https://kiota.example/o/x/compare/v1.1.0...v1.2.0\n")
 	assert.NotContains(t, got, "latest")
+}
+
+func TestChecksumListNeedsItsSignature(t *testing.T) {
+	bin := "x-darwin-arm64"
+	assert.Equal(t, sums, checksumList([]string{bin, sums, sums + ".asc"}))
+	assert.Empty(t, checksumList([]string{bin, sums}))
+	assert.Empty(t, checksumList([]string{bin, bin + ".asc"}))
 }
 
 func TestWriteTorrentsFencesOnGitHub(t *testing.T) {
