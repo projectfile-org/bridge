@@ -29,6 +29,7 @@ func GetForgeExtension(doc *projectfile.Document) (*ForgeExtension, error) {
 			Description: boolValDefaultTrue(m, "fields", "description"),
 			Homepage:    boolValDefaultTrue(m, "fields", "homepage"),
 			Topics:      boolValDefaultTrue(m, "fields", "topics"),
+			Protection:  boolValDefaultTrue(m, "fields", "protection"),
 		},
 	}
 	if hostsRaw, ok := m["hosts"].(map[string]any); ok && len(hostsRaw) > 0 {

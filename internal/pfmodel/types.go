@@ -327,9 +327,11 @@ type EOLEntry struct {
 // INTENT — tag format, changelog style, branch-to-channel map — consumed by
 // semantic-release / release-please / similar.
 type ReleaseExtension struct {
-	TagFormat string          `toml:"tag-format" yaml:"tag-format" json:"tag-format"`
-	Changelog string          `toml:"changelog"  yaml:"changelog"  json:"changelog"`
-	Branches  []ReleaseBranch `toml:"branches"   yaml:"branches"   json:"branches"`
+	TagFormat    string          `toml:"tag-format"    yaml:"tag-format"    json:"tag-format"`
+	Changelog    string          `toml:"changelog"     yaml:"changelog"     json:"changelog"`
+	Branches     []ReleaseBranch `toml:"branches"      yaml:"branches"      json:"branches"`
+	Trunk        string          `toml:"trunk"         yaml:"trunk"         json:"trunk"`
+	StableBranch string          `toml:"stable-branch" yaml:"stable-branch" json:"stable-branch"`
 }
 
 // ReleaseBranch is one entry in the release branch-to-channel map.
@@ -377,6 +379,7 @@ type ForgeFieldsToggles struct {
 	Description bool `toml:"description" yaml:"description" json:"description"`
 	Homepage    bool `toml:"homepage"    yaml:"homepage"    json:"homepage"`
 	Topics      bool `toml:"topics"      yaml:"topics"      json:"topics"`
+	Protection  bool `toml:"protection"  yaml:"protection"  json:"protection"`
 }
 
 // CodeOwnersExtension binds `[org.projectfile.codeowners]`. Entries is

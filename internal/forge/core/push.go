@@ -22,11 +22,12 @@ const (
 	FieldDescription = "description"
 	FieldHomepage    = "homepage"
 	FieldTopics      = "topics"
+	FieldProtection  = "protection"
 )
 
 // AllFields is the canonical iteration order for log output. Mirrors the
 // order the field-mapping table in the design doc uses.
-var AllFields = []string{FieldDescription, FieldHomepage, FieldTopics}
+var AllFields = []string{FieldDescription, FieldHomepage, FieldTopics, FieldProtection}
 
 // reasonFieldDisabled is the user-facing "this field would have been pushed
 // but isn't" line, emitted for every field the --field flag or extension
@@ -94,6 +95,10 @@ func Push(ctx context.Context, pf *projectfile.Document, opts PushOptions) (Push
 	allowField := buildFieldFilter(opts.Fields, ext)
 	repoFilter := buildRepoFilter(opts.Repos)
 	forgeFilter := buildForgeFilter(opts.Forge)
+	plan, err := buildProtectionPlan(pf)
+	if err != nil {
+		return PushResult{}, err
+	}
 
 	out := PushResult{DryRun: opts.DryRun}
 
@@ -107,7 +112,7 @@ func Push(ctx context.Context, pf *projectfile.Document, opts PushOptions) (Push
 	}
 
 	for _, repo := range repos {
-		rr := processRepo(ctx, repo, desired, allowField, repoFilter, forgeFilter, ext, opts)
+		rr := processRepo(ctx, repo, desired, plan, allowField, repoFilter, forgeFilter, ext, opts)
 		out.Repos = append(out.Repos, rr)
 	}
 	return out, nil
@@ -119,6 +124,7 @@ func processRepo(
 	ctx context.Context,
 	repo projectfile.Repository,
 	desired Snapshot,
+	plan *protectionPlan,
 	allowField func(string) bool,
 	repoFilter func(string) bool,
 	forgeFilter func(string) bool,
@@ -214,8 +220,18 @@ func processRepo(
 	}
 
 	patch, changes := diffWithFilter(current, desired, allowField, hostmatch.Kind(kind))
+	guard, guardChange, err := protectionPatch(repoCtx, driver, owner, name, plan, repo.Role, allowField)
+	if err != nil {
+		genlog.Error("forge push: protection fetch failed", "url", repo.URL, "err", err.Error())
+		rr.Failed = true
+		rr.Error = err.Error()
+		return rr
+	}
+	if guardChange != nil {
+		changes = append(changes, *guardChange)
+	}
 	rr.Changes = changes
-	if patch.IsEmpty() {
+	if patch.IsEmpty() && guard == nil {
 		genlog.Debug("forge push: up to date", "url", repo.URL)
 		rr.UpToDate = true
 		return rr
@@ -235,11 +251,21 @@ func processRepo(
 		genlog.Debug("forge push: dry-run, no API call", "url", repo.URL)
 		return rr
 	}
-	if err := driver.Apply(repoCtx, owner, name, patch); err != nil {
-		genlog.Error("forge push: apply failed", "url", repo.URL, "err", err.Error())
-		rr.Failed = true
-		rr.Error = err.Error()
-		return rr
+	if !patch.IsEmpty() {
+		if err := driver.Apply(repoCtx, owner, name, patch); err != nil {
+			genlog.Error("forge push: apply failed", "url", repo.URL, "err", err.Error())
+			rr.Failed = true
+			rr.Error = err.Error()
+			return rr
+		}
+	}
+	if guard != nil {
+		if err := driver.(Protector).ApplyProtection(repoCtx, owner, name, *guard); err != nil {
+			genlog.Error("forge push: protection apply failed", "url", repo.URL, "err", err.Error())
+			rr.Failed = true
+			rr.Error = err.Error()
+			return rr
+		}
 	}
 	genlog.Debug("forge push: applied", "url", repo.URL, "fields", len(changes))
 	return rr
@@ -322,6 +348,9 @@ func buildFieldFilter(cliFields []string, ext *pfmodel.ForgeExtension) func(stri
 		}
 		if !ext.Fields.Topics {
 			allowed[FieldTopics] = false
+		}
+		if !ext.Fields.Protection {
+			allowed[FieldProtection] = false
 		}
 	}
 	return func(field string) bool { return allowed[field] }

@@ -103,7 +103,7 @@ bridge/
     ├── pfmodel/            bridge-owned projectfile extension shapes (citation, readme,
     │                        forge, funding, ...) — moved out of core in the core-2.0 cut
     ├── bridge/             every projectfile↔external-file bridge + core/ contract + registry
-    ├── forge/              forge push (core/ + drivers/{github,gitlab,forgejo} + hostmatch/)
+    ├── forge/              forge push: metadata + branch/tag protection (core/ + drivers/{github,gitlab,forgejo} + hostmatch/)
     ├── releasenotes/       release notes: range, commit grouping, fragments, suppression delta; `publish` appends the forge half (install/usage narrowed to the forge’s publish route, verify, magnets, compare)
     ├── scanners/           stack + git + forge + sinks scanners (core registry)
     ├── source/             `init` ecosystem auto-detection (reuses bridge parsers)

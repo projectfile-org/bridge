@@ -6,8 +6,10 @@ package pfmodel
 
 import (
 	"fmt"
+	"sort"
 	"strings"
 
+	"kiota.ch/projectfile/core/v2/pkg/genlog"
 	"kiota.ch/projectfile/core/v2/pkg/projectfile"
 )
 
@@ -289,9 +291,11 @@ func GetReleaseExtension(doc *projectfile.Document) (*ReleaseExtension, error) {
 		return nil, nil
 	}
 	return &ReleaseExtension{
-		TagFormat: strVal(m, "tag-format"),
-		Changelog: strVal(m, "changelog"),
-		Branches:  parseReleaseBranches(m["branches"]),
+		TagFormat:    strVal(m, "tag-format"),
+		Changelog:    strVal(m, "changelog"),
+		Branches:     parseReleaseBranches(m["branches"]),
+		Trunk:        strVal(m, "trunk"),
+		StableBranch: strVal(m, "stable-branch"),
 	}, nil
 }
 
@@ -312,6 +316,33 @@ func parseReleaseBranches(raw any) []ReleaseBranch {
 			Prerelease: boolVal(m, "prerelease"),
 		})
 	}
+	return out
+}
+
+// PushGoals returns the sorted CI goal nodes a push runs, i.e. every goal not gated to schedule or dispatch only.
+func PushGoals(doc *projectfile.Document) []string {
+	raw, _ := projectfile.LookupExtension(doc, "org.projectfile.ci")
+	ci, _ := raw.(map[string]any)
+	nodes, _ := ci["nodes"].(map[string]any)
+	out := []string{}
+	for name, v := range nodes {
+		node, _ := v.(map[string]any)
+		if goal, _ := node["goal"].(bool); !goal {
+			continue
+		}
+		when, _ := node["when"].(map[string]any)
+		events := toStrSlice(when["events"])
+		// A goal with no events runs on every trigger; one listing any token beyond schedule and dispatch runs on a push.
+		onPush := len(events) == 0
+		for _, e := range events {
+			onPush = onPush || (e != "schedule" && e != "dispatch")
+		}
+		genlog.Debug("ci goal", "node", name, "events", events, "push", onPush)
+		if onPush {
+			out = append(out, name)
+		}
+	}
+	sort.Strings(out)
 	return out
 }
 
