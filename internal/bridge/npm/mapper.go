@@ -6,6 +6,7 @@ package npm
 
 import (
 	"fmt"
+	"regexp"
 	"strings"
 
 	"kiota.ch/projectfile/core/v2/pkg/genlog"
@@ -27,6 +28,9 @@ const (
 // bidir core can run gap-fill passes through the same closures.
 //
 // Add a new field by appending one entry to the returned slice.
+// semverPattern is the SemVer 2.0.0 grammar from semver.org, the only version shape npm accepts.
+var semverPattern = regexp.MustCompile(`^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-((?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\.(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\+([0-9a-zA-Z-]+(?:\.[0-9a-zA-Z-]+)*))?$`)
+
 func buildMappers(pkg *Document, pf *projectfile.Document) core.MapperList {
 	return core.MapperList{
 		{
@@ -79,6 +83,10 @@ func buildMappers(pkg *Document, pf *projectfile.Document) core.MapperList {
 			},
 			FromPF: func(_ bool) string {
 				if pf.Identity.Version == "" || pkg.Version == pf.Identity.Version {
+					return ""
+				}
+				if !semverPattern.MatchString(pf.Identity.Version) {
+					genlog.Warn("skipping non-SemVer identity.version, npm accepts SemVer only", "version", pf.Identity.Version)
 					return ""
 				}
 				pkg.Version = pf.Identity.Version

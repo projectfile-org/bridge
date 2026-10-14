@@ -137,6 +137,23 @@ func TestBuildMappersFromPFForce(t *testing.T) {
 	assert.Equal(t, "overridden-name", doc.Name)
 }
 
+func TestBuildMappersFromPFSkipsNonSemVer(t *testing.T) {
+	for _, version := range []string{"24.04", "16.2"} {
+		dir := t.TempDir()
+		writePackageJSON(t, dir, fixtureJSON)
+		doc, err := npm.Read(dir)
+		require.NoError(t, err)
+		before := doc.Version
+		pf := &projectfile.Document{Identity: projectfile.Identity{Name: "x", Version: version}}
+		for _, m := range (npm.Bridge{}).BuildMappers(doc, pf) {
+			if m.FromPF != nil {
+				m.FromPF(true)
+			}
+		}
+		assert.Equal(t, before, doc.Version, version)
+	}
+}
+
 func TestBuildMappersFromPFRepositoryFollowsPackages(t *testing.T) {
 	dir := t.TempDir()
 	writePackageJSON(t, dir, fixtureJSON)
