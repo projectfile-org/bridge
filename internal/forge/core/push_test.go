@@ -500,3 +500,42 @@ func TestPush_FieldFilter(t *testing.T) {
 		t.Fatalf("topics should be filtered out, got %v", *fc.applied.Topics)
 	}
 }
+
+func TestPush_DefaultBranchOriginOnly(t *testing.T) {
+	pf := releasePF(
+		projectfile.Repository{URL: testRepoGitHub, Role: projectfile.RepositoryRoleOrigin},
+		projectfile.Repository{URL: testRepoGitLab, Role: projectfile.RepositoryRoleMirror},
+	)
+	origin := &fakeClient{kind: testKindGitHub, snapshot: Snapshot{Description: "X", DefaultBranch: "main"}}
+	mirror := &fakeClient{kind: testKindGitLab, snapshot: Snapshot{Description: "X", DefaultBranch: "main"}}
+	opts := PushOptions{
+		Resolve: func(kind string) Client {
+			if kind == testKindGitHub {
+				return origin
+			}
+			return mirror
+		},
+		TokenLookup: stubToken,
+	}
+	if _, err := Push(context.Background(), pf, opts); err != nil {
+		t.Fatalf("Push: %v", err)
+	}
+	if origin.applied.DefaultBranch == nil || *origin.applied.DefaultBranch != testTrunk {
+		t.Fatalf("origin default branch = %v, want %s", origin.applied.DefaultBranch, testTrunk)
+	}
+	if mirror.applyCount != 0 {
+		t.Fatalf("mirror patched: %+v", mirror.applied)
+	}
+}
+
+func TestPush_DefaultBranchUpToDate(t *testing.T) {
+	pf := releasePF(projectfile.Repository{URL: testRepoGitHub, Role: projectfile.RepositoryRoleOrigin})
+	fc := &fakeClient{kind: testKindGitHub, snapshot: Snapshot{Description: "X", DefaultBranch: testTrunk}}
+	opts := PushOptions{Resolve: func(string) Client { return fc }, TokenLookup: stubToken}
+	if _, err := Push(context.Background(), pf, opts); err != nil {
+		t.Fatalf("Push: %v", err)
+	}
+	if fc.applyCount != 0 {
+		t.Fatalf("apply called with %+v, want no call", fc.applied)
+	}
+}

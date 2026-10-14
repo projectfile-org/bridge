@@ -119,7 +119,7 @@ func TestNamesEqual_NilIsNotEmpty(t *testing.T) {
 
 func TestPush_ProtectionAppliedOnOrigin(t *testing.T) {
 	pf := releasePF(projectfile.Repository{URL: testRepoCodeberg, Role: projectfile.RepositoryRoleOrigin})
-	fp := &fakeProtector{fakeClient: fakeClient{kind: testForgejo, snapshot: Snapshot{Description: "X"}}}
+	fp := &fakeProtector{fakeClient: fakeClient{kind: testForgejo, snapshot: Snapshot{Description: "X", DefaultBranch: testTrunk}}}
 	res, err := Push(context.Background(), pf, PushOptions{
 		Resolve:     func(string) Client { return fp },
 		TokenLookup: stubToken,

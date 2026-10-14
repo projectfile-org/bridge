@@ -19,15 +19,16 @@ import (
 // kept as named constants so the command's --field flag and the registry's
 // filter logic share a single vocabulary.
 const (
-	FieldDescription = "description"
-	FieldHomepage    = "homepage"
-	FieldTopics      = "topics"
-	FieldProtection  = "protection"
+	FieldDescription   = "description"
+	FieldHomepage      = "homepage"
+	FieldTopics        = "topics"
+	FieldProtection    = "protection"
+	FieldDefaultBranch = "default-branch"
 )
 
 // AllFields is the canonical iteration order for log output. Mirrors the
 // order the field-mapping table in the design doc uses.
-var AllFields = []string{FieldDescription, FieldHomepage, FieldTopics, FieldProtection}
+var AllFields = []string{FieldDescription, FieldHomepage, FieldTopics, FieldDefaultBranch, FieldProtection}
 
 // reasonFieldDisabled is the user-facing "this field would have been pushed
 // but isn't" line, emitted for every field the --field flag or extension
@@ -91,7 +92,10 @@ func Push(ctx context.Context, pf *projectfile.Document, opts PushOptions) (Push
 		return PushResult{DryRun: opts.DryRun}, nil
 	}
 
-	desired := buildDesiredSnapshot(pf)
+	desired, err := buildDesiredSnapshot(pf)
+	if err != nil {
+		return PushResult{}, err
+	}
 	allowField := buildFieldFilter(opts.Fields, ext)
 	repoFilter := buildRepoFilter(opts.Repos)
 	forgeFilter := buildForgeFilter(opts.Forge)
@@ -219,6 +223,10 @@ func processRepo(
 		return rr
 	}
 
+	if repo.Role != projectfile.RepositoryRoleOrigin {
+		desired.DefaultBranch = ""
+	}
+	genlog.Debug("forge push: default branch", "url", repo.URL, "role", repo.Role, "current", current.DefaultBranch, "desired", desired.DefaultBranch)
 	patch, changes := diffWithFilter(current, desired, allowField, hostmatch.Kind(kind))
 	guard, guardChange, err := protectionPatch(repoCtx, driver, owner, name, plan, repo.Role, allowField)
 	if err != nil {
@@ -274,10 +282,10 @@ func processRepo(
 // buildDesiredSnapshot extracts the three pushable fields from the
 // projectfile, applying the documented fallback rules. Sole reader of
 // pf-side metadata in this package — keeps the mapping logic in one place.
-func buildDesiredSnapshot(pf *projectfile.Document) Snapshot {
+func buildDesiredSnapshot(pf *projectfile.Document) (Snapshot, error) {
 	snap := Snapshot{}
 	if pf == nil {
-		return snap
+		return snap, nil
 	}
 	// Description: summary first, then first line of description. Forges
 	// expose a single description slot and don't render markdown there, so
@@ -291,7 +299,14 @@ func buildDesiredSnapshot(pf *projectfile.Document) Snapshot {
 	}
 	snap.Homepage = pfmodel.LinkURL(pf, projectfile.LinkHomepage)
 	snap.Topics = LowerTopics(pf.Keywords)
-	return snap
+	rel, err := pfmodel.GetReleaseExtension(pf)
+	if err != nil {
+		return snap, fmt.Errorf("read release extension: %w", err)
+	}
+	if rel != nil {
+		snap.DefaultBranch = rel.Trunk
+	}
+	return snap, nil
 }
 
 // resolveKind merges the extension's per-host kinds override with
@@ -351,6 +366,9 @@ func buildFieldFilter(cliFields []string, ext *pfmodel.ForgeExtension) func(stri
 		}
 		if !ext.Fields.Protection {
 			allowed[FieldProtection] = false
+		}
+		if !ext.Fields.DefaultBranch {
+			allowed[FieldDefaultBranch] = false
 		}
 	}
 	return func(field string) bool { return allowed[field] }
@@ -443,6 +461,20 @@ func diffWithFilter(
 				Field:  FieldTopics,
 				Value:  Trunc(fmt.Sprintf("%v", *full.Topics)),
 				Source: "keywords",
+			})
+		}
+	}
+	if full.DefaultBranch != nil {
+		if !allow(FieldDefaultBranch) {
+			changes = append(changes, FieldChange{
+				Field: FieldDefaultBranch, Skipped: true,
+				Reason: reasonFieldDisabled,
+			})
+		} else {
+			patch.DefaultBranch = full.DefaultBranch
+			changes = append(changes, FieldChange{
+				Field: FieldDefaultBranch, Value: *full.DefaultBranch,
+				Source: "release.trunk",
 			})
 		}
 	}

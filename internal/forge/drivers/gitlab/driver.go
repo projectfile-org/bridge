@@ -76,8 +76,9 @@ func (d *driver) projectID(owner, repo string) string {
 func (d *driver) Fetch(ctx context.Context, owner, repo string) (core.Snapshot, error) {
 	base := d.apiBase(ctx)
 	var meta struct {
-		Description string   `json:"description"`
-		Topics      []string `json:"topics"`
+		Description   string   `json:"description"`
+		Topics        []string `json:"topics"`
+		DefaultBranch string   `json:"default_branch"`
 	}
 	url := fmt.Sprintf("%s/projects/%s", base, d.projectID(owner, repo))
 	if err := d.do(ctx, http.MethodGet, url, nil, &meta); err != nil {
@@ -87,7 +88,8 @@ func (d *driver) Fetch(ctx context.Context, owner, repo string) (core.Snapshot, 
 		Description: meta.Description,
 		// Homepage intentionally left blank — GitLab has no homepage slot
 		// at the project level, so we never surface drift on this field.
-		Topics: core.LowerTopics(meta.Topics),
+		Topics:        core.LowerTopics(meta.Topics),
+		DefaultBranch: meta.DefaultBranch,
 	}, nil
 }
 
@@ -101,6 +103,9 @@ func (d *driver) Apply(ctx context.Context, owner, repo string, patch core.Patch
 	}
 	if patch.Topics != nil {
 		body["topics"] = *patch.Topics
+	}
+	if patch.DefaultBranch != nil {
+		body["default_branch"] = *patch.DefaultBranch
 	}
 	if len(body) == 0 {
 		return nil

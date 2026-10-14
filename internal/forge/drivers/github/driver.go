@@ -73,8 +73,9 @@ func (d *driver) Owner(repoURL string) (owner, repo string, err error) {
 func (d *driver) Fetch(ctx context.Context, owner, repo string) (core.Snapshot, error) {
 	base := d.apiBase(ctx, owner)
 	var meta struct {
-		Description string `json:"description"`
-		Homepage    string `json:"homepage"`
+		Description   string `json:"description"`
+		Homepage      string `json:"homepage"`
+		DefaultBranch string `json:"default_branch"`
 	}
 	if err := d.do(ctx, http.MethodGet, fmt.Sprintf("%s/repos/%s/%s", base, owner, repo), nil, &meta); err != nil {
 		return core.Snapshot{}, err
@@ -86,9 +87,10 @@ func (d *driver) Fetch(ctx context.Context, owner, repo string) (core.Snapshot, 
 		return core.Snapshot{}, err
 	}
 	return core.Snapshot{
-		Description: meta.Description,
-		Homepage:    meta.Homepage,
-		Topics:      core.LowerTopics(topics.Names),
+		Description:   meta.Description,
+		Homepage:      meta.Homepage,
+		DefaultBranch: meta.DefaultBranch,
+		Topics:        core.LowerTopics(topics.Names),
 	}, nil
 }
 
@@ -96,13 +98,16 @@ func (d *driver) Fetch(ctx context.Context, owner, repo string) (core.Snapshot, 
 // /topics. Two requests max — the same shape Fetch made.
 func (d *driver) Apply(ctx context.Context, owner, repo string, patch core.Patch) error {
 	base := d.apiBase(ctx, owner)
-	if patch.Description != nil || patch.Homepage != nil {
+	if patch.Description != nil || patch.Homepage != nil || patch.DefaultBranch != nil {
 		body := map[string]any{}
 		if patch.Description != nil {
 			body["description"] = *patch.Description
 		}
 		if patch.Homepage != nil {
 			body["homepage"] = *patch.Homepage
+		}
+		if patch.DefaultBranch != nil {
+			body["default_branch"] = *patch.DefaultBranch
 		}
 		if err := d.do(ctx, http.MethodPatch, fmt.Sprintf("%s/repos/%s/%s", base, owner, repo), body, nil); err != nil {
 			return err

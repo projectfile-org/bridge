@@ -45,8 +45,8 @@ var (
 var forgeCmd = &cobra.Command{
 	Use:   "forge",
 	Short: "Push projectfile metadata out to the repository forge",
-	Long: "Sync identity fields (description, homepage, topics) and branch and\n" +
-		"tag protection from projectfile to every non-archive entry in\n" +
+	Long: "Sync identity fields (description, homepage, topics), the default branch\n" +
+		"and branch and tag protection from projectfile to every non-archive entry in\n" +
 		"top-level repositories[].\n" +
 		"\n" +
 		"Tokens are read from environment variables — standard GITHUB_TOKEN /\n" +
@@ -65,7 +65,7 @@ var forgeCmd = &cobra.Command{
 
 var forgePushCmd = &cobra.Command{
 	Use:   "push [forge] [directory]",
-	Short: "Push description, homepage, topics and protection to each forge",
+	Short: "Push description, homepage, topics, default branch and protection to each forge",
 	Long: "For every entry in top-level repositories[] (role != archive),\n" +
 		"compare the projectfile's identity fields against the forge's current\n" +
 		"state and push the per-field delta. Idempotent: a second run is a no-op.\n" +
@@ -75,6 +75,7 @@ var forgePushCmd = &cobra.Command{
 		"the push CI goals for merges; trunk and release branches refuse force\n" +
 		"push and deletion; release tags take pushes from the token’s account.\n" +
 		"Mirrors get the force-push, deletion and signature guards only.\n" +
+		"The origin’s default branch is set to release.trunk; mirrors keep theirs.\n" +
 		"\n" +
 		"Optional [forge] restricts to repos on a single forge (matched by host\n" +
 		"substring, e.g. 'github', 'codeberg', 'kiota'). If the first arg is a\n" +

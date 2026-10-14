@@ -26,10 +26,11 @@ func GetForgeExtension(doc *projectfile.Document) (*ForgeExtension, error) {
 		// push to run at all.
 		Push: boolFieldDefaultTrue(m, "push"),
 		Fields: ForgeFieldsToggles{
-			Description: boolValDefaultTrue(m, "fields", "description"),
-			Homepage:    boolValDefaultTrue(m, "fields", "homepage"),
-			Topics:      boolValDefaultTrue(m, "fields", "topics"),
-			Protection:  boolValDefaultTrue(m, "fields", "protection"),
+			Description:   boolValDefaultTrue(m, "fields", "description"),
+			Homepage:      boolValDefaultTrue(m, "fields", "homepage"),
+			Topics:        boolValDefaultTrue(m, "fields", "topics"),
+			Protection:    boolValDefaultTrue(m, "fields", "protection"),
+			DefaultBranch: boolValDefaultTrue(m, "fields", "default-branch"),
 		},
 	}
 	if hostsRaw, ok := m["hosts"].(map[string]any); ok && len(hostsRaw) > 0 {

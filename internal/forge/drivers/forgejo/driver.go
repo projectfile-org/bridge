@@ -62,8 +62,9 @@ func (d *driver) Owner(repoURL string) (owner, repo string, err error) {
 func (d *driver) Fetch(ctx context.Context, owner, repo string) (core.Snapshot, error) {
 	base := d.apiBase(ctx, owner)
 	var meta struct {
-		Description string `json:"description"`
-		Website     string `json:"website"`
+		Description   string `json:"description"`
+		Website       string `json:"website"`
+		DefaultBranch string `json:"default_branch"`
 	}
 	if err := d.do(ctx, http.MethodGet, fmt.Sprintf("%s/repos/%s/%s", base, owner, repo), nil, &meta); err != nil {
 		return core.Snapshot{}, err
@@ -75,15 +76,16 @@ func (d *driver) Fetch(ctx context.Context, owner, repo string) (core.Snapshot, 
 		return core.Snapshot{}, err
 	}
 	return core.Snapshot{
-		Description: meta.Description,
-		Homepage:    meta.Website,
-		Topics:      core.LowerTopics(topics.Topics),
+		Description:   meta.Description,
+		Homepage:      meta.Website,
+		DefaultBranch: meta.DefaultBranch,
+		Topics:        core.LowerTopics(topics.Topics),
 	}, nil
 }
 
 func (d *driver) Apply(ctx context.Context, owner, repo string, patch core.Patch) error {
 	base := d.apiBase(ctx, owner)
-	if patch.Description != nil || patch.Homepage != nil {
+	if patch.Description != nil || patch.Homepage != nil || patch.DefaultBranch != nil {
 		body := map[string]any{}
 		if patch.Description != nil {
 			body["description"] = *patch.Description
@@ -91,6 +93,9 @@ func (d *driver) Apply(ctx context.Context, owner, repo string, patch core.Patch
 		if patch.Homepage != nil {
 			// Forgejo's field is called "website", not "homepage".
 			body["website"] = *patch.Homepage
+		}
+		if patch.DefaultBranch != nil {
+			body["default_branch"] = *patch.DefaultBranch
 		}
 		if err := d.do(ctx, http.MethodPatch, fmt.Sprintf("%s/repos/%s/%s", base, owner, repo), body, nil); err != nil {
 			return err

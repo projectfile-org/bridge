@@ -45,24 +45,26 @@ type Client interface {
 // the user can edit in every forge's web UI; adding a fourth field means
 // touching every driver, so this set is deliberately small.
 type Snapshot struct {
-	Description string
-	Homepage    string
-	Topics      []string
+	Description   string
+	Homepage      string
+	Topics        []string
+	DefaultBranch string // empty in a desired snapshot leaves the forge's default branch alone
 }
 
 // Patch carries the desired-state delta. The pointer-or-nil convention
 // distinguishes "field absent from this patch" (nil → leave unchanged) from
 // "clear the field" (non-nil empty value). Same idiom as the GitHub Go SDK.
 type Patch struct {
-	Description *string
-	Homepage    *string
-	Topics      *[]string
+	Description   *string
+	Homepage      *string
+	Topics        *[]string
+	DefaultBranch *string
 }
 
 // IsEmpty reports whether the patch would mutate nothing. Used by the
 // algorithm to decide whether to log "(up to date)" and skip the HTTP call.
 func (p Patch) IsEmpty() bool {
-	return p.Description == nil && p.Homepage == nil && p.Topics == nil
+	return p.Description == nil && p.Homepage == nil && p.Topics == nil && p.DefaultBranch == nil
 }
 
 // Diff produces the minimal patch that transforms current into desired.
@@ -84,6 +86,10 @@ func Diff(current, desired Snapshot) Patch {
 	if !topicsEqual(current.Topics, desired.Topics) {
 		v := append([]string(nil), desired.Topics...)
 		patch.Topics = &v
+	}
+	if desired.DefaultBranch != "" && current.DefaultBranch != desired.DefaultBranch {
+		v := desired.DefaultBranch
+		patch.DefaultBranch = &v
 	}
 	return patch
 }

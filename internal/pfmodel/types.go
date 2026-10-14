@@ -173,7 +173,7 @@ type FundingChannel struct {
 	GUID        string `toml:"guid" yaml:"guid" json:"guid"`
 	Type        string `toml:"type" yaml:"type" json:"type"`
 	Address     string `toml:"address" yaml:"address" json:"address"`
-	Description string `toml:"description" yaml:"description" json:"description"`
+	Description string `toml:"description"    yaml:"description"    json:"description"`
 }
 
 // FundingPlan carries a funding plan for FundingJSON bridges.
@@ -182,7 +182,7 @@ type FundingPlan struct {
 	GUID        string   `toml:"guid" yaml:"guid" json:"guid"`
 	Status      string   `toml:"status" yaml:"status" json:"status"`
 	Name        string   `toml:"name" yaml:"name" json:"name"`
-	Description string   `toml:"description" yaml:"description" json:"description"`
+	Description string   `toml:"description"    yaml:"description"    json:"description"`
 	Amount      float64  `toml:"amount" yaml:"amount" json:"amount"`
 	Currency    string   `toml:"currency" yaml:"currency" json:"currency"`
 	Frequency   string   `toml:"frequency" yaml:"frequency" json:"frequency"`
@@ -197,7 +197,7 @@ type FundingHistory struct {
 	Expenses    float64 `toml:"expenses" yaml:"expenses" json:"expenses"`
 	Taxes       float64 `toml:"taxes" yaml:"taxes" json:"taxes"`
 	Currency    string  `toml:"currency" yaml:"currency" json:"currency"`
-	Description string  `toml:"description" yaml:"description" json:"description"`
+	Description string  `toml:"description"    yaml:"description"    json:"description"`
 }
 
 // FundingExtension binds `[org.projectfile.funding]`. The set of providers
@@ -376,10 +376,11 @@ type ForgeExtension struct {
 // ForgeFieldsToggles enables/disables individual fields the push command
 // would otherwise sync.
 type ForgeFieldsToggles struct {
-	Description bool `toml:"description" yaml:"description" json:"description"`
-	Homepage    bool `toml:"homepage"    yaml:"homepage"    json:"homepage"`
-	Topics      bool `toml:"topics"      yaml:"topics"      json:"topics"`
-	Protection  bool `toml:"protection"  yaml:"protection"  json:"protection"`
+	Description   bool `toml:"description"    yaml:"description"    json:"description"`
+	Homepage      bool `toml:"homepage"       yaml:"homepage"       json:"homepage"`
+	Topics        bool `toml:"topics"         yaml:"topics"         json:"topics"`
+	Protection    bool `toml:"protection"     yaml:"protection"     json:"protection"`
+	DefaultBranch bool `toml:"default-branch" yaml:"default-branch" json:"default-branch"`
 }
 
 // CodeOwnersExtension binds `[org.projectfile.codeowners]`. Entries is
