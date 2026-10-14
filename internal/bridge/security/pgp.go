@@ -11,7 +11,6 @@ import (
 	"encoding/hex"
 	"fmt"
 	"io"
-	"math/rand/v2"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -88,7 +87,8 @@ func deriveFromURL(keyURL string, opts core.Options) (string, error) {
 		return fp, nil
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), netfetch.Timeout())
+	// Bound the whole derive by every attempt netfetch may make.
+	ctx, cancel := context.WithTimeout(context.Background(), netfetch.Timeout()*time.Duration(netfetch.Attempts()))
 	defer cancel()
 	armored, err := fetchArmored(ctx, keyURL, pgpClient())
 	if err != nil {
@@ -109,12 +109,9 @@ func deriveFromURL(keyURL string, opts core.Options) (string, error) {
 	return fp, nil
 }
 
-// pgpClient is the production HTTP client for the fingerprint derive: a 10s
-// timeout and a redirect guard that rejects cross-host hops (an auth gateway
-// answering for a public pubkey URL).
+// pgpClient is the fingerprint derive's HTTP client: it rejects a cross-host redirect and leaves the deadline to netfetch.
 func pgpClient() *http.Client {
 	return &http.Client{
-		Timeout: netfetch.Timeout(),
 		CheckRedirect: func(req *http.Request, via []*http.Request) error {
 			if len(via) >= 10 {
 				return fmt.Errorf("too many redirects")
@@ -128,61 +125,37 @@ func pgpClient() *http.Client {
 	}
 }
 
-// fetchArmored GETs an OpenPGP armored key. One bounded retry on transport or
-// 5xx; 4xx returns immediately (the key is genuinely absent). Cross-host
-// redirects are rejected so an auth gateway cannot substitute a login page for
-// the key, and an HTML response is rejected for the same reason. The client is
-// a parameter so tests inject a test server's client; production uses
-// pgpClient(), which carries the timeout and redirect guard.
+// fetchArmored GETs an armored OpenPGP key through netfetch; a 4xx returns empty, an HTML answer is an error.
 func fetchArmored(ctx context.Context, keyURL string, client *http.Client) ([]byte, error) {
 	if !strings.HasPrefix(keyURL, "https://") {
 		return nil, fmt.Errorf("refusing non-HTTPS key URL: %s", keyURL)
 	}
-	var lastErr error
-	for attempt := range 2 {
-		if attempt > 0 {
-			jitter := time.Duration(rand.Int64N(int64(250 * time.Millisecond))) // #nosec G404 -- non-crypto retry jitter
-			select {
-			case <-ctx.Done():
-				return nil, ctx.Err()
-			case <-time.After(250*time.Millisecond + jitter):
-			}
-		}
-		req, err := http.NewRequestWithContext(ctx, http.MethodGet, keyURL, nil)
-		if err != nil {
-			return nil, err
-		}
-		req.Header.Set("User-Agent", "projectfile")
-		resp, err := client.Do(req)
-		if err != nil {
-			lastErr = err
-			continue
-		}
-		if resp.StatusCode/100 == 5 {
-			_, _ = io.Copy(io.Discard, resp.Body)
-			_ = resp.Body.Close()
-			lastErr = fmt.Errorf("HTTP %d", resp.StatusCode)
-			continue
-		}
-		if resp.StatusCode/100 == 4 {
-			_, _ = io.Copy(io.Discard, resp.Body)
-			_ = resp.Body.Close()
-			// 404 is the normal "no such key" case — return empty, not an error.
-			return nil, nil
-		}
-		if isHTMLResponse(resp) {
-			_, _ = io.Copy(io.Discard, resp.Body)
-			_ = resp.Body.Close()
-			return nil, fmt.Errorf("received HTML from %s (HTTP %d) — likely a login page, not a pubkey", keyURL, resp.StatusCode)
-		}
-		body, err := io.ReadAll(resp.Body)
-		_ = resp.Body.Close()
-		if err != nil {
-			return nil, fmt.Errorf("read response: %w", err)
-		}
-		return body, nil
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, keyURL, nil)
+	if err != nil {
+		return nil, err
 	}
-	return nil, lastErr
+	req.Header.Set("User-Agent", "projectfile")
+	resp, err := netfetch.Do(client, req)
+	if err != nil {
+		return nil, err
+	}
+	if resp.StatusCode/100 == 4 {
+		_, _ = io.Copy(io.Discard, resp.Body)
+		_ = resp.Body.Close()
+		// 404 is the normal "no such key" case — return empty, not an error.
+		return nil, nil
+	}
+	if isHTMLResponse(resp) {
+		_, _ = io.Copy(io.Discard, resp.Body)
+		_ = resp.Body.Close()
+		return nil, fmt.Errorf("received HTML from %s (HTTP %d) — likely a login page, not a pubkey", keyURL, resp.StatusCode)
+	}
+	body, err := io.ReadAll(resp.Body)
+	_ = resp.Body.Close()
+	if err != nil {
+		return nil, fmt.Errorf("read response: %w", err)
+	}
+	return body, nil
 }
 
 // parseFingerprint decodes an ASCII-armored OpenPGP key and returns the

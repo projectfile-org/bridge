@@ -8,6 +8,7 @@ import (
 	"archive/tar"
 	"bytes"
 	"context"
+	"errors"
 	"strings"
 	"testing"
 
@@ -246,4 +247,29 @@ func TestFirstRefTakesLeadingLine(t *testing.T) {
 
 	_, _, ok = firstRef("\n\n")
 	assert.False(t, ok)
+}
+
+// TestTransientGitAcceptsTransportFailuresOnly verifies a forge blip is retried and a git answer is not.
+func TestTransientGitAcceptsTransportFailuresOnly(t *testing.T) {
+	retryable := []string{
+		"git ls-remote: exit status 128: fatal: unable to access 'https://kiota.ch/b19/ubuntu/': gnutls_handshake() failed: Connection reset by peer",
+		"git archive: exit status 128: fatal: the remote end hung up unexpectedly",
+		"fatal: could not resolve host: kiota.ch",
+		"fatal: unable to access: The requested URL returned error: 503",
+		"rpc failed: curl 92 HTTP/2 stream 1 was not closed cleanly: CANCEL",
+		"git ls-remote: exit status 128: fatal: unable to access: Failed to connect to kiota.ch port 443 after 2000 ms: Connection refused",
+	}
+	for _, msg := range retryable {
+		assert.True(t, transientGit(errors.New(msg)), msg)
+	}
+
+	final := []string{
+		"git archive: exit status 128: fatal: pathspec 'docs/FEATURES.md' did not match any files",
+		"git ls-remote: signal: killed",
+		"fatal: Authentication failed for 'https://kiota.ch/b19/ubuntu/'",
+		"ERROR: Repository not found.",
+	}
+	for _, msg := range final {
+		assert.False(t, transientGit(errors.New(msg)), msg)
+	}
 }

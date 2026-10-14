@@ -18,6 +18,7 @@ import (
 	"strings"
 
 	"kiota.ch/projectfile/core/v2/pkg/genlog"
+	"kiota.ch/projectfile/core/v2/pkg/netfetch"
 	"kiota.ch/projectfile/core/v2/pkg/projectfile"
 	"projectfile.org/projectfile/bridge/internal/forge/core"
 	"projectfile.org/projectfile/bridge/internal/forge/hostmatch"
@@ -161,7 +162,7 @@ func send(ctx context.Context, client *http.Client, token, method, target, conte
 	if token != "" {
 		req.Header.Set("Authorization", "token "+token)
 	}
-	resp, err := core.DoWithRetry(ctx, client, req)
+	resp, err := netfetch.Do(client, req)
 	if err != nil {
 		return fmt.Errorf("%s %s: %w", method, target, err)
 	}

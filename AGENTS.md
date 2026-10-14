@@ -29,7 +29,7 @@ core tags releases — currently `v1.0.1`). Every core dependency crosses throug
 core’s **`pkg/*` façades** — this module
 holds **zero** `cli/internal/*` imports. The core API in use: `pkg/projectfile`
 (the typed `*Document` — alias identity means it crosses zero-cost),
-`pkg/{genlog,rawdoc,userconfig,spdx,selector,pflock,fieldpath}`. Mutable core
+`pkg/{genlog,rawdoc,userconfig,spdx,selector,pflock,fieldpath,netfetch}`. Mutable core
 toggles are driven via setters (`genlog.SetQuiet`, `projectfile.SetYAMLOutputSorted`,
 `spdx.SetEmbedded`, …) exposed on those façades.
 
@@ -633,3 +633,29 @@ Dockerfile ships. CI-workflow generation is gated on the same validation.
 - §9 release ordering: core is tagged (`v1.0.1`) and bridge pins it — the
     `replace` is gone. Remaining: validate the container build /
     `source-passes-lint` / CI-workflow generation against the pinned private module, and land bridge’s own remote repository + Dockerfile.
+
+## Network retries
+
+Every crossing in this module goes through core’s `pkg/netfetch`: one
+per-attempt timeout, one attempt count, one backoff-with-jitter schedule. There
+is no second retry implementation here — the drivers, `releasenotes`, the PGP
+key fetch and the `fragments` Git subprocess all share it.
+
+Two rules keep it that way:
+
+- **A body-carrying request replays through `req.GetBody`.** `netfetch.Do`
+    rewinds the body between attempts, so a retried PATCH or a retried asset
+    upload is not sent empty. A body with no `GetBody` snapshot (a raw stream)
+    is sent once and reported as unreplayable rather than redelivered drained.
+- **A classifier decides what is transient, not the retry loop.** Each crossing
+    keeps its own `transient…` predicate because only it knows what its answers
+    mean: `fetchArmored` returns 4xx at once (a genuinely absent key), the Git
+    crossing retries transport failures but never a pathspec miss or an auth
+    refusal. The schedule itself is never re-implemented — call
+    `netfetch.Sleep`/`netfetch.Delay` when a crossing has to run its own loop.
+
+A per-command `--timeout` that must cover a longer crossing sets
+`netfetch.SetTimeout` at the top of the command (`releasenotes.Publish` does,
+because a release-asset upload legitimately outruns the 10 s default attempt).
+It is the one place a command narrows the shared policy, and it is a narrowing
+of a global, so it is set once per process and never mid-flight.

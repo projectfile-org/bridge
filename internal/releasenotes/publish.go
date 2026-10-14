@@ -14,6 +14,7 @@ import (
 	"strings"
 
 	"kiota.ch/projectfile/core/v2/pkg/genlog"
+	"kiota.ch/projectfile/core/v2/pkg/netfetch"
 	"projectfile.org/projectfile/bridge/internal/forge/core"
 )
 
@@ -43,6 +44,8 @@ func Publish(ctx context.Context, po PublishOptions) (string, error) {
 	if po.Timeout == 0 {
 		po.Timeout = defaultTimeout
 	}
+	// This command's --timeout is the per-attempt bound, since an asset upload outruns the default.
+	netfetch.SetTimeout(po.Timeout)
 	client := core.NewHTTPClient(core.HTTPOptions{Timeout: po.Timeout})
 	base := strings.TrimSuffix(po.API, "/") + "/repos/" + po.Repo + "/releases"
 	var rel release
@@ -118,7 +121,7 @@ func call(ctx context.Context, client *http.Client, token, method, url string, i
 	if token != "" {
 		req.Header.Set("Authorization", "token "+token)
 	}
-	resp, err := core.DoWithRetry(ctx, client, req)
+	resp, err := netfetch.Do(client, req)
 	if err != nil {
 		return fmt.Errorf("%s %s: %w", method, url, err)
 	}
@@ -144,7 +147,7 @@ func fetchText(ctx context.Context, client *http.Client, token, url string) (str
 	if token != "" {
 		req.Header.Set("Authorization", "token "+token)
 	}
-	resp, err := core.DoWithRetry(ctx, client, req)
+	resp, err := netfetch.Do(client, req)
 	if err != nil {
 		return "", err
 	}

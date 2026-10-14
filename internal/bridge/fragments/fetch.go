@@ -22,6 +22,7 @@ import (
 	"github.com/pelletier/go-toml/v2"
 	"go.yaml.in/yaml/v3"
 	"kiota.ch/projectfile/core/v2/pkg/genlog"
+	"kiota.ch/projectfile/core/v2/pkg/netfetch"
 	"projectfile.org/projectfile/bridge/internal/bridge/core"
 	"projectfile.org/projectfile/bridge/internal/pfmodel"
 	"projectfile.org/projectfile/bridge/internal/warn"
@@ -619,10 +620,22 @@ func gitLsRemote(ctx context.Context, repoURL string, args ...string) (string, e
 	return runGit(ctx, append(argv, repoURL)...)
 }
 
-// runGit runs one bounded git command and returns its stdout. Credential
-// prompting is disabled: a fetch that blocks on a password would hang a build
-// with no output explaining why.
+// runGit runs one bounded git command, retrying a transport failure on netfetch's shared backoff, and returns its stdout.
 func runGit(ctx context.Context, argv ...string) (string, error) {
+	for attempt := 1; ; attempt++ {
+		out, err := gitOnce(ctx, argv...)
+		if err == nil || !transientGit(err) || attempt >= netfetch.Attempts() {
+			return out, err
+		}
+		if !netfetch.Sleep(ctx, netfetch.Delay(attempt+1)) {
+			return "", err
+		}
+		genlog.Debug("git retry", "command", argv[0], "attempt", attempt+1, "err", err.Error())
+	}
+}
+
+// gitOnce is one attempt: bounded by gitTimeout, with credential prompting off.
+func gitOnce(ctx context.Context, argv ...string) (string, error) {
 	ctx, cancel := context.WithTimeout(ctx, gitTimeout)
 	defer cancel()
 
@@ -639,6 +652,23 @@ func runGit(ctx context.Context, argv ...string) (string, error) {
 		return "", fmt.Errorf("git %s: %w", argv[0], err)
 	}
 	return string(out), nil
+}
+
+// transientGit reports a transport, DNS or dropped-connection git failure, never a pathspec, ref or auth refusal.
+func transientGit(err error) bool {
+	msg := strings.ToLower(err.Error())
+	needles := []string{
+		"connection refused", "connection reset", "connection timed out",
+		"network is unreachable", "no route to host", "could not resolve host",
+		"temporary failure in name resolution", "hung up", "early eof",
+		"rpc failed", "unable to access", "failed to connect", "service unavailable",
+	}
+	for _, needle := range needles {
+		if strings.Contains(msg, needle) {
+			return true
+		}
+	}
+	return false
 }
 
 // firstRef takes the leading "<sha>\t<ref>" line of ls-remote output.

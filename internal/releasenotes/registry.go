@@ -16,6 +16,7 @@ import (
 	"strings"
 
 	"kiota.ch/projectfile/core/v2/pkg/genlog"
+	"kiota.ch/projectfile/core/v2/pkg/netfetch"
 	"projectfile.org/projectfile/bridge/internal/forge/core"
 )
 
@@ -144,7 +145,7 @@ func fetchManifest(ctx context.Context, client *http.Client, target string, toke
 		if *token != "" {
 			req.Header.Set("Authorization", "Bearer "+*token)
 		}
-		resp, err := core.DoWithRetry(ctx, client, req)
+		resp, err := netfetch.Do(client, req)
 		if err != nil {
 			return nil, "", fmt.Errorf("GET %s: %w", target, err)
 		}
@@ -194,7 +195,7 @@ func anonymousToken(ctx context.Context, client *http.Client, challenge string) 
 	if err != nil {
 		return "", err
 	}
-	resp, err := core.DoWithRetry(ctx, client, req)
+	resp, err := netfetch.Do(client, req)
 	if err != nil {
 		return "", err
 	}

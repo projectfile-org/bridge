@@ -22,6 +22,7 @@ import (
 	"net/url"
 	"strings"
 
+	"kiota.ch/projectfile/core/v2/pkg/netfetch"
 	"projectfile.org/projectfile/bridge/internal/forge/core"
 	"projectfile.org/projectfile/bridge/internal/forge/hostmatch"
 )
@@ -169,7 +170,7 @@ func (d *driver) do(ctx context.Context, method, url string, body, out any) erro
 	if tok := core.TokenFromContext(ctx); tok != "" {
 		req.Header.Set("Authorization", "Bearer "+tok)
 	}
-	resp, err := core.DoWithRetry(ctx, d.http, req)
+	resp, err := netfetch.Do(d.http, req)
 	if err != nil {
 		return err
 	}
