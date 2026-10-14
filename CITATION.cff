@@ -33,5 +33,5 @@ keywords:
   - scaffolding
   - go
   - cli
-version: 3.6.0
-date-released: "2026-10-12"
+version: 3.6.1
+date-released: "2026-10-14"
