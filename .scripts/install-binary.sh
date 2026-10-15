@@ -28,8 +28,9 @@ log "building host-native pf-bridge set"
 
 mkdir -p "${dst}"
 
-# The dispatcher (module root) + one binary per cmd/pf-bridge-*.
+# The standalone dispatcher, then the single-bridge binaries from the cell archive.
 install_one pf-bridge
-for d in cmd/pf-bridge-*/; do
-	install_one "$(basename "${d}")"
+for archive in dist/pf-bridge-bridges-*.tar.gz; do
+	log "installing the single-bridge binaries from ${archive} into ${dst}"
+	tar --extract --gzip --file="${archive}" --directory="${dst}" --wildcards './pf-bridge-*'
 done
