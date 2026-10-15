@@ -6,9 +6,9 @@
 package main
 
 import (
-	_ "projectfile.org/projectfile/bridge/internal/bridge/ai-policy"
+	_ "projectfile.org/projectfile/bridge/v4/internal/bridge/ai-policy"
 
-	"projectfile.org/projectfile/bridge/internal/bridgerun"
+	"projectfile.org/projectfile/bridge/v4/internal/bridgerun"
 )
 
 func main() { bridgerun.Main("pf-bridge-ai-policy") }

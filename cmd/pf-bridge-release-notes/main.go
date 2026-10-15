@@ -6,7 +6,7 @@
 package main
 
 import (
-	"projectfile.org/projectfile/bridge/internal/releasenotescmd"
+	"projectfile.org/projectfile/bridge/v4/internal/releasenotescmd"
 )
 
 func main() { releasenotescmd.Main("pf-bridge-release-notes") }

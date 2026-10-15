@@ -6,9 +6,9 @@
 package main
 
 import (
-	_ "projectfile.org/projectfile/bridge/internal/bridge/security"
+	_ "projectfile.org/projectfile/bridge/v4/internal/bridge/security"
 
-	"projectfile.org/projectfile/bridge/internal/bridgerun"
+	"projectfile.org/projectfile/bridge/v4/internal/bridgerun"
 )
 
 func main() { bridgerun.Main("pf-bridge-security") }

@@ -26,10 +26,10 @@ import (
 
 	"kiota.ch/projectfile/core/v2/pkg/genlog"
 	"kiota.ch/projectfile/core/v2/pkg/projectfile"
-	"projectfile.org/projectfile/bridge/internal/buildinfo"
-	"projectfile.org/projectfile/bridge/internal/declared"
-	"projectfile.org/projectfile/bridge/internal/describe"
-	"projectfile.org/projectfile/bridge/internal/warn"
+	"projectfile.org/projectfile/bridge/v4/internal/buildinfo"
+	"projectfile.org/projectfile/bridge/v4/internal/declared"
+	"projectfile.org/projectfile/bridge/v4/internal/describe"
+	"projectfile.org/projectfile/bridge/v4/internal/warn"
 )
 
 const prefix = "pf-bridge-"

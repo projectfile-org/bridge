@@ -11,8 +11,8 @@ import (
 
 	"kiota.ch/projectfile/core/v2/pkg/genlog"
 	"kiota.ch/projectfile/core/v2/pkg/projectfile"
-	"projectfile.org/projectfile/bridge/internal/forge/hostmatch"
-	"projectfile.org/projectfile/bridge/internal/pfmodel"
+	"projectfile.org/projectfile/bridge/v4/internal/forge/hostmatch"
+	"projectfile.org/projectfile/bridge/v4/internal/pfmodel"
 )
 
 // Field is the pf-side identifier for a forge field. Three values today;

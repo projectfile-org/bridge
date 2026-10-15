@@ -11,7 +11,7 @@ import (
 	"testing"
 
 	"kiota.ch/projectfile/core/v2/pkg/projectfile"
-	"projectfile.org/projectfile/bridge/internal/pfmodel"
+	"projectfile.org/projectfile/bridge/v4/internal/pfmodel"
 )
 
 // Test fixtures. Centralised so the goconst linter doesn't flag the

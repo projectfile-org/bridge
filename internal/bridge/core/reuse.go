@@ -10,7 +10,7 @@ import (
 	"time"
 
 	"kiota.ch/projectfile/core/v2/pkg/projectfile"
-	"projectfile.org/projectfile/bridge/internal/pfmodel"
+	"projectfile.org/projectfile/bridge/v4/internal/pfmodel"
 )
 
 // CommentStyle selects how REUSEHeader wraps its SPDX lines. The SPDX text

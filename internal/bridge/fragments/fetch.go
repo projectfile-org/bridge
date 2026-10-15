@@ -23,9 +23,9 @@ import (
 	"go.yaml.in/yaml/v3"
 	"kiota.ch/projectfile/core/v2/pkg/genlog"
 	"kiota.ch/projectfile/core/v2/pkg/netfetch"
-	"projectfile.org/projectfile/bridge/internal/bridge/core"
-	"projectfile.org/projectfile/bridge/internal/pfmodel"
-	"projectfile.org/projectfile/bridge/internal/warn"
+	"projectfile.org/projectfile/bridge/v4/internal/bridge/core"
+	"projectfile.org/projectfile/bridge/v4/internal/pfmodel"
+	"projectfile.org/projectfile/bridge/v4/internal/warn"
 )
 
 // Every crossing to a forge is bounded: a parent whose host hangs must slow one

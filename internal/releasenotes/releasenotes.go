@@ -20,7 +20,7 @@ import (
 
 	"kiota.ch/projectfile/core/v2/pkg/genlog"
 	"kiota.ch/projectfile/core/v2/pkg/projectfile"
-	"projectfile.org/projectfile/bridge/internal/bridge/core"
+	"projectfile.org/projectfile/bridge/v4/internal/bridge/core"
 )
 
 // Options selects the range and the release the notes describe.

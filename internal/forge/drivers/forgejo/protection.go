@@ -11,7 +11,7 @@ import (
 	"net/url"
 
 	"kiota.ch/projectfile/core/v2/pkg/genlog"
-	"projectfile.org/projectfile/bridge/internal/forge/core"
+	"projectfile.org/projectfile/bridge/v4/internal/forge/core"
 )
 
 // fastForwardOnly is the Forgejo merge style that never creates a commit.

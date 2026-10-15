@@ -12,7 +12,7 @@ import (
 
 	"kiota.ch/projectfile/core/v2/pkg/genlog"
 	"kiota.ch/projectfile/core/v2/pkg/projectfile"
-	"projectfile.org/projectfile/bridge/internal/pfmodel"
+	"projectfile.org/projectfile/bridge/v4/internal/pfmodel"
 )
 
 // Protector is the optional Client surface for branch and tag protection; a driver without it reports protection unsupported.

@@ -4,7 +4,7 @@
 
 package cff
 
-import "projectfile.org/projectfile/bridge/internal/bridge"
+import "projectfile.org/projectfile/bridge/v4/internal/bridge"
 
 // init self-registers the CFF bridge. cmd/bridge.go blank-imports this
 // package so the registration runs at process start.

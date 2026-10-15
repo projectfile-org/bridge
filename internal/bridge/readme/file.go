@@ -13,7 +13,7 @@ import (
 
 	"kiota.ch/projectfile/core/v2/pkg/genlog"
 	"kiota.ch/projectfile/core/v2/pkg/projectfile"
-	"projectfile.org/projectfile/bridge/internal/pfmodel"
+	"projectfile.org/projectfile/bridge/v4/internal/pfmodel"
 )
 
 // buildFileGroup embeds a group's declared file as its fence; an absent file drops the group.

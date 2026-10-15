@@ -12,7 +12,7 @@ version="${1:-${GITHUB_REF_NAME:-}}"
 case "${version}" in
 	'' | *['{}']*) version="$(git describe --tags --always --dirty 2>/dev/null || echo dev)" ;; # empty or an unexpanded template placeholder
 esac
-ldflags="-s -w -X projectfile.org/projectfile/bridge/internal/buildinfo.Version=${version}"
+ldflags="-s -w -X projectfile.org/projectfile/bridge/v4/internal/buildinfo.Version=${version}"
 
 log() { printf '[build-binaries] %s\n' "$*" >&2; }
 

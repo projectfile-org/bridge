@@ -6,7 +6,7 @@
 package main
 
 import (
-	"projectfile.org/projectfile/bridge/internal/initcmd"
+	"projectfile.org/projectfile/bridge/v4/internal/initcmd"
 )
 
 func main() { initcmd.Main("pf-bridge-init") }

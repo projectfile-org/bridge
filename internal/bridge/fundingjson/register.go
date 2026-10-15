@@ -5,7 +5,7 @@
 package fundingjson
 
 import (
-	"projectfile.org/projectfile/bridge/internal/bridge"
+	"projectfile.org/projectfile/bridge/v4/internal/bridge"
 )
 
 func init() {

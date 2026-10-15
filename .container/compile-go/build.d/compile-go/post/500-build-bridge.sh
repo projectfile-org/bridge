@@ -9,7 +9,7 @@
   # shellcheck source=/dev/null
   . b19-i18n
 
-  LDFLAGS="-s -w -X projectfile.org/projectfile/bridge/internal/buildinfo.Version=${M6E_VERSION:-dev}"
+  LDFLAGS="-s -w -X projectfile.org/projectfile/bridge/v4/internal/buildinfo.Version=${M6E_VERSION:-dev}"
 
   b19-run "BRIDGE" "$(_ 'Download modules')" --     \
     go mod download

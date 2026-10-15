@@ -12,7 +12,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"kiota.ch/projectfile/core/v2/pkg/projectfile"
-	"projectfile.org/projectfile/bridge/internal/bridge/core"
+	"projectfile.org/projectfile/bridge/v4/internal/bridge/core"
 )
 
 // fixtureMimicsM11s is the m11s root layout in miniature: pyproject carries requires-python while the projectfile models no python floor.

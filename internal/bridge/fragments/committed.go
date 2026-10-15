@@ -12,7 +12,7 @@ import (
 	"strings"
 
 	"kiota.ch/projectfile/core/v2/pkg/genlog"
-	"projectfile.org/projectfile/bridge/internal/bridge/core"
+	"projectfile.org/projectfile/bridge/v4/internal/bridge/core"
 )
 
 // The committed assembled document is the only record of inherited content:

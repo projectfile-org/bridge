@@ -12,7 +12,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"projectfile.org/projectfile/bridge/internal/forge/core"
+	"projectfile.org/projectfile/bridge/v4/internal/forge/core"
 )
 
 func TestProtectionRoundTrip(t *testing.T) {

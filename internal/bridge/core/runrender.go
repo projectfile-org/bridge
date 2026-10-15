@@ -14,7 +14,7 @@ import (
 
 	"kiota.ch/projectfile/core/v2/pkg/genlog"
 	"kiota.ch/projectfile/core/v2/pkg/projectfile"
-	"projectfile.org/projectfile/bridge/internal/warn"
+	"projectfile.org/projectfile/bridge/v4/internal/warn"
 )
 
 // DriftHint is the remedy the summary block states once, however many files

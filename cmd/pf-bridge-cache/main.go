@@ -6,7 +6,7 @@
 package main
 
 import (
-	"projectfile.org/projectfile/bridge/internal/cachecmd"
+	"projectfile.org/projectfile/bridge/v4/internal/cachecmd"
 )
 
 func main() { cachecmd.Main("pf-bridge-cache") }

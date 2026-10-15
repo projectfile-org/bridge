@@ -15,7 +15,7 @@ import (
 
 	"kiota.ch/projectfile/core/v2/pkg/genlog"
 	"kiota.ch/projectfile/core/v2/pkg/netfetch"
-	"projectfile.org/projectfile/bridge/internal/forge/core"
+	"projectfile.org/projectfile/bridge/v4/internal/forge/core"
 )
 
 const magnetLimit = 64 << 10

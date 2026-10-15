@@ -18,7 +18,7 @@ import (
 	"sort"
 	"sync"
 
-	"projectfile.org/projectfile/bridge/internal/bridge/core"
+	"projectfile.org/projectfile/bridge/v4/internal/bridge/core"
 )
 
 // The registry is keyed by both Filename and every Alias so Lookup is O(1).

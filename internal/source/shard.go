@@ -9,8 +9,8 @@ import (
 	"strings"
 
 	"kiota.ch/projectfile/core/v2/pkg/projectfile"
-	"projectfile.org/projectfile/bridge/internal/bridge/shard"
-	"projectfile.org/projectfile/bridge/internal/pfmodel"
+	"projectfile.org/projectfile/bridge/v4/internal/bridge/shard"
+	"projectfile.org/projectfile/bridge/v4/internal/pfmodel"
 )
 
 // ShardSource scaffolds projectfile identity from a Crystal shard manifest.

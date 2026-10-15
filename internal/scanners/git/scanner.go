@@ -18,9 +18,9 @@ import (
 	"strings"
 
 	"kiota.ch/projectfile/core/v2/pkg/projectfile"
-	"projectfile.org/projectfile/bridge/internal/forge/hostmatch"
-	"projectfile.org/projectfile/bridge/internal/scanners/core"
-	"projectfile.org/projectfile/bridge/internal/source"
+	"projectfile.org/projectfile/bridge/v4/internal/forge/hostmatch"
+	"projectfile.org/projectfile/bridge/v4/internal/scanners/core"
+	"projectfile.org/projectfile/bridge/v4/internal/source"
 )
 
 // Scanner is the composite git scanner. It delegates to the three

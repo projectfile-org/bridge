@@ -16,7 +16,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"projectfile.org/projectfile/bridge/internal/bridge/core"
+	"projectfile.org/projectfile/bridge/v4/internal/bridge/core"
 )
 
 // fixtureKey is the real B64C122EE16C3746 key (privacy upload, no User ID) —

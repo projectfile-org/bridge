@@ -20,8 +20,8 @@ import (
 	"kiota.ch/projectfile/core/v2/pkg/interp"
 	"kiota.ch/projectfile/core/v2/pkg/projectfile"
 
-	"projectfile.org/projectfile/bridge/internal/bridge/core"
-	"projectfile.org/projectfile/bridge/internal/pfmodel"
+	"projectfile.org/projectfile/bridge/v4/internal/bridge/core"
+	"projectfile.org/projectfile/bridge/v4/internal/pfmodel"
 )
 
 // isolate drops every inherited GIT_* variable so a hook's GIT_DIR never reaches the fixture.

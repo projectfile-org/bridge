@@ -14,7 +14,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"kiota.ch/projectfile/core/v2/pkg/projectfile"
-	"projectfile.org/projectfile/bridge/internal/pfmodel"
+	"projectfile.org/projectfile/bridge/v4/internal/pfmodel"
 )
 
 // REUSE-IgnoreStart — the literal SPDX strings below are fixtures, not

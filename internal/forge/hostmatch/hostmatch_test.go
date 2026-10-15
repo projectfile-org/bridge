@@ -7,7 +7,7 @@ package hostmatch
 import (
 	"testing"
 
-	"projectfile.org/projectfile/bridge/internal/pfmodel"
+	"projectfile.org/projectfile/bridge/v4/internal/pfmodel"
 )
 
 // Repository URLs reused across the case tables, one per rule under test.

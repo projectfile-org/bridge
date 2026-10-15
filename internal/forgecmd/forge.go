@@ -21,18 +21,18 @@ import (
 	"kiota.ch/projectfile/core/v2/pkg/genlog"
 	"kiota.ch/projectfile/core/v2/pkg/netfetch"
 	"kiota.ch/projectfile/core/v2/pkg/projectfile"
-	"projectfile.org/projectfile/bridge/internal/buildinfo"
-	"projectfile.org/projectfile/bridge/internal/describe"
-	forgecore "projectfile.org/projectfile/bridge/internal/forge/core"
-	"projectfile.org/projectfile/bridge/internal/forge/hostmatch"
-	"projectfile.org/projectfile/bridge/internal/pfmodel"
-	"projectfile.org/projectfile/bridge/internal/rootflags"
+	"projectfile.org/projectfile/bridge/v4/internal/buildinfo"
+	"projectfile.org/projectfile/bridge/v4/internal/describe"
+	forgecore "projectfile.org/projectfile/bridge/v4/internal/forge/core"
+	"projectfile.org/projectfile/bridge/v4/internal/forge/hostmatch"
+	"projectfile.org/projectfile/bridge/v4/internal/pfmodel"
+	"projectfile.org/projectfile/bridge/v4/internal/rootflags"
 
 	// Blank-import every driver so its init() populates the registry.
 	// Adding a new driver is a single import line here, mirroring sync.go.
-	_ "projectfile.org/projectfile/bridge/internal/forge/drivers/forgejo"
-	_ "projectfile.org/projectfile/bridge/internal/forge/drivers/github"
-	_ "projectfile.org/projectfile/bridge/internal/forge/drivers/gitlab"
+	_ "projectfile.org/projectfile/bridge/v4/internal/forge/drivers/forgejo"
+	_ "projectfile.org/projectfile/bridge/v4/internal/forge/drivers/github"
+	_ "projectfile.org/projectfile/bridge/v4/internal/forge/drivers/gitlab"
 )
 
 var (

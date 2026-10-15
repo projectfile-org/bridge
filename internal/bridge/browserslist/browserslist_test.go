@@ -11,8 +11,8 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"kiota.ch/projectfile/core/v2/pkg/projectfile"
-	"projectfile.org/projectfile/bridge/internal/bridge/browserslist"
-	"projectfile.org/projectfile/bridge/internal/bridge/core"
+	"projectfile.org/projectfile/bridge/v4/internal/bridge/browserslist"
+	"projectfile.org/projectfile/bridge/v4/internal/bridge/core"
 )
 
 func docWithBrowsers(browsers any) *projectfile.Document {

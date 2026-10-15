@@ -6,7 +6,7 @@
 package main
 
 import (
-	"projectfile.org/projectfile/bridge/internal/scancmd"
+	"projectfile.org/projectfile/bridge/v4/internal/scancmd"
 )
 
 func main() { scancmd.Main("pf-bridge-scan") }

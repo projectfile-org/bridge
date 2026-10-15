@@ -12,7 +12,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"kiota.ch/projectfile/core/v2/pkg/projectfile"
-	"projectfile.org/projectfile/bridge/internal/scanners/forge"
+	"projectfile.org/projectfile/bridge/v4/internal/scanners/forge"
 )
 
 const fragment = `---

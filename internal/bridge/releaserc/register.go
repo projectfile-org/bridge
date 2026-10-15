@@ -4,7 +4,7 @@
 
 package releaserc
 
-import "projectfile.org/projectfile/bridge/internal/bridge"
+import "projectfile.org/projectfile/bridge/v4/internal/bridge"
 
 // No embedded template: the config is assembled directly and marshalled with
 // yaml.v3 (the plugins list is mixed-shape — plain strings and [name, {config}]

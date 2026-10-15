@@ -10,8 +10,8 @@ import (
 
 	"kiota.ch/projectfile/core/v2/pkg/genlog"
 	"kiota.ch/projectfile/core/v2/pkg/spdx"
-	"projectfile.org/projectfile/bridge/internal/bridge"
-	"projectfile.org/projectfile/bridge/internal/bridge/core"
+	"projectfile.org/projectfile/bridge/v4/internal/bridge"
+	"projectfile.org/projectfile/bridge/v4/internal/bridge/core"
 )
 
 // `all:` mirrors the convention used in other bridges: the templates dir

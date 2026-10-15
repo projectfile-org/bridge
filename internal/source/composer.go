@@ -9,8 +9,8 @@ import (
 	"strings"
 
 	"kiota.ch/projectfile/core/v2/pkg/projectfile"
-	"projectfile.org/projectfile/bridge/internal/bridge/composer"
-	"projectfile.org/projectfile/bridge/internal/pfmodel"
+	"projectfile.org/projectfile/bridge/v4/internal/bridge/composer"
+	"projectfile.org/projectfile/bridge/v4/internal/pfmodel"
 )
 
 type ComposerSource struct{}

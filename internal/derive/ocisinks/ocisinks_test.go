@@ -13,8 +13,8 @@ import (
 	"github.com/stretchr/testify/require"
 	"kiota.ch/projectfile/core/v2/pkg/genlog"
 	"kiota.ch/projectfile/core/v2/pkg/projectfile"
-	"projectfile.org/projectfile/bridge/internal/derive/ocisinks"
-	"projectfile.org/projectfile/bridge/internal/pfmodel"
+	"projectfile.org/projectfile/bridge/v4/internal/derive/ocisinks"
+	"projectfile.org/projectfile/bridge/v4/internal/pfmodel"
 )
 
 // Fixture literals shared across the table, declared once (goconst).

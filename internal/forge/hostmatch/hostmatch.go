@@ -18,7 +18,7 @@ import (
 	"slices"
 	"strings"
 
-	"projectfile.org/projectfile/bridge/internal/pfmodel"
+	"projectfile.org/projectfile/bridge/v4/internal/pfmodel"
 )
 
 // The capability sets of a public forge whose API a badge service reaches:

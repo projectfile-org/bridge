@@ -5,8 +5,8 @@
 package forgejo
 
 import (
-	"projectfile.org/projectfile/bridge/internal/forge/core"
-	"projectfile.org/projectfile/bridge/internal/forge/hostmatch"
+	"projectfile.org/projectfile/bridge/v4/internal/forge/core"
+	"projectfile.org/projectfile/bridge/v4/internal/forge/hostmatch"
 )
 
 func init() {

@@ -12,7 +12,7 @@ import (
 	"slices"
 
 	"kiota.ch/projectfile/core/v2/pkg/genlog"
-	"projectfile.org/projectfile/bridge/internal/forge/core"
+	"projectfile.org/projectfile/bridge/v4/internal/forge/core"
 )
 
 // errUnsupported names the protection a repository ruleset cannot carry without a bypass actor.

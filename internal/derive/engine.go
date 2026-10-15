@@ -8,9 +8,9 @@ package derive
 import (
 	"kiota.ch/projectfile/core/v2/pkg/genlog"
 	"kiota.ch/projectfile/core/v2/pkg/projectfile"
-	"projectfile.org/projectfile/bridge/internal/derive/forges"
-	"projectfile.org/projectfile/bridge/internal/derive/ocisinks"
-	"projectfile.org/projectfile/bridge/internal/pfmodel"
+	"projectfile.org/projectfile/bridge/v4/internal/derive/forges"
+	"projectfile.org/projectfile/bridge/v4/internal/derive/ocisinks"
+	"projectfile.org/projectfile/bridge/v4/internal/pfmodel"
 )
 
 // remotesKey is where AddVirtual parks the derived forge coordinates, nested

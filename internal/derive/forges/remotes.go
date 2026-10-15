@@ -11,8 +11,8 @@ import (
 
 	"kiota.ch/projectfile/core/v2/pkg/genlog"
 	"kiota.ch/projectfile/core/v2/pkg/projectfile"
-	"projectfile.org/projectfile/bridge/internal/forge/hostmatch"
-	"projectfile.org/projectfile/bridge/internal/pfmodel"
+	"projectfile.org/projectfile/bridge/v4/internal/forge/hostmatch"
+	"projectfile.org/projectfile/bridge/v4/internal/pfmodel"
 )
 
 // Keys of one derived remote. Named so the deriver, its tests, and the YAML

@@ -9,8 +9,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	_ "projectfile.org/projectfile/bridge/internal/scanners/all"
-	"projectfile.org/projectfile/bridge/internal/scanners/core"
+	_ "projectfile.org/projectfile/bridge/v4/internal/scanners/all"
+	"projectfile.org/projectfile/bridge/v4/internal/scanners/core"
 )
 
 func TestRunAllOnEmptyDirReportsNoFailure(t *testing.T) {

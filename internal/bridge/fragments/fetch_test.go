@@ -14,8 +14,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"projectfile.org/projectfile/bridge/internal/bridge/core"
-	"projectfile.org/projectfile/bridge/internal/pfmodel"
+	"projectfile.org/projectfile/bridge/v4/internal/bridge/core"
+	"projectfile.org/projectfile/bridge/v4/internal/pfmodel"
 )
 
 // spdxTag is split from its value so the REUSE scanner does not read the

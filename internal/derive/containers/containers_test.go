@@ -11,8 +11,8 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"kiota.ch/projectfile/core/v2/pkg/projectfile"
-	"projectfile.org/projectfile/bridge/internal/derive/containers"
-	"projectfile.org/projectfile/bridge/internal/pfmodel"
+	"projectfile.org/projectfile/bridge/v4/internal/derive/containers"
+	"projectfile.org/projectfile/bridge/v4/internal/pfmodel"
 )
 
 // keyRef is the sink-entry ref key, pulled out once (goconst).

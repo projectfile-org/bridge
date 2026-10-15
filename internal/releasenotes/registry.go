@@ -17,7 +17,7 @@ import (
 
 	"kiota.ch/projectfile/core/v2/pkg/genlog"
 	"kiota.ch/projectfile/core/v2/pkg/netfetch"
-	"projectfile.org/projectfile/bridge/internal/forge/core"
+	"projectfile.org/projectfile/bridge/v4/internal/forge/core"
 )
 
 const manifestAccept = "application/vnd.oci.image.index.v1+json, application/vnd.docker.distribution.manifest.list.v2+json, application/vnd.oci.image.manifest.v1+json, application/vnd.docker.distribution.manifest.v2+json"

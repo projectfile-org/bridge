@@ -14,7 +14,7 @@ import (
 	"go.yaml.in/yaml/v3"
 
 	"kiota.ch/projectfile/core/v2/pkg/projectfile"
-	"projectfile.org/projectfile/bridge/internal/bridge/shard"
+	"projectfile.org/projectfile/bridge/v4/internal/bridge/shard"
 )
 
 // fixtureYAML carries every synced field plus preserve-only keys (dependencies,

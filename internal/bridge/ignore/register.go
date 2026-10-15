@@ -5,7 +5,7 @@
 package ignore
 
 import (
-	"projectfile.org/projectfile/bridge/internal/bridge"
+	"projectfile.org/projectfile/bridge/v4/internal/bridge"
 )
 
 // targets is the single source of truth for which ignore files this

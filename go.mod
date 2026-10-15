@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: MIT
 
-module projectfile.org/projectfile/bridge
+module projectfile.org/projectfile/bridge/v4
 
 go 1.27.2
 

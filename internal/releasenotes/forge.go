@@ -13,11 +13,11 @@ import (
 	"kiota.ch/projectfile/core/v2/pkg/genlog"
 	"kiota.ch/projectfile/core/v2/pkg/interp"
 	"kiota.ch/projectfile/core/v2/pkg/projectfile"
-	"projectfile.org/projectfile/bridge/internal/bridge/readme"
-	"projectfile.org/projectfile/bridge/internal/derive"
-	"projectfile.org/projectfile/bridge/internal/derive/ocisinks"
-	"projectfile.org/projectfile/bridge/internal/forge/hostmatch"
-	"projectfile.org/projectfile/bridge/internal/pfmodel"
+	"projectfile.org/projectfile/bridge/v4/internal/bridge/readme"
+	"projectfile.org/projectfile/bridge/v4/internal/derive"
+	"projectfile.org/projectfile/bridge/v4/internal/derive/ocisinks"
+	"projectfile.org/projectfile/bridge/v4/internal/forge/hostmatch"
+	"projectfile.org/projectfile/bridge/v4/internal/pfmodel"
 )
 
 // ForgeMarker opens the forge half in a release body; publish replaces everything after it.

@@ -4,7 +4,7 @@
 
 package shard
 
-import "projectfile.org/projectfile/bridge/internal/bridge"
+import "projectfile.org/projectfile/bridge/v4/internal/bridge"
 
 func init() {
 	bridge.Register(Bridge{})

@@ -9,7 +9,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"kiota.ch/projectfile/core/v2/pkg/projectfile"
-	"projectfile.org/projectfile/bridge/internal/pfmodel"
+	"projectfile.org/projectfile/bridge/v4/internal/pfmodel"
 )
 
 // TestScalarToStringCoercesAxisShapes pins the matrix-cell rendering for every

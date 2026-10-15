@@ -14,7 +14,7 @@ import (
 
 	"kiota.ch/projectfile/core/v2/pkg/genlog"
 
-	"projectfile.org/projectfile/bridge/internal/commands"
+	"projectfile.org/projectfile/bridge/v4/internal/commands"
 )
 
 // installed reports whether name is a subcommand linked into this binary.

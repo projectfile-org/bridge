@@ -18,8 +18,8 @@ import (
 	"strings"
 
 	"kiota.ch/projectfile/core/v2/pkg/netfetch"
-	"projectfile.org/projectfile/bridge/internal/forge/core"
-	"projectfile.org/projectfile/bridge/internal/forge/hostmatch"
+	"projectfile.org/projectfile/bridge/v4/internal/forge/core"
+	"projectfile.org/projectfile/bridge/v4/internal/forge/hostmatch"
 )
 
 type driver struct {

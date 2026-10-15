@@ -8,7 +8,7 @@ import (
 	"os"
 	"strings"
 
-	"projectfile.org/projectfile/bridge/internal/forge/hostmatch"
+	"projectfile.org/projectfile/bridge/v4/internal/forge/hostmatch"
 )
 
 // Canonical hostnames per forge kind. Used only as a hint to log/error

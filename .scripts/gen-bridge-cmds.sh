@@ -18,7 +18,7 @@ set -eu
 # =============================================================================
 
 root="$(cd "$(dirname "$0")/.." && pwd)"
-mod="projectfile.org/projectfile/bridge"
+mod="projectfile.org/projectfile/bridge/v4"
 cmd_dir="${root}/cmd"
 
 log() { printf '[gen-bridge-cmds] %s\n' "$*" >&2; }

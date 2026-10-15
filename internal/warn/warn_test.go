@@ -14,7 +14,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"projectfile.org/projectfile/bridge/internal/warn"
+	"projectfile.org/projectfile/bridge/v4/internal/warn"
 )
 
 const driftMsg = "drift: file no longer matches the projectfile"

@@ -10,7 +10,7 @@ import (
 	"sync"
 
 	"kiota.ch/projectfile/core/v2/pkg/genlog"
-	"projectfile.org/projectfile/bridge/internal/source"
+	"projectfile.org/projectfile/bridge/v4/internal/source"
 )
 
 // Mirrors internal/bridge/registry.go: thread-safe map keyed by Name(),

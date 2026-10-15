@@ -15,10 +15,10 @@ import (
 	"github.com/spf13/cobra"
 
 	"kiota.ch/projectfile/core/v2/pkg/genlog"
-	"projectfile.org/projectfile/bridge/internal/buildinfo"
-	"projectfile.org/projectfile/bridge/internal/describe"
-	"projectfile.org/projectfile/bridge/internal/releasenotes"
-	"projectfile.org/projectfile/bridge/internal/rootflags"
+	"projectfile.org/projectfile/bridge/v4/internal/buildinfo"
+	"projectfile.org/projectfile/bridge/v4/internal/describe"
+	"projectfile.org/projectfile/bridge/v4/internal/releasenotes"
+	"projectfile.org/projectfile/bridge/v4/internal/rootflags"
 )
 
 var (

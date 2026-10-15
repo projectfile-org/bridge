@@ -25,9 +25,9 @@ import (
 	"kiota.ch/projectfile/core/v2/pkg/genlog"
 	"kiota.ch/projectfile/core/v2/pkg/projectfile"
 	"kiota.ch/projectfile/core/v2/pkg/spdx"
-	"projectfile.org/projectfile/bridge/internal/buildinfo"
-	"projectfile.org/projectfile/bridge/internal/describe"
-	"projectfile.org/projectfile/bridge/internal/rootflags"
+	"projectfile.org/projectfile/bridge/v4/internal/buildinfo"
+	"projectfile.org/projectfile/bridge/v4/internal/describe"
+	"projectfile.org/projectfile/bridge/v4/internal/rootflags"
 )
 
 // cacheRoot resolves the shared slot and names where it came from.

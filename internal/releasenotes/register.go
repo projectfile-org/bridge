@@ -7,7 +7,7 @@ package releasenotes
 import (
 	"embed"
 
-	"projectfile.org/projectfile/bridge/internal/bridge/core"
+	"projectfile.org/projectfile/bridge/v4/internal/bridge/core"
 )
 
 // summaryTemplate renders the summary line; a project overrides it under .projectfile/templates/.

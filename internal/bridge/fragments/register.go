@@ -7,8 +7,8 @@ package fragments
 import (
 	"embed"
 
-	"projectfile.org/projectfile/bridge/internal/bridge"
-	"projectfile.org/projectfile/bridge/internal/bridge/core"
+	"projectfile.org/projectfile/bridge/v4/internal/bridge"
+	"projectfile.org/projectfile/bridge/v4/internal/bridge/core"
 )
 
 //go:embed all:templates

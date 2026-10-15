@@ -8,7 +8,7 @@ import (
 	"fmt"
 
 	"kiota.ch/projectfile/core/v2/pkg/projectfile"
-	"projectfile.org/projectfile/bridge/internal/bridge/core"
+	"projectfile.org/projectfile/bridge/v4/internal/bridge/core"
 )
 
 // Bridge implements core.Syncer for the CODEOWNERS file (root, .github/, or

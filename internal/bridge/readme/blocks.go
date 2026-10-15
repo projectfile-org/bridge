@@ -8,7 +8,7 @@ import (
 	"strings"
 
 	"kiota.ch/projectfile/core/v2/pkg/projectfile"
-	"projectfile.org/projectfile/bridge/internal/pfmodel"
+	"projectfile.org/projectfile/bridge/v4/internal/pfmodel"
 )
 
 // Blocks renders the named README blocks in the default language, without the managed header.

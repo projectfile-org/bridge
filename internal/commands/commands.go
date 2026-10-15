@@ -6,35 +6,35 @@
 package commands
 
 import (
-	_ "projectfile.org/projectfile/bridge/internal/bridge/ai-policy"       // registers the ai-policy bridge
-	_ "projectfile.org/projectfile/bridge/internal/bridge/browserslist"    // registers the browserslist bridge
-	_ "projectfile.org/projectfile/bridge/internal/bridge/cff"             // registers the cff bridge
-	_ "projectfile.org/projectfile/bridge/internal/bridge/coc"             // registers the coc bridge
-	_ "projectfile.org/projectfile/bridge/internal/bridge/codeowners"      // registers the codeowners bridge
-	_ "projectfile.org/projectfile/bridge/internal/bridge/composer"        // registers the composer bridge
-	_ "projectfile.org/projectfile/bridge/internal/bridge/contributing"    // registers the contributing bridge
-	_ "projectfile.org/projectfile/bridge/internal/bridge/dei"             // registers the dei bridge
-	_ "projectfile.org/projectfile/bridge/internal/bridge/fragments"       // registers the fragments bridge
-	_ "projectfile.org/projectfile/bridge/internal/bridge/funding"         // registers the funding bridge
-	_ "projectfile.org/projectfile/bridge/internal/bridge/fundingjson"     // registers the fundingjson bridge
-	_ "projectfile.org/projectfile/bridge/internal/bridge/gitattributes"   // registers the gitattributes bridge
-	_ "projectfile.org/projectfile/bridge/internal/bridge/ignore"          // registers the ignore bridge
-	_ "projectfile.org/projectfile/bridge/internal/bridge/license"         // registers the license bridge
-	_ "projectfile.org/projectfile/bridge/internal/bridge/npm"             // registers the npm bridge
-	_ "projectfile.org/projectfile/bridge/internal/bridge/pyproject"       // registers the pyproject bridge
-	_ "projectfile.org/projectfile/bridge/internal/bridge/readme"          // registers the readme bridge
-	_ "projectfile.org/projectfile/bridge/internal/bridge/releaserc"       // registers the releaserc bridge
-	_ "projectfile.org/projectfile/bridge/internal/bridge/security"        // registers the security bridge
-	_ "projectfile.org/projectfile/bridge/internal/bridge/shard"           // registers the shard bridge
-	_ "projectfile.org/projectfile/bridge/internal/bridge/support"         // registers the support bridge
-	_ "projectfile.org/projectfile/bridge/internal/bridge/vulnerabilities" // registers the vulnerabilities bridge
-	_ "projectfile.org/projectfile/bridge/internal/bridge/yamllint"        // registers the yamllint bridge
-	"projectfile.org/projectfile/bridge/internal/bridgerun"
-	"projectfile.org/projectfile/bridge/internal/cachecmd"
-	"projectfile.org/projectfile/bridge/internal/forgecmd"
-	"projectfile.org/projectfile/bridge/internal/initcmd"
-	"projectfile.org/projectfile/bridge/internal/releasenotescmd"
-	"projectfile.org/projectfile/bridge/internal/scancmd"
+	_ "projectfile.org/projectfile/bridge/v4/internal/bridge/ai-policy"       // registers the ai-policy bridge
+	_ "projectfile.org/projectfile/bridge/v4/internal/bridge/browserslist"    // registers the browserslist bridge
+	_ "projectfile.org/projectfile/bridge/v4/internal/bridge/cff"             // registers the cff bridge
+	_ "projectfile.org/projectfile/bridge/v4/internal/bridge/coc"             // registers the coc bridge
+	_ "projectfile.org/projectfile/bridge/v4/internal/bridge/codeowners"      // registers the codeowners bridge
+	_ "projectfile.org/projectfile/bridge/v4/internal/bridge/composer"        // registers the composer bridge
+	_ "projectfile.org/projectfile/bridge/v4/internal/bridge/contributing"    // registers the contributing bridge
+	_ "projectfile.org/projectfile/bridge/v4/internal/bridge/dei"             // registers the dei bridge
+	_ "projectfile.org/projectfile/bridge/v4/internal/bridge/fragments"       // registers the fragments bridge
+	_ "projectfile.org/projectfile/bridge/v4/internal/bridge/funding"         // registers the funding bridge
+	_ "projectfile.org/projectfile/bridge/v4/internal/bridge/fundingjson"     // registers the fundingjson bridge
+	_ "projectfile.org/projectfile/bridge/v4/internal/bridge/gitattributes"   // registers the gitattributes bridge
+	_ "projectfile.org/projectfile/bridge/v4/internal/bridge/ignore"          // registers the ignore bridge
+	_ "projectfile.org/projectfile/bridge/v4/internal/bridge/license"         // registers the license bridge
+	_ "projectfile.org/projectfile/bridge/v4/internal/bridge/npm"             // registers the npm bridge
+	_ "projectfile.org/projectfile/bridge/v4/internal/bridge/pyproject"       // registers the pyproject bridge
+	_ "projectfile.org/projectfile/bridge/v4/internal/bridge/readme"          // registers the readme bridge
+	_ "projectfile.org/projectfile/bridge/v4/internal/bridge/releaserc"       // registers the releaserc bridge
+	_ "projectfile.org/projectfile/bridge/v4/internal/bridge/security"        // registers the security bridge
+	_ "projectfile.org/projectfile/bridge/v4/internal/bridge/shard"           // registers the shard bridge
+	_ "projectfile.org/projectfile/bridge/v4/internal/bridge/support"         // registers the support bridge
+	_ "projectfile.org/projectfile/bridge/v4/internal/bridge/vulnerabilities" // registers the vulnerabilities bridge
+	_ "projectfile.org/projectfile/bridge/v4/internal/bridge/yamllint"        // registers the yamllint bridge
+	"projectfile.org/projectfile/bridge/v4/internal/bridgerun"
+	"projectfile.org/projectfile/bridge/v4/internal/cachecmd"
+	"projectfile.org/projectfile/bridge/v4/internal/forgecmd"
+	"projectfile.org/projectfile/bridge/v4/internal/initcmd"
+	"projectfile.org/projectfile/bridge/v4/internal/releasenotescmd"
+	"projectfile.org/projectfile/bridge/v4/internal/scancmd"
 )
 
 // Mains maps a subcommand to the Main its standalone pf-bridge-<name> binary calls.

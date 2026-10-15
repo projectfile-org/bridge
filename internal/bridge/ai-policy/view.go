@@ -8,7 +8,7 @@ import (
 	"sort"
 
 	"kiota.ch/projectfile/core/v2/pkg/genlog"
-	"projectfile.org/projectfile/bridge/internal/pfmodel"
+	"projectfile.org/projectfile/bridge/v4/internal/pfmodel"
 )
 
 // policyView is the policy template data for one render. Every enum token

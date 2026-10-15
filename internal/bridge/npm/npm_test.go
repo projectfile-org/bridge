@@ -14,7 +14,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"kiota.ch/projectfile/core/v2/pkg/projectfile"
-	"projectfile.org/projectfile/bridge/internal/bridge/npm"
+	"projectfile.org/projectfile/bridge/v4/internal/bridge/npm"
 )
 
 const testAliceSmith = "Alice Smith"

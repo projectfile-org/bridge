@@ -14,7 +14,7 @@ import (
 	"strings"
 	"testing"
 
-	"projectfile.org/projectfile/bridge/internal/forge/core"
+	"projectfile.org/projectfile/bridge/v4/internal/forge/core"
 )
 
 func newTestDriver(server *httptest.Server) *driver {

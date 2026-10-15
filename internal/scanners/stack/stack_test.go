@@ -12,7 +12,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"projectfile.org/projectfile/bridge/internal/scanners/stack"
+	"projectfile.org/projectfile/bridge/v4/internal/scanners/stack"
 )
 
 func touch(t *testing.T, path string) {

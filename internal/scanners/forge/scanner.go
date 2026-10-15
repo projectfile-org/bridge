@@ -11,11 +11,11 @@ import (
 	"kiota.ch/projectfile/core/v2/pkg/genlog"
 	"kiota.ch/projectfile/core/v2/pkg/interp"
 	"kiota.ch/projectfile/core/v2/pkg/projectfile"
-	"projectfile.org/projectfile/bridge/internal/forge/hostmatch"
-	"projectfile.org/projectfile/bridge/internal/pfmodel"
-	"projectfile.org/projectfile/bridge/internal/rootflags"
-	"projectfile.org/projectfile/bridge/internal/scanners/core"
-	"projectfile.org/projectfile/bridge/internal/source"
+	"projectfile.org/projectfile/bridge/v4/internal/forge/hostmatch"
+	"projectfile.org/projectfile/bridge/v4/internal/pfmodel"
+	"projectfile.org/projectfile/bridge/v4/internal/rootflags"
+	"projectfile.org/projectfile/bridge/v4/internal/scanners/core"
+	"projectfile.org/projectfile/bridge/v4/internal/source"
 )
 
 const (

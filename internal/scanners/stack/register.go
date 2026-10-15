@@ -5,8 +5,8 @@
 package stack
 
 import (
-	"projectfile.org/projectfile/bridge/internal/scanners/core"
-	"projectfile.org/projectfile/bridge/internal/source"
+	"projectfile.org/projectfile/bridge/v4/internal/scanners/core"
+	"projectfile.org/projectfile/bridge/v4/internal/source"
 )
 
 // Scanner adapts the package's existing Scan walker to the core.Scanner

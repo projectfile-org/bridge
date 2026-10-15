@@ -13,14 +13,14 @@ import (
 	"kiota.ch/projectfile/core/v2/pkg/pflock"
 	"kiota.ch/projectfile/core/v2/pkg/projectfile"
 	"kiota.ch/projectfile/core/v2/pkg/userconfig"
-	"projectfile.org/projectfile/bridge/internal/pfmodel"
-	"projectfile.org/projectfile/bridge/internal/scanners/core"
-	"projectfile.org/projectfile/bridge/internal/source"
+	"projectfile.org/projectfile/bridge/v4/internal/pfmodel"
+	"projectfile.org/projectfile/bridge/v4/internal/scanners/core"
+	"projectfile.org/projectfile/bridge/v4/internal/source"
 
 	// Blank-imported aggregator pulls every scanner driver's init() into the
 	// build so they self-register with core. Adding a new scanner is a single
 	// line in scanners/all, not one per consumer.
-	_ "projectfile.org/projectfile/bridge/internal/scanners/all"
+	_ "projectfile.org/projectfile/bridge/v4/internal/scanners/all"
 )
 
 // formatYAML / formatTOML are the canonical names for the supported

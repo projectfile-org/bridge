@@ -6,7 +6,7 @@ package core
 
 import (
 	"kiota.ch/projectfile/core/v2/pkg/userconfig"
-	"projectfile.org/projectfile/bridge/internal/pfmodel"
+	"projectfile.org/projectfile/bridge/v4/internal/pfmodel"
 )
 
 // Per-target user-config fallbacks. Each helper gap-fills empty fields on

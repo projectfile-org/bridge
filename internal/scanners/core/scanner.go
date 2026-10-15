@@ -12,7 +12,7 @@ package core
 
 import (
 	"kiota.ch/projectfile/core/v2/pkg/projectfile"
-	"projectfile.org/projectfile/bridge/internal/source"
+	"projectfile.org/projectfile/bridge/v4/internal/source"
 )
 
 // HasProjectfile reports whether root holds a projectfile, the Detect probe of a scanner that reads one.

@@ -12,7 +12,7 @@ import (
 	"reflect"
 	"testing"
 
-	"projectfile.org/projectfile/bridge/internal/forge/core"
+	"projectfile.org/projectfile/bridge/v4/internal/forge/core"
 )
 
 // testOwner is the account the fake forge authenticates.

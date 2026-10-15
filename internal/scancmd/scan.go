@@ -17,18 +17,18 @@ import (
 	"kiota.ch/projectfile/core/v2/pkg/pflock"
 	"kiota.ch/projectfile/core/v2/pkg/projectfile"
 	"kiota.ch/projectfile/core/v2/pkg/selector"
-	"projectfile.org/projectfile/bridge/internal/buildinfo"
-	"projectfile.org/projectfile/bridge/internal/describe"
-	"projectfile.org/projectfile/bridge/internal/pfmodel"
-	"projectfile.org/projectfile/bridge/internal/rootflags"
-	"projectfile.org/projectfile/bridge/internal/scanners/core"
-	stackscan "projectfile.org/projectfile/bridge/internal/scanners/stack"
-	"projectfile.org/projectfile/bridge/internal/source"
+	"projectfile.org/projectfile/bridge/v4/internal/buildinfo"
+	"projectfile.org/projectfile/bridge/v4/internal/describe"
+	"projectfile.org/projectfile/bridge/v4/internal/pfmodel"
+	"projectfile.org/projectfile/bridge/v4/internal/rootflags"
+	"projectfile.org/projectfile/bridge/v4/internal/scanners/core"
+	stackscan "projectfile.org/projectfile/bridge/v4/internal/scanners/stack"
+	"projectfile.org/projectfile/bridge/v4/internal/source"
 
 	// Blank-imported aggregator pulls every scanner driver's init() into the
 	// build so they self-register with core. stackscan above is also imported
 	// non-blank because runStacksPhase calls its Scan/Diff/Union functions.
-	_ "projectfile.org/projectfile/bridge/internal/scanners/all"
+	_ "projectfile.org/projectfile/bridge/v4/internal/scanners/all"
 )
 
 // cmdAll is the "run everything" composite name, shared by the picker and the

@@ -13,7 +13,7 @@
 // Suppressed vulnerability IDs (CVE/GHSA) are NOT handled here — they live in
 // the tool-agnostic org.projectfile.vulnerabilities namespace and fan out to
 // scanner ignore files (.trivyignore, .grype.yaml, osv-scanner.toml) via
-// projectfile.org/projectfile/bridge/internal/bridge/vulnerabilities.
+// projectfile.org/projectfile/bridge/v4/internal/bridge/vulnerabilities.
 package ignore
 
 import (
@@ -25,8 +25,8 @@ import (
 	"strings"
 
 	"kiota.ch/projectfile/core/v2/pkg/projectfile"
-	"projectfile.org/projectfile/bridge/internal/bridge/core"
-	"projectfile.org/projectfile/bridge/internal/pfmodel"
+	"projectfile.org/projectfile/bridge/v4/internal/bridge/core"
+	"projectfile.org/projectfile/bridge/v4/internal/pfmodel"
 )
 
 const (

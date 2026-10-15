@@ -11,7 +11,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"projectfile.org/projectfile/bridge/internal/scanners/sinks"
+	"projectfile.org/projectfile/bridge/v4/internal/scanners/sinks"
 )
 
 const document = `---

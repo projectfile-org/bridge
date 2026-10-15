@@ -15,7 +15,7 @@ import (
 	"charm.land/lipgloss/v2"
 
 	"kiota.ch/projectfile/core/v2/pkg/selector"
-	"projectfile.org/projectfile/bridge/internal/source"
+	"projectfile.org/projectfile/bridge/v4/internal/source"
 )
 
 var (

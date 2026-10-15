@@ -6,7 +6,7 @@
 package main
 
 import (
-	"projectfile.org/projectfile/bridge/internal/forgecmd"
+	"projectfile.org/projectfile/bridge/v4/internal/forgecmd"
 )
 
 func main() { forgecmd.Main("pf-bridge-forge") }

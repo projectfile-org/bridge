@@ -11,7 +11,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"kiota.ch/projectfile/core/v2/pkg/projectfile"
-	"projectfile.org/projectfile/bridge/internal/derive/forges"
+	"projectfile.org/projectfile/bridge/v4/internal/derive/forges"
 )
 
 // owner is the repository owner every b19 mirror shares in these fixtures.

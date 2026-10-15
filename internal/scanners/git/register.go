@@ -4,7 +4,7 @@
 
 package git
 
-import "projectfile.org/projectfile/bridge/internal/scanners/core"
+import "projectfile.org/projectfile/bridge/v4/internal/scanners/core"
 
 func init() {
 	core.Register(authorsScanner{})
