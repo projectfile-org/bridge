@@ -16,13 +16,10 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"os/exec"
-	"path/filepath"
 	"slices"
 	"sort"
 	"strconv"
 	"strings"
-	"syscall"
 	"time"
 
 	"github.com/charmbracelet/colorprofile"
@@ -100,27 +97,20 @@ func main() {
 		return
 	}
 
-	// Git-style dispatch: pf-bridge <name> [args] → exec pf-bridge-<name>.
+	// Dispatch: pf-bridge <name> [args] runs pf-bridge-<name>.
 	name := args[0]
 	if err := leadingFlagError(name); err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %s\n", err)
 		os.Exit(2)
 	}
-	path, err := exec.LookPath(prefix + name)
-	if err != nil {
+	if !installed(name) {
 		fmt.Fprintf(os.Stderr,
-			"Error: unknown command %q — %s%s not found on PATH.\nInstalled: %s\n",
+			"Error: unknown command %q — %s%s not found.\nInstalled: %s\n",
 			name, prefix, name, strings.Join(discover(), ", "))
 		genlog.FlushDebug()
 		os.Exit(1)
 	}
-	// Replace this process so signals/exit codes pass through cleanly.
-	argv := append([]string{prefix + name}, args[1:]...)
-	if err := syscall.Exec(path, argv, os.Environ()); err != nil { // #nosec G702,G204 -- path resolved via PATH discovery on a fixed prefix; dispatching is this command's job
-		fmt.Fprintf(os.Stderr, "Error: exec %s: %s\n", path, err)
-		genlog.FlushDebug()
-		os.Exit(1)
-	}
+	dispatch(name, args[1:])
 }
 
 // runAll fans a bridge request across every installed file-bridge binary.
@@ -196,7 +186,7 @@ func declaredChildren(flags []string) []child {
 			warn.Record("skipped: not a file bridge", "tool", r.Tool, "name", r.Name)
 			continue
 		}
-		if _, err := exec.LookPath(prefix + r.Name); err != nil {
+		if !installed(r.Name) {
 			warn.Record("skipped: declared bridge is not installed",
 				"tool", r.Tool, "binary", prefix+r.Name)
 			continue
@@ -322,7 +312,7 @@ func runChildren(children []child) error {
 
 	var failed int
 	for _, c := range children {
-		cmd := exec.Command(prefix+c.name, c.args...) // #nosec G702,G204 -- name resolved via PATH discovery on a fixed prefix; dispatching is this command's job
+		cmd := command(context.Background(), c.name, c.args...)
 		cmd.Stdout, cmd.Stderr, cmd.Stdin = os.Stdout, os.Stderr, os.Stdin
 		cmd.Env = env
 		if err := cmd.Run(); err != nil {
@@ -367,11 +357,10 @@ func isPlatformArtifact(name string) bool {
 	return goosKnown[parts[len(parts)-2]] && goarchKnown[parts[len(parts)-1]]
 }
 
-// discover returns the sorted, de-duplicated set of pf-bridge-* suffixes found
-// as executables on PATH, minus cross-compile release artifacts.
-func discover() []string {
+// discoverIn returns the sorted, de-duplicated pf-bridge-* suffixes found in dirs, minus cross-compile release artifacts.
+func discoverIn(dirs []string) []string {
 	seen := map[string]bool{}
-	for _, dir := range filepath.SplitList(os.Getenv("PATH")) {
+	for _, dir := range dirs {
 		if dir == "" {
 			continue
 		}
@@ -473,7 +462,7 @@ func withDescriptions(names []string) []bridgeEntry {
 
 // probeDescribe asks one child who it is; empty when it cannot answer.
 func probeDescribe(ctx context.Context, name string) string {
-	cmd := exec.CommandContext(ctx, prefix+name, describe.Flag) // #nosec G204 -- probing the named sibling is this command's job
+	cmd := command(ctx, name, describe.Flag)
 	out, err := cmd.Output()
 	if err != nil {
 		return ""

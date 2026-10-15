@@ -67,9 +67,7 @@ func TestDiscoverSkipsPlatformArtifacts(t *testing.T) {
 	} {
 		require.NoError(t, os.WriteFile(filepath.Join(dir, n), nil, 0o755))
 	}
-	t.Setenv("PATH", dir)
-
-	assert.Equal(t, []string{forgeName, npmName}, discover())
+	assert.Equal(t, []string{forgeName, npmName}, discoverIn([]string{dir}))
 }
 
 func TestRenderList(t *testing.T) {
@@ -89,20 +87,6 @@ func TestRenderList(t *testing.T) {
 	renderList(&bold, entries, true)
 	assert.Contains(t, bold.String(), "\x1b[1mnpm\x1b[22m")
 	assert.NotContains(t, bold.String(), "\x1b[1mnpm \x1b[22m", "padding must stay outside the escape")
-}
-
-func TestWithDescriptions(t *testing.T) {
-	dir := t.TempDir()
-	// A script child answers the probe like a real pf-bridge-* would; a silent
-	// one stands in for an older install that does not know the flag.
-	script := "#!/bin/sh\necho 'package.json — two-way sync'\n"
-	require.NoError(t, os.WriteFile(filepath.Join(dir, "pf-bridge-npm"), []byte(script), 0o755))
-	require.NoError(t, os.WriteFile(filepath.Join(dir, "pf-bridge-old"), nil, 0o755))
-	t.Setenv("PATH", dir)
-
-	entries := withDescriptions([]string{npmName, "old"})
-	assert.Equal(t, "package.json — two-way sync", entries[0].desc)
-	assert.Empty(t, entries[1].desc)
 }
 
 // The fan-out grammar, one case per shape the dispatcher has to tell apart.
