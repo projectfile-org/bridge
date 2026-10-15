@@ -23,6 +23,7 @@ includes:
   - .makefile/b19/images/ubuntu.yaml
   - .makefile/b19/traits/image/attested.yaml
   - .makefile/b19/traits/image/signed.yaml
+  - .makefile/b19/vulnerabilities/deb/curl.yaml
   - .makefile/library/languages/go.yaml
   - .makefile/library/traits/go/binary.yaml
   - .makefile/library/traits/binary/signed.yaml

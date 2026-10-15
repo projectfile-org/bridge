@@ -61,3 +61,12 @@ gpg --encrypt --armor --recipient B64C122EE16C3746 message.txt
 
 Projectfile Bridges does not currently run a bug bounty programme. We still welcome
 responsibly disclosed reports — see the contact channel above.
+
+## Acknowledged Vulnerabilities
+
+The following findings were reviewed and are intentionally suppressed (a fix
+depends on an upstream release, or the advisory does not apply to this project):
+
+| ID | Reason |
+| --- | --- |
+| CVE-2026-92392 | unfixable cURL in the Ubuntu base (no fix published) |
