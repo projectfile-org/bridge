@@ -605,18 +605,18 @@ module is private, so a cold fetch needs `GOPRIVATE=kiota.ch/*`, an SSH
 
 ```sh
 make help           # categorised m6e target list
-make build-binaries # → dist/pf-bridge + every dist/pf-bridge-* (host-native off-matrix)
+make build-binaries # → dist/pf-bridge (host-native off-matrix)
 make install-binary # build-binaries + copy the whole set into ~/.local/bin
 make go-test        # host Go test suite
 go build ./... && go test ./...   # plain host toolchain
 ```
 
-`build-binaries.sh` writes two assets per cell: the standalone `pf-bridge-<os>-<arch>`
-and `pf-bridge-bridges-<version>-<os>-<arch>.tar.gz` (lookup dispatcher, every
-single-bridge binary, licence, readme; sorted, fixed mtime, owner and mode, so a
-rebuild is byte-identical). The m6e-only `install-binary` tool installs the
-standalone binary and unpacks the single-bridge ones beside it, because m6e calls
-`pf-bridge-release-notes` by name. There is no hand-written `build-local`/`install-local` — those
+`build-binaries.sh` writes one asset per cell, the standalone `pf-bridge-<os>-<arch>`.
+The single-bridge binaries are not released: together they weigh about 130 MB per
+cell, eight times the standalone, because each one links its own Go runtime. With
+`PF_BRIDGE_SINGLES=<dir>` it also builds them into that directory; the m6e-only
+`install-binary` tool does so and installs them beside the standalone binary,
+because m6e calls `pf-bridge-release-notes` by name. There is no hand-written `build-local`/`install-local` — those
 retired with the manifest model. `.scripts/`: `build-binaries.sh` (matrix
 cross-compile on the forge, host-native when the matrix binds no cell + a Git
 version fallback + an unsuffixed `dist/<name>` host copy), `install-binary.sh`

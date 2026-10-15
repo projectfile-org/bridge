@@ -22,15 +22,15 @@ install_one() { # $1 = binary basename
 	log "installed ${bin} -> ${dst}/$1"
 }
 
-# Build host-native (no version arg → build-binaries derives one from git).
+# Build host-native, the single-bridge binaries into dist/singles.
 log "building host-native pf-bridge set"
-.scripts/build-binaries.sh
+PF_BRIDGE_SINGLES=dist/singles .scripts/build-binaries.sh
 
 mkdir -p "${dst}"
 
-# The standalone dispatcher, then the single-bridge binaries from the cell archive.
+# The standalone dispatcher, then every single-bridge binary beside it.
 install_one pf-bridge
-for archive in dist/pf-bridge-bridges-*.tar.gz; do
-	log "installing the single-bridge binaries from ${archive} into ${dst}"
-	tar --extract --gzip --file="${archive}" --directory="${dst}" --wildcards './pf-bridge-*'
+for bin in dist/singles/pf-bridge-*; do
+	install -m 0755 "${bin}" "${dst}/${bin##*/}"
+	log "installed ${bin} -> ${dst}/${bin##*/}"
 done

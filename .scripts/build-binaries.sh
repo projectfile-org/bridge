@@ -6,7 +6,7 @@
 
 set -eu
 
-# build-binaries.sh — cross-compile the standalone pf-bridge and an archive of the single-bridge binaries for one GOOS/GOARCH.
+# build-binaries.sh — cross-compile the standalone pf-bridge for one GOOS/GOARCH.
 
 version="${1:-${GITHUB_REF_NAME:-}}"
 case "${version}" in
@@ -32,18 +32,12 @@ build() { # $1 output path   $2 package path   $3 extra go build flags (may be e
 # The standalone dispatcher with every bridge linked in: the asset an install fetches
 build "$(GOOS="${goos}" GOARCH="${goarch}" .makefile/core/scripts/asset-name.sh dist/pf-bridge)" .
 
-# The small single-purpose binaries beside a lookup-only dispatcher, as one archive
-stage=dist/.stage
-rm -rf dist/.stage
-mkdir -p dist/.stage
-build "${stage}/pf-bridge" . "-tags lookup"
+# The single-bridge binaries, only when PF_BRIDGE_SINGLES names a directory (local install)
+if [ -z "${PF_BRIDGE_SINGLES:-}" ]; then
+    log "PF_BRIDGE_SINGLES unset, built the standalone pf-bridge only for ${goos}/${goarch}"
+    exit 0
+fi
+mkdir -p "${PF_BRIDGE_SINGLES}"
 for d in cmd/pf-bridge-*/; do
-    build "${stage}/$(basename "${d}")" "./${d}"
+    build "${PF_BRIDGE_SINGLES}/$(basename "${d}")" "./${d}"
 done
-cp -R LICENSE LICENSES README.md "${stage}/"
-archive="$(GOOS="${goos}" GOARCH="${goarch}" .makefile/core/scripts/asset-name.sh "dist/pf-bridge-bridges-${version}").tar.gz"
-epoch="${SOURCE_DATE_EPOCH:-$(git log -1 --format=%ct 2>/dev/null || echo 0)}"
-set -- "${stage}"/*
-log "archiving $# entries into ${archive} mtime=@${epoch}"
-tar --create --directory="${stage}" --sort=name --mtime="@${epoch}" --owner=0 --group=0 --numeric-owner --mode='u+rwX,go+rX,go-w' . | gzip --no-name --best >"${archive}"
-rm -rf dist/.stage
