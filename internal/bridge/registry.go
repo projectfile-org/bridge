@@ -13,6 +13,8 @@
 package bridge
 
 import (
+	"path/filepath"
+	"runtime"
 	"sort"
 	"sync"
 
@@ -26,7 +28,31 @@ var (
 	mu      sync.RWMutex
 	byKey   = map[string]core.Bridge{}
 	primary = map[string]core.Bridge{}
+	// owner maps each Filename to the directory of the package that registered it, which names its command.
+	owner = map[string]string{}
+	scope string
 )
+
+// Scope limits Lookup, List and Filter to the bridges the named command's package registered; empty lifts the limit.
+func Scope(command string) {
+	mu.Lock()
+	defer mu.Unlock()
+	scope = command
+}
+
+// inScope reports whether the bridge registered as name belongs to the current scope; the caller holds mu.
+func inScope(name string) bool {
+	return scope == "" || owner[name] == scope
+}
+
+// callerPackage returns the directory name of the package whose init called Register.
+func callerPackage() string {
+	_, file, _, ok := runtime.Caller(2)
+	if !ok {
+		return ""
+	}
+	return filepath.Base(filepath.Dir(file))
+}
 
 // Register adds b to the registry. Panics on:
 //   - empty Filename (programmer error caught at init time)
@@ -50,6 +76,7 @@ func Register(b core.Bridge) {
 	}
 	primary[name] = b
 	byKey[name] = b
+	owner[name] = callerPackage()
 	for _, a := range b.Aliases() {
 		if a == "" {
 			continue
@@ -67,6 +94,9 @@ func Lookup(name string) (core.Bridge, bool) {
 	mu.RLock()
 	defer mu.RUnlock()
 	b, ok := byKey[name]
+	if ok && !inScope(b.Filename()) {
+		return nil, false
+	}
 	return b, ok
 }
 
@@ -75,8 +105,10 @@ func Lookup(name string) (core.Bridge, bool) {
 func List() []core.Bridge {
 	mu.RLock()
 	out := make([]core.Bridge, 0, len(primary))
-	for _, b := range primary {
-		out = append(out, b)
+	for name, b := range primary {
+		if inScope(name) {
+			out = append(out, b)
+		}
 	}
 	mu.RUnlock()
 	sort.Slice(out, func(i, j int) bool { return out[i].Filename() < out[j].Filename() })

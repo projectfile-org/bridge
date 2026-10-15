@@ -97,6 +97,7 @@ func failOnDrift() bool {
 // program name (e.g. "pf-bridge-readme"); the binary's blank-imports decide
 // which bridge(s) the registry holds.
 func Main(binName string) {
+	bridge.Scope(strings.TrimPrefix(binName, "pf-bridge-"))
 	root := &cobra.Command{
 		Use:   binName + " [to|from] [filename] [directory]",
 		Short: "Bridge projectfile with the external file(s) this binary carries",
