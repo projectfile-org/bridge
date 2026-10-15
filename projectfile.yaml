@@ -152,6 +152,8 @@ org:
           needs:
             binaries-are-signed: false
     status: maintained
+    release:
+      tag-prefix: v
 repositories:
   - branch: main
     role: origin
