@@ -66,6 +66,16 @@ If the registries above are unreachable, pull from the origin instead:
 docker pull kiota.ch/projectfile/bridge:latest
 ```
 
+### Go toolchain
+
+Install with the Go toolchain:
+
+```sh
+go install projectfile.org/projectfile/bridge/v4/cmd/pf-bridge@latest
+```
+
+Then run `pf-bridge --help`.
+
 ### Prebuilt binary
 
 Download the prebuilt binary for your platform from GitHub Releases:
@@ -76,6 +86,8 @@ curl --fail --location --output ~/.local/bin/pf-bridge https://github.com/projec
 chmod +x ~/.local/bin/pf-bridge
 ~/.local/bin/pf-bridge --help
 ```
+
+Published for: `linux/amd64`, `linux/arm64`, `linux/riscv64`, `darwin/amd64`, `darwin/arm64`
 
 To uninstall, delete that one file: `rm ~/.local/bin/pf-bridge`.
 

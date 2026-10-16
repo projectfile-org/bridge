@@ -68,6 +68,16 @@ docker pull damianbuho/projectfile-bridge:latest
 docker pull kiota.ch/projectfile/bridge:latest
 ```
 
+### Інструменти Go
+
+Встановіть за допомогою інструментів Go:
+
+```sh
+go install projectfile.org/projectfile/bridge/v4/cmd/pf-bridge@latest
+```
+
+Потім виконайте `pf-bridge --help`.
+
 ### Готовий бінарний файл
 
 Завантажте готовий бінарний файл для своєї платформи з випусків на GitHub:
@@ -78,6 +88,8 @@ curl --fail --location --output ~/.local/bin/pf-bridge https://github.com/projec
 chmod +x ~/.local/bin/pf-bridge
 ~/.local/bin/pf-bridge --help
 ```
+
+Опубліковано для: `linux/amd64`, `linux/arm64`, `linux/riscv64`, `darwin/amd64`, `darwin/arm64`
 
 Щоб видалити, зітріть цей єдиний файл: `rm ~/.local/bin/pf-bridge`.
 
