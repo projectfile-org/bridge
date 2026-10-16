@@ -326,67 +326,6 @@ func runChildren(children []child) error {
 	return nil
 }
 
-// goosKnown / goarchKnown are Go's platform vocabulary, used only to recognise
-// release artifacts (pf-bridge-npm-linux-x86_64) so discovery lists commands,
-// not their cross-compile copies. A bridge genuinely named "<goos>-<goarch>"
-// would be hidden — none is.
-var goosKnown = map[string]bool{
-	"aix": true, "android": true, "darwin": true, "dragonfly": true,
-	"freebsd": true, "illumos": true, "ios": true, "js": true, "linux": true,
-	"netbsd": true, "openbsd": true, "plan9": true, "solaris": true,
-	"wasip1": true, "windows": true, "zos": true,
-}
-
-var goarchKnown = map[string]bool{
-	"386": true, "amd64": true, "arm": true, "arm64": true, "arm64be": true,
-	"loong64": true, "mips": true, "mipsle": true, "mips64": true,
-	"mips64le": true, "ppc64": true, "ppc64le": true, "riscv64": true,
-	"s390x": true, "sparc": true, "sparc64": true, "wasm": true,
-	"x86_64": true, "aarch64": true, "i686": true, "i386": true, // uname -m spellings of the release assets
-}
-
-// isPlatformArtifact reports whether name ends in a <goos>-<goarch> pair — the
-// suffix every dist/release binary carries from the cross-compile matrix. The
-// suffixed dispatcher copy (pf-bridge-linux-x86_64) matches too, which matters:
-// listed as a "bridge" it would fan out into itself, forever.
-func isPlatformArtifact(name string) bool {
-	parts := strings.Split(name, "-")
-	if len(parts) < 2 {
-		return false
-	}
-	return goosKnown[parts[len(parts)-2]] && goarchKnown[parts[len(parts)-1]]
-}
-
-// discoverIn returns the sorted, de-duplicated pf-bridge-* suffixes found in dirs, minus cross-compile release artifacts.
-func discoverIn(dirs []string) []string {
-	seen := map[string]bool{}
-	for _, dir := range dirs {
-		if dir == "" {
-			continue
-		}
-		entries, err := os.ReadDir(dir)
-		if err != nil {
-			continue
-		}
-		for _, e := range entries {
-			n := e.Name()
-			if !strings.HasPrefix(n, prefix) || n == "pf-bridge" {
-				continue
-			}
-			suffix := strings.TrimPrefix(n, prefix)
-			if suffix != "" && !isPlatformArtifact(suffix) {
-				seen[suffix] = true
-			}
-		}
-	}
-	out := make([]string, 0, len(seen))
-	for s := range seen {
-		out = append(out, s)
-	}
-	sort.Strings(out)
-	return out
-}
-
 // listBridges writes every installed bridge with its self-description, grouped by category.
 func listBridges(w *os.File) {
 	names := discover()

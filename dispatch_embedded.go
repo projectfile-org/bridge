@@ -2,8 +2,6 @@
 //
 // SPDX-License-Identifier: MIT
 
-//go:build !lookup
-
 package main
 
 import (

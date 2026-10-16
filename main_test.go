@@ -5,8 +5,6 @@
 package main
 
 import (
-	"os"
-	"path/filepath"
 	"strings"
 	"testing"
 
@@ -25,50 +23,6 @@ const (
 	npmName   = "npm"
 	forgeName = "forge"
 )
-
-func TestIsPlatformArtifact(t *testing.T) {
-	cases := []struct {
-		name string
-		want bool
-	}{
-		{"npm-linux-amd64", true},
-		{"npm-linux-x86_64", true},
-		{"npm-linux-aarch64", true},
-		{"npm-darwin-arm64", true},
-		{"linux-amd64", true}, // the suffixed dispatcher copy
-		{npmName, false},
-		{"readme", false},
-		{forgeName, false},
-		{"codeowners", false},
-		{"linux", false}, // goos alone is not a pair
-		{"amd64", false}, // goarch alone is not a pair
-		{"npm-linux", false},
-		{"npm-amd64", false},
-	}
-	for _, tc := range cases {
-		t.Run(tc.name, func(t *testing.T) {
-			assert.Equal(t, tc.want, isPlatformArtifact(tc.name))
-		})
-	}
-}
-
-func TestDiscoverSkipsPlatformArtifacts(t *testing.T) {
-	dir := t.TempDir()
-	for _, n := range []string{
-		"pf-bridge", // the dispatcher itself
-		"pf-bridge-npm",
-		"pf-bridge-npm-linux-amd64",
-		"pf-bridge-linux-amd64",
-		"pf-bridge-npm-linux-aarch64",
-		"pf-bridge-linux-x86_64",
-		"pf-bridge-forge",
-		"pf-bridge-fragments-darwin-arm64",
-		"unrelated",
-	} {
-		require.NoError(t, os.WriteFile(filepath.Join(dir, n), nil, 0o755))
-	}
-	assert.Equal(t, []string{forgeName, npmName}, discoverIn([]string{dir}))
-}
 
 func TestRenderList(t *testing.T) {
 	entries := []bridgeEntry{
