@@ -59,3 +59,27 @@ func TestAllMatrixAxesUnionsNodeAxes(t *testing.T) {
 	assert.Equal(t, map[string][]string{"S": {"a"}, arch: {"amd64", "arm64", "riscv64"}}, pfmodel.AllMatrixAxes(doc, "org.projectfile.ci"))
 	assert.Equal(t, map[string][]string{"S": {"a"}}, pfmodel.MatrixAxes(doc, "org.projectfile.ci"), "the root-only reader is unchanged")
 }
+
+// TestAllMatrixDerivesArtifactNodes: `matrix: {artifact: NAME}` reads the record's lists, project-level arch as fallback, minus its exclude cells.
+func TestAllMatrixDerivesArtifactNodes(t *testing.T) {
+	const amd64, arm64, darwin, riscv64 = "amd64", "arm64", "darwin", "riscv64"
+	artifactNode := func(name string) map[string]any {
+		return map[string]any{"matrix": map[string]any{"artifact": name}}
+	}
+	doc := &projectfile.Document{Extensions: map[string]any{
+		"org.projectfile.architecture": []any{amd64, arm64, riscv64},
+		"org.projectfile.artifacts": map[string]any{"go-binary": map[string]any{
+			"operating-system": []any{"linux", darwin},
+			"exclude":          []any{map[string]any{"os": darwin, "arch": riscv64}},
+		}},
+		"org.projectfile.ci": map[string]any{"nodes": map[string]any{
+			"built": artifactNode("go-binary"),
+			"ghost": artifactNode("missing"),
+		}},
+	}}
+	matrix := pfmodel.AllMatrix(doc, "org.projectfile.ci")
+	assert.Equal(t, map[string][]string{"TARGET_OS": {"linux", darwin}, "TARGET_ARCH": {amd64, "arm64", riscv64}}, matrix.Axes)
+	assert.Equal(t, []map[string]string{{"TARGET_OS": darwin, "TARGET_ARCH": riscv64}}, matrix.Exclude)
+	assert.ElementsMatch(t, []string{"x-linux-amd64", "x-linux-arm64", "x-linux-riscv64", "x-darwin-amd64", "x-darwin-arm64"},
+		matrix.Expand([]string{"x-{TARGET_OS}-{TARGET_ARCH}"}), "five cells, darwin/riscv64 dropped")
+}

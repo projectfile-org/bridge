@@ -10,6 +10,7 @@ import (
 	"slices"
 	"strings"
 
+	"kiota.ch/projectfile/core/v2/pkg/genlog"
 	"kiota.ch/projectfile/core/v2/pkg/projectfile"
 )
 
@@ -67,7 +68,7 @@ func AllMatrixAxes(doc *projectfile.Document, ns string) map[string][]string {
 	nodes, _ := m["nodes"].(map[string]any)
 	for _, name := range slices.Sorted(maps.Keys(nodes)) {
 		node, _ := nodes[name].(map[string]any)
-		for axis, values := range MatrixAxesOf(node) {
+		for axis, values := range nodeMatrix(doc, name, node).Axes {
 			if axes == nil {
 				axes = map[string][]string{}
 			}
@@ -110,7 +111,70 @@ func AllMatrix(doc *projectfile.Document, ns string) Matrix {
 	nodes, _ := root["nodes"].(map[string]any)
 	for _, name := range slices.Sorted(maps.Keys(nodes)) {
 		node, _ := nodes[name].(map[string]any)
-		matrix.Exclude = append(matrix.Exclude, matrixExcludeOf(node)...)
+		matrix.Exclude = append(matrix.Exclude, nodeMatrix(doc, name, node).Exclude...)
+	}
+	return matrix
+}
+
+// Axes and record keys of the `matrix: {artifact: NAME}` form, as pf-ci lowers it.
+const (
+	targetOSAxis   = "TARGET_OS"
+	targetArchAxis = "TARGET_ARCH"
+)
+
+var artifactAxes = []struct{ axis, list, cell string }{
+	{targetArchAxis, "architecture", "arch"},
+	{targetOSAxis, "operating-system", "os"},
+}
+
+// nodeMatrix reads one node's matrix, deriving it from the artifact record when the node writes `matrix: {artifact: NAME}`.
+func nodeMatrix(doc *projectfile.Document, name string, node map[string]any) Matrix {
+	m, _ := node["matrix"].(map[string]any)
+	artifact, ok := m["artifact"].(string)
+	if !ok {
+		return Matrix{Axes: MatrixAxesOf(node), Exclude: matrixExcludeOf(node)}
+	}
+	matrix := artifactMatrix(doc, artifact)
+	genlog.Debug("node matrix from artifact record", "node", name, "artifact", artifact, "axes", matrix.Axes, "exclude", matrix.Exclude)
+	return matrix
+}
+
+// artifactMatrix builds TARGET_OS×TARGET_ARCH minus `exclude` from one artifact, falling back to the project-level lists.
+func artifactMatrix(doc *projectfile.Document, name string) Matrix {
+	arts, _, _ := lookupNS(doc, ArtifactsExtensionNS)
+	art, ok := arts[name].(map[string]any)
+	if !ok {
+		genlog.Warn("matrix.artifact names no org.projectfile.artifacts entry", "artifact", name)
+		return Matrix{}
+	}
+	matrix := Matrix{Axes: map[string][]string{}}
+	for _, a := range artifactAxes {
+		list := strListVal(art, a.list)
+		if len(list) == 0 {
+			raw, _ := projectfile.LookupExtension(doc, "org.projectfile."+a.list)
+			list = toStrSlice(raw)
+		}
+		if len(list) == 0 && a.list == "operating-system" {
+			list = []string{"linux"}
+		}
+		if len(list) == 0 {
+			genlog.Warn("matrix.artifact declares no platform list", "artifact", name, "list", a.list)
+			continue
+		}
+		matrix.Axes[a.axis] = list
+	}
+	cells, _ := art["exclude"].([]any)
+	for _, c := range cells {
+		cell, _ := c.(map[string]any)
+		row := map[string]string{}
+		for _, a := range artifactAxes {
+			if v := ScalarToString(cell[a.cell]); v != "" {
+				row[a.axis] = v
+			}
+		}
+		if len(row) > 0 {
+			matrix.Exclude = append(matrix.Exclude, row)
+		}
 	}
 	return matrix
 }
