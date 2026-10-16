@@ -91,6 +91,9 @@ org:
         executable: dist/pf-bridge
         kind: binary
         path: dist/pf-bridge
+        operating-system: [linux, darwin]
+        exclude:
+          - {os: darwin, arch: riscv64}
     ignores:
       git:
         include:
@@ -116,31 +119,9 @@ org:
     ci:
       nodes:
         binaries-are-built:
-          matrix:
-            axes:
-              GOARCH:
-                - amd64
-                - arm64
-                - riscv64
-              GOOS:
-                - linux
-                - darwin
-            exclude:
-              - GOARCH: riscv64
-                GOOS: darwin
+          matrix: {artifact: go-binary}
         gsa:
-          matrix:
-            axes:
-              GOARCH:
-                - amd64
-                - arm64
-                - riscv64
-              GOOS:
-                - linux
-                - darwin
-            exclude:
-              - GOARCH: riscv64
-                GOOS: darwin
+          matrix: {artifact: go-binary}
         # One torrent bundles every signed cell, so it waits on signing and runs once.
         binaries-are-torrented:
           needs:
