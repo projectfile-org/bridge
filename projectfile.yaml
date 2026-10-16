@@ -44,17 +44,17 @@ license:
   covers: project
 links:
   - label:
-      en: Projectfile Bridges on kiota.ch
-      es: Projectfile Bridges en kiota.ch
-      uk: Projectfile Bridges на kiota.ch
+      en: Repository on kiota.ch
+      es: Repositorio en kiota.ch
+      uk: Репозиторій на kiota.ch
     preferred: true
     priority: 10
     type: source-code
     url: https://kiota.ch/projectfile/bridge
   - label:
-      en: Projectfile Bridges on GitHub
-      es: Projectfile Bridges en GitHub
-      uk: Projectfile Bridges на GitHub
+      en: Repository on GitHub
+      es: Repositorio en GitHub
+      uk: Репозиторій на GitHub
     priority: 80
     tags:
       - public

@@ -79,8 +79,6 @@ chmod +x ~/.local/bin/pf-bridge
 ~/.local/bin/pf-bridge --help
 ```
 
-Опубліковано для: `linux/amd64`, `linux/arm64`, `linux/riscv64`, `darwin/amd64`, `darwin/arm64`
-
 Щоб видалити, зітріть цей єдиний файл: `rm ~/.local/bin/pf-bridge`.
 
 ## Використання

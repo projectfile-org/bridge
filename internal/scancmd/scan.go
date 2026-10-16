@@ -342,7 +342,6 @@ func applyPartialToDoc(doc *projectfile.Document, effectivePF *projectfile.Docum
 	}
 	effectivePeople := effectivePF.People
 	effectiveOrgs := effectivePF.Organizations
-	effectiveTitle := effectivePF.Identity.Title
 	if len(p.Stack) > 0 {
 		doc.Stack = stackscan.Union(doc.Stack, p.Stack)
 	}
@@ -373,23 +372,8 @@ func applyPartialToDoc(doc *projectfile.Document, effectivePF *projectfile.Docum
 	for _, l := range p.Links {
 		applyLink(doc, l, scanForce)
 	}
-	// Promote scanner-generated source-code labels from the "Source Code on X"
-	// noun placeholder to "{title} on X", so the label carries the project
-	// identity rather than a generic description. Localized: the placeholder
-	// and the promotion both follow the declared languages. Only links still
-	// carrying the placeholder are touched — a curated or already-promoted
-	// label is left alone (PromoteSourceCodeLabel returns nil).
-	if effectiveTitle != nil {
-		for i := range doc.Links {
-			l := &doc.Links[i]
-			if l.Type != projectfile.LinkSourceCode {
-				continue
-			}
-			if promoted := pfmodel.PromoteSourceCodeLabel(effectivePF, l.Label, effectiveTitle); promoted != nil {
-				l.Label = promoted
-			}
-		}
-	}
+	// Source-code links keep the generic "Repository on {forge}" label rather
+	// than repeating the project title; no placeholder-to-title promotion.
 	// Gap-fill the `support` tag onto the issues tracker so SUPPORT.md's
 	// "Before You Ask" lists it by default. A default, never forced: under
 	// --force it would overwrite the tags a scanner just proposed.

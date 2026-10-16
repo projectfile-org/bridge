@@ -12,8 +12,9 @@ import (
 
 // Localized "{subject} on {forge}" labels for derived links.
 //
-// scan + derive compose a link label from a subject (the project title for
-// source-code links, a type noun for Issues/Packages) and a forge display name
+// scan + derive compose a link label from a subject ("Repository" for
+// source-code links so the title no longer repeats the project name; a type
+// noun for Issues/Packages) and a forge display name
 // (a proper noun, never translated). When a project declares
 // org.projectfile.i18n.languages the label is emitted as a Langs map so each
 // locale gets its own connector word; a single-language project stays Bare so
@@ -29,6 +30,7 @@ import (
 // key (its placeholder subject before the title rewrite promotes it).
 const (
 	NounSourceCode    = "source-code"
+	NounRepository    = NounSourceCode
 	NounIssues        = "issues"
 	NounPackages      = "packages"
 	NounHomepage      = "homepage"
@@ -49,7 +51,7 @@ var onConnector = map[string]string{
 // is independent of the readme catalog's link.type.* values. A missing entry
 // degrades to English then to the bare key (nounWord).
 var linkNouns = map[string]map[string]string{
-	NounSourceCode:    {"en": "Source Code", "es": "Código fuente", "uk": "Вихідний код"},
+	NounSourceCode:    {"en": "Repository", "es": "Repositorio", "uk": "Репозиторій"},
 	NounIssues:        {"en": "Issues", "es": "Incidencias", "uk": "Задачі"},
 	NounPackages:      {"en": "Packages", "es": "Paquetes", "uk": "Пакунки"},
 	NounHomepage:      {"en": "Homepage", "es": "Página principal", "uk": "Головна сторінка"},
@@ -133,7 +135,13 @@ func ComposeOnLabel(pf *projectfile.Document, subject *projectfile.LocalizedStri
 	return &projectfile.LocalizedString{Langs: m}
 }
 
-// PromoteSourceCodeLabel replaces a scanner placeholder label (the "Source
+// PromoteRepositoryLabel is the alias introduced for the "Repository on {forge}"
+// switch; it delegates to PromoteSourceCodeLabel so existing callers keep work-
+// ing while new code can spell the renamed concept.
+func PromoteRepositoryLabel(pf *projectfile.Document, label, title *projectfile.LocalizedString) *projectfile.LocalizedString {
+	return PromoteSourceCodeLabel(pf, label, title)
+}
+
 // Code on {forge}" noun form, in any locale) with one whose subject is title,
 // recomposed per declared language. It is the localized successor to the scan
 // title-rewrite: the scanner writes the noun placeholder (it sees only the
