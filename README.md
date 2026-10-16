@@ -79,6 +79,8 @@ chmod +x ~/.local/bin/pf-bridge
 
 Published for: `linux/amd64`, `linux/arm64`, `linux/riscv64`, `darwin/amd64`, `darwin/arm64`
 
+To uninstall, delete that one file: `rm ~/.local/bin/pf-bridge`.
+
 ## Usage
 
 ### pf-bridge
