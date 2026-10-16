@@ -76,7 +76,7 @@ func TestScanMaterializesTemplates(t *testing.T) {
 	assert.Equal(t, "https://kiota.ch/b19/go", p.Links[0].URL)
 	assert.True(t, p.Links[0].Preferred)
 	assert.Equal(t, 10, p.Links[0].Extra["priority"], "priority rides the extra channel untouched")
-	assert.Equal(t, "Source Code on kiota.ch", p.Links[0].Label.Langs["en"], "no label → the noun placeholder the promotion rewrites")
+	assert.Equal(t, "Repository on kiota.ch", p.Links[0].Label.Langs["en"], "no label → the noun placeholder")
 	assert.Equal(t, "https://kiota.ch/b19/go/issues", p.Links[1].URL)
 	assert.Equal(t, "Incidencias en kiota.ch", p.Links[1].Label.Langs["es"])
 	assert.Equal(t, "go mirror on GitHub", p.Links[2].Label.Langs["en"], "an explicit label is expanded in place")

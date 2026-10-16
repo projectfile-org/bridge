@@ -89,7 +89,7 @@ func TestNounLabelTranslatesSubjects(t *testing.T) {
 		"en": "Packages", "es": "Paquetes", "uk": "Пакунки",
 	}, pfmodel.NounLabel(pf, pfmodel.NounPackages).Langs)
 	assert.Equal(t, map[string]string{
-		"en": "Source Code", "es": "Código fuente", "uk": "Вихідний код",
+		"en": "Repository", "es": "Repositorio", "uk": "Репозиторій",
 	}, pfmodel.NounLabel(pf, pfmodel.NounSourceCode).Langs)
 }
 
