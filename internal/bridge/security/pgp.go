@@ -81,7 +81,7 @@ func linkCarriesKey(fp, gpgKey, gpgKeyURL string) bool {
 	if gpgKey == "" || strings.HasSuffix(strings.ReplaceAll(fp, " ", ""), strings.ToUpper(gpgKey)) {
 		return true
 	}
-	genlog.Warn("pgp-key link carries another key; ignoring it",
+	genlog.Debug("pgp-key link carries another key; ignoring it",
 		"url", gpgKeyURL, "fingerprint", fp, "gpg-key", gpgKey)
 	return false
 }
