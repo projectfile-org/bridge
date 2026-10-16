@@ -85,7 +85,7 @@ func TestFormatFingerprint(t *testing.T) {
 func TestDeriveFingerprintOfflineSkipsNetwork(t *testing.T) {
 	// No server started; if Offline is ignored, this would dial and fail.
 	withTempCache(t, func() {
-		fp, src := deriveFingerprint("B64C122EE16C3746", "",
+		fp, src, _ := deriveFingerprint("B64C122EE16C3746", "",
 			core.Options{Offline: true})
 		assert.Empty(t, fp, "offline with empty cache must not derive")
 		assert.Empty(t, src)
@@ -97,10 +97,45 @@ func TestDeriveFingerprintOfflineSkipsNetwork(t *testing.T) {
 func TestDeriveFingerprintOfflineReadsCache(t *testing.T) {
 	withTempCache(t, func() {
 		storeCachedFingerprint(cacheKeyURL(keysOpenPGPKeyByID+"B64C122EE16C3746"), expectedFP)
-		fp, src := deriveFingerprint("B64C122EE16C3746", "",
+		fp, src, _ := deriveFingerprint("B64C122EE16C3746", "",
 			core.Options{Offline: true})
 		assert.Equal(t, expectedFP, fp)
 		assert.Contains(t, src, "cached")
+	})
+}
+
+// TestDeriveFingerprintRejectsLinkToAnotherKey pins that a pgp-key link carrying another key yields neither its fingerprint nor its URL.
+func TestDeriveFingerprintRejectsLinkToAnotherKey(t *testing.T) {
+	const link = "https://example.org/release.asc"
+	withTempCache(t, func() {
+		storeCachedFingerprint(cacheKeyURL(link), "8F89 CBF7 C8D5 1F8B EC75  33C0 0925 F8F7 9EBD 3257")
+		storeCachedFingerprint(cacheKeyURL(keysOpenPGPKeyByID+"B64C122EE16C3746"), expectedFP)
+		fp, src, keyURL := deriveFingerprint("B64C122EE16C3746", link, core.Options{Offline: true})
+		assert.Equal(t, expectedFP, fp)
+		assert.Contains(t, src, "keys.openpgp.org")
+		assert.Empty(t, keyURL)
+	})
+}
+
+// TestDeriveFingerprintKeepsLinkToSameKey pins that a pgp-key link carrying gpg-key wins and keeps its URL, case-insensitively.
+func TestDeriveFingerprintKeepsLinkToSameKey(t *testing.T) {
+	const link = "https://example.org/messaging.asc"
+	withTempCache(t, func() {
+		storeCachedFingerprint(cacheKeyURL(link), expectedFP)
+		fp, src, keyURL := deriveFingerprint("b64c122ee16c3746", link, core.Options{Offline: true})
+		assert.Equal(t, expectedFP, fp)
+		assert.Contains(t, src, "pgp-key")
+		assert.Equal(t, link, keyURL)
+	})
+}
+
+// TestDeriveFingerprintKeepsUnreadLink pins that a link nothing was derived from stays in the render.
+func TestDeriveFingerprintKeepsUnreadLink(t *testing.T) {
+	const link = "https://example.org/messaging.asc"
+	withTempCache(t, func() {
+		fp, _, keyURL := deriveFingerprint("B64C122EE16C3746", link, core.Options{Offline: true})
+		assert.Empty(t, fp)
+		assert.Equal(t, link, keyURL)
 	})
 }
 

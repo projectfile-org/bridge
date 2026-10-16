@@ -30,39 +30,38 @@ import (
 // via links[].type=pgp-key) is tried first.
 const keysOpenPGPKeyByID = "https://keys.openpgp.org/vks/v1/by-keyid/"
 
-// deriveFingerprint fills an empty fingerprint by fetching the armored public
-// key and parsing its primary-key packet. It tries the links[].type=pgp-key URL
-// first (self-hosted, authoritative), then keys.openpgp.org keyed by gpgKey.
-//
-// Returns ("", "") when the fingerprint is already known, when Offline is set
-// (cache read only), when no source is available, or when every fetch failed.
-// A derive failure NEVER blocks the render: the verify section simply omits, as
-// it did before the derive existed.
-func deriveFingerprint(gpgKey, gpgKeyURL string, opts core.Options) (fingerprint, source string) {
+// deriveFingerprint derives gpgKey's fingerprint from the pgp-key link, then keys.openpgp.org; keyURL drops a link proven to carry another key.
+func deriveFingerprint(gpgKey, gpgKeyURL string, opts core.Options) (fingerprint, source, keyURL string) {
+	keyURL = gpgKeyURL
 	if opts.Offline {
-		// Cache read only: an offline run must not reach the network. The cache
-		// keys mirror the online write path (URL-keyed), so a fingerprint
-		// derived online earlier in the same cache is reused offline.
+		// Cache read only: an offline run must not reach the network.
 		if gpgKeyURL != "" {
 			if fp := loadCachedFingerprint(cacheKeyURL(gpgKeyURL)); fp != "" {
-				return fp, "derived:links[].type=pgp-key (cached)"
+				if linkCarriesKey(fp, gpgKey, gpgKeyURL) {
+					return fp, "derived:links[].type=pgp-key (cached)", keyURL
+				}
+				keyURL = ""
 			}
 		}
 		if gpgKey != "" {
 			if fp := loadCachedFingerprint(cacheKeyURL(keysOpenPGPKeyByID + gpgKey)); fp != "" {
-				return fp, "derived:keys.openpgp.org (cached)"
+				return fp, "derived:keys.openpgp.org (cached)", keyURL
 			}
 		}
-		return "", ""
+		return "", "", keyURL
 	}
 
 	if gpgKeyURL != "" {
 		fp, err := deriveFromURL(gpgKeyURL, opts)
-		if err != nil {
+		switch {
+		case err != nil:
 			genlog.Warn("gpg-fingerprint derive failed; falling through",
 				"source", "links[].type=pgp-key", "error", err.Error())
-		} else if fp != "" {
-			return fp, "derived:links[].type=pgp-key"
+		case fp == "":
+		case linkCarriesKey(fp, gpgKey, gpgKeyURL):
+			return fp, "derived:links[].type=pgp-key", keyURL
+		default:
+			keyURL = ""
 		}
 	}
 	if gpgKey != "" {
@@ -71,10 +70,20 @@ func deriveFingerprint(gpgKey, gpgKeyURL string, opts core.Options) (fingerprint
 			genlog.Warn("gpg-fingerprint derive failed; omitting verify section",
 				"source", "keys.openpgp.org", "error", err.Error())
 		} else if fp != "" {
-			return fp, "derived:keys.openpgp.org"
+			return fp, "derived:keys.openpgp.org", keyURL
 		}
 	}
-	return "", ""
+	return "", "", keyURL
+}
+
+// linkCarriesKey reports whether fp belongs to gpgKey (any key when gpgKey is unset), warning on a mismatch.
+func linkCarriesKey(fp, gpgKey, gpgKeyURL string) bool {
+	if gpgKey == "" || strings.HasSuffix(strings.ReplaceAll(fp, " ", ""), strings.ToUpper(gpgKey)) {
+		return true
+	}
+	genlog.Warn("pgp-key link carries another key; ignoring it",
+		"url", gpgKeyURL, "fingerprint", fp, "gpg-key", gpgKey)
+	return false
 }
 
 // deriveFromURL fetches an armored key (cache first — a fingerprint is

@@ -100,7 +100,7 @@ func (Bridge) Render(pf *projectfile.Document, opts core.Options) (core.Output, 
 	fp := ext.GPGFingerprint
 	fpSrc := "[org.projectfile.security].gpg-fingerprint"
 	if fp == "" {
-		fp, fpSrc = deriveFingerprint(ext.GPGKey, gpgKeyURL, opts)
+		fp, fpSrc, gpgKeyURL = deriveFingerprint(ext.GPGKey, gpgKeyURL, opts)
 	}
 
 	emitDecisionTrace(contact, contactSrc, ext, window, windowSrc, gpgKeyURL, len(acknowledged), fp, fpSrc)
