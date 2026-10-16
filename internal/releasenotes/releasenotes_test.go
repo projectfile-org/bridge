@@ -284,7 +284,7 @@ func TestRenderForge(t *testing.T) {
 	assert.Contains(t, got, "### Container image\n\nThe signature proves this project’s CI built and pushed the image.\n")
 	assert.Contains(t, got, "COSIGN_KEY=https://example.org/cosign.pub\ncosign verify --key \"$COSIGN_KEY\" --insecure-ignore-tlog=true kiota.example/x:1.2.0\n")
 	assert.Contains(t, got, "### Prebuilt binary\n")
-	assert.Contains(t, got, "gpg --keyserver hkps://keys.openpgp.org --recv-keys ABCD1234\ncurl --fail --location --output x.asc https://kiota.example/o/x/releases/download/v1.2.0/x-$(uname -s).asc\ngpg --verify x.asc x\n")
+	assert.Contains(t, got, "gpg --keyserver hkps://keys.openpgp.org --recv-keys ABCD1234\ncurl --fail --location --output x.asc https://kiota.example/o/x/releases/download/v1.2.0/x-$(uname -s).asc\ngpg --verify x.asc ~/.local/bin/x\n")
 	assert.Contains(t, got, "gpg --verify x-SHA256SUMS.asc x-SHA256SUMS\nsha256sum --check --ignore-missing x-SHA256SUMS\n")
 	assert.NotContains(t, got, "ghcr.example")
 	assert.NotContains(t, got, "verify-attestation")

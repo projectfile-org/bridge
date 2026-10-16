@@ -30,8 +30,9 @@ const (
 	attestedNode  = "org.projectfile.ci.nodes.image-is-attested"
 	gpgReleaseKey = "${people[0].handles.gpg-key.release}"
 	hostCommand   = "${org.projectfile.artifacts{kind=binary}.command}"
-	// hostSignatureURL mirrors the release-binary install command in m6e/library traits/binary-release.yaml.
+	// hostSignatureURL and installDir mirror the release-binary install command in m6e/library traits/binary/release.yaml.
 	hostSignatureURL = "${org.projectfile.forge.remotes.github.url}/releases/${org.projectfile.readme.download}/${org.projectfile.artifacts{kind=binary}.host-asset}.asc"
+	installDir       = "~/.local/bin/"
 	binaryEntry      = "release-binary"
 	binaryPrefix     = "Download the prebuilt binary for your platform from this release:"
 )
@@ -235,7 +236,7 @@ func binaryVerify(pf *projectfile.Document, assets []string) []string {
 	sums := checksumList(assets)
 	genlog.Debug("checksum list", "file", or(sums, "<none>"))
 	if cmd, sig, ok := hostSignature(pf); ok {
-		lines = append(lines, "curl --fail --location --output "+cmd+".asc "+sig, "gpg --verify "+cmd+".asc "+cmd)
+		lines = append(lines, "curl --fail --location --output "+cmd+".asc "+sig, "gpg --verify "+cmd+".asc "+installDir+cmd)
 		if sums == "" {
 			return lines
 		}
