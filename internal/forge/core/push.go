@@ -287,15 +287,15 @@ func buildDesiredSnapshot(pf *projectfile.Document) (Snapshot, error) {
 	if pf == nil {
 		return snap, nil
 	}
-	// Description: summary first, then first line of description. Forges
-	// expose a single description slot and don't render markdown there, so
-	// the first paragraph of the full description is the closest analogue.
-	summary := projectfile.ExtractLocalizedString(pf.Identity.Summary)
-	if summary != "" {
-		snap.Description = summary
+	// Description: the project description first, falling back to the
+	// summary when no description is set. Forges expose a single
+	// description slot and don't render markdown there, so the first
+	// paragraph of the full description is the closest analogue.
+	desc := firstLine(projectfile.ExtractLocalizedString(pf.Identity.Description))
+	if desc != "" {
+		snap.Description = desc
 	} else {
-		desc := projectfile.ExtractLocalizedString(pf.Identity.Description)
-		snap.Description = firstLine(desc)
+		snap.Description = projectfile.ExtractLocalizedString(pf.Identity.Summary)
 	}
 	snap.Homepage = pfmodel.LinkURL(pf, projectfile.LinkHomepage)
 	snap.Topics = LowerTopics(pf.Keywords)
