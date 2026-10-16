@@ -31,7 +31,7 @@
   }
 
   # The pf-bridge dispatcher (module root) + one binary per cmd/pf-bridge-*.
-  build_one pf-bridge .
+  build_one pf-bridge ./cmd/pf-bridge
   for dir in cmd/pf-bridge-*/; do
     build_one "$(basename "${dir}")" "./${dir}"
   done

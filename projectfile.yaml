@@ -88,6 +88,7 @@ org:
     artifacts:
       go-binary:
         command: pf-bridge
+        module: projectfile.org/projectfile/bridge/v4/cmd/pf-bridge
         executable: dist/pf-bridge
         kind: binary
         path: dist/pf-bridge

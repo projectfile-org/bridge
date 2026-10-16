@@ -30,7 +30,7 @@ build() { # $1 output path   $2 package path   $3 extra go build flags (may be e
 }
 
 # The standalone dispatcher with every bridge linked in: the asset an install fetches
-build "$(GOOS="${goos}" GOARCH="${goarch}" .makefile/core/scripts/asset-name.sh dist/pf-bridge)" .
+build "$(GOOS="${goos}" GOARCH="${goarch}" .makefile/core/scripts/asset-name.sh dist/pf-bridge)" ./cmd/pf-bridge
 
 # The single-bridge binaries, only when PF_BRIDGE_SINGLES names a directory (local install)
 if [ -z "${PF_BRIDGE_SINGLES:-}" ]; then

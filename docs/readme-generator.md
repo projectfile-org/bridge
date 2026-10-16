@@ -1241,7 +1241,7 @@ For example, to write a project-specific installation block:
 Install `{{.}}` with:
 
 ```sh
-go install projectfile.org/projectfile/bridge/v4@latest
+go install projectfile.org/projectfile/bridge/v4/cmd/pf-bridge@latest
 ```
 {{end -}}
 ````

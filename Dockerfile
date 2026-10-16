@@ -30,7 +30,7 @@ ARG TARGETARCH
 ENV GOPROXY=${GOPROXY}
 
 COPY --chown=${B19_UID}:${B19_GID} .container/compile-go/           /
-COPY --chown=${B19_UID}:${B19_GID} *.go go.mod go.sum               ${B19_HOME}/
+COPY --chown=${B19_UID}:${B19_GID} go.mod go.sum                    ${B19_HOME}/
 COPY --chown=${B19_UID}:${B19_GID} internal/                        ${B19_HOME}/internal/
 COPY --chown=${B19_UID}:${B19_GID} cmd/                             ${B19_HOME}/cmd/
 
