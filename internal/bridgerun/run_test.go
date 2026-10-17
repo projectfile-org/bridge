@@ -6,15 +6,19 @@ package bridgerun
 
 import (
 	"bytes"
+	"fmt"
 	"os"
+	"strings"
 	"testing"
 
 	"github.com/spf13/cobra"
 	"github.com/stretchr/testify/assert"
 
+	"kiota.ch/projectfile/core/v2/pkg/genlog"
 	"kiota.ch/projectfile/core/v2/pkg/projectfile"
 	"projectfile.org/projectfile/bridge/v4/internal/bridge"
 	"projectfile.org/projectfile/bridge/v4/internal/bridge/core"
+	"projectfile.org/projectfile/bridge/v4/internal/rootflags"
 )
 
 // Fakes for the registry-driven describeLine: Bridge identity plus the one
@@ -87,4 +91,36 @@ func TestNoTerminalStdinListsInsteadOfPrompting(t *testing.T) {
 	cmd.SetOut(&out)
 	assert.NoError(t, runBridge(cmd, nil))
 	assert.Contains(t, out.String(), "tty-one\ntty-two\n")
+}
+
+// TestHelpTemplateStylesOnlyForColour pins that the help title is plain in a pipe and styled under --colors=always.
+func TestHelpTemplateStylesOnlyForColour(t *testing.T) {
+	tmpl := helpTemplate("pf-bridge-readme", "BASE\n")
+	for _, tc := range []struct {
+		mode string
+		ansi bool
+	}{{genlog.ColorAuto, false}, {genlog.ColorAlways, true}} {
+		assert.NoError(t, genlog.SetColor(tc.mode))
+		var buf bytes.Buffer
+		_, _ = fmt.Fprint(genlog.Styled(&buf), tmpl)
+		got := buf.String()
+		assert.Contains(t, got, "pf-bridge-readme")
+		assert.Contains(t, got, "BASE")
+		assert.Equal(t, tc.ansi, strings.Contains(got, "\x1b["), "colors=%s: %q", tc.mode, got)
+	}
+	assert.NoError(t, genlog.SetColor(genlog.ColorAuto))
+}
+
+// TestRootHelpCarriesTitleAndNoteOnce pins Main’s help wiring: the title leads and the env-var note prints once.
+func TestRootHelpCarriesTitleAndNoteOnce(t *testing.T) {
+	root := &cobra.Command{Use: "pf-bridge-readme", Run: func(*cobra.Command, []string) {}}
+	rootflags.Bind(root)
+	root.SetHelpTemplate(helpTemplate("pf-bridge-readme", root.HelpTemplate()))
+	var buf bytes.Buffer
+	root.SetOut(genlog.Styled(&buf))
+	root.SetArgs([]string{"--help"})
+	assert.NoError(t, root.Execute())
+	got := buf.String()
+	assert.True(t, strings.HasPrefix(got, "pf-bridge-readme\n"), "help starts %q", got)
+	assert.Equal(t, 1, strings.Count(got, "defaults from its PF_BRIDGE_* env var"))
 }

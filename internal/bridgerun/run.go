@@ -95,6 +95,11 @@ func failOnDrift() bool {
 	return v
 }
 
+// helpTemplate prefixes cobra’s help with the styled binary name.
+func helpTemplate(binName, base string) string {
+	return lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("212")).Render(binName) + "\n\n" + base
+}
+
 // Main is the entry point of a per-bridge binary. binName is the argv[0]-style
 // program name (e.g. "pf-bridge-readme"); the binary's blank-imports decide
 // which bridge(s) the registry holds.
@@ -102,7 +107,7 @@ func Main(binName string) {
 	bridge.Scope(strings.TrimPrefix(binName, "pf-bridge-"))
 	root := &cobra.Command{
 		Use:   binName + " [to|from] [filename] [directory]",
-		Short: lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("212")).Render("pf-bridge") + " — keep every project file in sync with your projectfile document",
+		Short: binName + " — keep every project file in sync with your projectfile document",
 		Long: "Two-way bridge between projectfile and the metadata file(s) this\n" +
 			"binary provides. The first positional may be the preposition 'to' or\n" +
 			"'from' to force direction; otherwise the sync converges without\n" +
@@ -148,7 +153,7 @@ func Main(binName string) {
 	root.Flags().BoolVar(&bridgeList, "list", false,
 		"print every registered bridge filename and exit")
 	rootflags.Bind(root)
-	root.SetHelpTemplate(root.HelpTemplate() + "\nEvery --flag above defaults from its PF_BRIDGE_* env var.\n")
+	root.SetHelpTemplate(helpTemplate(binName, root.HelpTemplate()))
 
 	// The dispatcher's listing probe: answer before cobra runs so no config
 	// or lock work happens.
