@@ -25,9 +25,9 @@ includes:
   - .makefile/b19/traits/image/attested.yaml
   - .makefile/b19/traits/image/signed.yaml
   - .makefile/library/languages/go.yaml
-  - .makefile/library/traits/go/binary.yaml
   - .makefile/library/traits/binary/signed.yaml
   - .makefile/library/traits/binary/torrent.yaml
+  - .makefile/library/traits/go/binary.yaml
   - https://kiota.ch/damian-buho/metadata/raw/branch/main/forge/github.yaml
   - https://kiota.ch/damian-buho/metadata/raw/branch/main/include.yaml
   - https://kiota.ch/damian-buho/metadata/raw/branch/main/registry/dockerhub.yaml
@@ -84,6 +84,24 @@ links:
       uk: Пакунки на Docker Hub
     type: package-registry
     url: https://hub.docker.com/r/damianbuho/projectfile-bridge
+  - label:
+      en: Repository on Codeberg
+      es: Repositorio en Codeberg
+      uk: Репозиторій на Codeberg
+    tags:
+      - public
+      - badges
+      - badges-gitea
+    type: source-code
+    url: https://codeberg.org/projectfile/bridge
+  - label:
+      en: Issues on Codeberg
+      es: Incidencias en Codeberg
+      uk: Задачі на Codeberg
+    tags:
+      - support
+    type: bugs
+    url: https://codeberg.org/projectfile/bridge/issues
 org:
   projectfile:
     artifacts:
@@ -144,5 +162,8 @@ repositories:
   - role: mirror
     type: git
     url: git@github.com:projectfile-org/bridge.git
+  - role: mirror
+    type: git
+    url: ssh://git@codeberg.org/projectfile/bridge.git
 technologies:
   - go
