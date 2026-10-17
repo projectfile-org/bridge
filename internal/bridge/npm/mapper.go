@@ -20,6 +20,7 @@ const (
 	npmKeyName        = "name"
 	npmKeyDescription = "description"
 	npmKeyKeywords    = "keywords"
+	npmKeyPrivate     = "private"
 )
 
 // buildMappers is a port of the previous sync_npm.buildMappers, lifted to the
@@ -454,7 +455,7 @@ func buildMappers(pkg *Document, pf *projectfile.Document) core.MapperList {
 			},
 		},
 		{
-			ExtKey: "private", PFKey: "identity.visibility",
+			ExtKey: npmKeyPrivate, PFKey: "identity.visibility",
 			// Scoped to a project that DECLARES an npm package artifact. An app with a
 			// hand-written `"private": true` guards its npm package, not its
 			// visibility: projecting the project field there would delete a guard the
@@ -467,7 +468,7 @@ func buildMappers(pkg *Document, pf *projectfile.Document) core.MapperList {
 					return ""
 				}
 				pf.Identity.Visibility = projectfile.VisibilityPrivate
-				return "private"
+				return npmKeyPrivate
 			},
 			FromPF: func(_ bool) string {
 				if declaredNPMName(pf) == "" {
@@ -482,7 +483,7 @@ func buildMappers(pkg *Document, pf *projectfile.Document) core.MapperList {
 				}
 				pkg.Private = private
 				if private {
-					return "private"
+					return npmKeyPrivate
 				}
 				return core.Removed
 			},

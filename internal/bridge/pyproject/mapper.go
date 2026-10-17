@@ -22,6 +22,7 @@ import (
 const (
 	extNamespace      = "org.python.pep621"
 	pyprojectKeywords = "keywords"
+	pyKeyClassifiers  = "classifiers"
 )
 
 // pfKeyFunding is the projectfile slot label for funding URLs. Duplicated
@@ -467,7 +468,7 @@ func mapKeywords(py *Document, pf *projectfile.Document) core.FieldMapper {
 
 func mapClassifiers(py *Document, pf *projectfile.Document) core.FieldMapper {
 	return core.FieldMapper{
-		ExtKey: "classifiers", PFKey: "keywords (namespaced)",
+		ExtKey: pyKeyClassifiers, PFKey: "keywords (namespaced)",
 		// Strategy: keep the *original* classifier strings in
 		// pf.Extensions["org.python.pep621"]["classifiers"] so round-trip is
 		// lossless. The derived "topic:x"-style namespaced keywords in
@@ -477,7 +478,7 @@ func mapClassifiers(py *Document, pf *projectfile.Document) core.FieldMapper {
 			if len(py.Project.Classifiers) == 0 {
 				return ""
 			}
-			stored := extStringList(pf, "classifiers")
+			stored := extStringList(pf, pyKeyClassifiers)
 			if equalStringSlice(stored, py.Project.Classifiers) {
 				// Already mirrored — assume namespaced keywords are in sync too.
 				return ""
@@ -485,7 +486,7 @@ func mapClassifiers(py *Document, pf *projectfile.Document) core.FieldMapper {
 			if len(stored) > 0 && !force {
 				return ""
 			}
-			setExtAny(pf, "classifiers", stringsToAny(py.Project.Classifiers))
+			setExtAny(pf, pyKeyClassifiers, stringsToAny(py.Project.Classifiers))
 			// Project derived namespaced keywords onto pf.Keywords (additive,
 			// dedup against existing).
 			derived := classifiersToKeywords(py.Project.Classifiers)
@@ -495,7 +496,7 @@ func mapClassifiers(py *Document, pf *projectfile.Document) core.FieldMapper {
 			return fmt.Sprintf("%d classifier(s)", len(py.Project.Classifiers))
 		},
 		FromPF: func(force bool) string {
-			stored := extStringList(pf, "classifiers")
+			stored := extStringList(pf, pyKeyClassifiers)
 			if len(stored) == 0 {
 				return core.ClearExt(force, &py.Project.Classifiers)
 			}
@@ -517,7 +518,7 @@ const classifierPrivate = "Private :: Do Not Upload"
 // and dropped again the moment the document says public.
 func mapVisibility(py *Document, pf *projectfile.Document) core.FieldMapper {
 	return core.FieldMapper{
-		ExtKey: "classifiers", PFKey: "identity.visibility",
+		ExtKey: pyKeyClassifiers, PFKey: "identity.visibility",
 		ToPF: func(force bool) string {
 			// Only a guarded pyproject teaches the document anything; an absent
 			// trove says nothing about whether the forge is anonymously reachable.

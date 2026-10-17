@@ -279,7 +279,7 @@ var knownProjectKeys = []string{
 	"authors",
 	"maintainers",
 	pyprojectKeywords,
-	"classifiers",
+	pyKeyClassifiers,
 	"urls",
 	"scripts",
 	"gui-scripts",

@@ -74,7 +74,7 @@ var knownKeyOrder = []string{
 	"maintainers",
 	"repository",
 	"funding",
-	"private",
+	npmKeyPrivate,
 	"os",
 	"cpu",
 	"engines",

@@ -21,6 +21,10 @@ const testAliceSmith = "Alice Smith"
 
 const testLinux = "linux"
 
+const testPackageName = "my-package"
+
+const testKeyName = "name"
+
 const testAMD64 = "amd64"
 
 // fixtureJSON includes known fields AND unknown keys (scripts, volta) to verify
@@ -52,7 +56,7 @@ func TestReadTypedFields(t *testing.T) {
 
 	doc, err := npm.Read(dir)
 	require.NoError(t, err)
-	assert.Equal(t, "my-package", doc.Name)
+	assert.Equal(t, testPackageName, doc.Name)
 	assert.Equal(t, "1.2.3", doc.Version)
 	assert.Equal(t, "A test package", doc.Description)
 	assert.Equal(t, "MIT", doc.License)
@@ -94,7 +98,7 @@ func TestWriteRoundTripPreservesUnknownKeys(t *testing.T) {
 	got, err := npm.Read(dir)
 	require.NoError(t, err)
 	assert.Equal(t, "2.0.0", got.Version)
-	assert.Equal(t, "my-package", got.Name, "unmodified field must be unchanged")
+	assert.Equal(t, testPackageName, got.Name, "unmodified field must be unchanged")
 	assert.True(t, got.Rest.Has("scripts"), "'scripts' must survive round-trip")
 	assert.True(t, got.Rest.Has("volta"), "'volta' must survive round-trip")
 }
@@ -292,7 +296,7 @@ func TestParsePersonString(t *testing.T) {
 }
 
 func TestParsePersonMap(t *testing.T) {
-	m := map[string]any{"name": "Charlie", "email": "charlie@example.com", "url": "https://charlie.dev"}
+	m := map[string]any{testKeyName: "Charlie", "email": "charlie@example.com", "url": "https://charlie.dev"}
 	p := npm.ParsePerson(m)
 	assert.Equal(t, "Charlie", p.Name)
 	assert.Equal(t, "charlie@example.com", p.Email)
@@ -346,7 +350,7 @@ func TestDependenciesRoundTripUntouchedByMappers(t *testing.T) {
 	doc, err := npm.Read(dir)
 	require.NoError(t, err)
 
-	pf := &projectfile.Document{Identity: projectfile.Identity{Name: "my-package"}}
+	pf := &projectfile.Document{Identity: projectfile.Identity{Name: testPackageName}}
 	for _, m := range (npm.Bridge{}).BuildMappers(doc, pf) {
 		if m.ToPF != nil {
 			m.ToPF(true)
@@ -442,10 +446,10 @@ func TestWriteDropsClearedMappedKey(t *testing.T) {
 // npmArtifactDoc declares the npm package artifact the visibility projection is scoped to.
 func npmArtifactDoc(visibility string) *projectfile.Document {
 	return &projectfile.Document{
-		Identity: projectfile.Identity{Name: "my-package", Visibility: visibility},
+		Identity: projectfile.Identity{Name: testPackageName, Visibility: visibility},
 		Extensions: map[string]any{
 			"org.projectfile.artifacts": map[string]any{
-				"npm-package": map[string]any{"kind": "package", "registry": "npm", "name": "my-package"},
+				"npm-package": map[string]any{"kind": "package", "registry": "npm", testKeyName: testPackageName},
 			},
 		},
 	}
@@ -555,7 +559,7 @@ org:
 	require.NoError(t, err)
 
 	for _, m := range (npm.Bridge{}).BuildMappers(doc, pf) {
-		if m.ExtKey == "name" {
+		if m.ExtKey == testKeyName {
 			assert.Empty(t, m.ToPF(true), "a declared artifact owns the npm name")
 			assert.Equal(t, "tool", m.FromPF(true))
 		}
