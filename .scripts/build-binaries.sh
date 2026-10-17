@@ -8,7 +8,7 @@ set -eu
 
 # build-binaries.sh — cross-compile the standalone pf-bridge for one GOOS/GOARCH.
 
-version="${1:-${GITHUB_REF_NAME:-}}"
+version="${1:-${M6E_RELEASE_TAG:-${GITHUB_REF_NAME:-}}}"
 case "${version}" in
 	'' | *['{}']*) version="$(git describe --tags --always --dirty 2>/dev/null || echo dev)" ;; # empty or an unexpanded template placeholder
 esac
