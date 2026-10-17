@@ -16,6 +16,7 @@ This document explains where to get help and how to ask effective questions.
 Please check these first — your question may already be answered:
 
 - [Issues on GitHub](https://github.com/projectfile-org/bridge/issues)
+- [Issues on Codeberg](https://codeberg.org/projectfile/bridge/issues)
 
 ## Where to Ask
 
