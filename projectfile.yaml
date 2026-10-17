@@ -17,6 +17,7 @@ identity:
     uk: 'pf-bridge — інструмент проєктування projectfile: він створює файли ідентичності forge-майданчика, збирає фрагменти функцій і дорожньої карти та проєктує projectfile на файли, яких очікують forge і репозиторій. Бінарник-компаньйон pf-cli в інструментарії projectfile.org.'
   version: 4.0.2
   released: "2026-10-15"
+  visibility: public
 includes:
   - .makefile/b19/ci.yaml
   - .makefile/b19/images/go.yaml
