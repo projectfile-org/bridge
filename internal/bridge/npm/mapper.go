@@ -453,6 +453,40 @@ func buildMappers(pkg *Document, pf *projectfile.Document) core.MapperList {
 				return fmt.Sprintf("%d entr(y/ies)", len(urls))
 			},
 		},
+		{
+			ExtKey: "private", PFKey: "identity.visibility",
+			// Scoped to a project that DECLARES an npm package artifact. An app with a
+			// hand-written `"private": true` guards its npm package, not its
+			// visibility: projecting the project field there would delete a guard the
+			// document never spoke for, and make an accidental publish possible.
+			ToPF: func(force bool) string {
+				// Only a guarded manifest teaches the document anything: an absent or
+				// `private: false` package says nothing about whether the forge is
+				// anonymously reachable, so it must not become a claim of publicity.
+				if declaredNPMName(pf) == "" || !pkg.Private || pf.Identity.Visibility != "" && !force {
+					return ""
+				}
+				pf.Identity.Visibility = projectfile.VisibilityPrivate
+				return "private"
+			},
+			FromPF: func(_ bool) string {
+				if declaredNPMName(pf) == "" {
+					return ""
+				}
+				// Absence resolves to private (spec §4.3), so one line covers both an
+				// explicit `private` and an undeclared document; the writer drops the
+				// key entirely for a public project rather than writing `"private": false`.
+				private := projectfile.IsPrivate(pf)
+				if pkg.Private == private {
+					return ""
+				}
+				pkg.Private = private
+				if private {
+					return "private"
+				}
+				return core.Removed
+			},
+		},
 	}
 }
 

@@ -149,7 +149,7 @@ var forgeListCmd = &cobra.Command{
 		// doesn't see "unknown" for a host they've already configured.
 		ext, _ := pfmodel.GetForgeExtension(pf)
 		w := tabwriter.NewWriter(cmd.OutOrStdout(), 0, 2, 2, ' ', 0)
-		fmt.Fprintln(w, "REPO\tFORGE\tTOKEN\tSTATUS")
+		fmt.Fprintln(w, "REPO\tFORGE\tTOKEN\tVISIBILITY\tSTATUS")
 		for _, repo := range pf.Repositories {
 			rule, host := hostmatch.Resolve(repo.URL)
 			kind := resolveListKind(ext, rule, host)
@@ -171,7 +171,13 @@ var forgeListCmd = &cobra.Command{
 			if repo.Role == projectfile.RepositoryRoleArchive {
 				status = "skipped (archive role)"
 			}
-			fmt.Fprintf(w, "%s\t%s\t%s\t%s\n", repo.URL, kind, token, status)
+			// The declared value verbatim: an absent field resolves to private
+			// for local derivation, but nothing acts on a remote repo without one.
+			visibility := projectfile.Visibility(pf)
+			if visibility == "" {
+				visibility = "undeclared"
+			}
+			fmt.Fprintf(w, "%s\t%s\t%s\t%s\t%s\n", repo.URL, kind, token, visibility, status)
 		}
 		return w.Flush()
 	},

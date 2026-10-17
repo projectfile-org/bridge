@@ -110,3 +110,48 @@ func TestFetchAndApply(t *testing.T) {
 		t.Fatalf("website should not have been sent (that's forgejo's name): %v", gotBody)
 	}
 }
+
+// TestVisibilityRoundTrip pins GitLab's enum spelling in both directions, and that
+// its third level (internal) reads back as no opinion rather than as private.
+func TestVisibilityRoundTrip(t *testing.T) {
+	current := "private"
+	var gotBody map[string]any
+	mux := http.NewServeMux()
+	mux.HandleFunc("/projects/owner%2Frepo", func(w http.ResponseWriter, r *http.Request) {
+		switch r.Method {
+		case http.MethodGet:
+			_ = json.NewEncoder(w).Encode(map[string]any{"visibility": current})
+		case http.MethodPut:
+			body, _ := io.ReadAll(r.Body)
+			_ = json.Unmarshal(body, &gotBody)
+			w.WriteHeader(http.StatusOK)
+			_, _ = w.Write([]byte("{}"))
+		}
+	})
+	srv := httptest.NewServer(mux)
+	defer srv.Close()
+
+	d := newTestDriver(srv)
+	snap, err := d.Fetch(context.Background(), "owner", "repo")
+	if err != nil {
+		t.Fatalf("Fetch: %v", err)
+	}
+	if snap.Visibility != "private" {
+		t.Fatalf("fetched visibility %q, want private", snap.Visibility)
+	}
+	if err := d.Apply(context.Background(), "owner", "repo", core.Patch{Visibility: &[]bool{false}[0]}); err != nil {
+		t.Fatalf("Apply: %v", err)
+	}
+	if gotBody["visibility"] != "public" {
+		t.Fatalf("GitLab spells visibility as an enum string: %v", gotBody)
+	}
+
+	current = "internal"
+	snap, err = d.Fetch(context.Background(), "owner", "repo")
+	if err != nil {
+		t.Fatalf("Fetch internal: %v", err)
+	}
+	if snap.Visibility != "" {
+		t.Fatalf("internal is no opinion, got %q", snap.Visibility)
+	}
+}

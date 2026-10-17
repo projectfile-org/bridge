@@ -66,6 +66,7 @@ func (d *driver) Fetch(ctx context.Context, owner, repo string) (core.Snapshot, 
 		Description   string `json:"description"`
 		Website       string `json:"website"`
 		DefaultBranch string `json:"default_branch"`
+		Private       bool   `json:"private"`
 	}
 	if err := d.do(ctx, http.MethodGet, fmt.Sprintf("%s/repos/%s/%s", base, owner, repo), nil, &meta); err != nil {
 		return core.Snapshot{}, err
@@ -80,13 +81,14 @@ func (d *driver) Fetch(ctx context.Context, owner, repo string) (core.Snapshot, 
 		Description:   meta.Description,
 		Homepage:      meta.Website,
 		DefaultBranch: meta.DefaultBranch,
+		Visibility:    core.BoolToVisibility(meta.Private),
 		Topics:        core.LowerTopics(topics.Topics),
 	}, nil
 }
 
 func (d *driver) Apply(ctx context.Context, owner, repo string, patch core.Patch) error {
 	base := d.apiBase(ctx, owner)
-	if patch.Description != nil || patch.Homepage != nil || patch.DefaultBranch != nil {
+	if patch.Description != nil || patch.Homepage != nil || patch.DefaultBranch != nil || patch.Visibility != nil {
 		body := map[string]any{}
 		if patch.Description != nil {
 			body["description"] = *patch.Description
@@ -97,6 +99,9 @@ func (d *driver) Apply(ctx context.Context, owner, repo string, patch core.Patch
 		}
 		if patch.DefaultBranch != nil {
 			body["default_branch"] = *patch.DefaultBranch
+		}
+		if patch.Visibility != nil {
+			body["private"] = *patch.Visibility
 		}
 		if err := d.do(ctx, http.MethodPatch, fmt.Sprintf("%s/repos/%s/%s", base, owner, repo), body, nil); err != nil {
 			return err

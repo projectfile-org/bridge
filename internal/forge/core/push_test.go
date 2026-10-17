@@ -10,7 +10,11 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
 	"kiota.ch/projectfile/core/v2/pkg/projectfile"
+	"projectfile.org/projectfile/bridge/v4/internal/forge/hostmatch"
 	"projectfile.org/projectfile/bridge/v4/internal/pfmodel"
 )
 
@@ -538,4 +542,44 @@ func TestPush_DefaultBranchUpToDate(t *testing.T) {
 	if fc.applyCount != 0 {
 		t.Fatalf("apply called with %+v, want no call", fc.applied)
 	}
+}
+
+// TestDiffVisibilityOnlyWhenDeclared pins the carve-out: a declared value patches,
+// an undeclared one never does, so a private-by-default rule cannot flip a live public repo.
+func TestDiffVisibilityOnlyWhenDeclared(t *testing.T) {
+	undeclared := Diff(Snapshot{Visibility: projectfile.VisibilityPublic}, Snapshot{})
+	assert.Nil(t, Diff(Snapshot{}, Snapshot{}).Visibility, "no current state, no opinion, no patch")
+	assert.Nil(t, undeclared.Visibility, "an undeclared project must leave the forge alone")
+	assert.True(t, undeclared.IsEmpty())
+
+	private := Diff(Snapshot{Visibility: projectfile.VisibilityPublic}, Snapshot{Visibility: projectfile.VisibilityPrivate})
+	require.NotNil(t, private.Visibility)
+	assert.True(t, *private.Visibility)
+
+	public := Diff(Snapshot{Visibility: projectfile.VisibilityPrivate}, Snapshot{Visibility: projectfile.VisibilityPublic})
+	require.NotNil(t, public.Visibility)
+	assert.False(t, *public.Visibility)
+
+	assert.Nil(t, Diff(Snapshot{Visibility: projectfile.VisibilityPublic}, Snapshot{Visibility: projectfile.VisibilityPublic}).Visibility, "already public")
+}
+
+// TestBuildDesiredSnapshotVisibility pins that only a declared field reaches the snapshot.
+func TestBuildDesiredSnapshotVisibility(t *testing.T) {
+	undeclared, err := buildDesiredSnapshot(&projectfile.Document{})
+	require.NoError(t, err)
+	assert.Equal(t, "", undeclared.Visibility, "an absent field is no opinion for a remote write")
+
+	declared, err := buildDesiredSnapshot(&projectfile.Document{Identity: projectfile.Identity{Visibility: projectfile.VisibilityPublic}})
+	require.NoError(t, err)
+	assert.Equal(t, projectfile.VisibilityPublic, declared.Visibility)
+}
+
+// TestDiffWithFilterVisibilitySkipped pins that --field and the extension toggles mute the field like any other.
+func TestDiffWithFilterVisibilitySkipped(t *testing.T) {
+	allow := buildFieldFilter([]string{FieldDescription}, nil)
+	patch, changes := diffWithFilter(Snapshot{}, Snapshot{Visibility: projectfile.VisibilityPrivate}, allow, hostmatch.KindGitHub)
+	assert.Nil(t, patch.Visibility)
+	require.Len(t, changes, 1)
+	assert.Equal(t, FieldVisibility, changes[0].Field)
+	assert.True(t, changes[0].Skipped)
 }

@@ -419,10 +419,11 @@ func TestPlatformFromParsedExtensionFields(t *testing.T) {
 }
 
 // TestWriteDropsClearedMappedKey pins that a cleared mapped field leaves package.json while foreign keys stay.
+// `private: false` is a MAPPED key resolved to "public" (spec §4.3), so it goes with bugs rather than surviving as foreign.
 func TestWriteDropsClearedMappedKey(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "package.json")
-	require.NoError(t, os.WriteFile(path, []byte(`{"name":"x","private":false,"bugs":{"url":"https://stale.test/issues"},"scripts":{"t":"true"}}`), 0o644))
+	require.NoError(t, os.WriteFile(path, []byte(`{"name":"x","private":false,"publishConfig":{"registry":"https://registry.example"},"bugs":{"url":"https://stale.test/issues"},"scripts":{"t":"true"}}`), 0o644))
 	doc, err := npm.Read(dir)
 	require.NoError(t, err)
 	doc.Bugs = nil
@@ -433,8 +434,102 @@ func TestWriteDropsClearedMappedKey(t *testing.T) {
 	require.NoError(t, err)
 	require.NoError(t, json.Unmarshal(data, &got))
 	assert.NotContains(t, got, "bugs")
+	assert.NotContains(t, got, "private")
 	assert.Contains(t, got, "scripts")
-	assert.Contains(t, got, "private")
+	assert.Contains(t, got, "publishConfig")
+}
+
+// npmArtifactDoc declares the npm package artifact the visibility projection is scoped to.
+func npmArtifactDoc(visibility string) *projectfile.Document {
+	return &projectfile.Document{
+		Identity: projectfile.Identity{Name: "my-package", Visibility: visibility},
+		Extensions: map[string]any{
+			"org.projectfile.artifacts": map[string]any{
+				"npm-package": map[string]any{"kind": "package", "registry": "npm", "name": "my-package"},
+			},
+		},
+	}
+}
+
+// TestVisibilityProjectedOntoPrivateKey pins the three spec states through the writer:
+// an explicit public drops the key, private and undeclared both write it.
+func TestVisibilityProjectedOntoPrivateKey(t *testing.T) {
+	states := map[string]struct {
+		declared string
+		wantKey  bool
+	}{
+		"public":     {declared: projectfile.VisibilityPublic, wantKey: false},
+		"private":    {declared: projectfile.VisibilityPrivate, wantKey: true},
+		"undeclared": {declared: "", wantKey: true},
+	}
+	for name, tc := range states {
+		t.Run(name, func(t *testing.T) {
+			dir := t.TempDir()
+			writePackageJSON(t, dir, fixtureJSON)
+			pkg, err := npm.Read(dir)
+			require.NoError(t, err)
+			pf := npmArtifactDoc(tc.declared)
+
+			for _, m := range (npm.Bridge{}).BuildMappers(pkg, pf) {
+				if m.FromPF != nil {
+					m.FromPF(false)
+				}
+			}
+			require.NoError(t, npm.Write(dir, pkg))
+
+			var got map[string]any
+			data, err := os.ReadFile(filepath.Join(dir, "package.json"))
+			require.NoError(t, err)
+			require.NoError(t, json.Unmarshal(data, &got))
+			guard, present := got["private"]
+			assert.Equal(t, tc.wantKey, present, "private key present")
+			if present {
+				assert.Equal(t, true, guard, "private value")
+			}
+		})
+	}
+}
+
+// TestPublicVisibilityRemovesAHandGuardedManifest pins that an explicit public overrides a guard written by hand.
+func TestPublicVisibilityRemovesAHandGuardedManifest(t *testing.T) {
+	dir := t.TempDir()
+	writePackageJSON(t, dir, `{"name": "acme-tool", "private": true}`)
+	pkg, err := npm.Read(dir)
+	require.NoError(t, err)
+	pf := npmArtifactDoc(projectfile.VisibilityPublic)
+
+	for _, m := range (npm.Bridge{}).BuildMappers(pkg, pf) {
+		if m.FromPF != nil {
+			m.FromPF(false)
+		}
+	}
+	require.NoError(t, npm.Write(dir, pkg))
+
+	pkg, err = npm.Read(dir)
+	require.NoError(t, err)
+	assert.False(t, pkg.Private)
+	assert.False(t, pkg.Rest.Has("private"), "the key itself leaves, npm has no use for \"private\": false")
+}
+
+// TestPrivateManifestTeachesTheDocument pins the discovery direction, and that an unguarded manifest teaches nothing.
+func TestPrivateManifestTeachesTheDocument(t *testing.T) {
+	guarded := func(t *testing.T, content string) string {
+		t.Helper()
+		dir := t.TempDir()
+		writePackageJSON(t, dir, content)
+		pkg, err := npm.Read(dir)
+		require.NoError(t, err)
+		pf := npmArtifactDoc("")
+		for _, m := range (npm.Bridge{}).BuildMappers(pkg, pf) {
+			if m.ToPF != nil {
+				m.ToPF(false)
+			}
+		}
+		return pf.Identity.Visibility
+	}
+	assert.Equal(t, projectfile.VisibilityPrivate, guarded(t, `{"name": "acme-tool", "private": true}`))
+	assert.Equal(t, "", guarded(t, `{"name": "acme-tool"}`), "an unguarded manifest says nothing about publicity")
+	assert.Equal(t, "", guarded(t, `{"name": "acme-tool", "private": false}`), "only a guard teaches the document")
 }
 
 // TestDeclaredArtifactNameWins pins that a declared npm package artifact names the package and is never read back into identity.
@@ -468,4 +563,26 @@ org:
 	assert.Equal(t, "tool", doc.Name)
 	assert.Equal(t, "org.acme", pf.Identity.Namespace)
 	assert.Equal(t, "tool", pf.Identity.Name)
+}
+
+// TestVisibilityIgnoresAnUndeclaredPackage pins the scoping: an app whose `private: true` guards the npm
+// package keeps it, because the document declares no npm artifact and therefore speaks for neither side.
+func TestVisibilityIgnoresAnUndeclaredPackage(t *testing.T) {
+	dir := t.TempDir()
+	writePackageJSON(t, dir, `{"name": "acme-web", "private": true}`)
+	pkg, err := npm.Read(dir)
+	require.NoError(t, err)
+	pf := &projectfile.Document{Identity: projectfile.Identity{Name: "acme-web", Visibility: projectfile.VisibilityPublic}}
+
+	for _, m := range (npm.Bridge{}).BuildMappers(pkg, pf) {
+		if m.FromPF != nil {
+			m.FromPF(false)
+		}
+	}
+	require.NoError(t, npm.Write(dir, pkg))
+
+	pkg, err = npm.Read(dir)
+	require.NoError(t, err)
+	assert.True(t, pkg.Private, "a public web app's npm guard is not the project's visibility")
+	assert.True(t, pkg.Rest.Has("private"))
 }

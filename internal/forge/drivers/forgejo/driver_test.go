@@ -86,3 +86,40 @@ func TestFetchAndApply(t *testing.T) {
 		t.Fatalf("topics body missing: %v", gotTopics)
 	}
 }
+
+// TestVisibilityRoundTrip pins the Forgejo boolean name and the read-back.
+func TestVisibilityRoundTrip(t *testing.T) {
+	var gotBody map[string]any
+	mux := http.NewServeMux()
+	mux.HandleFunc("/repos/me/proj", func(w http.ResponseWriter, r *http.Request) {
+		switch r.Method {
+		case http.MethodGet:
+			_ = json.NewEncoder(w).Encode(map[string]any{"private": true})
+		case http.MethodPatch:
+			body, _ := io.ReadAll(r.Body)
+			_ = json.Unmarshal(body, &gotBody)
+			w.WriteHeader(http.StatusOK)
+			_, _ = w.Write([]byte("{}"))
+		}
+	})
+	mux.HandleFunc("/repos/me/proj/topics", func(w http.ResponseWriter, _ *http.Request) {
+		_ = json.NewEncoder(w).Encode(map[string]any{"topics": []string{}})
+	})
+	srv := httptest.NewServer(mux)
+	defer srv.Close()
+
+	d := newTestDriver(srv)
+	snap, err := d.Fetch(context.Background(), "me", "proj")
+	if err != nil {
+		t.Fatalf("Fetch: %v", err)
+	}
+	if snap.Visibility != "private" {
+		t.Fatalf("fetched visibility %q, want private", snap.Visibility)
+	}
+	if err := d.Apply(context.Background(), "me", "proj", core.Patch{Visibility: &[]bool{true}[0]}); err != nil {
+		t.Fatalf("Apply: %v", err)
+	}
+	if gotBody["private"] != true {
+		t.Fatalf("wire body must carry private=true: %v", gotBody)
+	}
+}

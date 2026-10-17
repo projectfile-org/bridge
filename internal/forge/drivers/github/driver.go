@@ -77,6 +77,7 @@ func (d *driver) Fetch(ctx context.Context, owner, repo string) (core.Snapshot, 
 		Description   string `json:"description"`
 		Homepage      string `json:"homepage"`
 		DefaultBranch string `json:"default_branch"`
+		Private       bool   `json:"private"`
 	}
 	if err := d.do(ctx, http.MethodGet, fmt.Sprintf("%s/repos/%s/%s", base, owner, repo), nil, &meta); err != nil {
 		return core.Snapshot{}, err
@@ -92,6 +93,7 @@ func (d *driver) Fetch(ctx context.Context, owner, repo string) (core.Snapshot, 
 		Homepage:      meta.Homepage,
 		DefaultBranch: meta.DefaultBranch,
 		Topics:        core.LowerTopics(topics.Names),
+		Visibility:    core.BoolToVisibility(meta.Private),
 	}, nil
 }
 
@@ -99,7 +101,7 @@ func (d *driver) Fetch(ctx context.Context, owner, repo string) (core.Snapshot, 
 // /topics. Two requests max — the same shape Fetch made.
 func (d *driver) Apply(ctx context.Context, owner, repo string, patch core.Patch) error {
 	base := d.apiBase(ctx, owner)
-	if patch.Description != nil || patch.Homepage != nil || patch.DefaultBranch != nil {
+	if patch.Description != nil || patch.Homepage != nil || patch.DefaultBranch != nil || patch.Visibility != nil {
 		body := map[string]any{}
 		if patch.Description != nil {
 			body["description"] = *patch.Description
@@ -109,6 +111,9 @@ func (d *driver) Apply(ctx context.Context, owner, repo string, patch core.Patch
 		}
 		if patch.DefaultBranch != nil {
 			body["default_branch"] = *patch.DefaultBranch
+		}
+		if patch.Visibility != nil {
+			body["private"] = *patch.Visibility
 		}
 		if err := d.do(ctx, http.MethodPatch, fmt.Sprintf("%s/repos/%s/%s", base, owner, repo), body, nil); err != nil {
 			return err

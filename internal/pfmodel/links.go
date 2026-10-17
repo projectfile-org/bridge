@@ -20,7 +20,8 @@ const keyPriority = "priority"
 
 // keyTags is the §139 additional-key name a link carries its advisory
 // capability list under — the same channel keyPriority rides, so a tag costs
-// no schema change.
+// no schema change. The reader of that key is core's, so pf-cli validates a
+// contradiction against exactly what the scanner proposed.
 const keyTags = "tags"
 
 // The capability tags that are HOST facts, and so are the only ones a scanner
@@ -39,7 +40,7 @@ const keyTags = "tags"
 // The route family is NOT the forge kind — Codeberg is Kind forgejo and
 // shields calls its route gitea — so each rule states its own tags.
 const (
-	TagPublic       = "public"
+	TagPublic       = projectfile.TagPublic
 	TagBadges       = "badges"
 	TagBadgesGitHub = "badges-github"
 	TagBadgesGitLab = "badges-gitlab"
@@ -129,7 +130,7 @@ func mergeTag(tags []string, tag string) []string {
 // forge by capability instead of by hostname, and so serve a fleet whose
 // projects each sit on a different set of mirrors.
 func LinkTags(l projectfile.Link) []string {
-	return TagsFrom(l.Extra[keyTags])
+	return projectfile.LinkTags(l)
 }
 
 // SetLinkTags writes a proposed capability list onto a link, and reports
@@ -300,12 +301,7 @@ func LinksByTag(doc *projectfile.Document, tag string) []projectfile.Link {
 
 // LinkHasTag reports whether a link carries the given §139 tag.
 func LinkHasTag(l projectfile.Link, tag string) bool {
-	for _, t := range LinkTags(l) {
-		if t == tag {
-			return true
-		}
-	}
-	return false
+	return projectfile.LinkHasTag(l, tag)
 }
 
 // SetLink writes url into the canonical links[type=linkType] entry: updates

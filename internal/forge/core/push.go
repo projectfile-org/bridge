@@ -24,11 +24,12 @@ const (
 	FieldTopics        = "topics"
 	FieldProtection    = "protection"
 	FieldDefaultBranch = "default-branch"
+	FieldVisibility    = "visibility"
 )
 
 // AllFields is the canonical iteration order for log output. Mirrors the
 // order the field-mapping table in the design doc uses.
-var AllFields = []string{FieldDescription, FieldHomepage, FieldTopics, FieldDefaultBranch, FieldProtection}
+var AllFields = []string{FieldDescription, FieldHomepage, FieldTopics, FieldDefaultBranch, FieldProtection, FieldVisibility}
 
 // reasonFieldDisabled is the user-facing "this field would have been pushed
 // but isn't" line, emitted for every field the --field flag or extension
@@ -306,6 +307,11 @@ func buildDesiredSnapshot(pf *projectfile.Document) (Snapshot, error) {
 	if rel != nil {
 		snap.DefaultBranch = rel.Trunk
 	}
+	// Declared-only: an absent identity.visibility leaves the snapshot empty,
+	// which Diff reads as no opinion. This is the one field a private-by-
+	// default rule must NOT reach, because flipping a live repo private breaks
+	// anonymous clones and every mirror that reads it.
+	snap.Visibility = projectfile.Visibility(pf)
 	return snap, nil
 }
 
@@ -475,6 +481,29 @@ func diffWithFilter(
 			changes = append(changes, FieldChange{
 				Field: FieldDefaultBranch, Value: *full.DefaultBranch,
 				Source: "release.trunk",
+			})
+		}
+	}
+	if full.Visibility != nil {
+		// Making a repo private is the one delta that breaks consumers this
+		// document never enumerated — anonymous clones, mirrors, badges — so
+		// it is logged even on a green run.
+		value, reason := "public", ""
+		if *full.Visibility {
+			value, reason = "private", "anonymous consumers lose access"
+			genlog.Warn("forge push: repository becomes private", "visibility", value, "note", reason)
+		}
+		switch {
+		case !allow(FieldVisibility):
+			changes = append(changes, FieldChange{
+				Field: FieldVisibility, Skipped: true,
+				Reason: reasonFieldDisabled,
+			})
+		default:
+			patch.Visibility = full.Visibility
+			changes = append(changes, FieldChange{
+				Field: FieldVisibility, Value: value,
+				Source: "identity.visibility",
 			})
 		}
 	}

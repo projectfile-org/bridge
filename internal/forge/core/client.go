@@ -13,6 +13,8 @@ import (
 	"reflect"
 	"sort"
 	"strings"
+
+	"kiota.ch/projectfile/core/v2/pkg/projectfile"
 )
 
 // Client is the surface every forge driver implements. Owner() does the
@@ -49,6 +51,12 @@ type Snapshot struct {
 	Homepage      string
 	Topics        []string
 	DefaultBranch string // empty in a desired snapshot leaves the forge's default branch alone
+	// Visibility is the project's declared identity.visibility, "" when the
+	// document declares none. Empty means NO OPINION, and no opinion never
+	// patches: a remote repo's visibility is a fact on the forge, not a value
+	// this document gets to derive (spec §4.3 resolves an absent field to
+	// private for LOCAL derivation only).
+	Visibility string
 }
 
 // Patch carries the desired-state delta. The pointer-or-nil convention
@@ -59,12 +67,13 @@ type Patch struct {
 	Homepage      *string
 	Topics        *[]string
 	DefaultBranch *string
+	Visibility    *bool // nil = leave the forge alone; false = make public, true = make private
 }
 
 // IsEmpty reports whether the patch would mutate nothing. Used by the
 // algorithm to decide whether to log "(up to date)" and skip the HTTP call.
 func (p Patch) IsEmpty() bool {
-	return p.Description == nil && p.Homepage == nil && p.Topics == nil && p.DefaultBranch == nil
+	return p.Description == nil && p.Homepage == nil && p.Topics == nil && p.DefaultBranch == nil && p.Visibility == nil
 }
 
 // Diff produces the minimal patch that transforms current into desired.
@@ -91,7 +100,23 @@ func Diff(current, desired Snapshot) Patch {
 		v := desired.DefaultBranch
 		patch.DefaultBranch = &v
 	}
+	// Only a declared value patches visibility, so an undeclared project never
+	// flips a public repo private and a declared private one is made private.
+	if desired.Visibility != "" && current.Visibility != desired.Visibility {
+		v := desired.Visibility != projectfile.VisibilityPublic // the wire boolean is `private`
+		patch.Visibility = &v
+	}
 	return patch
+}
+
+// BoolToVisibility is the wire->document direction every driver that receives a
+// boolean `private` uses; no opinion is "" so an undeclared document never
+// patches against it.
+func BoolToVisibility(private bool) string {
+	if private {
+		return projectfile.VisibilityPrivate
+	}
+	return projectfile.VisibilityPublic
 }
 
 // topicsEqual compares two topic lists ignoring order. Both forges store

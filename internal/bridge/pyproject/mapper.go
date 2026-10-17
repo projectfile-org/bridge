@@ -6,6 +6,7 @@ package pyproject
 
 import (
 	"fmt"
+	"slices"
 	"sort"
 	"strings"
 
@@ -61,6 +62,9 @@ func buildMappers(py *Document, pf *projectfile.Document) core.MapperList {
 		mapMaintainers(py, pf),
 		mapKeywords(py, pf),
 		mapClassifiers(py, pf),
+		// After the classifiers mapper: it rewrites the whole list from the
+		// stored extension, so the privacy marker has to be layered on last.
+		mapVisibility(py, pf),
 		mapURLHomepage(py, pf),
 		mapURLRepository(py, pf),
 		mapURLDocumentation(py, pf),
@@ -500,6 +504,49 @@ func mapClassifiers(py *Document, pf *projectfile.Document) core.FieldMapper {
 			}
 			py.Project.Classifiers = append([]string(nil), stored...)
 			return fmt.Sprintf("%d classifier(s)", len(stored))
+		},
+	}
+}
+
+// classifierPrivate is the PEP 753 trove uploader reads; pyproject has no
+// boolean of its own, so the marker is a list member.
+const classifierPrivate = "Private :: Do Not Upload"
+
+// mapVisibility projects identity.visibility onto that trove. Absence resolves
+// to private (spec §4.3), so the marker is written for every undeclared project
+// and dropped again the moment the document says public.
+func mapVisibility(py *Document, pf *projectfile.Document) core.FieldMapper {
+	return core.FieldMapper{
+		ExtKey: "classifiers", PFKey: "identity.visibility",
+		ToPF: func(force bool) string {
+			// Only a guarded pyproject teaches the document anything; an absent
+			// trove says nothing about whether the forge is anonymously reachable.
+			if !containsString(py.Project.Classifiers, classifierPrivate) {
+				return ""
+			}
+			if pf.Identity.Visibility != "" && !force {
+				return ""
+			}
+			pf.Identity.Visibility = projectfile.VisibilityPrivate
+			return classifierPrivate
+		},
+		FromPF: func(_ bool) string {
+			guarded := containsString(py.Project.Classifiers, classifierPrivate)
+			if guarded == projectfile.IsPrivate(pf) {
+				return ""
+			}
+			if guarded {
+				kept := make([]string, 0, len(py.Project.Classifiers))
+				for _, c := range py.Project.Classifiers {
+					if c != classifierPrivate {
+						kept = append(kept, c)
+					}
+				}
+				py.Project.Classifiers = kept
+				return core.Removed
+			}
+			py.Project.Classifiers = append(py.Project.Classifiers, classifierPrivate)
+			return classifierPrivate
 		},
 	}
 }
@@ -1326,6 +1373,10 @@ func equalStringSet(a, b []string) bool {
 		}
 	}
 	return true
+}
+
+func containsString(haystack []string, needle string) bool {
+	return slices.Contains(haystack, needle)
 }
 
 func mergeUniqueStrings(existing, incoming []string) []string {

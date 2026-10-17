@@ -47,7 +47,9 @@ func Write(dir string, doc *Document) error {
 }
 
 // keepWhenEmpty are known keys whose empty value is meaningful, so an omitted typed field never deletes them.
-var keepWhenEmpty = map[string]bool{"private": true, "dependencies": true, "devDependencies": true, "peerDependencies": true}
+// `private` is absent from the set: identity.visibility always resolves to a value (spec §4.3), so a false Private is
+// a real "this project is public" and the loop below deletes the key — npm has no use for `"private": false`.
+var keepWhenEmpty = map[string]bool{"dependencies": true, "devDependencies": true, "peerDependencies": true}
 
 // WriteMerge is the legacy entry point; it now simply delegates to Write so
 // callers (cmd/sync, sync_npm) keep working until they are collapsed onto the

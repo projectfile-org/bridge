@@ -18,6 +18,7 @@ import (
 	"strings"
 
 	"kiota.ch/projectfile/core/v2/pkg/netfetch"
+	"kiota.ch/projectfile/core/v2/pkg/projectfile"
 	"projectfile.org/projectfile/bridge/v4/internal/forge/core"
 	"projectfile.org/projectfile/bridge/v4/internal/forge/hostmatch"
 )
@@ -80,6 +81,7 @@ func (d *driver) Fetch(ctx context.Context, owner, repo string) (core.Snapshot, 
 		Description   string   `json:"description"`
 		Topics        []string `json:"topics"`
 		DefaultBranch string   `json:"default_branch"`
+		Visibility    string   `json:"visibility"`
 	}
 	url := fmt.Sprintf("%s/projects/%s", base, d.projectID(owner, repo))
 	if err := d.do(ctx, http.MethodGet, url, nil, &meta); err != nil {
@@ -91,6 +93,7 @@ func (d *driver) Fetch(ctx context.Context, owner, repo string) (core.Snapshot, 
 		// at the project level, so we never surface drift on this field.
 		Topics:        core.LowerTopics(meta.Topics),
 		DefaultBranch: meta.DefaultBranch,
+		Visibility:    visibilityFromGitLab(meta.Visibility),
 	}, nil
 }
 
@@ -107,6 +110,11 @@ func (d *driver) Apply(ctx context.Context, owner, repo string, patch core.Patch
 	}
 	if patch.DefaultBranch != nil {
 		body["default_branch"] = *patch.DefaultBranch
+	}
+	if patch.Visibility != nil {
+		// GitLab models visibility as an enum string, not the boolean the
+		// other two forges take.
+		body["visibility"] = gitlabVisibility(core.BoolToVisibility(*patch.Visibility))
 	}
 	if len(body) == 0 {
 		return nil
@@ -179,4 +187,25 @@ func (d *driver) do(ctx context.Context, method, url string, body, out any) erro
 		return fmt.Errorf("decode response: %w", err)
 	}
 	return nil
+}
+
+// visibilityFromGitLab maps GitLab's visibility enum onto the projectfile's
+// two values, and leaves internal (GitLab's third level) as no opinion.
+func visibilityFromGitLab(in string) string {
+	switch in {
+	case "public":
+		return projectfile.VisibilityPublic
+	case "private":
+		return projectfile.VisibilityPrivate
+	}
+	return ""
+}
+
+// gitlabVisibility is the inverse: GitLab spells the two projectfile values
+// with its own enum, and has no name for the internal level.
+func gitlabVisibility(in string) string {
+	if in == projectfile.VisibilityPublic {
+		return "public"
+	}
+	return "private"
 }
