@@ -18,6 +18,8 @@ import (
 	"github.com/mattn/go-isatty"
 	"github.com/spf13/cobra"
 
+	"charm.land/lipgloss/v2"
+
 	"kiota.ch/projectfile/core/v2/pkg/genlog"
 	"kiota.ch/projectfile/core/v2/pkg/pflock"
 	"kiota.ch/projectfile/core/v2/pkg/projectfile"
@@ -100,7 +102,7 @@ func Main(binName string) {
 	bridge.Scope(strings.TrimPrefix(binName, "pf-bridge-"))
 	root := &cobra.Command{
 		Use:   binName + " [to|from] [filename] [directory]",
-		Short: "Bridge projectfile with the external file(s) this binary carries",
+		Short: lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("212")).Render("pf-bridge") + " — keep every project file in sync with your projectfile document",
 		Long: "Two-way bridge between projectfile and the metadata file(s) this\n" +
 			"binary provides. The first positional may be the preposition 'to' or\n" +
 			"'from' to force direction; otherwise the sync converges without\n" +
