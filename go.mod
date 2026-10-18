@@ -1,8 +1,8 @@
+module projectfile.org/projectfile/bridge/v4
+
 // SPDX-FileCopyrightText: 2026 Damián Búho <damian.buho@proton.me>
 //
 // SPDX-License-Identifier: MIT
-
-module projectfile.org/projectfile/bridge/v4
 
 go 1.27.2
 
