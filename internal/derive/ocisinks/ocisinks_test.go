@@ -7,6 +7,7 @@ package ocisinks_test
 import (
 	"bytes"
 	"os"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -36,6 +37,10 @@ const (
 	// refKiota is the origin’s own shape: the host, then the project’s own path.
 	refKiota      = "kiota.ch/${path}:${tag}"
 	nameDockerHub = "dockerhub"
+	// refDockerHub names ${flatpath}, a part the fixture parts never declare.
+	refDockerHub = "docker.io/damianbuho/${flatpath}:${tag}"
+	// refDockerHubBroken names a part no document declares at all.
+	refDockerHubBroken = "docker.io/damianbuho/${unset}:${tag}"
 )
 
 // parts is the image vocabulary the shared container fragment declares for every
@@ -181,7 +186,7 @@ func TestOneBrokenSinkAmongWorkingOnesWarns(t *testing.T) {
 	doc := docWithParts(map[string]any{
 		pfmodel.SinksExtensionNS: map[string]any{
 			nameGHCR:      map[string]any{keyRef: refGHCR},
-			nameDockerHub: map[string]any{keyRef: "docker.io/damianbuho/${flatpath}:${tag}"},
+			nameDockerHub: map[string]any{keyRef: refDockerHub},
 		},
 	})
 
@@ -365,11 +370,11 @@ func TestUnroutedSinkIsDropped(t *testing.T) {
 		pfmodel.SinksExtensionNS: map[string]any{
 			nameKiota:     map[string]any{keyRef: refKiota},
 			nameGHCR:      map[string]any{keyRef: refGHCR},
-			nameDockerHub: map[string]any{keyRef: "docker.io/damianbuho/${flatpath}:${tag}"},
+			nameDockerHub: map[string]any{keyRef: refDockerHub},
 		},
 		pfmodel.PublishExtensionNS: map[string]any{
-			"kiota":  map[string]any{pfmodel.PublishPushKey: []any{nameKiota}, "pull": nameKiota},
-			"github": map[string]any{pfmodel.PublishPushKey: []any{nameGHCR}, "pull": nameGHCR},
+			nameKiota: map[string]any{pfmodel.PublishPushKey: []any{nameKiota}, "pull": nameKiota},
+			"github":  map[string]any{pfmodel.PublishPushKey: []any{nameGHCR}, "pull": nameGHCR},
 		},
 	})
 
@@ -389,7 +394,7 @@ func TestRoutedSinkIsKept(t *testing.T) {
 			nameDockerHub: map[string]any{keyRef: "docker.io/damianbuho/${path}:${tag}"},
 		},
 		pfmodel.PublishExtensionNS: map[string]any{
-			"kiota": map[string]any{pfmodel.PublishPushKey: []any{nameKiota, nameDockerHub}},
+			nameKiota: map[string]any{pfmodel.PublishPushKey: []any{nameKiota, nameDockerHub}},
 		},
 	})
 
@@ -430,4 +435,127 @@ func TestLoneFallbackIsPromotedToPrimary(t *testing.T) {
 	kiota, ok := refs[nameKiota].(map[string]any)
 	require.True(t, ok)
 	assert.Equal(t, pfmodel.SinkRolePrimary, kiota[keyRole])
+}
+
+// A nil document answers the write-nothing signal a project with no image gives.
+func TestNilDocumentComposesNothing(t *testing.T) {
+	assert.Nil(t, ocisinks.Refs(nil))
+}
+
+// A malformed sinks namespace gives up on refs rather than panicking the run.
+func TestSinksNamespaceThatIsNotAMapComposesNothing(t *testing.T) {
+	doc := docWithParts(map[string]any{
+		pfmodel.SinksExtensionNS: "kiota.ch, ghcr.io",
+	})
+
+	var log bytes.Buffer
+	genlog.SetOutput(&log)
+	defer genlog.SetOutput(os.Stderr)
+
+	assert.Empty(t, ocisinks.Refs(doc))
+	assert.Contains(t, log.String(), "sinks namespace is not a map")
+}
+
+// One malformed entry costs that entry alone, and is named so its author finds it.
+func TestMalformedSinkEntryIsSkippedNotFatal(t *testing.T) {
+	doc := docWithParts(map[string]any{
+		pfmodel.SinksExtensionNS: map[string]any{
+			nameGHCR:  map[string]any{keyRef: refGHCR},
+			nameKiota: hostKiota,
+		},
+	})
+
+	var log bytes.Buffer
+	genlog.SetOutput(&log)
+	defer genlog.SetOutput(os.Stderr)
+
+	refs := ocisinks.Refs(doc)
+
+	assert.Len(t, refs, 1)
+	assert.Contains(t, refs, nameGHCR)
+	assert.Contains(t, log.String(), "sink="+nameKiota)
+}
+
+// A malformed publish namespace routes nothing: the unfiltered view it predates.
+func TestPublishNamespaceThatIsNotAMapLeavesSinksUnfiltered(t *testing.T) {
+	doc := docWithParts(map[string]any{
+		pfmodel.SinksExtensionNS: map[string]any{
+			nameKiota: map[string]any{keyRef: refKiota},
+			nameGHCR:  map[string]any{keyRef: refGHCR},
+		},
+		pfmodel.PublishExtensionNS: "push to everything",
+	})
+
+	var log bytes.Buffer
+	genlog.SetOutput(&log)
+	defer genlog.SetOutput(os.Stderr)
+
+	assert.Len(t, ocisinks.Refs(doc), 2)
+	assert.Contains(t, log.String(), "publish namespace is not a map")
+}
+
+// One malformed route is ignored; a push element that is no sink name is too.
+func TestMalformedPublishRouteIsIgnored(t *testing.T) {
+	doc := docWithParts(map[string]any{
+		pfmodel.SinksExtensionNS: map[string]any{
+			nameKiota:     map[string]any{keyRef: refKiota},
+			nameDockerHub: map[string]any{keyRef: refDockerHub},
+		},
+		pfmodel.PublishExtensionNS: map[string]any{
+			nameKiota:    map[string]any{pfmodel.PublishPushKey: []any{nameKiota, 7}},
+			"everywhere": "push to everything",
+		},
+	})
+
+	var log bytes.Buffer
+	genlog.SetOutput(&log)
+	defer genlog.SetOutput(os.Stderr)
+
+	refs := ocisinks.Refs(doc)
+
+	assert.Len(t, refs, 1)
+	assert.Contains(t, refs, nameKiota)
+	assert.Contains(t, log.String(), "publish route is not a map")
+}
+
+// Unresolved warnings sort by sink name, so a regenerated log diffs rather than reshuffles.
+func TestUnresolvedWarningsAreSortedByName(t *testing.T) {
+	doc := docWithParts(map[string]any{
+		pfmodel.SinksExtensionNS: map[string]any{
+			"zeta":        map[string]any{keyRef: "docker.io/x/${flatpath}:${tag}"},
+			"alpha":       map[string]any{keyRef: "ghcr.io/${account}/${path}:${tag}"},
+			nameDockerHub: map[string]any{keyRef: refDockerHubBroken},
+			nameGHCR:      map[string]any{keyRef: refGHCR},
+		},
+	})
+
+	var log bytes.Buffer
+	genlog.SetOutput(&log)
+	defer genlog.SetOutput(os.Stderr)
+
+	require.Len(t, ocisinks.Refs(doc), 1, "only the composing sink survives")
+	out := log.String()
+	assert.Contains(t, out, "sink=alpha")
+	assert.Contains(t, out, "sink=dockerhub")
+	assert.Contains(t, out, "sink=zeta")
+	assert.Less(t, strings.Index(out, "sink=alpha"), strings.Index(out, "sink=dockerhub"))
+	assert.Less(t, strings.Index(out, "sink=dockerhub"), strings.Index(out, "sink=zeta"))
+}
+
+// A malformed readme namespace declares no scalar to invent a destination from.
+func TestReadmeNamespaceThatIsNotAMapYieldsNoSink(t *testing.T) {
+	doc := docWithParts(map[string]any{
+		pfmodel.ReadmeExtensionNS: hostKiota,
+	})
+
+	assert.Empty(t, ocisinks.Refs(doc))
+}
+
+// An empty registry scalar is an absent one: no host, so no invented destination.
+func TestEmptyLegacyScalarYieldsNoSink(t *testing.T) {
+	doc := docWithParts(map[string]any{
+		pfmodel.ReadmeExtensionNS: map[string]any{keyRegistry: ""},
+	})
+
+	assert.Empty(t, ocisinks.Refs(doc))
 }
