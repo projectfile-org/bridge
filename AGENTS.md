@@ -34,6 +34,12 @@ holds **zero** `cli/internal/*` imports. The core API in use: `pkg/projectfile`
 toggles are driven via setters (`genlog.SetQuiet`, `projectfile.SetYAMLOutputSorted`,
 `spdx.SetEmbedded`, …) exposed on those façades.
 
+`userconfig.Load()` caches for the whole process and its façade exports no reset, so a
+test here reaches a fixture config by pointing `$XDG_CONFIG_HOME` at a temp tree and
+calling `userconfig.SetIgnored(false)` — the one call that drops the cache and lets the
+next `Load()` re-read disk. `SetIgnored(true)` in a `t.Cleanup` hands the next test an
+empty config instead of the last one’s personal defaults.
+
 ## SPDX licence corpus (`internal/bridge/license/spdx/`)
 
 Bridge owns the SPDX boilerplate texts and registers them with core’s resolver as
