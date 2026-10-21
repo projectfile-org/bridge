@@ -89,6 +89,7 @@ jobs:
           name: reports-image-is-audited-${{ github.run_id }}
           path: reports/
           if-no-files-found: warn
+          overwrite: true
   source-is-secure:
     runs-on: docker
     env:
@@ -140,3 +141,4 @@ jobs:
           name: reports-source-is-secure-${{ github.run_id }}
           path: reports/
           if-no-files-found: warn
+          overwrite: true

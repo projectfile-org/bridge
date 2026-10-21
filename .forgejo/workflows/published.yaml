@@ -99,6 +99,7 @@ jobs:
         with:
           name: build-binaries-${{ matrix.TARGET_ARCH }}-${{ matrix.TARGET_OS }}-${{ github.run_id }}
           path: dist
+          overwrite: true
   binaries-are-signed:
     runs-on: docker
     needs: ["binaries-are-built", "gsa", "release-tag"]
@@ -153,6 +154,7 @@ jobs:
         with:
           name: gpg-sign-${{ github.run_id }}
           path: dist
+          overwrite: true
   binaries-are-torrented:
     runs-on: docker
     needs: ["binaries-are-built", "binaries-are-signed", "gsa", "release-tag"]
@@ -214,6 +216,7 @@ jobs:
         with:
           name: binaries-torrent-create-${{ github.run_id }}
           path: dist
+          overwrite: true
       - name: binaries-torrent-seed
         if: vars.CI_SKIP_BINARIES_ARE_TORRENTED != 'true' && vars.CI_SKIP_BINARIES_TORRENT_SEED != 'true'
         uses: projectfile/actions/run-tool@cabb2957bccacf9b0c8f4b7c98c88f5bb7f83939 # v1
@@ -460,6 +463,7 @@ jobs:
         with:
           name: syft-sbom-tar-${{ matrix.M6E_ARCH }}-${{ github.run_id }}
           path: reports
+          overwrite: true
   image-is-built:
     runs-on: docker
     needs: ["documentation-passes-lint", "gpg-is-ready", "projectfile-is-ok", "release-tag", "runner-is-ready", "signing-is-ready", "source-is-compliant", "source-is-secure", "source-is-tested", "source-passes-lint"]
@@ -703,6 +707,7 @@ jobs:
           name: reports-image-is-secure-${{ matrix.M6E_ARCH }}-${{ github.run_id }}
           path: reports/
           if-no-files-found: warn
+          overwrite: true
   projectfile-is-ok:
     runs-on: docker
     needs: ["projectfile-is-valid"]
@@ -1025,6 +1030,7 @@ jobs:
           name: reports-source-is-secure-${{ github.run_id }}
           path: reports/
           if-no-files-found: warn
+          overwrite: true
   source-is-tested:
     runs-on: docker
     if: (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name != github.repository)
