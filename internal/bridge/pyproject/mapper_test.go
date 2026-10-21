@@ -61,13 +61,13 @@ func TestRequiresPythonExplicitPFAuthorityClears(t *testing.T) {
 
 // TestRequiresPythonConflict: a differing pf value still propagates by default (updates are not destruction) while an explicit file owner holds the file and an empty file still fills.
 func TestRequiresPythonConflict(t *testing.T) {
-	pf := &projectfile.Document{Requirements: &projectfile.Requirements{Runtime: map[string]string{"python": testPrevPython}}}
+	pf := &projectfile.Document{Requirements: &projectfile.Requirements{Runtime: map[string]string{testKeyPython: testPrevPython}}}
 	py := &Document{Project: Project{RequiresPython: testRequiresPython}}
 	m := mapperByExtKey(t, buildMappers(py, pf), testRequiresPythonField)
 	assert.Equal(t, testPrevPython, m.FromPF(true))
 	assert.Equal(t, testPrevPython, py.Project.RequiresPython)
 
-	owned := &projectfile.Document{Requirements: &projectfile.Requirements{Runtime: map[string]string{"python": testPrevPython}}}
+	owned := &projectfile.Document{Requirements: &projectfile.Requirements{Runtime: map[string]string{testKeyPython: testPrevPython}}}
 	projectfile.SetExtension(owned, testAuthorityNS, map[string]any{testAuthorityKey: map[string]any{testRequiresPythonField: testPyprojectOwner}})
 	kept := &Document{Project: Project{RequiresPython: testRequiresPython}}
 	m2 := mapperByExtKey(t, buildMappers(kept, owned), testRequiresPythonField)
@@ -106,13 +106,13 @@ func TestURLDocumentationNeedsMainTag(t *testing.T) {
 		py := &Document{}
 		m := mapperByExtKey(t, buildMappers(py, pf), "urls.Documentation")
 		assert.Equal(t, docsExampleURL, m.FromPF(false))
-		assert.Equal(t, map[string]string{"Documentation": docsExampleURL}, py.Project.URLs)
+		assert.Equal(t, map[string]string{testLabelDocumentation: docsExampleURL}, py.Project.URLs)
 	})
 
 	t.Run("urls_documentation_lands_as_a_tagged_link", func(t *testing.T) {
 		pf := newPF()
 		py := &Document{Project: Project{URLs: map[string]string{
-			"Documentation": docsExampleURL,
+			testLabelDocumentation: docsExampleURL,
 		}}}
 		m := mapperByExtKey(t, buildMappers(py, pf), "urls.Documentation")
 		assert.NotEmpty(t, m.ToPF(true))

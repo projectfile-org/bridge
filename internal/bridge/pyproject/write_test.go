@@ -135,7 +135,7 @@ func TestWriteAppendsProjectZoneWhenAbsent(t *testing.T) {
 	doc, err := Read(dir)
 	require.NoError(t, err)
 	doc.ReuseHeader = testReuseHeader
-	doc.Project.Name = "fixture"
+	doc.Project.Name = testNameFixture
 	require.NoError(t, Write(dir, doc))
 
 	got := readFile(t, dir)
@@ -149,7 +149,7 @@ func TestWriteAppendsProjectZoneWhenAbsent(t *testing.T) {
 // the whole canvas marshals and the REUSE header leads the file.
 func TestWriteFreshDocumentHeader(t *testing.T) {
 	dir := t.TempDir()
-	doc := &Document{Project: Project{Name: "fixture", Version: "1.0.0"}, ReuseHeader: testReuseHeader}
+	doc := &Document{Project: Project{Name: testNameFixture, Version: "1.0.0"}, ReuseHeader: testReuseHeader}
 	require.NoError(t, Write(dir, doc))
 
 	got := readFile(t, dir)
