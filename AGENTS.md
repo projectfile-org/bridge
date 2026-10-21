@@ -609,6 +609,16 @@ make go-test        # host Go test suite
 go build ./... && go test ./...   # plain host toolchain
 ```
 
+The gate is ONE project-wide minimum over the whole module, so picking the next
+module to cover means ranking the UNCUT statements per package. Read them out of
+a fresh profile (`go test ./... -count=1 -covermode=set -coverprofile=/tmp/c.out`),
+NOT from a stale `coverage.out`: a covered block is `sum(NumStmt)` where the
+third column is non-zero, so summing that third column instead counts
+EXECUTIONS and understates every package by ~20 points. `make go-test` reports
+`go tool cover -func`'s total, which drops package-level statements living
+outside any function extent from its denominator and therefore reads ~1 point
+higher than the statement sum — a gap that means nothing, not a second metric.
+
 `build-binaries.sh` writes one asset per cell, the standalone `pf-bridge-<os>-<arch>`.
 The single-bridge binaries are not released: together they weigh about 130 MB per
 cell, eight times the standalone, because each one links its own Go runtime. With
