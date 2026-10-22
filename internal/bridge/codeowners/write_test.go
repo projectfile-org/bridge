@@ -5,10 +5,13 @@
 package codeowners
 
 import (
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 // header is a two-line REUSE block in the shape core.REUSEHeader emits, with
@@ -65,4 +68,84 @@ func TestBytesKeepsCommentsBelowTheHeader(t *testing.T) {
 	doc.ReuseHeader = header
 
 	assert.Contains(t, string(Bytes(doc)), "# infra team owns the deploy scripts")
+}
+
+func TestBytesNilDocumentIsNil(t *testing.T) {
+	t.Parallel()
+
+	assert.Nil(t, Bytes(nil))
+}
+
+func TestBytesSerialisesEveryLineKind(t *testing.T) {
+	t.Parallel()
+
+	doc := &Document{Lines: []Line{
+		{Kind: KindComment, Text: ""},
+		{Kind: KindComment, Text: "zizmor"},
+		{Kind: KindComment, Text: "!zizmor"},
+		{Kind: KindComment, Text: ": vim: set"},
+		{Kind: KindComment, Text: testCommentOwners},
+		{Kind: KindBlank},
+		{Kind: KindEntry, Pattern: testPatternSrc, Owners: []string{testOwnerAda, testOwnerOps}},
+	}}
+	assert.Equal(t, "#\n# zizmor\n#!zizmor\n#: vim: set\n# owners team\n\n"+testPatternSrc+" "+testOwnerAda+" "+testOwnerOps+"\n",
+		string(Bytes(doc)), "each kind emits its canonical form, marker-style comments taking no space")
+}
+
+func TestWritePlacesTheFileAtTheProbePath(t *testing.T) {
+	t.Parallel()
+
+	dir := t.TempDir()
+	doc := &Document{Lines: []Line{{Kind: KindEntry, Pattern: testPatternSrc, Owners: []string{testOwnerAda}}}}
+	require.NoError(t, Write(dir, doc))
+	assert.Equal(t, string(Bytes(doc)), readFile(t, filepath.Join(dir, Filename)))
+}
+
+func TestWriteUpdatesAnExistingProbeInPlace(t *testing.T) {
+	t.Parallel()
+
+	dir := t.TempDir()
+	writeProbe(t, dir, testProbeGithub, testPatternSrc+" "+testOwnerAda+"\n")
+	require.NoError(t, Write(dir, &Document{Lines: []Line{{Kind: KindEntry, Pattern: testPatternDeploy, Owners: []string{testOwnerOps}}}}))
+
+	_, err := os.Stat(filepath.Join(dir, Filename))
+	assert.True(t, os.IsNotExist(err), "an existing probe is updated, never duplicated at the root")
+	assert.Equal(t, testPatternDeploy+" "+testOwnerOps+"\n", readFile(t, filepath.Join(dir, testProbeGithub)))
+}
+
+func TestWriteReportsAMkdirFailure(t *testing.T) {
+	t.Parallel()
+
+	blocker := filepath.Join(t.TempDir(), "not-a-dir")
+	require.NoError(t, os.WriteFile(blocker, []byte("x"), 0o644))
+	err := Write(blocker, &Document{})
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "mkdir")
+}
+
+func TestWriteReportsAFileFailure(t *testing.T) {
+	t.Parallel()
+
+	dir := t.TempDir()
+	require.NoError(t, os.Mkdir(filepath.Join(dir, Filename), 0o755)) // a directory where the file belongs
+	err := Write(dir, &Document{})
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "write")
+}
+
+func TestCloneDeepCopiesTheOwners(t *testing.T) {
+	t.Parallel()
+
+	assert.Nil(t, Clone(nil))
+
+	orig := &Document{ReuseHeader: header, Lines: []Line{
+		{Kind: KindEntry, Pattern: testPatternSrc, Owners: []string{testOwnerAda}},
+		{Kind: KindBlank},
+	}}
+	cp := Clone(orig)
+	require.NotNil(t, cp)
+	assert.Equal(t, header, cp.ReuseHeader)
+	cp.Lines[0].Owners[0] = testOwnerOps
+	assert.Equal(t, testOwnerAda, orig.Lines[0].Owners[0], "mutating the clone must not reach the original")
+	assert.Nil(t, cp.Lines[1].Owners, "a line without owners clones without allocating one")
 }
