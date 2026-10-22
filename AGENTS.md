@@ -119,6 +119,23 @@ bridge/
     └── warn/               warning ledger + end-of-run summary (+ fan-out handoff)
 ```
 
+### The `init` TUI is tested as a state machine
+
+`internal/scaffold`’s prompt models (`fieldPromptModel`,
+`optionalFieldsModel`) are pure: a test builds one with
+`newFieldPromptModel`/`newOptionalFieldsModel`, drives `Update` with a
+synthetic `tea.KeyPressMsg` and reads `View().Content`, so the package
+needs no `teatest` dependency and no terminal. The focus walk lives in
+core’s `selector.MultiInput` — with two fields a `tab` from the last
+one wraps to the first.
+
+The three `prompt*` wrappers each own their `tea.NewProgram`, and a
+program whose stdin is not a TTY opens `/dev/tty` — which SUCCEEDS on
+a developer machine and blocks the test on the real terminal. Any test
+that reaches them must skip when `/dev/tty` opens; headless CI and a
+container have no controlling terminal, so the error paths (and the
+`Run` branches above them) are covered there.
+
 ### Forge templates (`internal/scanners/forge`)
 
 `links[]` and `repositories[]` are MATERIALIZED, never derived: the file on
