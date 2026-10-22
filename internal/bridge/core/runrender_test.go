@@ -32,6 +32,8 @@ type stubRenderer struct {
 	content []byte
 	// Multi-file output; takes priority over content when set.
 	files map[string][]byte
+	// renderErr fails Render when set — the one error every driver must wrap.
+	renderErr error
 }
 
 func (r *stubRenderer) Name() string             { return "stub-renderer" }
@@ -50,6 +52,9 @@ func (r *stubRenderer) FullPath(dir string, _ *projectfile.Document) string {
 }
 
 func (r *stubRenderer) Render(_ *projectfile.Document, _ core.Options) (core.Output, error) {
+	if r.renderErr != nil {
+		return core.Output{}, r.renderErr
+	}
 	if r.files != nil {
 		return core.Output{Files: r.files}, nil
 	}
@@ -286,4 +291,46 @@ func TestRunRenderNoCreateIgnoresExisting(t *testing.T) {
 	data, err := os.ReadFile(target)
 	require.NoError(t, err)
 	assert.Equal(t, "new content", string(data))
+}
+
+// A render that fails takes the whole run with it, named for a fan-out log.
+func TestRunRenderRenderErrorSurfaces(t *testing.T) {
+	dir := t.TempDir()
+	r := &stubRenderer{filename: testStubTXT, renderErr: assert.AnError}
+
+	err := core.RunRender(r, &projectfile.Document{}, core.Options{Dir: dir})
+
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), testStubTXT)
+}
+
+// A renderer that produced no files is a no-op rather than a phantom create.
+func TestRunRenderNoOpOnEmptyOutput(t *testing.T) {
+	dir := t.TempDir()
+	r := &stubRenderer{filename: testStubTXT, files: map[string][]byte{}}
+
+	require.NoError(t, core.RunRender(r, &projectfile.Document{}, core.Options{Dir: dir}))
+
+	_, err := os.Stat(filepath.Join(dir, testStubTXT))
+	assert.True(t, os.IsNotExist(err))
+}
+
+// A target that cannot be read as a file is a broken run, not a refusal.
+func TestRunRenderFailsOnUnreadableTarget(t *testing.T) {
+	dir := t.TempDir()
+	require.NoError(t, os.Mkdir(filepath.Join(dir, testStubTXT), 0o755))
+	r := &stubRenderer{filename: testStubTXT, content: []byte("generated")}
+
+	err := core.RunRender(r, &projectfile.Document{}, core.Options{Dir: dir})
+	assert.Error(t, err)
+}
+
+// Under --check with --create-all not set, a missing file is expected, not drift.
+func TestCheckNoCreateTreatsMissingAsExpected(t *testing.T) {
+	err := core.RunRender(
+		&stubRenderer{filename: testStubTXT, content: []byte("hello")},
+		&projectfile.Document{},
+		core.Options{Dir: t.TempDir(), Check: true, DryRun: true, NoCreate: true},
+	)
+	assert.NoError(t, err)
 }

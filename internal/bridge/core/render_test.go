@@ -5,6 +5,7 @@
 package core_test
 
 import (
+	"io/fs"
 	"os"
 	"path/filepath"
 	"testing"
@@ -100,4 +101,86 @@ func TestRenderLocalOverrideCaching(t *testing.T) {
 	out2, err := core.Render(dir2, tmplName, map[string]string{"V": "y"})
 	require.NoError(t, err)
 	assert.Equal(t, "dir2: y", string(out2))
+}
+
+// Plural is the one template helper every bridge shares: 1 commit, 2 commits.
+func TestPluralPicksTheNounByCount(t *testing.T) {
+	assert.Equal(t, "1 commit", core.Plural(1, "commit", "commits"))
+	assert.Equal(t, "0 commits", core.Plural(0, "commit", "commits"))
+	assert.Equal(t, "3 commits", core.Plural(3, "commit", "commits"))
+}
+
+// An unregistered name is an error naming it, never a silent empty render.
+func TestRenderUnregisteredTemplateErrors(t *testing.T) {
+	_, err := core.Render("", "NOPE_MISSING.tmpl", nil)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "not registered")
+}
+
+// A template that fails executing reports which file failed.
+func TestRenderExecErrorNamesTheTemplate(t *testing.T) {
+	const name = "EXECFAIL.md.tmpl"
+	core.RegisterTemplates(name, func(string) ([]byte, error) { return []byte("{{.Deep.Missing}}"), nil })
+
+	_, err := core.Render("", name, map[string]string{"Deep": "flat"})
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), name)
+}
+
+// A project-local template is parsed on first use, so a syntax error surfaces from that render.
+func TestRenderLocalParseErrorNamesTheTemplate(t *testing.T) {
+	const name = "LOCALPARSE.md.tmpl"
+	dir := t.TempDir()
+	local := filepath.Join(dir, core.LocalTemplatesDir)
+	require.NoError(t, os.MkdirAll(local, 0o755))
+	require.NoError(t, os.WriteFile(filepath.Join(local, name), []byte("{{ broken"), 0o644))
+
+	_, err := core.Render(dir, name, nil)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), name)
+}
+
+// RegisterTemplateTree walks a bridge's embedded FS flat: *.tmpl only, no directories.
+func TestRegisterTemplateTreeRegistersFlatFiles(t *testing.T) {
+	root := t.TempDir()
+	const names = "TREEA.md.tmpl"
+	const nameB = "TREEB.md.tmpl"
+	for name, body := range map[string]string{names: "a", nameB: "b"} {
+		require.NoError(t, os.WriteFile(filepath.Join(root, name), []byte(body), 0o644))
+	}
+	require.NoError(t, os.WriteFile(filepath.Join(root, "notes.txt"), []byte("skip me"), 0o644))
+	require.NoError(t, os.MkdirAll(filepath.Join(root, "nested"), 0o755))
+	require.NoError(t, os.WriteFile(filepath.Join(root, "nested", "TREEC.md.tmpl"), []byte("c"), 0o644))
+
+	core.RegisterTemplateTree(treeFS{root}, ".")
+
+	out, err := core.Render("", "TREEA.md.tmpl", nil)
+	require.NoError(t, err)
+	assert.Equal(t, "a", string(out))
+
+	_, err = core.Render("", "notes.txt", nil)
+	assert.Error(t, err, "a non-template file never registers")
+	_, err = core.Render("", "nested/TREEC.md.tmpl", nil)
+	assert.Error(t, err, "nested directories are skipped")
+}
+
+// Re-registering a name panics: a cross-bridge collision fails at startup.
+func TestRegisterTemplatesPanicsOnDuplicate(t *testing.T) {
+	const name = "DUPLICATE.md.tmpl"
+	core.RegisterTemplates(name, func(string) ([]byte, error) { return nil, nil })
+
+	assert.Panics(t, func() {
+		core.RegisterTemplates(name, func(string) ([]byte, error) { return nil, nil })
+	})
+}
+
+// treeFS adapts a directory to the minimal FS RegisterTemplateTree reads.
+type treeFS struct{ root string }
+
+func (f treeFS) ReadDir(name string) ([]fs.DirEntry, error) {
+	return os.ReadDir(filepath.Join(f.root, name))
+}
+
+func (f treeFS) ReadFile(name string) ([]byte, error) {
+	return os.ReadFile(filepath.Join(f.root, name))
 }

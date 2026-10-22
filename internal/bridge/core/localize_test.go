@@ -5,11 +5,18 @@
 package core_test
 
 import (
+	"os"
+	"path/filepath"
+	"strings"
+	"sync"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
+	"kiota.ch/projectfile/core/v2/pkg/projectfile"
 	"projectfile.org/projectfile/bridge/v4/internal/bridge/core"
+	"projectfile.org/projectfile/bridge/v4/internal/pfmodel"
 )
 
 // TestLocalizedFilename pins the naming rule every localized artefact uses:
@@ -116,4 +123,117 @@ func TestLocalizedSiblingStaysInLanguage(t *testing.T) {
 func TestCollapseBlankLines(t *testing.T) {
 	assert.Equal(t, "a\n\nb\n", string(core.CollapseBlankLines([]byte("a\n\n\n\nb\n\n\n"))))
 	assert.Equal(t, "a\n", string(core.CollapseBlankLines([]byte("a"))), "a body with zero trailing newlines still gets one")
+}
+
+// Template names the RenderLocalized and HasTemplate tests share.
+const (
+	spdxMIT     = "MIT"
+	tmplTLOC    = "TLOC.md"
+	tmplTLOCCan = tmplTLOC + ".tmpl"
+	tmplTLOCES  = "TLOC.es.md.tmpl"
+	tmplBodyEN  = "# Title\n\nEN body\n"
+	tmplBodyES  = "# Titulo\n\nES body\n"
+)
+
+// tlocOnce keeps the shared registrations idempotent: RegisterTemplates panics on a duplicate name.
+var tlocOnce sync.Once
+
+func registerTLOC() {
+	tlocOnce.Do(func() {
+		core.RegisterTemplates(tmplTLOCCan, func(string) ([]byte, error) { return []byte(tmplBodyEN), nil })
+		core.RegisterTemplates(tmplTLOCES, func(string) ([]byte, error) { return []byte(tmplBodyES), nil })
+	})
+}
+
+// TestResolveLangAnchorsTheRenderSentinel pins the empty sentinel resolving to the default language.
+func TestResolveLangAnchorsTheRenderSentinel(t *testing.T) {
+	spanish := &projectfile.Document{}
+	projectfile.SetExtension(spanish, pfmodel.I18NExtensionNS, map[string]any{"default-language": "es"})
+	assert.Equal(t, "es", core.ResolveLang("", spanish))
+	assert.Equal(t, "uk", core.ResolveLang("uk", spanish))
+	assert.Equal(t, "en", core.ResolveLang("", &projectfile.Document{}))
+}
+
+// TestHasTemplateFindsBothTiers pins the probe: embedded, project-local, miss.
+func TestHasTemplateFindsBothTiers(t *testing.T) {
+	registerTLOC()
+	assert.True(t, core.HasTemplate("", tmplTLOCCan))
+
+	dir := t.TempDir()
+	local := filepath.Join(dir, core.LocalTemplatesDir)
+	require.NoError(t, os.MkdirAll(local, 0o755))
+	require.NoError(t, os.WriteFile(filepath.Join(local, "OTHER.md.tmpl"), []byte("x"), 0o644))
+	assert.True(t, core.HasTemplate(dir, "OTHER.md.tmpl"))
+	assert.False(t, core.HasTemplate(dir, "MISSING.md.tmpl"))
+	assert.False(t, core.HasTemplate(t.TempDir(), "MISSING.md.tmpl"))
+	assert.False(t, core.HasTemplate("", "MISSING.md.tmpl"))
+}
+
+// TestRenderLocalizedWritesCanonicalAndVariants pins the header, the bar above the H1, per-language keys.
+func TestRenderLocalizedWritesCanonicalAndVariants(t *testing.T) {
+	registerTLOC()
+	var seen []string
+
+	out, err := core.RenderLocalized(&projectfile.Document{
+		License:   &projectfile.License{Spdx: spdxMIT},
+		Copyright: &projectfile.Copyright{Year: 2026},
+	}, core.LocalizedSpec{
+		Filename: tmplTLOC,
+		Langs:    []string{"es"},
+		View: func(lang string) any {
+			seen = append(seen, lang)
+			return nil
+		},
+	}, core.Options{})
+
+	require.NoError(t, err)
+	assert.Equal(t, []string{"", "es"}, seen, "the view runs for the sentinel then each variant")
+	require.Len(t, out.Files, 2)
+
+	canonical := string(out.Files[tmplTLOC])
+	assert.True(t, strings.HasPrefix(canonical, "<!--"), "every generated file carries the managed header")
+	assert.Contains(t, canonical, "[Español](docs/es/TLOC.md)\n\n# Title", "the bar sits above the H1")
+
+	variant := string(out.Files["docs/es/TLOC.md"])
+	assert.Contains(t, variant, "# Titulo", "the variant renders its own template")
+	assert.Contains(t, variant, "[English](../../TLOC.md)", "the variant links home")
+}
+
+// TestRenderLocalizedSkipsAMissingTranslation pins the skip rule and the bar drop that follows it.
+func TestRenderLocalizedSkipsAMissingTranslation(t *testing.T) {
+	registerTLOC()
+
+	out, err := core.RenderLocalized(&projectfile.Document{
+		License:   &projectfile.License{Spdx: spdxMIT},
+		Copyright: &projectfile.Copyright{Year: 2026},
+	}, core.LocalizedSpec{
+		Filename: tmplTLOC,
+		Langs:    []string{"fr"},
+		View:     func(string) any { return nil },
+	}, core.Options{})
+
+	require.NoError(t, err)
+	require.Len(t, out.Files, 1)
+	assert.NotContains(t, string(out.Files[tmplTLOC]), "Français", "a dropped language never enters the bar")
+}
+
+// TestRenderLocalizedAppendsFooterAndSeeAlso pins the See also content before the trailing footer.
+func TestRenderLocalizedAppendsFooterAndSeeAlso(t *testing.T) {
+	registerTLOC()
+
+	out, err := core.RenderLocalized(&projectfile.Document{
+		License:   &projectfile.License{Spdx: spdxMIT},
+		Copyright: &projectfile.Copyright{Year: 2026},
+	}, core.LocalizedSpec{
+		Filename:  core.FileSupport,
+		Template:  tmplTLOC,
+		View:      func(string) any { return nil },
+		HowToLink: true,
+		SeeAlso:   func(string) []core.SeeAlsoLink { return []core.SeeAlsoLink{{Label: "Guide", URL: "https://g.test"}} },
+	}, core.Options{})
+
+	require.NoError(t, err)
+	body := string(out.Files[core.FileSupport])
+	assert.Contains(t, body, "## See also\n\n- [Guide](https://g.test)")
+	assert.Contains(t, body, "Generated from projectfile", "the how-to footer follows the content")
 }

@@ -5,6 +5,7 @@
 package core_test
 
 import (
+	"bytes"
 	"os"
 	"path/filepath"
 	"testing"
@@ -24,6 +25,7 @@ const (
 	testFromPFValue  = "from-pf"
 	testAuthorityNS  = "org.projectfile.bridge"
 	testAuthorityKey = "authority"
+	testConflictMail = "email"
 )
 
 // ── Stub Syncer ──────────────────────────────────────────────────────────────
@@ -37,6 +39,11 @@ type stubSyncer struct {
 	filename string
 	exists   bool
 	written  int // incremented on each Write call
+
+	readErr    error
+	writeErr   error
+	conflicts  []projectfile.PersonConflict
+	nilClosure bool // drops FromPF/ToPF to exercise the nil-guards
 }
 
 func (s *stubSyncer) Name() string             { return "stub-syncer" }
@@ -65,50 +72,61 @@ func (s *stubSyncer) Clone(doc any) any {
 }
 
 func (s *stubSyncer) Read(_ string) (any, error) {
+	if s.readErr != nil {
+		return nil, s.readErr
+	}
 	return &memDoc{fields: map[string]string{testStubField: "from-ext"}}, nil
 }
 
 func (s *stubSyncer) Write(_ string, _ any) error {
+	if s.writeErr != nil {
+		return s.writeErr
+	}
 	s.written++
 	return nil
 }
 
 func (s *stubSyncer) BuildMappers(extDoc any, pf *projectfile.Document) core.MapperList {
 	d := extDoc.(*memDoc)
-	return core.MapperList{
-		{
-			ExtKey: testStubField,
-			PFKey:  "identity.name",
-			FromPF: func(force bool) string {
-				if pf.Identity.Name == "" {
-					if d.fields[testStubField] == "" {
-						return ""
-					}
-					if !force {
-						return ""
-					}
-					delete(d.fields, testStubField)
-					return core.Removed
-				}
-				if d.fields[testStubField] == pf.Identity.Name {
+	m := core.FieldMapper{
+		ExtKey: testStubField,
+		PFKey:  "identity.name",
+		FromPF: func(force bool) string {
+			if pf.Identity.Name == "" {
+				if d.fields[testStubField] == "" {
 					return ""
 				}
-				d.fields[testStubField] = pf.Identity.Name
-				return pf.Identity.Name
-			},
-			ToPF: func(force bool) string {
-				v := d.fields[testStubField]
-				if v == "" {
+				if !force {
 					return ""
 				}
-				if pf.Identity.Name != "" && !force {
-					return ""
-				}
-				pf.Identity.Name = v
-				return v
-			},
+				delete(d.fields, testStubField)
+				return core.Removed
+			}
+			if d.fields[testStubField] == pf.Identity.Name {
+				return ""
+			}
+			d.fields[testStubField] = pf.Identity.Name
+			return pf.Identity.Name
+		},
+		ToPF: func(force bool) string {
+			v := d.fields[testStubField]
+			if v == "" {
+				return ""
+			}
+			if pf.Identity.Name != "" && !force {
+				return ""
+			}
+			pf.Identity.Name = v
+			return v
 		},
 	}
+	if s.nilClosure {
+		m.FromPF, m.ToPF = nil, nil
+	}
+	if len(s.conflicts) > 0 {
+		core.RecordPersonConflicts(pf, s.conflicts)
+	}
+	return core.MapperList{m}
 }
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
@@ -317,4 +335,118 @@ func TestRunSyncWritesBaseNotMerged(t *testing.T) {
 		"synced name must land in base")
 	assert.Nil(t, base.License,
 		"include-sourced license must NOT be materialised into base")
+}
+
+// A mode string no axis understands is refused with the value quoted.
+func TestRunSyncUnknownModeRefuses(t *testing.T) {
+	dir := t.TempDir()
+	pfPath := writePFFile(t, dir, "---\nidentity:\n  name: my-app\n")
+	pf := &projectfile.Document{Identity: projectfile.Identity{Name: testAppName}}
+	syn := &stubSyncer{filename: testStubJSON, exists: true}
+
+	_, err := core.RunSync(syn, pf, core.Options{Dir: dir, PFPath: pfPath, Mode: "bogus"})
+
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "unknown sync mode")
+	assert.Contains(t, err.Error(), "bogus")
+}
+
+// An empty mode axis is the default sync — projectfile authoritative.
+func TestRunSyncEmptyModeDefaultsToSync(t *testing.T) {
+	dir := t.TempDir()
+	pfPath := writePFFile(t, dir, "---\nidentity:\n  name: from-pf\n")
+	syn := &stubSyncer{filename: testStubJSON, exists: true}
+	pf := &projectfile.Document{Identity: projectfile.Identity{Name: testFromPFValue}}
+
+	res, err := core.RunSync(syn, pf, core.Options{Dir: dir, PFPath: pfPath})
+
+	require.NoError(t, err)
+	assert.True(t, res.ExtChanged)
+	assert.False(t, res.DryRun)
+}
+
+// A read or write failure on the external file surfaces with the filename.
+func TestRunSyncSurfacesIOErrors(t *testing.T) {
+	dir := t.TempDir()
+	pfPath := writePFFile(t, dir, "---\nidentity:\n  name: my-app\n")
+	pf := &projectfile.Document{Identity: projectfile.Identity{Name: testAppName}}
+
+	_, err := core.RunSync(&stubSyncer{filename: testStubJSON, exists: true, readErr: assert.AnError},
+		pf, core.Options{Dir: dir, PFPath: pfPath, Mode: core.ModeSync})
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "read "+testStubJSON)
+
+	_, err = core.RunSync(&stubSyncer{filename: testStubJSON, exists: true, writeErr: assert.AnError},
+		pf, core.Options{Dir: dir, PFPath: pfPath, Mode: core.ModeWrite})
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "write "+testStubJSON)
+}
+
+// A mapper carrying no closure for this direction is skipped, not fatal.
+func TestRunSyncSkipsNilMapperClosures(t *testing.T) {
+	dir := t.TempDir()
+	pfPath := writePFFile(t, dir, "---\nidentity:\n  name: my-app\n")
+	pf := &projectfile.Document{Identity: projectfile.Identity{Name: testAppName}}
+	syn := &stubSyncer{filename: testStubJSON, exists: true, nilClosure: true}
+
+	res, err := core.RunSync(syn, pf, core.Options{Dir: dir, PFPath: pfPath, Mode: core.ModeSync})
+	require.NoError(t, err)
+	assert.False(t, res.ExtChanged)
+
+	res, err = core.RunSync(syn, pf, core.Options{Dir: dir, PFPath: pfPath, Mode: core.ModeRead})
+	require.NoError(t, err)
+	assert.False(t, res.PFChanged)
+}
+
+// Person conflicts a mapper recorded are printed to stderr and lifted off the document.
+func TestRunSyncReportsPersonConflicts(t *testing.T) {
+	dir := t.TempDir()
+	pfPath := writePFFile(t, dir, "---\nidentity:\n  name: my-app\n")
+	pf := &projectfile.Document{Identity: projectfile.Identity{Name: testAppName}}
+	syn := &stubSyncer{
+		filename: testStubJSON, exists: true,
+		conflicts: []projectfile.PersonConflict{{
+			IdentityKey: "ada@example.test", Field: testConflictMail, Existing: "old", Incoming: "new",
+		}},
+	}
+	var stderr bytes.Buffer
+
+	_, err := core.RunSync(syn, pf, core.Options{
+		Dir: dir, PFPath: pfPath, Mode: core.ModeWrite, Stderr: &stderr,
+	})
+
+	require.NoError(t, err)
+	assert.Contains(t, stderr.String(), "conflicting")
+	assert.Contains(t, stderr.String(), "ada@example.test")
+	assert.Nil(t, pf.Rest, "the conflicts key must be lifted off the document")
+}
+
+// RecordPersonConflicts appends across mappers and stays inert when there is nothing.
+func TestRecordPersonConflictsAppends(t *testing.T) {
+	pf := &projectfile.Document{}
+	core.RecordPersonConflicts(pf, nil)
+	assert.Nil(t, pf.Rest)
+
+	first := projectfile.PersonConflict{IdentityKey: "a", Field: testConflictMail}
+	second := projectfile.PersonConflict{IdentityKey: "b", Field: testConflictMail}
+	core.RecordPersonConflicts(pf, []projectfile.PersonConflict{first})
+	core.RecordPersonConflicts(pf, []projectfile.PersonConflict{second})
+
+	got, ok := pf.Rest["_pf_sync_person_conflicts"].([]projectfile.PersonConflict)
+	require.True(t, ok)
+	assert.Equal(t, []projectfile.PersonConflict{first, second}, got)
+}
+
+// The reconcile path re-reads the BASE document, so an unreadable base fails the run.
+func TestRunSyncReconcileNeedsAReadableBase(t *testing.T) {
+	dir := t.TempDir()
+	syn := &stubSyncer{filename: testStubJSON, exists: true}
+	pf := &projectfile.Document{Identity: projectfile.Identity{Name: ""}}
+
+	_, err := core.RunSync(syn, pf, core.Options{
+		Dir: dir, PFPath: filepath.Join(dir, "absent.yaml"), Mode: core.ModeRead,
+	})
+
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "read base for reconcile")
 }
