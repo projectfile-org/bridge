@@ -32,12 +32,20 @@ const (
 	fxRange   = ">= 2.0"
 	fxVuln    = "CVE-2026-0001"
 	fxVulnRzn = "upstream fix pending"
+	fxPGPKey  = "B64C122EE16C3746"
+	fxPGPURL  = "https://example.org/pubkey.asc"
+	fxFP      = "6F19 7084 3C9E 8406 AD70  0467 B64C 122E E16C 3746"
 
 	nestedRel = "docs/SECURITY.md"
 	keyPath   = "path"
 	xdgApp    = "projectfile"
 	cliFile   = "cli.json"
 	xdgEnv    = "XDG_CONFIG_HOME"
+
+	// Namespace map keys three or more fixtures spell, hoisted so goconst stops counting them.
+	keyContact = "contact"
+	keyReport  = "report-url"
+	keyReason  = "reason"
 )
 
 // ── identity surface ────────────────────────────────────────────────────────
@@ -126,8 +134,8 @@ func TestExtensionToMapCarriesEveryDeclaredField(t *testing.T) {
 		BugBountyURL:      fxBounty,
 	})
 	assert.Equal(t, map[string]any{
-		"contact":            fxContact,
-		"report-url":         fxReport,
+		keyContact:           fxContact,
+		keyReport:            fxReport,
 		"supported-versions": []any{fxVersion},
 		"disclosure-window":  fxWindow,
 		"gpg-key":            "B64C122EE16C3746",
@@ -157,8 +165,8 @@ func TestAcknowledgedVulns(t *testing.T) {
 	pf := &projectfile.Document{}
 	projectfile.SetExtension(pf, pfmodel.VulnerabilitiesExtensionNS, map[string]any{"suppress": []any{
 		fxVuln,
-		map[string]any{"id": fxVuln, "reason": fxVulnRzn},
-		map[string]any{"reason": "no id at all"},
+		map[string]any{"id": fxVuln, keyReason: fxVulnRzn},
+		map[string]any{keyReason: "no id at all"},
 		"",
 	}})
 	got := acknowledgedVulns(pf)
@@ -202,7 +210,7 @@ func TestRequiredFieldsSetterWritesTheContact(t *testing.T) {
 func TestRequiredFieldsSetterPreservesTheOtherFields(t *testing.T) {
 	pointUserConfigAt(t, nil)
 	pf := &projectfile.Document{}
-	projectfile.SetExtension(pf, pfmodel.SecurityExtensionNS, map[string]any{"report-url": fxReport})
+	projectfile.SetExtension(pf, pfmodel.SecurityExtensionNS, map[string]any{keyReport: fxReport})
 	require.NoError(t, Bridge{}.RequiredFields(pf)[0].Setter(fxContact))
 	ext, err := pfmodel.GetSecurityExtension(pf)
 	require.NoError(t, err)
@@ -223,7 +231,7 @@ func TestRequiredFieldsSetterRejectsABlankValue(t *testing.T) {
 // securityDoc is a document whose contact arrives from the security namespace, the resolved-first tier.
 func securityDoc() *projectfile.Document {
 	pf := &projectfile.Document{Identity: projectfile.Identity{Name: fxName, Title: &projectfile.LocalizedString{Bare: fxTitle}}}
-	projectfile.SetExtension(pf, pfmodel.SecurityExtensionNS, map[string]any{"contact": fxContact})
+	projectfile.SetExtension(pf, pfmodel.SecurityExtensionNS, map[string]any{keyContact: fxContact})
 	return pf
 }
 
