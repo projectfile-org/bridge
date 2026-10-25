@@ -26,7 +26,7 @@ const (
 
 func TestRenderList(t *testing.T) {
 	entries := []bridgeEntry{
-		{name: npmName, desc: "package.json — two-way sync"},
+		{name: npmName, desc: npmDesc},
 		{name: "readme", desc: "README.md — one-way render"},
 	}
 
