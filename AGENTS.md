@@ -635,6 +635,9 @@ EXECUTIONS and understates every package by ~20 points. `make go-test` reports
 `go tool cover -func`'s total, which drops package-level statements living
 outside any function extent from its denominator and therefore reads ~1 point
 higher than the statement sum — a gap that means nothing, not a second metric.
+A process-global registry with no unregister (`internal/scanners/core`,
+`internal/bridge`) is tested by snapshotting the registry, running the case
+against an exact set, and restoring it in cleanup.
 
 `build-binaries.sh` writes one asset per cell, the standalone `pf-bridge-<os>-<arch>`.
 The single-bridge binaries are not released: together they weigh about 130 MB per
