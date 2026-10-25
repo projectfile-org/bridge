@@ -119,13 +119,16 @@ func TestEqualityHelpers(t *testing.T) {
 	assert.True(t, equalPersonList(nil, []Person{}), "nil and an empty roster are equivalent")
 	assert.True(t, equalPersonList(
 		[]Person{{Name: "A", Email: fxEmailA}},
-		[]Person{{Name: "A", Email: fxEmailA}}))
+		[]Person{{Name: "A", Email: fxEmailA}},
+	))
 	assert.False(t, equalPersonList(
 		[]Person{{Name: "A"}},
-		[]Person{{Name: "A"}, {Name: "B"}}))
+		[]Person{{Name: "A"}, {Name: "B"}},
+	))
 	assert.False(t, equalPersonList(
 		[]Person{{Name: "A", Email: fxEmailA}},
-		[]Person{{Name: "A", Email: "b@x.test"}}))
+		[]Person{{Name: "A", Email: "b@x.test"}},
+	))
 }
 
 func TestCopyStringMap(t *testing.T) {
