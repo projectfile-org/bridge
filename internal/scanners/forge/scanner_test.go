@@ -58,18 +58,18 @@ org:
       flatpath: ${org}-${name}
 `
 
-// write lays the scratch project down: the document plus the fragment it includes.
-func write(t *testing.T) string {
+// write lays the scratch project down: the shared document plus the fragment it includes.
+func write(t *testing.T, frag string) string {
 	t.Helper()
 	dir := t.TempDir()
-	require.NoError(t, os.WriteFile(filepath.Join(dir, "fragment.yaml"), []byte(fragment), 0o600))
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "fragment.yaml"), []byte(frag), 0o600))
 	require.NoError(t, os.WriteFile(filepath.Join(dir, "projectfile.yaml"), []byte(document), 0o600))
 	return dir
 }
 
 // A template is a URL or nothing: every resolved entry lands concrete, an unresolved one is skipped.
 func TestScanMaterializesTemplates(t *testing.T) {
-	p, hits, err := forge.Scanner{}.Scan(write(t))
+	p, hits, err := forge.Scanner{}.Scan(write(t, fragment))
 	require.NoError(t, err)
 
 	require.Len(t, p.Links, 3, "the codeberg template cannot resolve and is skipped")
@@ -97,4 +97,57 @@ func TestScanWithoutTemplatesIsEmpty(t *testing.T) {
 	assert.Empty(t, p.Links)
 	assert.Empty(t, p.Repositories)
 	assert.Empty(t, hits)
+}
+
+// labelGap declares a label whose Spanish half names a part this document has not, so the whole link is skipped.
+const labelGap = `---
+org:
+  projectfile:
+    forge:
+      links:
+        - type: source-code
+          url: https://kiota.ch/${path}
+          label: {en: "${name} on kiota.ch", es: "${nope} en kiota.ch"}
+`
+
+// nounGap declares a link type the noun table never spells, so the placeholder label answers nil.
+const nounGap = `---
+org:
+  projectfile:
+    forge:
+      links:
+        - type: documentation
+          url: https://kiota.ch/${path}/docs
+`
+
+// Detect answers by the projectfile's presence in root; an empty directory has none.
+func TestDetect(t *testing.T) {
+	assert.False(t, forge.Scanner{}.Detect(t.TempDir()))
+	assert.True(t, forge.Scanner{}.Detect(write(t, fragment)))
+}
+
+// A directory holding no projectfile fails the read rather than proposing nothing.
+func TestScanMissingProjectfileFails(t *testing.T) {
+	p, hits, err := forge.Scanner{}.Scan(t.TempDir())
+	require.Error(t, err)
+	assert.Nil(t, p)
+	assert.Nil(t, hits)
+}
+
+// A label unresolved in any language drops the whole link, never a half-translated one.
+func TestScanSkipsUnresolvedLabel(t *testing.T) {
+	p, hits, err := forge.Scanner{}.Scan(write(t, labelGap))
+	require.NoError(t, err)
+	assert.Empty(t, p.Links)
+	assert.Empty(t, hits)
+}
+
+// A link type with no noun in the table gets a nil placeholder label, not a guess.
+func TestScanNilPlaceholderLabelForUnnounsedType(t *testing.T) {
+	p, hits, err := forge.Scanner{}.Scan(write(t, nounGap))
+	require.NoError(t, err)
+	require.Len(t, p.Links, 1)
+	assert.Equal(t, "https://kiota.ch/b19/go/docs", p.Links[0].URL)
+	assert.Nil(t, p.Links[0].Label)
+	assert.Len(t, hits, 1)
 }
