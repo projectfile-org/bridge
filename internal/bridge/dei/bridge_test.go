@@ -5,12 +5,15 @@
 package dei_test
 
 import (
+	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"kiota.ch/projectfile/core/v2/pkg/projectfile"
+	"kiota.ch/projectfile/core/v2/pkg/userconfig"
 	"projectfile.org/projectfile/bridge/v4/internal/bridge/core"
 	"projectfile.org/projectfile/bridge/v4/internal/bridge/dei"
 	"projectfile.org/projectfile/bridge/v4/internal/pfmodel"
@@ -211,4 +214,44 @@ func withDEI(pf *projectfile.Document, ext map[string]any) *projectfile.Document
 		projectfile.SetExtension(pf, pfmodel.DEIExtensionNS, ext)
 	}
 	return pf
+}
+
+// TestBridgeIdentitySurface pins the registry-facing identity methods argv dispatch reads.
+func TestBridgeIdentitySurface(t *testing.T) {
+	b := dei.Bridge{}
+	assert.Equal(t, "dei", b.Name())
+	label, kind := b.Labels()
+	assert.Equal(t, b.Filename(), label, "the label is the managed filename")
+	assert.Equal(t, "projectfile", kind)
+	assert.Nil(t, b.Aliases(), "DEI.md is reached only by its one filename")
+	assert.Nil(t, b.RequiredFields(nil), "a marker doc owns no required field")
+}
+
+// TestBridgePathAndExists drives Exists across the absent and the written file.
+func TestBridgePathAndExists(t *testing.T) {
+	pointUserConfigEmpty(t)
+	b := dei.Bridge{}
+	dir := t.TempDir()
+	filename := b.Filename()
+	assert.False(t, b.Exists(dir), "an empty directory holds no DEI.md")
+	assert.Equal(t, filepath.Join(dir, filename), b.FullPath(dir, nil))
+	require.NoError(t, os.WriteFile(filepath.Join(dir, filename), []byte("marker"), 0o644))
+	assert.True(t, b.Exists(dir), "the written marker must be detected")
+}
+
+// TestRenderScalarNamespaceFails rejects a namespace written as a bare scalar.
+func TestRenderScalarNamespaceFails(t *testing.T) {
+	pf := &projectfile.Document{Identity: projectfile.Identity{Name: "flat"}}
+	projectfile.SetExtension(pf, pfmodel.DEIExtensionNS, testEnabled)
+	_, err := dei.Bridge{}.Render(pf, core.Options{Offline: true})
+	require.Error(t, err, "a scalar namespace is a malformed extension, not an opt-out")
+	assert.Contains(t, err.Error(), "is not a map")
+}
+
+// pointUserConfigEmpty aims Load at an empty tree so the developer's own config cannot steer the path.
+func pointUserConfigEmpty(t *testing.T) {
+	t.Helper()
+	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
+	userconfig.SetIgnored(false)
+	t.Cleanup(func() { userconfig.SetIgnored(true) })
 }
