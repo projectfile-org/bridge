@@ -5,10 +5,13 @@
 package vulnerabilities
 
 import (
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"kiota.ch/projectfile/core/v2/pkg/projectfile"
 	"projectfile.org/projectfile/bridge/v4/internal/bridge/core"
@@ -183,4 +186,40 @@ func TestShorthandStringList(t *testing.T) {
 	out, err := b.Render(doc, core.Options{})
 	assert.NoError(t, err)
 	assert.Contains(t, string(out.Files[testTrivyIgnore]), testCVE1)
+}
+
+// TestBridgeIdentitySurface pins the registry-facing identity argv dispatch reads.
+func TestBridgeIdentitySurface(t *testing.T) {
+	b := Bridge{scanner: scannerTrivy, filename: testTrivyIgnore}
+	assert.Equal(t, scannerTrivy+"-vulnignore", b.Name())
+	label, kind := b.Labels()
+	assert.Equal(t, testTrivyIgnore, label, "the label is the managed filename")
+	assert.Equal(t, "projectfile", kind)
+}
+
+// TestBridgePolicyMarker pins the marker every scanner ignore file carries.
+func TestBridgePolicyMarker(t *testing.T) {
+	b := Bridge{scanner: scannerGrype, filename: ".grype.yaml"}
+	assert.True(t, b.Policy().Marker, "a scanner ignore file must be marker-managed")
+}
+
+// TestBridgePathAndExists drives Exists across the absent and the written file.
+func TestBridgePathAndExists(t *testing.T) {
+	b := Bridge{scanner: scannerTrivy, filename: testTrivyIgnore}
+	dir := t.TempDir()
+	assert.False(t, b.Exists(dir), "an empty directory holds no ignore file")
+	assert.Equal(t, filepath.Join(dir, testTrivyIgnore), b.FullPath(dir, nil))
+	require.NoError(t, os.WriteFile(filepath.Join(dir, testTrivyIgnore), []byte("CVE-1\n"), 0o644))
+	assert.True(t, b.Exists(dir), "the written ignore file must be detected")
+}
+
+// TestRenderScalarNamespaceFails rejects the namespace written as a bare scalar.
+func TestRenderScalarNamespaceFails(t *testing.T) {
+	pf := &projectfile.Document{
+		Identity:   projectfile.Identity{Name: "p"},
+		Extensions: map[string]any{pfmodel.VulnerabilitiesExtensionNS: "flat"},
+	}
+	_, err := Bridge{scanner: scannerTrivy, filename: testTrivyIgnore}.Render(pf, core.Options{})
+	require.Error(t, err, "a scalar namespace is a malformed extension, not an opt-out")
+	assert.Contains(t, err.Error(), "is not a map")
 }

@@ -5,10 +5,13 @@
 package yamllint
 
 import (
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"kiota.ch/projectfile/core/v2/pkg/projectfile"
 	"projectfile.org/projectfile/bridge/v4/internal/bridge/core"
@@ -213,4 +216,56 @@ func TestRenderLineLengthFromConventions(t *testing.T) {
 	out, err := b.Render(pf, core.Options{})
 	assert.NoError(t, err)
 	assert.Contains(t, string(out.Files[filenameYamllint]), "max: 100")
+}
+
+// TestBridgeIdentitySurface pins the registry-facing identity argv dispatch reads.
+func TestBridgeIdentitySurface(t *testing.T) {
+	b := Bridge{filename: filenameYamllint}
+	assert.Equal(t, "yamllint-config", b.Name())
+	label, kind := b.Labels()
+	assert.Equal(t, filenameYamllint, label, "the label is the managed filename")
+	assert.Equal(t, "projectfile", kind)
+}
+
+// TestBridgePolicyMarker pins the marker the generated config carries so the next run overwrites cleanly.
+func TestBridgePolicyMarker(t *testing.T) {
+	b := Bridge{filename: filenameYamllint}
+	assert.True(t, b.Policy().Marker, "the generated config must be marker-managed")
+}
+
+// TestBridgePathAndExists drives Exists across the absent and the written file.
+func TestBridgePathAndExists(t *testing.T) {
+	b := Bridge{filename: filenameYamllint}
+	dir := t.TempDir()
+	assert.False(t, b.Exists(dir), "an empty directory holds no config")
+	assert.Equal(t, filepath.Join(dir, filenameYamllint), b.FullPath(dir, nil))
+	require.NoError(t, os.WriteFile(filepath.Join(dir, filenameYamllint), []byte("extends: default\n"), 0o644))
+	assert.True(t, b.Exists(dir), "the written config must be detected")
+}
+
+// TestRenderScalarIgnoresFails rejects the namespace written as a bare scalar, a malformed extension rather than an empty include list.
+func TestRenderScalarIgnoresFails(t *testing.T) {
+	pf := &projectfile.Document{
+		Identity:   projectfile.Identity{Name: "p"},
+		Extensions: map[string]any{pfmodel.IgnoresExtensionNS: "flat"},
+	}
+	_, err := Bridge{filename: filenameYamllint}.Render(pf, core.Options{})
+	require.Error(t, err, "a scalar namespace is a malformed extension, not an opt-out")
+	assert.Contains(t, err.Error(), "is not a map")
+}
+
+// TestRenderScalarConventionsFails rejects a scalar conventions namespace once the include gate has passed, so the width cannot be read.
+func TestRenderScalarConventionsFails(t *testing.T) {
+	pf := &projectfile.Document{
+		Identity: projectfile.Identity{Name: "p"},
+		Extensions: map[string]any{
+			pfmodel.IgnoresExtensionNS: map[string]any{
+				extKeyYamllint: map[string]any{testInclude: []any{testForgejo}},
+			},
+			pfmodel.ConventionsExtensionNS: "flat",
+		},
+	}
+	_, err := Bridge{filename: filenameYamllint}.Render(pf, core.Options{})
+	require.Error(t, err, "a scalar conventions namespace must reach Render's wrap")
+	assert.Contains(t, err.Error(), "is not a map")
 }
