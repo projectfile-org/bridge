@@ -5,6 +5,8 @@
 package browserslist_test
 
 import (
+	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -67,4 +69,34 @@ func TestRenderEnvMapErrors(t *testing.T) {
 	_, err := b.Render(docWithBrowsers(map[string]any{"production": []string{"defaults"}}), core.Options{})
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "per-environment mapping")
+}
+
+// TestBridgePolicyMarker pins the marker policy the pure-data .gitignore family shares.
+func TestBridgePolicyMarker(t *testing.T) {
+	assert.True(t, browserslist.Bridge{}.Policy().Marker, "a pure-data file must be marker-managed")
+}
+
+// TestBridgeIdentitySurface pins the registry-facing identity argv dispatch reads.
+func TestBridgeIdentitySurface(t *testing.T) {
+	b := browserslist.Bridge{}
+	assert.Equal(t, "browserslist", b.Name())
+	label, kind := b.Labels()
+	assert.Equal(t, b.Filename(), label, "the label is the managed filename")
+	assert.Equal(t, "projectfile", kind)
+}
+
+// TestBridgeStacks pins the node-stack ecosystems the default-on bridge claims.
+func TestBridgeStacks(t *testing.T) {
+	assert.Equal(t, []string{"node", "javascript", "typescript"}, browserslist.Bridge{}.Stacks())
+}
+
+// TestBridgePathAndExists drives Exists across the absent and the written file.
+func TestBridgePathAndExists(t *testing.T) {
+	b := browserslist.Bridge{}
+	dir := t.TempDir()
+	filename := b.Filename()
+	assert.False(t, b.Exists(dir), "an empty directory holds no config")
+	assert.Equal(t, filepath.Join(dir, filename), b.FullPath(dir, nil))
+	require.NoError(t, os.WriteFile(filepath.Join(dir, filename), []byte("last 1 version\n"), 0o644))
+	assert.True(t, b.Exists(dir), "the written file must be detected")
 }
