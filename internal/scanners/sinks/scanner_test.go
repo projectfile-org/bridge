@@ -94,3 +94,17 @@ func TestScanNoSinksIsQuiet(t *testing.T) {
 	assert.Empty(t, p.Links)
 	assert.Empty(t, hits)
 }
+
+// A directory holding no projectfile fails the read rather than proposing nothing.
+func TestScanMissingProjectfileFails(t *testing.T) {
+	p, hits, err := sinks.Scanner{}.Scan(t.TempDir())
+	require.Error(t, err)
+	assert.Nil(t, p)
+	assert.Nil(t, hits)
+}
+
+// Detect answers by the projectfile's presence in root; an empty directory has none.
+func TestDetect(t *testing.T) {
+	assert.False(t, sinks.Scanner{}.Detect(t.TempDir()))
+	assert.True(t, sinks.Scanner{}.Detect(write(t, document, fragment)))
+}
