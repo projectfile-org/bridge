@@ -20,6 +20,15 @@ func TestReadRejectsMalformedJSON(t *testing.T) {
 	assert.Nil(t, doc)
 }
 
+// TestReadRejectsANonObjectRoot pins that a null root reads as an empty Document yet is no object for the raw canvas.
+func TestReadRejectsANonObjectRoot(t *testing.T) {
+	dir := t.TempDir()
+	writePkgJSON(t, dir, `null`)
+	doc, err := Read(dir)
+	require.Error(t, err, "a null root unmarshals into Document but never into the raw canvas")
+	assert.Nil(t, doc)
+}
+
 // TestParsePersonEveryShape covers the three spellings a person can take inside
 // package.json plus the nil pointer and the unknown-type fallthrough.
 func TestParsePersonEveryShape(t *testing.T) {
