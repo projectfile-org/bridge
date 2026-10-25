@@ -14,6 +14,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"kiota.ch/projectfile/core/v2/pkg/projectfile"
+	"kiota.ch/projectfile/core/v2/pkg/userconfig"
 	"projectfile.org/projectfile/bridge/v4/internal/bridge/contributing"
 	"projectfile.org/projectfile/bridge/v4/internal/bridge/core"
 	"projectfile.org/projectfile/bridge/v4/internal/pfmodel"
@@ -234,8 +235,8 @@ func docWithAuthor(handles map[string]any) *projectfile.Document {
 	return &projectfile.Document{
 		Identity: projectfile.Identity{Name: "follow-proj"},
 		People: []projectfile.Person{{
-			GivenNames:  "Test",
-			FamilyNames: "Author",
+			GivenNames:  testGivenNames,
+			FamilyNames: testFamilyAuthor,
 			Roles:       []string{"author"},
 			Handles:     handles,
 		}},
@@ -352,8 +353,8 @@ func TestAuthorSiteUsesDomain(t *testing.T) {
 	pf := withContributing(&projectfile.Document{
 		Identity: projectfile.Identity{Name: "site-proj"},
 		People: []projectfile.Person{{
-			GivenNames:  "Test",
-			FamilyNames: "Author",
+			GivenNames:  testGivenNames,
+			FamilyNames: testFamilyAuthor,
 			Roles:       []string{"author"},
 			URL:         "https://dbuho.me",
 		}},
@@ -384,7 +385,7 @@ func TestRenderConventionsReplacesOldSections(t *testing.T) {
 // documented semantic value.
 func TestRenderConventionsVersioningKnown(t *testing.T) {
 	b := contributing.Bridge{}
-	pf := withConventions(&projectfile.Document{Identity: projectfile.Identity{Name: "v-proj"}},
+	pf := withConventions(&projectfile.Document{Identity: projectfile.Identity{Name: testIdentityVProj}},
 		map[string]any{"versioning": "semantic"})
 	out, err := b.Render(pf, core.Options{Offline: true})
 	require.NoError(t, err)
@@ -396,7 +397,7 @@ func TestRenderConventionsVersioningKnown(t *testing.T) {
 // rule: an unknown versioning value must surface as a raw bullet, not vanish.
 func TestRenderConventionsVersioningArbitrary(t *testing.T) {
 	b := contributing.Bridge{}
-	pf := withConventions(&projectfile.Document{Identity: projectfile.Identity{Name: "v-proj"}},
+	pf := withConventions(&projectfile.Document{Identity: projectfile.Identity{Name: testIdentityVProj}},
 		map[string]any{"versioning": "my-scheme"})
 	out, err := b.Render(pf, core.Options{Offline: true})
 	require.NoError(t, err)
@@ -447,7 +448,7 @@ func TestRenderConventionsLanguageStyles(t *testing.T) {
 // renders the default Conventional Commits bullet (prior behaviour preserved).
 func TestRenderConventionsCommitsDefault(t *testing.T) {
 	b := contributing.Bridge{}
-	pf := &projectfile.Document{Identity: projectfile.Identity{Name: "c-proj"}}
+	pf := &projectfile.Document{Identity: projectfile.Identity{Name: testIdentityCProj}}
 	out, err := b.Render(pf, core.Options{Offline: true})
 	require.NoError(t, err)
 	body := string(out.Files["CONTRIBUTING.md"])
@@ -597,4 +598,253 @@ func TestBuildDocLinkedWhenReadmeRendersIt(t *testing.T) {
 	out, err = contributing.Bridge{}.Render(pf, core.Options{Offline: true, Dir: dir})
 	require.NoError(t, err)
 	assert.Contains(t, string(out.Files["CONTRIBUTING.md"]), "is in [Building](docs/BUILD.md).")
+}
+
+// ── Path probes, registry surface and the remaining helper contracts ────────
+
+const (
+	testRoleAuthor      = "author"
+	testKeyVersioning   = "versioning"
+	testKeyCommitStyle  = "commit-style"
+	testKeyWorkflow     = "workflow"
+	testKeySections     = "sections"
+	testKeyStyleGuide   = "style-guide-url"
+	testSocialURL       = "https://m.to/@proj"
+	testSocialMirrorURL = "https://m.to/@other"
+	testIdentityCProj   = "c-proj"
+	testIdentityVProj   = "v-proj"
+	testGivenNames      = "Test"
+	testFamilyAuthor    = "Author"
+	testChatKind        = "chat"
+)
+
+// TestBridgePathAndExists isolates the user config so the path resolves to the
+// default filename rather than a developer's own generate.defaults entry.
+func TestBridgePathAndExists(t *testing.T) {
+	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
+	userconfig.SetIgnored(false)
+	t.Cleanup(func() { userconfig.SetIgnored(true) })
+	b := contributing.Bridge{}
+	dir := t.TempDir()
+	assert.False(t, b.Exists(dir), "no CONTRIBUTING.md yet")
+	assert.Equal(t, filepath.Join(dir, "CONTRIBUTING.md"), b.FullPath(dir, nil))
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "CONTRIBUTING.md"), []byte("# C\n"), 0o600))
+	assert.True(t, b.Exists(dir), "the written file must be seen")
+}
+
+// TestBridgeIdentitySurface pins the registry-facing one-liners.
+func TestBridgeIdentitySurface(t *testing.T) {
+	b := contributing.Bridge{}
+	assert.Equal(t, "contributing", b.Name())
+	label, category := b.Labels()
+	assert.Equal(t, "CONTRIBUTING.md", label)
+	assert.Equal(t, "projectfile", category)
+}
+
+// TestRenderRefusesAScalarNamespace reaches GetContributingExtension's error
+// return: a namespace holding a scalar cannot unmarshal into the extension.
+func TestRenderRefusesAScalarNamespace(t *testing.T) {
+	pf := &projectfile.Document{Identity: projectfile.Identity{Name: "scalar-proj"}}
+	projectfile.SetExtension(pf, pfmodel.ContributingExtensionNS, "not-a-map")
+	_, err := contributing.Bridge{}.Render(pf, core.Options{Offline: true})
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "is not a map")
+}
+
+// TestRenderUsesTheDeclaredBranchAndLicense takes the checkout branch from
+// repositories[].branch and names the licence in the acknowledgement section.
+func TestRenderUsesTheDeclaredBranchAndLicense(t *testing.T) {
+	pf := withConventions(&projectfile.Document{
+		Identity: projectfile.Identity{Name: "branch-proj"},
+		Repositories: []projectfile.Repository{{
+			URL:    "https://github.com/damian-buho/branch-proj",
+			Role:   projectfile.RepositoryRoleOrigin,
+			Branch: "trunk",
+		}},
+		License: &projectfile.License{Spdx: "MIT"},
+	}, map[string]any{testKeyWorkflow: "trunk-based"})
+	withContributing(pf, map[string]any{
+		testKeySections: []any{"submitting", "license_acknowledgement"},
+	})
+	out, err := contributing.Bridge{}.Render(pf, core.Options{Offline: true})
+	require.NoError(t, err)
+	body := string(out.Files["CONTRIBUTING.md"])
+	assert.Contains(t, body, "branch from `trunk`", "repositories[].branch must replace the main default")
+	assert.Contains(t, body, "the project’s MIT license")
+}
+
+// TestRenderChatURLLetsTheExtensionOverrideLinks keeps the backwards-compatible
+// precedence: an extension value wins over the links[type=chat] entry.
+func TestRenderChatURLLetsTheExtensionOverrideLinks(t *testing.T) {
+	pf := withContributing(&projectfile.Document{
+		Identity: projectfile.Identity{Name: "chat-proj"},
+		Links:    []projectfile.Link{{Type: testChatKind, URL: "https://links-chat.example.org"}},
+	}, map[string]any{
+		testKeySections: []any{testChatKind},
+		"chat-url":      "https://ext-chat.example.org",
+	})
+	out, err := contributing.Bridge{}.Render(pf, core.Options{Offline: true})
+	require.NoError(t, err)
+	body := string(out.Files["CONTRIBUTING.md"])
+	assert.Contains(t, body, "Join the project chat at <https://ext-chat.example.org>")
+	assert.NotContains(t, body, "links-chat", "the links[] value loses to the extension field")
+}
+
+// TestRenderAIPolicyRowFallsBackToEnglishForAnUntranslatedDefault keeps the
+// Conventions pointer when the primary language has no localised row.
+func TestRenderAIPolicyRowFallsBackToEnglishForAnUntranslatedDefault(t *testing.T) {
+	pf := &projectfile.Document{Identity: projectfile.Identity{Name: testAIProject}}
+	projectfile.SetExtension(pf, pfmodel.AIExtensionNS, map[string]any{testAIAttitude: testAIWelcoming})
+	projectfile.SetExtension(pf, pfmodel.I18NExtensionNS, map[string]any{"default-language": "de"})
+	out, err := contributing.Bridge{}.Render(pf, core.Options{Offline: true})
+	require.NoError(t, err)
+	assert.Contains(t, string(out.Files["CONTRIBUTING.md"]), "**AI Policy:** [Read our AI policy](AI_POLICY.md)")
+}
+
+// TestRenderConventionsCommitsGitmoji maps the gitmoji value to its guide.
+func TestRenderConventionsCommitsGitmoji(t *testing.T) {
+	pf := withConventions(&projectfile.Document{Identity: projectfile.Identity{Name: testIdentityCProj}},
+		map[string]any{testKeyCommitStyle: "gitmoji"})
+	out, err := contributing.Bridge{}.Render(pf, core.Options{Offline: true})
+	require.NoError(t, err)
+	assert.Contains(t, string(out.Files["CONTRIBUTING.md"]), "**Commits:** [Gitmoji](https://gitmoji.dev/)")
+}
+
+// TestRenderConventionsCommitsFree renders the "no strict convention" sentence
+// for the documented free value.
+func TestRenderConventionsCommitsFree(t *testing.T) {
+	pf := withConventions(&projectfile.Document{Identity: projectfile.Identity{Name: testIdentityCProj}},
+		map[string]any{testKeyCommitStyle: "free"})
+	out, err := contributing.Bridge{}.Render(pf, core.Options{Offline: true})
+	require.NoError(t, err)
+	assert.Contains(t, string(out.Files["CONTRIBUTING.md"]),
+		"**Commits:** no strict convention — write clear, descriptive messages.")
+}
+
+// TestRenderConventionsCommitsArbitrary degrades an unknown commit-style to the
+// raw value instead of dropping the row.
+func TestRenderConventionsCommitsArbitrary(t *testing.T) {
+	pf := withConventions(&projectfile.Document{Identity: projectfile.Identity{Name: testIdentityCProj}},
+		map[string]any{testKeyCommitStyle: "angular"})
+	out, err := contributing.Bridge{}.Render(pf, core.Options{Offline: true})
+	require.NoError(t, err)
+	assert.Contains(t, string(out.Files["CONTRIBUTING.md"]), "**Commits:** angular")
+}
+
+// TestRenderConventionsVersioningCalver links the Calendar Versioning site.
+func TestRenderConventionsVersioningCalver(t *testing.T) {
+	pf := withConventions(&projectfile.Document{Identity: projectfile.Identity{Name: testIdentityVProj}},
+		map[string]any{testKeyVersioning: "calver"})
+	out, err := contributing.Bridge{}.Render(pf, core.Options{Offline: true})
+	require.NoError(t, err)
+	assert.Contains(t, string(out.Files["CONTRIBUTING.md"]), "**Versioning:** [Calendar Versioning](https://calver.org/)")
+}
+
+// TestRenderConventionsVersioningRolling spells out the rolling release model.
+func TestRenderConventionsVersioningRolling(t *testing.T) {
+	pf := withConventions(&projectfile.Document{Identity: projectfile.Identity{Name: testIdentityVProj}},
+		map[string]any{testKeyVersioning: "rolling"})
+	out, err := contributing.Bridge{}.Render(pf, core.Options{Offline: true})
+	require.NoError(t, err)
+	assert.Contains(t, string(out.Files["CONTRIBUTING.md"]), "**Versioning:** rolling — no discrete releases.")
+}
+
+// TestRenderConventionsVersioningNone states that no releases are cut.
+func TestRenderConventionsVersioningNone(t *testing.T) {
+	pf := withConventions(&projectfile.Document{Identity: projectfile.Identity{Name: testIdentityVProj}},
+		map[string]any{testKeyVersioning: "none"})
+	out, err := contributing.Bridge{}.Render(pf, core.Options{Offline: true})
+	require.NoError(t, err)
+	assert.Contains(t, string(out.Files["CONTRIBUTING.md"]), "**Versioning:** none.")
+}
+
+// TestRenderConventionsLanguageStylesRemainderAndEmpty renders the stack tags
+// absent from pf.Stack and drops a language declared without a style guide.
+func TestRenderConventionsLanguageStylesRemainderAndEmpty(t *testing.T) {
+	pf := withConventions(&projectfile.Document{
+		Identity: projectfile.Identity{Name: "ls-proj"},
+		Stack:    []string{"js"},
+	}, map[string]any{
+		"js":   map[string]any{testKeyStyleGuide: "https://standardjs.com"},
+		"go":   map[string]any{testKeyStyleGuide: "https://go.dev/doc/effective_go"},
+		"rust": map[string]any{},
+	})
+	out, err := contributing.Bridge{}.Render(pf, core.Options{Offline: true})
+	require.NoError(t, err)
+	body := string(out.Files["CONTRIBUTING.md"])
+	assert.Contains(t, body, "**js style:** <https://standardjs.com>")
+	assert.Contains(t, body, "**go style:** <https://go.dev/doc/effective_go>",
+		"a language absent from pf.Stack still renders, after the declared stack tags")
+	assert.NotContains(t, body, "rust style", "a language with no style-guide-url renders no row")
+}
+
+// TestRenderAuthorHandlesOfEveryShape flattens the three spec §4.5.1 handle
+// shapes into follow links and drops the leaves that are not strings.
+func TestRenderAuthorHandlesOfEveryShape(t *testing.T) {
+	pf := withContributing(&projectfile.Document{
+		Identity: projectfile.Identity{Name: "follow-proj"},
+		People: []projectfile.Person{{
+			GivenNames:  testGivenNames,
+			FamilyNames: testFamilyAuthor,
+			Roles:       []string{testRoleAuthor},
+			URL:         "https://www.dbuho.me",
+			Handles: map[string]any{
+				testMastodon: testMastodonHandle,
+				"bluesky":    []any{"b1", "", 7},
+				testGitHub:   []string{"g1", "g2", ""},
+				"codeberg":   map[string]any{"home": "c1"},
+				"linkedin":   7,
+			},
+		}, {
+			GivenNames:  "Other",
+			FamilyNames: "Maintainer",
+			Roles:       []string{"maintainer"},
+			URL:         "https://example.org",
+		}},
+	}, map[string]any{testRecommendToFollow: true})
+	out, err := contributing.Bridge{}.Render(pf, core.Options{Offline: true})
+	require.NoError(t, err)
+	body := string(out.Files["CONTRIBUTING.md"])
+	assert.Contains(t, body, "on Mastodon", "a bare handle string becomes one follow link")
+	assert.Contains(t, body, "on Bluesky", "an array of any keeps only its string leaves")
+	assert.Contains(t, body, "on GitHub", "a []string shape keeps only its non-empty entries")
+	assert.Contains(t, body, "on Codeberg", "a map shape contributes its values")
+	assert.NotContains(t, body, "on LinkedIn", "an unknown handle shape yields no link")
+	assert.Contains(t, body, "Visit the [author’s site (dbuho.me)](https://www.dbuho.me)")
+	assert.NotContains(t, body, "https://example.org", "a maintainer is not an author")
+}
+
+// TestRenderProjectSocialsDedupAndPriority keeps one line per handle URL and
+// orders the peers of one platform by their declared priority.
+func TestRenderProjectSocialsDedupAndPriority(t *testing.T) {
+	pf := withContributing(&projectfile.Document{
+		Identity: projectfile.Identity{Name: "social-proj"},
+		Links: []projectfile.Link{
+			{Type: testMastodon, URL: testSocialURL},
+			{Type: testMastodon, URL: testSocialURL},
+			{Type: testMastodon, URL: testSocialMirrorURL, Extra: map[string]any{"priority": 5}},
+		},
+	}, map[string]any{testRecommendToFollow: true})
+	out, err := contributing.Bridge{}.Render(pf, core.Options{Offline: true})
+	require.NoError(t, err)
+	body := string(out.Files["CONTRIBUTING.md"])
+	assert.Contains(t, body, "Follow [social-proj on mastodon]("+testSocialURL+")")
+	assert.Contains(t, body, "Follow [social-proj on mastodon]("+testSocialMirrorURL+")")
+	assert.Equal(t, 1, strings.Count(body, testSocialURL), "a duplicate URL must collapse to one line")
+	pinned := strings.Index(body, "https://m.to/@proj)")
+	assert.Less(t, pinned, strings.Index(body, "https://m.to/@other)"),
+		"the default priority outranks a declared 5")
+}
+
+// TestRenderStarLineForAnUnparseableForgeURL keeps the raw URL as the star
+// label when the host cannot be parsed, rather than dropping the mirror.
+func TestRenderStarLineForAnUnparseableForgeURL(t *testing.T) {
+	pf := withContributing(&projectfile.Document{
+		Identity: projectfile.Identity{Name: "weird-forge"},
+		Links:    []projectfile.Link{{Type: testSourceCode, URL: "https://exa mple.org/cli"}},
+	}, map[string]any{testRecommendToStar: true})
+	out, err := contributing.Bridge{}.Render(pf, core.Options{Offline: true})
+	require.NoError(t, err)
+	assert.Contains(t, string(out.Files["CONTRIBUTING.md"]),
+		"Star the project on [https://exa mple.org/cli](https://exa mple.org/cli)")
 }
