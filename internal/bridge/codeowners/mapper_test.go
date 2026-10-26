@@ -63,7 +63,9 @@ func TestBuildMappersPaintsTheReuseHeader(t *testing.T) {
 	pf := &projectfile.Document{License: &projectfile.License{Spdx: "MIT"}}
 	extDoc := &Document{}
 	entriesMapper(t, extDoc, pf)
+	// REUSE-IgnoreStart
 	assert.Contains(t, extDoc.ReuseHeader, "SPDX-License-Identifier: MIT", "the driver stamps the header it writes")
+	// REUSE-IgnoreEnd
 }
 
 // ── to-pf direction ────────────────────────────────────────────────────────

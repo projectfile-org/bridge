@@ -43,7 +43,9 @@ func writeFixtureProjectfile(t *testing.T, dir, technologies string) {
 	body := "---\n" +
 		"# SPDX-FileCopyrightText: 2026 Tester\n" +
 		"#\n" +
+		// REUSE-IgnoreStart
 		"# SPDX-License-Identifier: " + spdxMIT + "\n" +
+		// REUSE-IgnoreEnd
 		"$schema: https://projectfile.org/schema/v1.json\n" +
 		"identity:\n  name: " + filepath.Base(dir) + "\n"
 	if technologies != "" {

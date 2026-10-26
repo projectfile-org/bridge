@@ -215,7 +215,9 @@ func TestRenderWritesEveryProviderBlock(t *testing.T) {
 
 	assert.True(t, strings.HasPrefix(body, core.YAMLDocStart), "the artefact opens with the YAML document start")
 	assert.Contains(t, body, fmt.Sprintf("# SPDX-FileCopyrightText: %d %s %s <%s>", fxYear, fxGiven, fxFamily, fxEmail))
+	// REUSE-IgnoreStart
 	assert.Contains(t, body, "# SPDX-License-Identifier: "+fxSpdx)
+	// REUSE-IgnoreEnd
 	assert.Contains(t, body, core.Marker, "every generated file carries the sentinel")
 	assert.Contains(t, body, "github:\n  - "+fxGitHub)
 	for _, block := range [][2]string{
