@@ -41,7 +41,7 @@ func TestFetchParentReadsThePublishedDocument(t *testing.T) {
 	assert.Equal(t, testParentTitle, cop.Title)
 	assert.Equal(t, "v2.0.0", cop.Ref, "the newest release tag wins")
 	assert.Len(t, cop.Commit, 40)
-	assert.Contains(t, cop.SPDX, "SPDX-License-Identifier: MIT")
+	assert.Contains(t, cop.SPDX, spdxTag+": "+spdxMIT)
 	assert.Contains(t, cop.Body, "### Live Entry")
 	assert.NotContains(t, cop.Body, "# Features")
 	assert.Equal(t, "## Inherited from B19/Ubuntu", cop.Heading())
