@@ -203,7 +203,7 @@ func TestOnlineRenderRoundTripsByteStable(t *testing.T) {
 // caller can preserve the committed sections instead of mixing.
 func TestFetchParentsReportsFailure(t *testing.T) {
 	doc := pfmodel.FragmentDocument{
-		Dir: "docs/features.d", Out: "FEATURES.md", Title: "Features",
+		Dir: "docs/features.d", Out: outFeaturesName, Title: "Features",
 		Parents: []pfmodel.FragmentParent{{URL: itestURL}, {URL: "https://example.test/b19/other"}},
 	}
 	var calls atomic.Int32

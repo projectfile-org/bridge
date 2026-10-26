@@ -160,7 +160,7 @@ func TestLocalizedTitleIsDeterministic(t *testing.T) {
 func TestTarEntriesAssignsLongestSuffix(t *testing.T) {
 	var buf bytes.Buffer
 	writer := tar.NewWriter(&buf)
-	for name, body := range map[string]string{"b19-ubuntu/FEATURES.md": "canonical", "b19-ubuntu/docs/es/FEATURES.md": "spanish", pfYAML: "pf", "README.md": "unasked"} {
+	for name, body := range map[string]string{"b19-ubuntu/" + outFeaturesName: archiveCanonical, "b19-ubuntu/docs/es/FEATURES.md": "spanish", pfYAML: "pf", outReadmeName: archiveUnasked} {
 		require.NoError(t, writer.WriteHeader(&tar.Header{
 			Name: name, Mode: 0o644, Size: int64(len(body)), Typeflag: tar.TypeReg,
 		}))
@@ -171,7 +171,7 @@ func TestTarEntriesAssignsLongestSuffix(t *testing.T) {
 
 	got, err := tarEntries(buf.Bytes(), []string{outFeaturesName, core.LocalizedFilename(outFeaturesName, "es"), pfYAML})
 	require.NoError(t, err)
-	assert.Equal(t, map[string]string{outFeaturesName: "canonical", core.LocalizedFilename(outFeaturesName, "es"): "spanish", pfYAML: "pf"}, got)
+	assert.Equal(t, map[string]string{outFeaturesName: archiveCanonical, core.LocalizedFilename(outFeaturesName, "es"): "spanish", pfYAML: "pf"}, got)
 }
 
 // TestTranslationsFromBatchNestsCopies verifies batched localized documents reduce to the same nesting shape as per-file reads.
@@ -191,7 +191,7 @@ func TestTranslationsFromBatchNestsCopies(t *testing.T) {
 func TestTarEntryPicksTheDocument(t *testing.T) {
 	var buf bytes.Buffer
 	writer := tar.NewWriter(&buf)
-	for name, body := range map[string]string{"README.md": "wrong", "b19-ubuntu/FEATURES.md": "right"} {
+	for name, body := range map[string]string{outReadmeName: "wrong", "b19-ubuntu/" + outFeaturesName: "right"} {
 		require.NoError(t, writer.WriteHeader(&tar.Header{
 			Name: name, Mode: 0o644, Size: int64(len(body)), Typeflag: tar.TypeReg,
 		}))
@@ -200,7 +200,7 @@ func TestTarEntryPicksTheDocument(t *testing.T) {
 	}
 	require.NoError(t, writer.Close())
 
-	got, err := tarEntry(buf.Bytes(), "FEATURES.md")
+	got, err := tarEntry(buf.Bytes(), outFeaturesName)
 	require.NoError(t, err)
 	assert.Equal(t, "right", got)
 
