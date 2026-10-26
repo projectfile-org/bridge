@@ -346,6 +346,15 @@ A parent that cannot be reached warns and keeps the committed sections.
 Refusing to nest a document with no SPDX header is deliberate — the
 alternative is unlicensed text in this repository over a fault upstream owns.
 
+The fetch is tested against a real Git crossing, not a stub: `gitFixture`
+builds a throwaway repository, tags a release and clones it bare, so
+`ls-remote` and `git archive --remote` answer as a forge does. The fixture URL
+is a plain filesystem path because `validateRepoURL` refuses every `scheme::`
+form — which is what keeps a remote-helper URL from reaching the subprocess —
+so `file://` is not a transport that can be tested. `TestMain` drops every
+inherited `GIT_*` variable and points `GIT_CONFIG_GLOBAL`/`GIT_CONFIG_SYSTEM`
+at `/dev/null`, so the fixture never reads the developer’s own config.
+
 Two things bite when adding a parent:
 
 - **The nested text is linted by the consumer, not by upstream.** Prose that
