@@ -44,5 +44,6 @@ func command(ctx context.Context, name string, args ...string) *exec.Cmd {
 	if err != nil {
 		self = os.Args[0]
 	}
-	return exec.CommandContext(ctx, self, append([]string{name}, args...)...) // #nosec G204 -- re-runs this executable with a linked subcommand name
+	// Re-runs this executable with a linked subcommand name. exec.Command uses argv (no shell), so forwarded CLI flags cannot inject commands; G702 taint originates from os.Args and gosec provides no sanitizer, so the directive below is the only honest remediation.
+	return exec.CommandContext(ctx, self, append([]string{name}, args...)...) // #nosec G204 G702 -- re-runs this executable with a linked subcommand name
 }
