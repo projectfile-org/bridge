@@ -30,6 +30,7 @@ const (
 	itestURL        = "https://example.test/b19/ubuntu"
 	itestRef        = "2.0.0"
 	outFeaturesName = "FEATURES.md"
+	itestFetched    = "### Fetched Feature\n\nFetched body."
 )
 
 // itestProject writes a projectfile with documents + parents and i18n es/uk.
@@ -90,7 +91,7 @@ func TestLiveFetchRendersFetchedSectionsAndReplacesCommitted(t *testing.T) {
 	itestStub(t, func(_ pfmodel.FragmentParent, _ string, langs []string) (inheritedCopy, map[string]inheritedCopy, error) {
 		canonical := inheritedCopy{
 			Name: testParent, Title: testParentTitle, URL: itestURL, Ref: itestRef,
-			SPDX: itestSPDX, Body: "### Fetched Feature\n\nFetched body.",
+			SPDX: itestSPDX, Body: itestFetched,
 		}
 		translated := map[string]inheritedCopy{}
 		for _, lang := range langs {
@@ -170,7 +171,7 @@ func TestOnlineRenderRoundTripsByteStable(t *testing.T) {
 	itestStub(t, func(_ pfmodel.FragmentParent, _ string, _ []string) (inheritedCopy, map[string]inheritedCopy, error) {
 		canonical := inheritedCopy{
 			Name: testParent, Title: testParentTitle, URL: itestURL, Ref: itestRef,
-			SPDX: itestSPDX, Body: "### Fetched Feature\n\nFetched body.",
+			SPDX: itestSPDX, Body: itestFetched,
 		}
 		// Spanish published, Ukrainian not — the fallback path rides along.
 		return canonical, map[string]inheritedCopy{"es": {
@@ -218,6 +219,35 @@ func TestFetchParentsReportsFailure(t *testing.T) {
 	assert.False(t, ok, "a failed parent must fail the document")
 	assert.Len(t, copies, 1, "readable copies still return")
 	assert.Equal(t, int32(2), calls.Load())
+}
+
+// TestSectionsForFetchesUnprefetchedDocument: a document resolved on its own —
+// no prefetch slot, so sectionsFor reaches the forge itself — gets the fetched
+// canonical sections and a variant resolver that layers the parent's localized
+// copy over them.
+func TestSectionsForFetchesUnprefetchedDocument(t *testing.T) {
+	doc := pfmodel.FragmentDocument{
+		Dir: "docs/features.d", Out: outFeaturesName, Title: "Features",
+		Parents: []pfmodel.FragmentParent{{URL: itestURL}},
+	}
+	itestStub(t, func(pfmodel.FragmentParent, string, []string) (inheritedCopy, map[string]inheritedCopy, error) {
+		canonical := inheritedCopy{
+			Name: testParent, Title: testParentTitle, Ref: itestRef,
+			SPDX: itestSPDX, Body: itestFetched,
+		}
+		return canonical, map[string]inheritedCopy{"es": canonical}, nil
+	})
+
+	canonical, resolveVariants := sectionsFor(t.TempDir(), doc, core.Options{}, []string{"es"}, "en", docFetch{})
+	require.Len(t, canonical, 1)
+	assert.Equal(t, "## Inherited from B19/Ubuntu", canonical[0].Heading)
+
+	variants := resolveVariants()
+	require.Len(t, variants, 1)
+	assert.Equal(t, "es", variants[0].Lang)
+	require.Len(t, variants[0].Inherited, 1)
+	assert.Equal(t, "## Heredado de B19/Ubuntu", variants[0].Inherited[0].Heading)
+	assert.Equal(t, itestFetched, variants[0].Inherited[0].Body)
 }
 
 // TestFetchParentsSkipsUnpublishedParent: a parent that publishes no such
