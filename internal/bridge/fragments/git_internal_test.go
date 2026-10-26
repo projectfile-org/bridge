@@ -62,7 +62,8 @@ func fixtureGit(t *testing.T, workDir string, args ...string) {
 
 // gitFixture builds one local repository serving the given files at the given
 // release tags and returns the URL the fetcher is pointed at. The bare copy is
-// what the file:// transport reaches, so the fixture reads like a forge.
+// what git reaches, and the URL is a plain path: a scheme URL is exactly the
+// remote-helper form validateRepoURL refuses, since `scheme::` matches.
 func gitFixture(t *testing.T, files map[string]string, tags ...string) string {
 	t.Helper()
 	work := t.TempDir()
@@ -79,9 +80,10 @@ func gitFixture(t *testing.T, files map[string]string, tags ...string) string {
 	for _, tag := range tags {
 		fixtureGit(t, src, "tag", tag)
 	}
-	bare := filepath.Join(work, "bare.git")
+	bare := filepath.Join(work, "kiota.ch", "b19", "ubuntu.git")
+	require.NoError(t, os.MkdirAll(filepath.Dir(bare), 0o755))
 	fixtureGit(t, work, "clone", "--quiet", "--bare", src, bare)
-	return "file://" + bare
+	return bare
 }
 
 // TestRunGitReturnsStdoutAndStderr covers one attempt: its stdout on success,
