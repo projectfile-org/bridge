@@ -69,6 +69,7 @@ const (
 	blockRelated          = "related"
 	blockLinks            = "links"
 	blockFunding          = "funding"
+	blockUpstream         = "upstream"
 	blockLicense          = "license"
 	blockAcknowledgements = "acknowledgements"
 )
@@ -82,7 +83,7 @@ const (
 // blockAcknowledgements closes the document after the licence — credits read
 // last, the way a film's do.
 var defaultBlocks = []string{
-	blockLanguages, blockLogo, blockBasics, blockBadges, blockRelated, blockScreenshots,
+	blockLanguages, blockLogo, blockBasics, blockBadges, blockUpstream, blockRelated, blockScreenshots,
 	blockFeatures, blockBenchmarks, blockQuickStart, blockRequirements,
 	blockArtifacts, blockPlatforms, blockInstallation, blockUsage, blockConfiguration, blockBuilding,
 	blockDocumentation, blockFAQ, blockRoadmap,

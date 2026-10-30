@@ -44,10 +44,11 @@ funding.body: Див. [%[1]s](%[2]s), якщо ви хочете підтрим�
 license.title: Ліцензія
 license.body: Цей проєкт ліцензовано на умовах %s — див. файл [LICENSE](LICENSE) для подробиць.
 license.body.upstream: Пакування в цьому репозиторії ліцензовано на умовах %s — див. файл [LICENSE](LICENSE) для подробиць.
-upstream.packages: Пакує %s.
-upstream.fork: Форк %s.
-upstream.license: "%[1]s поширюється за власною ліцензією, `%[2]s`."
-upstream.license.own: "%s поширюється за власною ліцензією."
+upstream.title: Першоджерело
+upstream.packages: "Цей проєкт пакує %[1]s (%[2]s)."
+upstream.fork: "Цей проєкт є форком %[1]s (%[2]s)."
+upstream.license.own: власна ліцензія
+upstream.thanks: "Дякуємо: %s"
 
 # Блок подяк — згадки після ліцензії, по одному підрозділу на кожен оголошений
 # список (org.projectfile.acknowledgements); порожні списки не показуються.

@@ -21,6 +21,7 @@ type upstreamEntry struct {
 	URL     string
 	Version string
 	License string
+	Authors string
 	Fork    bool
 }
 
@@ -48,6 +49,7 @@ func buildUpstream(doc *projectfile.Document, lang string) []upstreamEntry {
 			URL:     expandProse(doc, stringOf(m[keyURL]), "upstream.url"),
 			Version: expandProse(doc, stringOf(m["version"]), "upstream.version"),
 			License: stringOf(m["license"]),
+			Authors: projectfile.ExtractLocalizedStringForLang(localizedOf(m["authors"]), lang),
 			Fork:    stringOf(m["relation"]) == "fork",
 		}
 		if e.Name == "" {

@@ -55,6 +55,7 @@ rich project fills every section.
 | `logo`             | `docs/logo.<ext>` then `assets/logo.<ext>` probe                                                                | yes            |
 | `basics`           | `identity.title` + `identity.description`, else `identity.summary`                                              | yes            |
 | `badges`           | `readme.shields` (see [Badges](#badges))                                                                        | yes            |
+| `upstream`         | top-level `upstream[]` — what is packaged or forked, its license and `authors`                                  | yes            |
 | `screenshots`      | `docs/screenshots/*.<img>` probe                                                                                | yes            |
 | `features`         | `docs/FEATURES.md` probe, localized first (project H3 titles as bullets; one note naming inherited parents)     | yes            |
 | `benchmarks`       | `BENCHMARKS.md` probe                                                                                           | yes            |

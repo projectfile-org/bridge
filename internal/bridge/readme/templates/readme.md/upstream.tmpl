@@ -1,0 +1,9 @@
+{{- with upstream}}
+## {{t "upstream.title"}}
+
+{{range .}}{{$lic := t "upstream.license.own"}}{{if .License}}{{$lic = printf "`%s`" .License}}{{end -}}
+{{if .Fork}}{{printf (t "upstream.fork") .Ref $lic}}{{else}}{{printf (t "upstream.packages") .Ref $lic}}{{end}}
+{{with .Authors}}{{printf (t "upstream.thanks") .}}
+{{end}}
+{{end -}}
+{{end -}}
