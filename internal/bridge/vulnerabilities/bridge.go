@@ -71,11 +71,13 @@ func (b Bridge) Render(pf *projectfile.Document, _ core.Options) (core.Output, e
 	if err != nil {
 		return core.Output{}, err
 	}
-	// Nothing to suppress (or namespace absent) → emit nothing. The caller
-	// skips the write, so removing every suppression drops generation; clear
-	// any stale generated file by hand or via `git clean`.
+	// Source emptied (or namespace gone): every managed copy is stale and retires — deleted, except audit-ci.jsonc whose wrapper exits 1 on a missing --config file, rewritten to an empty allowlist instead.
 	if ext == nil || len(ext.Suppress) == 0 {
-		return core.Output{}, nil
+		var body []byte
+		if b.scanner == scannerAuditCI {
+			body = b.assemble(pf, nil)
+		}
+		return core.Output{Remove: map[string][]byte{b.filename: body}}, nil
 	}
 	// `generate` opts a project out of scanners it does not run. Unset means
 	// "fan out to every scanner" — the specify-once default.
@@ -227,6 +229,11 @@ func writeAuditCI(buf *bytes.Buffer, entries []pfmodel.VulnerabilitySuppress) {
 	buf.WriteString("{\n")
 	buf.WriteString("  \"$schema\": \"https://github.com/IBM/audit-ci/raw/main/docs/schema.json\",\n")
 	buf.WriteString("  \"low\": true,\n")
+	// zero entries collapse the array to one line — the empty-allowlist rewrite state.
+	if len(entries) == 0 {
+		buf.WriteString("  \"allowlist\": []\n}\n")
+		return
+	}
 	buf.WriteString("  \"allowlist\": [\n")
 	for i, e := range entries {
 		if e.Reason != "" {

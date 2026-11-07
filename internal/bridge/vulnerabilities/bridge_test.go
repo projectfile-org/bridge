@@ -20,6 +20,7 @@ import (
 
 const (
 	testTrivyIgnore = ".trivyignore"
+	testGrypeYAML   = ".grype.yaml"
 	testCVE1        = "CVE-2026-1"
 	testCVE2        = "CVE-2025-2"
 )
@@ -75,10 +76,10 @@ func TestRenderAllFormats(t *testing.T) {
 	})
 
 	t.Run(scannerGrype, func(t *testing.T) {
-		b := Bridge{scanner: scannerGrype, filename: ".grype.yaml"}
+		b := Bridge{scanner: scannerGrype, filename: testGrypeYAML}
 		out, err := b.Render(doc, core.Options{})
 		assert.NoError(t, err)
-		body := string(out.Files[".grype.yaml"])
+		body := string(out.Files[testGrypeYAML])
 		assert.True(t, strings.HasPrefix(body, core.YAMLDocStart))
 		assert.Contains(t, body, "ignore:")
 		assert.Contains(t, body, "vulnerability: CVE-2026-46320  # unfixable kernel headers")
@@ -199,7 +200,7 @@ func TestBridgeIdentitySurface(t *testing.T) {
 
 // TestBridgePolicyMarker pins the marker every scanner ignore file carries.
 func TestBridgePolicyMarker(t *testing.T) {
-	b := Bridge{scanner: scannerGrype, filename: ".grype.yaml"}
+	b := Bridge{scanner: scannerGrype, filename: testGrypeYAML}
 	assert.True(t, b.Policy().Marker, "a scanner ignore file must be marker-managed")
 }
 

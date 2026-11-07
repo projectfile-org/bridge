@@ -49,6 +49,8 @@ type Renderer interface {
 // one-entry map.
 type Output struct {
 	Files map[string][]byte
+	// Remove retires managed files their source lost: nil deletes the file, a body rewrites it to that empty state (audit-ci.jsonc); gated by the write marker, detached left alone, --check drifts on a surviving managed copy.
+	Remove map[string][]byte
 }
 
 // Policy controls the dispatcher's overwrite behaviour. Marker unset means

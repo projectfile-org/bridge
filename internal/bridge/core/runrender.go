@@ -33,7 +33,7 @@ func RunRender(r Renderer, pf *projectfile.Document, opts Options) error {
 	if err != nil {
 		return fmt.Errorf("%s: %w", r.Filename(), err)
 	}
-	if len(out.Files) == 0 {
+	if len(out.Files) == 0 && len(out.Remove) == 0 {
 		genlog.Plain("bridge: " + r.Filename() + " (no-op)")
 		return nil
 	}
@@ -50,22 +50,39 @@ func RunRender(r Renderer, pf *projectfile.Document, opts Options) error {
 // the write-gate policy and any existing on-disk copy are irrelevant here,
 // since nothing is touched. A single-file render prints bare; a multi-file
 // render (e.g. LICENSE's LICENSES/<id>.txt fan-out) prints a path header
-// before each file so the files stay distinguishable in the stream.
+// before each file so the files stay distinguishable in the stream. Remove
+// entries print a status line, or their rewrite body when one exists.
 func previewOutput(out Output) error {
-	names := make([]string, 0, len(out.Files))
+	names := make([]string, 0, len(out.Files)+len(out.Remove))
 	for k := range out.Files {
+		names = append(names, k)
+	}
+	for k := range out.Remove {
 		names = append(names, k)
 	}
 	sort.Strings(names)
 
 	multi := len(names) > 1
 	for _, rel := range names {
-		if multi {
-			fmt.Printf("--- %s ---\n", rel)
+		if body, ok := out.Files[rel]; ok {
+			if multi {
+				fmt.Printf("--- %s ---\n", rel)
+			}
+			if _, err := os.Stdout.Write(body); err != nil {
+				return fmt.Errorf("preview %s: %w", rel, err)
+			}
+			continue
 		}
-		if _, err := os.Stdout.Write(out.Files[rel]); err != nil {
-			return fmt.Errorf("preview %s: %w", rel, err)
+		if body, ok := out.Remove[rel]; ok && body != nil {
+			if multi {
+				fmt.Printf("--- %s ---\n", rel)
+			}
+			if _, err := os.Stdout.Write(body); err != nil {
+				return fmt.Errorf("preview %s: %w", rel, err)
+			}
+			continue
 		}
+		fmt.Printf("bridge: %s (would remove)\n", rel)
 	}
 	return nil
 }
@@ -118,6 +135,45 @@ func checkOutput(dir string, out Output, opts Options) error {
 			genlog.Success(fmt.Sprintf("bridge: %s (in sync)", rel))
 		}
 	}
+	// Remove entries retire: pf's state is the file's absence (nil body) or its empty-state rewrite (body); a surviving managed copy is drift, a detached one never is.
+	for _, rel := range sortedKeys(out.Remove) {
+		absPath, err := filepath.Abs(filepath.Join(dir, rel))
+		if err != nil {
+			return fmt.Errorf("resolve %s path: %w", rel, err)
+		}
+		rendered := out.Remove[rel]
+		existing, readErr := os.ReadFile(absPath) // #nosec G304 -- joined from caller-provided dir + registered filename
+		switch {
+		case readErr != nil && os.IsNotExist(readErr):
+			if rendered != nil && !opts.NoCreate {
+				warn.Record("drift: file is missing", "file", rel)
+				drifted = append(drifted, rel)
+				continue
+			}
+			if rendered != nil {
+				continue // --create-all: missing file is expected, not drift
+			}
+			genlog.Success(fmt.Sprintf("bridge: %s (in sync)", rel))
+		case readErr != nil:
+			return fmt.Errorf("read existing %s: %w", rel, readErr)
+		case !HasMarker(existing):
+			genlog.Plain(fmt.Sprintf("bridge: %s (detached — left alone)", rel))
+		case rendered == nil:
+			warn.Record("drift: file still holds state the projectfile no longer declares", "file", rel)
+			if opts.Diff {
+				WriteDiff(diffOut(opts), rel, existing, nil)
+			}
+			drifted = append(drifted, rel)
+		case !bytes.Equal(existing, rendered):
+			warn.Record("drift: file no longer matches the projectfile", "file", rel)
+			if opts.Diff {
+				WriteDiff(diffOut(opts), rel, existing, rendered)
+			}
+			drifted = append(drifted, rel)
+		default:
+			genlog.Success(fmt.Sprintf("bridge: %s (in sync)", rel))
+		}
+	}
 	if len(drifted) == 0 {
 		return nil
 	}
@@ -129,14 +185,22 @@ func checkOutput(dir string, out Output, opts Options) error {
 		len(drifted), strings.Join(drifted, ", "))
 }
 
-// writeOutput applies the policy gate per file, prints one status line per
-// file, and tallies refusals into a single batch-level error.
-func writeOutput(dir string, out Output, policy Policy, opts Options) error {
-	names := make([]string, 0, len(out.Files))
-	for k := range out.Files {
+// sortedKeys orders the map's file names, so every Output consumer prints deterministically.
+func sortedKeys(m map[string][]byte) []string {
+	names := make([]string, 0, len(m))
+	for k := range m {
 		names = append(names, k)
 	}
 	sort.Strings(names)
+	return names
+}
+
+// writeOutput applies the policy gate per file, prints one status line per
+// file, and tallies refusals into a single batch-level error. Remove entries
+// are handled after files under the same gate: a nil body deletes a managed
+// copy, a body rewrites it to the empty state, a detached copy is left alone.
+func writeOutput(dir string, out Output, policy Policy, opts Options) error {
+	names := sortedKeys(out.Files)
 
 	refusals := 0
 	for _, rel := range names {
@@ -172,6 +236,49 @@ func writeOutput(dir string, out Output, policy Policy, opts Options) error {
 			return fmt.Errorf("mkdir %s: %w", filepath.Dir(absPath), err)
 		}
 		if err := os.WriteFile(absPath, out.Files[rel], 0o644); err != nil { // #nosec G306 -- generated metadata, world-readable by intent
+			return fmt.Errorf("write %s: %w", rel, err)
+		}
+		genlog.Success(fmt.Sprintf("bridge: %s (%s)", rel, status))
+	}
+
+	// Retirements succeed even where nothing matches them: a missing delete target is already the state pf declares (absent), and a detached copy stays the human's file — neither refuses nor errors.
+	for _, rel := range sortedKeys(out.Remove) {
+		absPath, err := filepath.Abs(filepath.Join(dir, rel))
+		if err != nil {
+			return fmt.Errorf("resolve %s path: %w", rel, err)
+		}
+		body := out.Remove[rel]
+		existing, readErr := os.ReadFile(absPath) // #nosec G304 -- joined from caller-provided dir + registered filename
+		status := "updated"
+		switch {
+		case readErr != nil && os.IsNotExist(readErr):
+			if body == nil {
+				genlog.Plain(fmt.Sprintf("bridge: %s (absent)", rel))
+				continue
+			}
+			if opts.NoCreate {
+				genlog.Plain(fmt.Sprintf("bridge: %s (skipped — missing, --create-all not set)", rel))
+				continue
+			}
+			status = "created"
+		case readErr != nil:
+			return fmt.Errorf("read existing %s: %w", rel, readErr)
+		case policy.Marker && !HasMarker(existing) && !opts.Force:
+			genlog.Plain(fmt.Sprintf("bridge: %s (detached — left alone)", rel))
+			continue
+		}
+		if body == nil {
+			status = "removed"
+		}
+		if opts.DryRun {
+			genlog.Plain(fmt.Sprintf("bridge: %s (%s) [dry-run]", rel, status))
+			continue
+		}
+		if body == nil {
+			if err := os.Remove(absPath); err != nil {
+				return fmt.Errorf("remove %s: %w", rel, err)
+			}
+		} else if err := os.WriteFile(absPath, body, 0o644); err != nil { // #nosec G306 -- generated metadata, world-readable by intent
 			return fmt.Errorf("write %s: %w", rel, err)
 		}
 		genlog.Success(fmt.Sprintf("bridge: %s (%s)", rel, status))

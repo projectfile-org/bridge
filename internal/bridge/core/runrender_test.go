@@ -32,6 +32,8 @@ type stubRenderer struct {
 	content []byte
 	// Multi-file output; takes priority over content when set.
 	files map[string][]byte
+	// Files to retire (Output.Remove): nil deletes, a body rewrites.
+	remove map[string][]byte
 	// renderErr fails Render when set — the one error every driver must wrap.
 	renderErr error
 }
@@ -55,8 +57,8 @@ func (r *stubRenderer) Render(_ *projectfile.Document, _ core.Options) (core.Out
 	if r.renderErr != nil {
 		return core.Output{}, r.renderErr
 	}
-	if r.files != nil {
-		return core.Output{Files: r.files}, nil
+	if r.files != nil || r.remove != nil {
+		return core.Output{Files: r.files, Remove: r.remove}, nil
 	}
 	return core.Output{Files: map[string][]byte{r.filename: r.content}}, nil
 }

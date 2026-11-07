@@ -264,6 +264,17 @@ not tagged its links, and the drop rule makes that silent.
 `--check` renders, compares, and writes nothing; a content mismatch AND a
 missing file both count as drift, each reported with its unified diff.
 
+A renderer can also RETIRE a file through `core.Output.Remove` when the
+source it derives from empties (the vulnerabilities bridges, once the
+suppress list drains): a `nil` body deletes the managed copy, a body
+rewrites it to the empty state (`audit-ci.jsonc` — `auto-audit-ci` passes
+`--config` unconditionally, so the file is emptied, never deleted), a copy
+without the sentinel is left to its human (`--force` overrides), and the
+check drifts on a surviving managed copy only — hand-detached files are
+never reported, because pf does not own them. `vulnerabilities.generate`
+opts scanners out of fresh renders, never out of retirement: an emptied
+source leaves no suppression standing anywhere the family owns.
+
 **Drift WARNS by default; it does not fail.** `--fail-on-drift` (or
 `PF_BRIDGE_FAIL_ON_DRIFT=1`) restores the hard gate. The reason the default sits
 on the lenient side is the fleet’s two-step rollout: a bridge fix is published
