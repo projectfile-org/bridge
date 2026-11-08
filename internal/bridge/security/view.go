@@ -23,5 +23,6 @@ type securityView struct {
 // SECURITY.md names.
 type ackView struct {
 	ID     string
+	URL    string
 	Reason string
 }

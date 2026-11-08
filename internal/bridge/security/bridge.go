@@ -7,11 +7,13 @@ package security
 import (
 	"fmt"
 	"os"
+	"slices"
 	"strings"
 
 	"kiota.ch/projectfile/core/v2/pkg/genlog"
 	"kiota.ch/projectfile/core/v2/pkg/projectfile"
 	"kiota.ch/projectfile/core/v2/pkg/userconfig"
+	"projectfile.org/projectfile/bridge/v4/internal/advisory"
 	"projectfile.org/projectfile/bridge/v4/internal/bridge/core"
 	"projectfile.org/projectfile/bridge/v4/internal/pfmodel"
 )
@@ -211,8 +213,9 @@ func acknowledgedVulns(pf *projectfile.Document) []ackView {
 		if s.ID == "" {
 			continue
 		}
-		out = append(out, ackView{ID: s.ID, Reason: s.Reason})
+		out = append(out, ackView{ID: s.ID, URL: advisory.URL(s.ID), Reason: s.Reason})
 	}
+	slices.SortStableFunc(out, func(a, b ackView) int { return advisory.Compare(a.ID, b.ID) })
 	return out
 }
 

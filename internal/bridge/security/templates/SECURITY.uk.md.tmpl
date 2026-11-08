@@ -100,6 +100,6 @@ gpg --encrypt --armor --recipient {{.GPGKey}} message.txt
 
 | ID | Причина |
 | --- | --- |
-{{range .Acknowledged}}| {{.ID}} | {{if .Reason}}{{.Reason}}{{else}}—{{end}} |
+{{range .Acknowledged}}| {{if .URL}}[{{.ID}}]({{.URL}}){{else}}{{.ID}}{{end}} | {{if .Reason}}{{.Reason}}{{else}}—{{end}} |
 {{end}}
 {{- end}}

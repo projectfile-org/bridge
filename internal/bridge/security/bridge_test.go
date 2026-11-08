@@ -43,9 +43,10 @@ const (
 	xdgEnv    = "XDG_CONFIG_HOME"
 
 	// Namespace map keys three or more fixtures spell, hoisted so goconst stops counting them.
-	keyContact = "contact"
-	keyReport  = "report-url"
-	keyReason  = "reason"
+	keyContact  = "contact"
+	keyReport   = "report-url"
+	keyReason   = "reason"
+	keySuppress = "suppress"
 )
 
 // ── identity surface ────────────────────────────────────────────────────────
@@ -163,7 +164,7 @@ func TestAcknowledgedVulns(t *testing.T) {
 	assert.Nil(t, acknowledgedVulns(&projectfile.Document{}), "a document with no vulnerabilities namespace names nothing")
 
 	pf := &projectfile.Document{}
-	projectfile.SetExtension(pf, pfmodel.VulnerabilitiesExtensionNS, map[string]any{"suppress": []any{
+	projectfile.SetExtension(pf, pfmodel.VulnerabilitiesExtensionNS, map[string]any{keySuppress: []any{
 		fxVuln,
 		map[string]any{"id": fxVuln, keyReason: fxVulnRzn},
 		map[string]any{keyReason: "no id at all"},
@@ -174,6 +175,20 @@ func TestAcknowledgedVulns(t *testing.T) {
 	assert.Equal(t, fxVuln, got[0].ID)
 	assert.Empty(t, got[0].Reason, "the string shorthand carries no reason")
 	assert.Equal(t, fxVulnRzn, got[1].Reason)
+	assert.Equal(t, "https://nvd.nist.gov/vuln/detail/"+fxVuln, got[0].URL, "a CVE links to NVD")
+}
+
+// The table lists findings alphanumerically, whatever order the projectfile declares them in.
+func TestAcknowledgedVulnsSortsAlphanumerically(t *testing.T) {
+	pf := &projectfile.Document{}
+	projectfile.SetExtension(pf, pfmodel.VulnerabilitiesExtensionNS, map[string]any{keySuppress: []any{
+		"GHSA-aaaa-bbbb-cccc", "CVE-2026-10000", "CVE-2026-9999",
+	}})
+	var ids []string
+	for _, a := range acknowledgedVulns(pf) {
+		ids = append(ids, a.ID)
+	}
+	assert.Equal(t, []string{"CVE-2026-9999", "CVE-2026-10000", "GHSA-aaaa-bbbb-cccc"}, ids)
 }
 
 // ── required fields ─────────────────────────────────────────────────────────

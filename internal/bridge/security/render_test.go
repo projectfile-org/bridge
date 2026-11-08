@@ -69,7 +69,7 @@ func TestRenderRendersEveryDeclaredSection(t *testing.T) {
 	assert.Contains(t, body, "- \\"+fxRange)
 	assert.Contains(t, body, "acknowledge reports within "+fxWindow)
 	assert.Contains(t, body, "## Acknowledged Vulnerabilities")
-	assert.Contains(t, body, "| "+fxVuln+" | "+fxVulnRzn+" |")
+	assert.Contains(t, body, "| ["+fxVuln+"](https://nvd.nist.gov/vuln/detail/"+fxVuln+") | "+fxVulnRzn+" |")
 	assert.Contains(t, body, "## Bug Bounty")
 	assert.Contains(t, body, fxBounty)
 	assert.Contains(t, body, "gpg --keyserver keys.openpgp.org --recv-keys "+fxPGPKey)
@@ -176,7 +176,7 @@ func fullDoc() *projectfile.Document {
 		"bug-bounty-url":     fxBounty,
 	})
 	projectfile.SetExtension(pf, pfmodel.VulnerabilitiesExtensionNS, map[string]any{
-		"suppress": []any{map[string]any{"id": fxVuln, keyReason: fxVulnRzn}},
+		keySuppress: []any{map[string]any{"id": fxVuln, keyReason: fxVulnRzn}},
 	})
 	pf.Links = []projectfile.Link{{Type: "pgp-key", URL: fxPGPURL}}
 	return pf
