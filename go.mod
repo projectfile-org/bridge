@@ -20,6 +20,7 @@ require (
 	github.com/spf13/cobra v1.10.2
 	github.com/stretchr/testify v1.12.1
 	go.yaml.in/yaml/v3 v3.0.6
+	golang.org/x/sync v0.22.0
 	kiota.ch/projectfile/core/v2 v2.20.4
 )
 
@@ -45,7 +46,6 @@ require (
 	github.com/xo/terminfo v1.0.0 // indirect
 	golang.org/x/crypto v0.56.0 // indirect
 	golang.org/x/exp v0.0.0-20260824195058-e88cd73687aa // indirect
-	golang.org/x/sync v0.22.0 // indirect
 	golang.org/x/sys v0.47.0 // indirect
 	golang.org/x/text v0.41.0 // indirect
 )

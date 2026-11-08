@@ -157,6 +157,7 @@ type VulnerabilitiesExtension struct {
 // dropped from the plain-line .trivyignore dialect.
 type VulnerabilitySuppress struct {
 	ID     string `toml:"id" yaml:"id" json:"id"`
+	Name   string `toml:"name" yaml:"name" json:"name"`
 	Reason string `toml:"reason" yaml:"reason" json:"reason"`
 }
 

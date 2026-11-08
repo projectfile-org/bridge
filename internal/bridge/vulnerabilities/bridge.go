@@ -24,10 +24,11 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"sort"
+	"slices"
 	"strconv"
 
 	"kiota.ch/projectfile/core/v2/pkg/projectfile"
+	"projectfile.org/projectfile/bridge/v4/internal/advisory"
 	"projectfile.org/projectfile/bridge/v4/internal/bridge/core"
 	"projectfile.org/projectfile/bridge/v4/internal/pfmodel"
 )
@@ -66,7 +67,7 @@ func (b Bridge) FullPath(dir string, _ *projectfile.Document) string {
 	return filepath.Join(dir, b.filename)
 }
 
-func (b Bridge) Render(pf *projectfile.Document, _ core.Options) (core.Output, error) {
+func (b Bridge) Render(pf *projectfile.Document, opts core.Options) (core.Output, error) {
 	ext, err := pfmodel.GetVulnerabilitiesExtension(pf)
 	if err != nil {
 		return core.Output{}, err
@@ -75,7 +76,7 @@ func (b Bridge) Render(pf *projectfile.Document, _ core.Options) (core.Output, e
 	if ext == nil || len(ext.Suppress) == 0 {
 		var body []byte
 		if b.scanner == scannerAuditCI {
-			body = b.assemble(pf, nil)
+			body = b.assemble(pf, nil, opts)
 		}
 		return core.Output{Remove: map[string][]byte{b.filename: body}}, nil
 	}
@@ -84,7 +85,7 @@ func (b Bridge) Render(pf *projectfile.Document, _ core.Options) (core.Output, e
 	if !enabledFor(ext, b.scanner) {
 		return core.Output{}, nil
 	}
-	body := b.assemble(pf, ext.Suppress)
+	body := b.assemble(pf, ext.Suppress, opts)
 	if len(body) == 0 {
 		return core.Output{}, nil
 	}
@@ -108,8 +109,8 @@ func enabledFor(ext *pfmodel.VulnerabilitiesExtension, scanner string) bool {
 // assemble builds the byte body for one scanner: REUSE header + banner + the
 // scanner-specific suppress block. The banner points at the single
 // org.projectfile.vulnerabilities source so a reader always knows where to edit.
-func (b Bridge) assemble(pf *projectfile.Document, suppress []pfmodel.VulnerabilitySuppress) []byte {
-	entries := dedupSorted(suppress)
+func (b Bridge) assemble(pf *projectfile.Document, suppress []pfmodel.VulnerabilitySuppress, opts core.Options) []byte {
+	entries := fillNames(dedupSorted(suppress), opts)
 
 	var buf bytes.Buffer
 	// grype's file is YAML: yamllint (rule document-start) wants a `---`
@@ -138,25 +139,19 @@ func (b Bridge) assemble(pf *projectfile.Document, suppress []pfmodel.Vulnerabil
 	return buf.Bytes()
 }
 
-// dedupSorted returns the suppress entries de-duplicated by ID and sorted, so
+// dedupSorted returns the suppress entries de-duplicated by ID and sorted alphanumerically, so
 // output is stable regardless of projectfile list order or duplicate entries.
 func dedupSorted(in []pfmodel.VulnerabilitySuppress) []pfmodel.VulnerabilitySuppress {
-	byID := make(map[string]string, len(in)) // id → reason (first reason wins)
-	order := make([]string, 0, len(in))
+	seen := make(map[string]bool, len(in)) // first entry per ID wins
+	out := make([]pfmodel.VulnerabilitySuppress, 0, len(in))
 	for _, e := range in {
-		if e.ID == "" {
+		if e.ID == "" || seen[e.ID] {
 			continue
 		}
-		if _, seen := byID[e.ID]; !seen {
-			byID[e.ID] = e.Reason
-			order = append(order, e.ID)
-		}
+		seen[e.ID] = true
+		out = append(out, e)
 	}
-	sort.Strings(order)
-	out := make([]pfmodel.VulnerabilitySuppress, 0, len(order))
-	for _, id := range order {
-		out = append(out, pfmodel.VulnerabilitySuppress{ID: id, Reason: byID[id]})
-	}
+	slices.SortFunc(out, func(a, b pfmodel.VulnerabilitySuppress) int { return advisory.Compare(a.ID, b.ID) })
 	return out
 }
 
@@ -182,12 +177,24 @@ func vulnBanner(filename string, count int, marker string) string {
 `, leader, filename, count, noun, marker)
 }
 
-// writeTrivy emits one vulnerability ID per line (any format: CVE/GHSA/GO-*).
-// The plain-line .trivyignore dialect has no slot for a reason, so reason
-// provenance is dropped here (it still surfaces in the grype/osv formats and
-// the projectfile itself).
+// writeComments emits the entry’s name and database link, each on its own comment line.
+func writeComments(buf *bytes.Buffer, indent, leader string, e pfmodel.VulnerabilitySuppress) {
+	if name := advisory.OneLine(e.Name); name != "" {
+		fmt.Fprintf(buf, "%s%s %s\n", indent, leader, name)
+	}
+	if link := advisory.URL(e.ID); link != "" {
+		fmt.Fprintf(buf, "%s%s %s\n", indent, leader, link)
+	}
+}
+
+// writeTrivy emits one vulnerability ID per line (any format: CVE/GHSA/GO-*),
+// under its name and link comments; the dialect has no slot for a reason.
 func writeTrivy(buf *bytes.Buffer, entries []pfmodel.VulnerabilitySuppress) {
-	for _, e := range entries {
+	for i, e := range entries {
+		if i > 0 {
+			buf.WriteByte('\n')
+		}
+		writeComments(buf, "", "#", e)
 		fmt.Fprintf(buf, "%s\n", e.ID)
 	}
 }
@@ -198,6 +205,7 @@ func writeTrivy(buf *bytes.Buffer, entries []pfmodel.VulnerabilitySuppress) {
 func writeGrype(buf *bytes.Buffer, entries []pfmodel.VulnerabilitySuppress) {
 	buf.WriteString("ignore:\n")
 	for _, e := range entries {
+		writeComments(buf, "  ", "#", e)
 		if e.Reason != "" {
 			fmt.Fprintf(buf, "  - vulnerability: %s  # %s\n", e.ID, e.Reason)
 		} else {
@@ -210,6 +218,7 @@ func writeGrype(buf *bytes.Buffer, entries []pfmodel.VulnerabilitySuppress) {
 // osv-scanner auto-discovers osv-scanner.toml from the scanned directory.
 func writeOsv(buf *bytes.Buffer, entries []pfmodel.VulnerabilitySuppress) {
 	for _, e := range entries {
+		writeComments(buf, "", "#", e)
 		buf.WriteString("[[IgnoredVulns]]\n")
 		fmt.Fprintf(buf, "id = %s\n", strconv.Quote(e.ID))
 		if e.Reason != "" {
@@ -236,6 +245,7 @@ func writeAuditCI(buf *bytes.Buffer, entries []pfmodel.VulnerabilitySuppress) {
 	}
 	buf.WriteString("  \"allowlist\": [\n")
 	for i, e := range entries {
+		writeComments(buf, "    ", "//", e)
 		if e.Reason != "" {
 			fmt.Fprintf(buf, "    // %s\n", e.Reason)
 		}

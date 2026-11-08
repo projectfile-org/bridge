@@ -101,6 +101,7 @@ func parseSuppressList(list []any) []VulnerabilitySuppress {
 		}
 		s := VulnerabilitySuppress{
 			ID:     strVal(m, "id"),
+			Name:   strVal(m, "name"),
 			Reason: strVal(m, "reason"),
 		}
 		if s.ID != "" {

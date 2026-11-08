@@ -275,6 +275,19 @@ never reported, because pf does not own them. `vulnerabilities.generate`
 opts scanners out of fresh renders, never out of retirement: an emptied
 source leaves no suppression standing anywhere the family owns.
 
+Every vulnerability entry renders, ID sorted alphanumerically (`internal/advisory.Compare`:
+`CVE-2026-9999` before `CVE-2026-10000`), under a name comment line and a
+database-link comment line (NVD for `CVE-`, GitHub for `GHSA-`, pkg.go.dev for
+`GO-`, osv.dev otherwise); SECURITY.md links the same IDs. The name is the
+entry’s `name`, else the osv.dev title, read through the shared
+`$XDG_CACHE_HOME/pf/osv/<ID>.txt` slot, eight requests at a time. `--check`
+and `--preview` look names up the same way so they match what a write
+renders, and `--offline` reads the cache only. A writing run stores what it
+found as `name` on the BASE projectfile’s own entries. An entry an include
+declares (the fleet’s m6e `vulnerabilities/` fragments) keeps its name in the
+cache only, so an offline gate on an empty cache renders it unnamed and
+drifts.
+
 **Drift WARNS by default; it does not fail.** `--fail-on-drift` (or
 `PF_BRIDGE_FAIL_ON_DRIFT=1`) restores the hard gate. The reason the default sits
 on the lenient side is the fleet’s two-step rollout: a bridge fix is published
