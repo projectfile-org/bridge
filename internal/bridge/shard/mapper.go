@@ -121,39 +121,12 @@ func mapAuthors(doc *Document, pf *projectfile.Document) core.FieldMapper {
 	return core.FieldMapper{
 		ExtKey: "authors", PFKey: "people",
 		ToPF: func(_ bool) string {
-			var incoming []projectfile.Person
-			for _, a := range doc.Authors {
-				name, email := splitShardAuthor(a)
-				if name == "" && email == "" {
-					continue
-				}
-				incoming = append(incoming, shardPersonToPF(name, email))
-			}
-			if len(incoming) == 0 {
-				return ""
-			}
-			before := len(pf.People)
-			merged, conflicts := projectfile.MergePeople(pf.People, incoming)
-			pf.People = merged
-			core.RecordPersonConflicts(pf, conflicts)
-			if len(pf.People) == before && len(conflicts) == 0 {
-				return ""
-			}
-			return fmt.Sprintf("%d author(s) merged", len(incoming))
+			return core.MergeAuthorStrings(pf, doc.Authors)
 		},
 		FromPF: func(force bool) string {
-			authors := filterByRole(pf.People, "author")
-			if len(authors) == 0 {
-				return core.ClearExt(force, &doc.Authors)
-			}
-			entries := make([]string, 0, len(authors))
-			for _, p := range authors {
-				if s := formatShardAuthor(p); s != "" {
-					entries = append(entries, s)
-				}
-			}
+			entries := core.AuthorStrings(pf.People)
 			if len(entries) == 0 {
-				return ""
+				return core.ClearExt(force, &doc.Authors)
 			}
 			if equalStringSlice(doc.Authors, entries) {
 				return ""
@@ -339,78 +312,6 @@ func mapDocumentation(doc *Document, pf *projectfile.Document) core.FieldMapper 
 			return core.Trunc(url)
 		},
 	}
-}
-
-// splitShardAuthor splits "Name <email>" into its name and email parts.
-func splitShardAuthor(s string) (name, email string) {
-	rest := strings.TrimSpace(s)
-	if open := strings.Index(rest, "<"); open >= 0 {
-		if end := strings.Index(rest[open:], ">"); end >= 0 {
-			email = strings.TrimSpace(rest[open+1 : open+end])
-			rest = strings.TrimSpace(rest[:open])
-		}
-	}
-	return rest, email
-}
-
-// shardPersonToPF converts a shard author pair into a projectfile person.
-func shardPersonToPF(name, email string) projectfile.Person {
-	p := projectfile.Person{Email: email, Roles: []string{"author"}}
-	parts := strings.SplitN(strings.TrimSpace(name), " ", 2)
-	switch {
-	case len(parts) == 2:
-		p.GivenNames = parts[0]
-		p.FamilyNames = parts[1]
-	case len(parts) == 1 && parts[0] != "":
-		p.DisplayName = parts[0]
-	}
-	return p
-}
-
-// formatShardAuthor renders a projectfile person as a "Name <email>" string.
-func formatShardAuthor(p projectfile.Person) string {
-	name := personDisplayName(p)
-	switch {
-	case name != "" && p.Email != "":
-		return name + " <" + p.Email + ">"
-	case name != "":
-		return name
-	default:
-		return p.Email
-	}
-}
-
-// personDisplayName resolves the flat display name following composer rules.
-func personDisplayName(p projectfile.Person) string {
-	if p.DisplayName != "" {
-		return p.DisplayName
-	}
-	if p.GivenNames != "" && p.FamilyNames != "" {
-		parts := []string{p.GivenNames}
-		if p.NameParticle != "" {
-			parts = append(parts, p.NameParticle)
-		}
-		parts = append(parts, p.FamilyNames)
-		if p.NameSuffix != "" {
-			parts = append(parts, p.NameSuffix)
-		}
-		return strings.Join(parts, " ")
-	}
-	return ""
-}
-
-// filterByRole selects the people entries carrying the given role.
-func filterByRole(people []projectfile.Person, role string) []projectfile.Person {
-	var out []projectfile.Person
-	for _, p := range people {
-		for _, r := range p.Roles {
-			if r == role {
-				out = append(out, p)
-				break
-			}
-		}
-	}
-	return out
 }
 
 // equalStringSlice compares two string slices treating nil and empty as equal.

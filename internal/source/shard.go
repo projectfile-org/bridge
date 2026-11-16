@@ -63,7 +63,7 @@ func (ShardSource) Extract(dir string) (*Partial, error) {
 	}
 	var people []PersonEntry
 	for _, a := range doc.Authors {
-		if pe, ok := shardAuthorEntry(a); ok {
+		if pe, ok := authorEntry(a); ok {
 			people = append(people, pe)
 		}
 	}
@@ -74,8 +74,8 @@ func (ShardSource) Extract(dir string) (*Partial, error) {
 	return p, nil
 }
 
-// shardAuthorEntry splits a "Name <email>" author string into a person entry.
-func shardAuthorEntry(s string) (PersonEntry, bool) {
+// authorEntry splits a "Name <email>" author string into a person entry.
+func authorEntry(s string) (PersonEntry, bool) {
 	rest := strings.TrimSpace(s)
 	email := ""
 	if open := strings.Index(rest, "<"); open >= 0 {

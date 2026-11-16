@@ -113,7 +113,7 @@ func TestReuseCopyrightLinesFallBackToContributorThenDisplayName(t *testing.T) {
 	author := &projectfile.Document{
 		Copyright: &projectfile.Copyright{Year: 2026},
 		People: []projectfile.Person{
-			{GivenNames: nameAda, FamilyNames: familyLovelace, Email: adaEmail, Roles: []string{"author"}},
+			{GivenNames: nameAda, FamilyNames: familyLovelace, Email: adaEmail, Roles: []string{roleAuthor}},
 		},
 	}
 	assert.Equal(t, []string{"2026 Ada Lovelace <ada@example.test>"}, ReuseCopyrightLines(author))
@@ -122,8 +122,8 @@ func TestReuseCopyrightLinesFallBackToContributorThenDisplayName(t *testing.T) {
 	noEmail := &projectfile.Document{
 		Copyright: &projectfile.Copyright{Year: 2026},
 		People: []projectfile.Person{
-			{Roles: []string{"author"}},
-			{GivenNames: "Grace", FamilyNames: "Hopper", Roles: []string{"maintainer"}},
+			{Roles: []string{roleAuthor}},
+			{GivenNames: "Grace", FamilyNames: "Hopper", Roles: []string{roleMaintainer}},
 		},
 	}
 	assert.Equal(t, []string{"2026 Grace Hopper"}, ReuseCopyrightLines(noEmail))
@@ -151,7 +151,7 @@ func TestReuseCopyrightYearAndLicenseFallbacks(t *testing.T) {
 func TestContributorHolderReadsAuthorAndMaintainer(t *testing.T) {
 	name, email, ok := contributorHolder(&projectfile.Document{
 		People: []projectfile.Person{
-			{GivenNames: nameAda, FamilyNames: familyLovelace, Email: adaEmail, Roles: []string{"maintainer"}},
+			{GivenNames: nameAda, FamilyNames: familyLovelace, Email: adaEmail, Roles: []string{roleMaintainer}},
 		},
 	})
 	assert.True(t, ok)

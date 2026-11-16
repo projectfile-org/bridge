@@ -12,6 +12,7 @@ import (
 	"github.com/pelletier/go-toml/v2"
 
 	"kiota.ch/projectfile/core/v2/pkg/rawdoc"
+	"projectfile.org/projectfile/bridge/v4/internal/bridge/core"
 )
 
 // Write serialises doc to pyproject.toml under dir.
@@ -102,9 +103,9 @@ func render(doc *Document, canvas *rawdoc.OrderedTOML, project map[string]any) (
 		if err != nil {
 			return nil, fmt.Errorf("marshal pyproject.toml: %w", err)
 		}
-		return ensureREUSEHeader(data, doc.ReuseHeader), nil
+		return core.GapFillREUSEHeader(data, doc.ReuseHeader), nil
 	}
-	return ensureREUSEHeader(spliceProjectZone(doc.Source, zone), doc.ReuseHeader), nil
+	return core.GapFillREUSEHeader(spliceProjectZone(doc.Source, zone), doc.ReuseHeader), nil
 }
 
 // spliceProjectZone replaces the [project] table (with its [project.*]
@@ -212,34 +213,6 @@ func collapseZoneSeam(lines []string, at int) []string {
 		return append(append([]string{}, lines[:at]...), lines[at+1:]...)
 	}
 	return lines
-}
-
-// ensureREUSEHeader prepends header when the leading comment block of data
-// carries no SPDX tags — a header that is already there, hand-written or
-// stamped, always wins untouched.
-func ensureREUSEHeader(data []byte, header string) []byte {
-	if header == "" || leadingBlockHasSPDX(data) {
-		return data
-	}
-	return append([]byte(header), data...)
-}
-
-// leadingBlockHasSPDX reports whether the comment and blank lines ahead of
-// the first data line contain an SPDX tag.
-func leadingBlockHasSPDX(data []byte) bool {
-	for _, line := range strings.Split(string(data), "\n") {
-		t := strings.TrimSpace(line)
-		switch {
-		case t == "":
-		case strings.HasPrefix(t, "#"):
-			if strings.Contains(t, "SPDX-FileCopyrightText:") || strings.Contains(t, "SPDX-License-Identifier:") {
-				return true
-			}
-		default:
-			return false
-		}
-	}
-	return false
 }
 
 // toLines splits a marshalled block into lines without its trailing newline.

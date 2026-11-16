@@ -175,3 +175,28 @@ func hasContributorRole(roles []string) bool {
 	}
 	return false
 }
+
+// GapFillREUSEHeader prepends a hash-comment header unless the leading comment block already carries SPDX tags.
+func GapFillREUSEHeader(data []byte, header string) []byte {
+	if header == "" || leadingBlockHasSPDX(data) {
+		return data
+	}
+	return append([]byte(header), data...)
+}
+
+// leadingBlockHasSPDX reports whether the comment lines ahead of the first data line carry an SPDX tag.
+func leadingBlockHasSPDX(data []byte) bool {
+	for _, line := range strings.Split(string(data), "\n") {
+		t := strings.TrimSpace(line)
+		switch {
+		case t == "":
+		case strings.HasPrefix(t, "#"):
+			if strings.Contains(t, "SPDX-FileCopyrightText:") || strings.Contains(t, "SPDX-License-Identifier:") {
+				return true
+			}
+		default:
+			return false
+		}
+	}
+	return false
+}

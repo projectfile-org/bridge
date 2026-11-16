@@ -370,31 +370,31 @@ func TestShardSourceExtractURLAndGaps(t *testing.T) {
 
 // TestShardAuthorEntry pins every readable spelling plus the unterminated email bracket.
 func TestShardAuthorEntry(t *testing.T) {
-	both, ok := shardAuthorEntry(fxGivenAda + " " + fxFamilyLovelace + " <" + fxEmailA + ">")
+	both, ok := authorEntry(fxGivenAda + " " + fxFamilyLovelace + " <" + fxEmailA + ">")
 	require.True(t, ok)
 	assert.Equal(t, fxGivenAda, both.GivenNames)
 	assert.Equal(t, fxFamilyLovelace, both.FamilyNames)
 	assert.Equal(t, fxEmailA, both.Email)
 
-	bare, ok := shardAuthorEntry(fxEntitySingle)
+	bare, ok := authorEntry(fxEntitySingle)
 	require.True(t, ok)
 	assert.Equal(t, fxEntitySingle, bare.Name, "a single word is the flat name")
 
-	emailOnly, ok := shardAuthorEntry("<" + fxEmailA + ">")
+	emailOnly, ok := authorEntry("<" + fxEmailA + ">")
 	require.True(t, ok)
 	assert.Equal(t, fxEmailA, emailOnly.Email)
 	assert.Empty(t, emailOnly.Name)
 
-	unterminated, ok := shardAuthorEntry(fxGivenAda + " <" + fxEmailA)
+	unterminated, ok := authorEntry(fxGivenAda + " <" + fxEmailA)
 	require.True(t, ok)
 	assert.Equal(t, fxGivenAda, unterminated.GivenNames, "an unterminated bracket keeps the tail inside the name")
 	assert.Equal(t, "<"+fxEmailA, unterminated.FamilyNames)
 	assert.Empty(t, unterminated.Email, "no email is cut out without the closing bracket")
 	assert.Empty(t, unterminated.Name)
 
-	_, ok = shardAuthorEntry("   ")
+	_, ok = authorEntry("   ")
 	assert.False(t, ok, "a blank author string yields no entry")
-	_, ok = shardAuthorEntry("<>")
+	_, ok = authorEntry("<>")
 	assert.False(t, ok, "an author with neither a name nor an email is dropped")
 }
 
