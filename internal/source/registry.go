@@ -81,6 +81,7 @@ func Registry() []Source {
 			Register(NPMSource{})
 			Register(ComposerSource{})
 			Register(ShardSource{})
+			Register(CargoSource{})
 		}
 	})
 	return registry

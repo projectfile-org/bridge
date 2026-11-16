@@ -8,6 +8,7 @@ package commands
 import (
 	_ "projectfile.org/projectfile/bridge/v4/internal/bridge/ai-policy"       // registers the ai-policy bridge
 	_ "projectfile.org/projectfile/bridge/v4/internal/bridge/browserslist"    // registers the browserslist bridge
+	_ "projectfile.org/projectfile/bridge/v4/internal/bridge/cargo"           // registers the cargo bridge
 	_ "projectfile.org/projectfile/bridge/v4/internal/bridge/cff"             // registers the cff bridge
 	_ "projectfile.org/projectfile/bridge/v4/internal/bridge/coc"             // registers the coc bridge
 	_ "projectfile.org/projectfile/bridge/v4/internal/bridge/codeowners"      // registers the codeowners bridge
@@ -41,6 +42,7 @@ import (
 var Mains = map[string]func(string){
 	"ai-policy":       bridgerun.Main,
 	"browserslist":    bridgerun.Main,
+	"cargo":           bridgerun.Main,
 	"cff":             bridgerun.Main,
 	"coc":             bridgerun.Main,
 	"codeowners":      bridgerun.Main,

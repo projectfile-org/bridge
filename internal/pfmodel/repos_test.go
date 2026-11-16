@@ -16,6 +16,7 @@ import (
 const (
 	testCodebergRepoURL = "https://codeberg.org/acme/proj.git"
 	testProjRepoURL     = "https://kiota.ch/acme/proj.git"
+	testProjWebURL      = "https://kiota.ch/acme/proj"
 )
 
 func TestIssuesRepositoryExplicit(t *testing.T) {
@@ -114,10 +115,10 @@ func TestCitableRepositoryURLSSHResolvedViaSourceCodeLink(t *testing.T) {
 		},
 		Links: []projectfile.Link{
 			{Type: projectfile.LinkSourceCode, URL: "https://codeberg.org/acme/proj"},
-			{Type: projectfile.LinkSourceCode, URL: "https://kiota.ch/acme/proj", Preferred: true},
+			{Type: projectfile.LinkSourceCode, URL: testProjWebURL, Preferred: true},
 		},
 	}
-	assert.Equal(t, "https://kiota.ch/acme/proj", pfmodel.CitableRepositoryURL(doc))
+	assert.Equal(t, testProjWebURL, pfmodel.CitableRepositoryURL(doc))
 }
 
 func TestCitableRepositoryURLNil(t *testing.T) {
@@ -151,4 +152,14 @@ func TestPackagesRepositoryNil(t *testing.T) {
 	assert.Nil(t, pfmodel.PackagesRepository(nil))
 	assert.Nil(t, pfmodel.PackagesRepository(&projectfile.Document{}))
 	assert.Equal(t, projectfile.RepositoryRoleOrigin, pfmodel.EnsurePackagesRepository(&projectfile.Document{}).Role)
+}
+
+func TestPackagesRepositoryURL(t *testing.T) {
+	assert.Empty(t, pfmodel.PackagesRepositoryURL(&projectfile.Document{}))
+	doc := &projectfile.Document{Repositories: []projectfile.Repository{{URL: testProjWebURL, Role: projectfile.RepositoryRoleOrigin}}}
+	assert.Equal(t, testProjWebURL, pfmodel.PackagesRepositoryURL(doc))
+	doc.Repositories[0].URL = "ssh://git@kiota.ch/acme/proj.git"
+	assert.Empty(t, pfmodel.PackagesRepositoryURL(doc), "an SSH entry with no source-code link has no public URL")
+	doc.Links = []projectfile.Link{{Type: projectfile.LinkSourceCode, URL: testProjWebURL}}
+	assert.Equal(t, testProjWebURL, pfmodel.PackagesRepositoryURL(doc))
 }

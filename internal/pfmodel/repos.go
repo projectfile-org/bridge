@@ -72,6 +72,21 @@ func PackagesRepository(doc *projectfile.Document) *projectfile.Repository {
 	return PrimaryRepository(doc)
 }
 
+// PackagesRepositoryURL returns the public URL of PackagesRepository, resolving an SSH entry through links[type=source-code].
+func PackagesRepositoryURL(doc *projectfile.Document) string {
+	r := PackagesRepository(doc)
+	if r == nil {
+		return ""
+	}
+	if isPublicURL(r.URL) {
+		return r.URL
+	}
+	if l := LinkByType(doc, LinkSourceCode); l != nil && isPublicURL(l.URL) {
+		return l.URL
+	}
+	return ""
+}
+
 // CitableRepositoryURL returns the forge landing-page URL for the repository
 // the citation chain should cite — the schemes (http/ftp) acceptable in
 // CITATION.cff repository-code, SPDX VCS expressions, and public package

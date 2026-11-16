@@ -406,3 +406,45 @@ func TestIsLicenseURL(t *testing.T) {
 }
 
 // ── shared fixture adapters ──────────────────────────────────────────────────
+
+// ── Cargo.toml ───────────────────────────────────────────────────────────────
+
+func TestCargoSourceExtractEveryField(t *testing.T) {
+	manifest := "[package]\nname = \"widget\"\nversion = \"0.1.0\"\ndescription = \"A crate\"\nlicense = \"MIT\"\n" +
+		"homepage = \"https://cargo.example.test\"\nrepository = \"https://github.com/acme/widget\"\n" +
+		"documentation = \"https://docs.rs/widget\"\nkeywords = [\"cli\"]\nauthors = [\"Ada Lovelace <a@example.test>\", \"<>\"]\n"
+	s := CargoSource{}
+	assert.Equal(t, "Cargo.toml", s.Name())
+	assert.Equal(t, "Cargo.toml", s.Filename())
+	assert.False(t, s.Detect(t.TempDir()))
+	dir := writeFixture(t, "Cargo.toml", manifest)
+	assert.True(t, s.Detect(dir))
+
+	p, err := s.Extract(dir)
+	require.NoError(t, err)
+	assert.Equal(t, "widget", *p.Name)
+	assert.Equal(t, "0.1.0", *p.Version)
+	assert.Equal(t, &LocalizedString{Bare: "A crate"}, p.Summary)
+	assert.Equal(t, fxLicenseMIT, *p.License)
+	assert.Equal(t, []string{"cli"}, p.Keywords)
+	require.Len(t, p.Repositories, 1)
+	assert.Equal(t, "https://github.com/acme/widget", p.Repositories[0].URL)
+	require.Len(t, p.Links, 2)
+	assert.Equal(t, []string{pfmodel.TagMainDocumentation}, pfmodel.LinkTags(p.Links[1]))
+	require.Len(t, p.People, 1, "the empty author entry is dropped")
+	assert.Equal(t, fxGivenAda, p.People[0].GivenNames)
+	assert.Equal(t, []string{"rust"}, p.Stack)
+}
+
+func TestCargoSourceExtractWorkspaceAndErrors(t *testing.T) {
+	p, err := CargoSource{}.Extract(writeFixture(t, "Cargo.toml", "[workspace]\nmembers = []\n\n[workspace.package]\nversion = \"2.0.0\"\n"))
+	require.NoError(t, err)
+	assert.Nil(t, p.Name, "a virtual workspace names no crate")
+	assert.Equal(t, "2.0.0", *p.Version)
+	assert.Nil(t, p.Summary)
+	assert.Empty(t, p.Links)
+
+	_, err = CargoSource{}.Extract(writeFixture(t, "Cargo.toml", "[package\n"))
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "read Cargo.toml")
+}

@@ -132,6 +132,7 @@ Tools:
   release-notes        Render release notes from git
   scan                 Run scanners to refresh projectfile metadata from filesystem signals
 Package manifests:
+  cargo      [rw]  Cargo.toml — two-way sync
   composer   [rw]  composer.json — two-way sync
   npm        [rw]  package.json — two-way sync
   pyproject  [rw]  pyproject.toml — two-way sync

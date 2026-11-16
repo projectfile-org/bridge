@@ -422,7 +422,7 @@ const (
 
 // bridgeCategories groups bridge names for the usage listing; alphabetical within each group.
 var bridgeCategories = map[string]string{
-	"npm": catManifests, "composer": catManifests, "pyproject": catManifests, "shard": catManifests,
+	"cargo": catManifests, "npm": catManifests, "composer": catManifests, "pyproject": catManifests, "shard": catManifests,
 	"cff": catCite, "codeowners": catCite, "funding": catCite, "fundingjson": catCite,
 	"readme": catDocs, "contributing": catDocs, "coc": catDocs, "security": catDocs, "support": catDocs, "dei": catDocs, "ai-policy": catDocs, "llm": catDocs, "fragments": catDocs,
 	"ignore": catRepo, "gitattributes": catRepo, "yamllint": catRepo, "releaserc": catRepo, "browserslist": catRepo, "vulnerabilities": catRepo, "license": catRepo,

@@ -28,7 +28,7 @@ func TestRegistryNamesEveryDefaultSource(t *testing.T) {
 	for _, s := range Registry() {
 		names = append(names, s.Name())
 	}
-	assert.Equal(t, []string{fxNameCFF, fxNameNPM, "composer.json", "shard.yml"}, names,
+	assert.Equal(t, []string{fxNameCFF, fxNameNPM, "composer.json", "shard.yml", "Cargo.toml"}, names,
 		"the registry order is the merge precedence, so the citation file wins over an npm manifest")
 }
 

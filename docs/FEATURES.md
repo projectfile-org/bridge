@@ -42,6 +42,7 @@ SPDX-License-Identifier: MIT
 - Your PHP `composer.json` stays in the same sync, so Packagist sees what the projectfile says.
 - Your Python `pyproject.toml` stays in sync too, while the sections you hand-edit remain exactly as you left them.
 - Your Crystal `shard.yml` is covered as well: a shard release starts from the projectfile, not from a second copy of the same facts.
+- Your Rust `Cargo.toml` follows the projectfile line by line: only the values that changed are rewritten, and your comments and dependency tables stay untouched.
 
 ### A readme that keeps up with the project
 
