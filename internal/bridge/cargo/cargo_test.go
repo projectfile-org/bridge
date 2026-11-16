@@ -19,6 +19,7 @@ import (
 const (
 	keywordCLI = "cli"
 	crateDemo  = "demo"
+	mitHeader  = "# SPDX-License-" + "Identifier: MIT\n\n"
 )
 
 const packageManifest = `# SPDX-FileCopyrightText: 2026 Alice Example <alice@example.com>
@@ -228,8 +229,8 @@ func TestRenderCreatesWorkspacePackageBeforeNextTable(t *testing.T) {
 }
 
 func TestRenderFreshManifestGetsHeaderAndPackageTable(t *testing.T) {
-	doc := &Document{Name: "fresh", Version: "0.1.0", Authors: []string{"Alice <a@example.com>"}, ReuseHeader: "# SPDX-License-Identifier: MIT\n\n"}
-	want := "# SPDX-License-Identifier: MIT\n\n[package]\nname = \"fresh\"\nversion = \"0.1.0\"\nauthors = [\"Alice <a@example.com>\"]\n"
+	doc := &Document{Name: "fresh", Version: "0.1.0", Authors: []string{"Alice <a@example.com>"}, ReuseHeader: mitHeader}
+	want := mitHeader + "[package]\nname = \"fresh\"\nversion = \"0.1.0\"\nauthors = [\"Alice <a@example.com>\"]\n"
 	assert.Equal(t, want, renderString(t, doc))
 }
 

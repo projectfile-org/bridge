@@ -56,11 +56,11 @@ func TestMergeAuthorStrings(t *testing.T) {
 }
 
 func TestGapFillREUSEHeader(t *testing.T) {
-	header := "# SPDX-License-Identifier: MIT\n\n"
+	header := "# " + spdxLicenseLine("MIT") + "\n\n"
 	assert.Equal(t, header+"a = 1\n", string(GapFillREUSEHeader([]byte("a = 1\n"), header)))
 	tagged := "# note\n\n# SPDX-FileCopyrightText: X\na = 1\n"
 	assert.Equal(t, tagged, string(GapFillREUSEHeader([]byte(tagged), header)), "a present header wins")
-	late := "a = 1\n# SPDX-License-Identifier: MIT\n"
+	late := "a = 1\n# " + spdxLicenseLine("MIT") + "\n"
 	assert.Equal(t, header+late, string(GapFillREUSEHeader([]byte(late), header)), "only the leading block counts")
 	assert.Equal(t, "a = 1\n", string(GapFillREUSEHeader([]byte("a = 1\n"), "")))
 }
