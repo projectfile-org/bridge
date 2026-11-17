@@ -139,11 +139,11 @@ func expand(dir, pattern string, claimed map[string]bool) []string {
 	return out
 }
 
-// page resolves rel for lang: the docs/<lang>/ variant, else the canonical page marked Fallback, else nothing.
+// page resolves rel for lang: the docs/<lang>/ variant at its own path, so its relative links hold, else the canonical page marked Fallback.
 func page(dir, rel, lang string) (Chapter, bool) {
 	if lang != "" {
 		if loc := core.LocalizedFilename(rel, lang); exists(dir, loc) {
-			return chapter(dir, loc, rel, false), true
+			return chapter(dir, loc, false), true
 		}
 	}
 	if !exists(dir, rel) {
@@ -153,16 +153,16 @@ func page(dir, rel, lang string) (Chapter, bool) {
 	if lang != "" {
 		genlog.Info("book page has no translation, using the canonical page", "page", rel, "lang", lang)
 	}
-	return chapter(dir, rel, rel, lang != ""), true
+	return chapter(dir, rel, lang != ""), true
 }
 
-// chapter labels the file at src by its H1, falling back to its file name, and places it at the book path rel.
-func chapter(dir, src, rel string, fallback bool) Chapter {
-	title := core.FirstHeading(dir, src)
+// chapter labels dir/rel by its H1, falling back to its file name, and places it at the same path in the book.
+func chapter(dir, rel string, fallback bool) Chapter {
+	title := core.FirstHeading(dir, rel)
 	if title == "" {
 		title = strings.TrimSuffix(path.Base(rel), path.Ext(rel))
 	}
-	return Chapter{Title: title, Path: rel, Source: filepath.Join(dir, filepath.FromSlash(src)), Fallback: fallback}
+	return Chapter{Title: title, Path: rel, Source: filepath.Join(dir, filepath.FromSlash(rel)), Fallback: fallback}
 }
 
 // collection plans one rendered collection as a chapter titled by its declaration, with the rendered tree under it.
@@ -199,7 +199,8 @@ func folder(abs, rel, title string) Chapter {
 		case e.IsDir():
 			c.Children = append(c.Children, folder(filepath.Join(abs, name), path.Join(rel, name), name))
 		case name != indexPage && strings.EqualFold(path.Ext(name), ".md"):
-			child := chapter(abs, name, path.Join(rel, name), false)
+			child := chapter(abs, name, false)
+			child.Path = path.Join(rel, name)
 			c.Children = append(c.Children, child)
 		default:
 			genlog.Debug("page collection entry skipped", "dir", abs, "entry", name)
@@ -208,8 +209,17 @@ func folder(abs, rel, title string) Chapter {
 	return c
 }
 
-// exists reports whether dir/rel is a regular file.
+// exists reports whether rel is a regular file inside dir; a path leaving dir never exists.
 func exists(dir, rel string) bool {
-	info, err := os.Stat(filepath.Join(dir, filepath.FromSlash(rel)))
+	if !filepath.IsLocal(filepath.FromSlash(rel)) {
+		genlog.Warn("book page path leaves the project, skipped", "dir", dir, "page", rel)
+		return false
+	}
+	root, err := os.OpenRoot(dir)
+	if err != nil {
+		return false
+	}
+	defer func() { _ = root.Close() }()
+	info, err := root.Stat(filepath.FromSlash(rel))
 	return err == nil && !info.IsDir()
 }

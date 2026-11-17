@@ -116,14 +116,14 @@ func TestSummaryOfTheDefaultLanguage(t *testing.T) {
 `, string(Summary(b)))
 }
 
-// TestTranslatedBookKeepsCanonicalPaths pins the language book: a variant is read from docs/<lang>/ but placed at the canonical path.
-func TestTranslatedBookKeepsCanonicalPaths(t *testing.T) {
+// TestTranslatedBookKeepsEachPagePath pins the language book: a variant stays at docs/<lang>/, a fallback at its canonical path.
+func TestTranslatedBookKeepsEachPagePath(t *testing.T) {
 	in, pf := fixture(t)
 	b, err := Plan(in, pf, langES)
 	require.NoError(t, err)
 	assert.Equal(t, "Herramienta", b.Title)
 	require.NotNil(t, b.Intro)
-	assert.Equal(t, readmeMD, b.Intro.Path)
+	assert.Equal(t, "docs/es/README.md", b.Intro.Path)
 	assert.Equal(t, filepath.Join(in.Dir, "docs", langES, readmeMD), b.Intro.Source)
 	assert.False(t, b.Intro.Fallback)
 	assert.Equal(t, "Funciones", b.Parts[0].Title)
@@ -142,6 +142,21 @@ func TestBookWithoutPartsIsItsIntroduction(t *testing.T) {
 	b, err := Plan(Input{Dir: dir}, &projectfile.Document{}, "")
 	require.NoError(t, err)
 	assert.Equal(t, "# Summary\n\n[Solo](README.md)\n", string(Summary(b)))
+}
+
+// TestPagesOutsideTheProjectAreSkipped pins the traversal edge: an existing file one level above the project never enters the book.
+func TestPagesOutsideTheProjectAreSkipped(t *testing.T) {
+	parent := t.TempDir()
+	write(t, parent, "secret.md", "# Secret\n")
+	dir := filepath.Join(parent, "project")
+	write(t, dir, readmeMD, "# Solo\n")
+	pf := &projectfile.Document{}
+	projectfile.SetExtension(pf, pfmodel.ConventionsExtensionNS, map[string]any{"book": map[string]any{"parts": []any{
+		map[string]any{keyTitle: "Leak", keyPages: []any{"../secret.md", "docs/../../secret.md"}},
+	}}})
+	b, err := Plan(Input{Dir: dir}, pf, "")
+	require.NoError(t, err)
+	assert.Empty(t, b.Parts)
 }
 
 // TestPlanRejectsMalformedPages pins that a broken collection declaration fails the plan instead of dropping the part.
