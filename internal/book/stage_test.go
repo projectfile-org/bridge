@@ -72,3 +72,29 @@ func TestStageRefusesAForeignDirectory(t *testing.T) {
 	require.ErrorContains(t, err, "is not a staged book")
 	assert.Equal(t, "mine", read(t, out, "en/keep.txt"))
 }
+
+// TestStageAppendsExtras pins docs/<name>.d/<id>.md after the rendered page, the language variant first, and never on index.md.
+func TestStageAppendsExtras(t *testing.T) {
+	in, pf := fixture(t)
+	rendered := t.TempDir()
+	for _, lang := range []string{"en", langES} {
+		write(t, rendered, lang+"/rules/index.md", "# Rules\n")
+		write(t, rendered, lang+"/rules/web/one.md", "# One\n\n\n")
+		write(t, rendered, lang+"/rules/two.md", "# Two\n")
+		write(t, rendered, lang+"/rules/three.md", "# Three\n")
+	}
+	write(t, in.Dir, "docs/rules.d/three.md", "Canonical.\n")
+	write(t, in.Dir, "docs/rules.d/web/one.md", "Example.\n")
+	write(t, in.Dir, "docs/es/rules.d/web/one.md", "Ejemplo.\n")
+	write(t, in.Dir, "docs/rules.d/index.md", "Never.\n")
+	out := filepath.Join(t.TempDir(), "book")
+
+	_, err := Stage(in.Dir, rendered, out, pf)
+	require.NoError(t, err)
+
+	assert.Equal(t, "# One\n\nExample.\n", read(t, out, "en/src/pages/rules/web/one.md"))
+	assert.Equal(t, "# One\n\nEjemplo.\n", read(t, out, "es/src/pages/rules/web/one.md"))
+	assert.Equal(t, "# Three\n\nCanonical.\n", read(t, out, "es/src/pages/rules/three.md"), "an untranslated extras page falls back to the canonical one")
+	assert.Equal(t, "# Two\n", read(t, out, "en/src/pages/rules/two.md"), "a page without extras is unchanged")
+	assert.Equal(t, "# Rules\n", read(t, out, "en/src/pages/rules/index.md"), "index.md names no item")
+}

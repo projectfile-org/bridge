@@ -30,6 +30,8 @@ type Chapter struct {
 	Path     string
 	Source   string
 	Fallback bool
+	// Extras is the project-relative hand-written page appended to a rendered one, docs/<name>.d/<id>.md.
+	Extras   string
 	Children []Chapter
 }
 
@@ -88,6 +90,7 @@ func Plan(in Input, pf *projectfile.Document, lang string) (Book, error) {
 		if p.Collections {
 			for _, col := range collections {
 				if c, ok := collection(in.Rendered, col, concrete); ok {
+					attachExtras(&c, in.Dir, col.Name, lang)
 					chapters = append(chapters, c)
 				}
 			}
@@ -179,6 +182,25 @@ func collection(rendered string, col pfmodel.PageCollection, lang string) (Chapt
 	c := folder(root, path.Join(PagesDir, col.Name), title)
 	genlog.Debug("page collection planned", "collection", col.Name, "lang", lang, "pages", len(c.Children))
 	return c, true
+}
+
+// attachExtras names, on each rendered page of collection name under c, its docs/<name>.d/<id>.md: the lang variant, else the canonical one.
+func attachExtras(c *Chapter, dir, name, lang string) {
+	prefix := path.Join(PagesDir, name) + "/"
+	if id, ok := strings.CutPrefix(c.Path, prefix); ok && path.Base(id) != indexPage {
+		rel := path.Join(core.LocalizedDir, name+".d", id)
+		if loc := core.LocalizedFilename(rel, lang); lang != "" && exists(dir, loc) {
+			c.Extras = loc
+		} else if exists(dir, rel) {
+			c.Extras = rel
+		}
+		if c.Extras != "" {
+			genlog.Debug("page collection extras attached", "collection", name, "page", id, "extras", c.Extras)
+		}
+	}
+	for i := range c.Children {
+		attachExtras(&c.Children[i], dir, name, lang)
+	}
 }
 
 // folder plans the directory abs placed at the book path rel: its index.md is its own chapter, every other entry a child.

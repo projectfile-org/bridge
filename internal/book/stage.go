@@ -5,6 +5,7 @@
 package book
 
 import (
+	"bytes"
 	"fmt"
 	"os"
 	"path"
@@ -97,6 +98,13 @@ func writeBook(dir, tmp string, b Book, pf *projectfile.Document) error {
 		}
 		if c.Fallback {
 			body = append([]byte(FallbackNote(b.Lang)), body...)
+		}
+		if c.Extras != "" {
+			extras, err := project.ReadFile(filepath.FromSlash(c.Extras))
+			if err != nil {
+				return err
+			}
+			body = append(append(bytes.TrimRight(body, "\n"), "\n\n"...), extras...)
 		}
 		if err := writeFile(root, path.Join(srcDir, c.Path), body); err != nil {
 			return err

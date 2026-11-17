@@ -33,7 +33,8 @@ var rootCmd = &cobra.Command{
 		"book.toml, src/SUMMARY.md and a copy of every page at its repository path.\n" +
 		"The README opens the book; the parts follow org.projectfile.conventions.book,\n" +
 		"and each org.projectfile.pages collection is read from --rendered/<lang>/<name>/,\n" +
-		"where its executable rendered it. A page with no translation is the\n" +
+		"where its executable rendered it, each page followed by its hand-written\n" +
+		"docs/<name>.d/<id>.md when one exists. A page with no translation is the\n" +
 		"default-language page under a note saying so.",
 	Example: "  pf-bridge book\n" +
 		"  pf-bridge book --output dist/book --rendered dist/pages ../project",
