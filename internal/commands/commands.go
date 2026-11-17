@@ -6,6 +6,7 @@
 package commands
 
 import (
+	"projectfile.org/projectfile/bridge/v4/internal/bookcmd"
 	_ "projectfile.org/projectfile/bridge/v4/internal/bridge/ai-policy"       // registers the ai-policy bridge
 	_ "projectfile.org/projectfile/bridge/v4/internal/bridge/browserslist"    // registers the browserslist bridge
 	_ "projectfile.org/projectfile/bridge/v4/internal/bridge/cargo"           // registers the cargo bridge
@@ -69,4 +70,5 @@ var Mains = map[string]func(string){
 	"init":            initcmd.Main,
 	"cache":           cachecmd.Main,
 	"release-notes":   releasenotescmd.Main,
+	"book":            bookcmd.Main,
 }

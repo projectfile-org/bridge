@@ -34,6 +34,7 @@ Shared flags (also accepted after a bridge name):
   Drift warns by default; --fail-on-drift makes it fatal.
 
 Tools:
+  book                 Stage one mdBook per language
   cache                Manage the local SPDX and include cache
   forge                Push projectfile metadata out to the repository forge
   init                 Scaffold a new projectfile document (prefer pf-cli init)

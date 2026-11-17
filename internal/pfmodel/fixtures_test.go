@@ -33,6 +33,8 @@ const (
 	keyNodes       = "nodes"
 	keyOut         = "out"
 	keyOwners      = "owners"
+	keyPages       = "pages"
+	keyFragments   = "fragments"
 	keyParents     = "parents"
 	keyPattern     = "pattern"
 	keyPrerelease  = "prerelease"
@@ -41,6 +43,8 @@ const (
 	keyTopics      = "topics"
 	keyWhen        = "when"
 	keyYear        = "year"
+	fxTool         = "tool"
+	fxFeatures     = "Features"
 
 	// Targets and lists the ignore, attributes and publish vocabulary names.
 	targetContainer       = "container"

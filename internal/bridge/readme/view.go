@@ -776,7 +776,7 @@ func listDocsMarkdown(dir, docPath string) []staticLink {
 			continue
 		}
 		rel := filepath.Join(docsDir, howToSubdir, name)
-		label := extractFirstHeading(dir, rel)
+		label := core.FirstHeading(dir, rel)
 		if label == "" {
 			label = humanizeFilename(name)
 		}
@@ -895,43 +895,6 @@ func humanizeFilename(name string) string {
 	return strings.Join(words, " ")
 }
 
-// parseATXHeading parses one line of Markdown as an ATX heading. It returns
-// the heading level (1–6) and the trimmed text, or ok=false when the line is
-// not a heading. A space or tab must follow the leading #'s (CommonMark); no
-// trailing #'s are stripped — none of the repo's documents use closing hashes.
-// Shared by the documentation and features blocks.
-func parseATXHeading(line string) (level int, text string, ok bool) {
-	n := 0
-	for n < len(line) && line[n] == '#' {
-		n++
-	}
-	if n == 0 || n > 6 {
-		return 0, "", false
-	}
-	// A space or tab must follow the marker (CommonMark 4.2).
-	if n >= len(line) || (line[n] != ' ' && line[n] != '\t') {
-		return 0, "", false
-	}
-	return n, strings.TrimSpace(line[n:]), true
-}
-
-// extractFirstHeading reads dir/rel and returns the text of the first ATX
-// heading of any level, or "" on a read error or when the file has no heading.
-// Used by the documentation block to label each docs/how-to/*.md link with the
-// heading a reader actually sees rather than the bare filename.
-func extractFirstHeading(dir, rel string) string {
-	body, err := readFile(dir, rel)
-	if err != nil {
-		return ""
-	}
-	for _, line := range strings.Split(string(body), "\n") {
-		if _, text, ok := parseATXHeading(line); ok {
-			return text
-		}
-	}
-	return ""
-}
-
 // featureGroup is one "Inherited from <parent>" bucket of a FEATURES.md: the
 // H2 heading text verbatim plus the H3 feature titles nested under it.
 type featureGroup struct {
@@ -961,7 +924,7 @@ func parseFeatureSections(dir, rel string) featureOut {
 	current := &out.Project
 	seenProjectH2 := false
 	for _, line := range strings.Split(string(body), "\n") {
-		level, text, ok := parseATXHeading(line)
+		level, text, ok := core.ParseATXHeading(line)
 		if !ok {
 			continue
 		}
