@@ -86,6 +86,7 @@ gen_main scan  "" "${mod}/internal/scancmd"
 gen_main init  "" "${mod}/internal/initcmd"
 gen_main cache "" "${mod}/internal/cachecmd"
 gen_main release-notes "" "${mod}/internal/releasenotescmd"
+gen_main book "" "${mod}/internal/bookcmd"
 gen_registry
 
 log "done"
