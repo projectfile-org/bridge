@@ -48,6 +48,7 @@ const (
 	CitationExtensionNS         = "org.projectfile.citation"
 	I18NExtensionNS             = "org.projectfile.i18n"
 	FragmentsExtensionNS        = "org.projectfile.fragments"
+	PagesExtensionNS            = "org.projectfile.pages"
 	ArtifactsExtensionNS        = "org.projectfile.artifacts"
 	AcknowledgementsExtensionNS = "org.projectfile.acknowledgements"
 	BridgeExtensionNS           = "org.projectfile.bridge"
