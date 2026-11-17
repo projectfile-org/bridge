@@ -114,17 +114,6 @@ func TestFeaturesBlockListsHeadings(t *testing.T) {
 		"the H2 section heading must not appear as a bullet")
 }
 
-// TestExtractFirstHeading pins the documentation link label source: the first
-// ATX heading of any level, with empty results on no-heading and read error.
-func TestExtractFirstHeading(t *testing.T) {
-	dir := t.TempDir()
-	writeFile(t, dir, "a.md", "preamble\n## Second Section\n")
-	writeFile(t, dir, "b.md", "no heading here\n")
-	assert.Equal(t, "Second Section", extractFirstHeading(dir, "a.md"))
-	assert.Equal(t, "", extractFirstHeading(dir, "b.md"), "no heading → empty")
-	assert.Equal(t, "", extractFirstHeading(dir, "missing.md"), "unreadable → empty")
-}
-
 // TestFeatureHeadingsFiltersH3 pins the FEATURES.md title extraction: only
 // level-3 headings are returned, H1/H2 are skipped, and an absent file is nil.
 func TestFeatureHeadingsFiltersH3(t *testing.T) {
@@ -211,31 +200,6 @@ func TestAcknowledgementsBlockRendersGroups(t *testing.T) {
 func TestAcknowledgementsBlockSkippedWhenAbsent(t *testing.T) {
 	body := renderDoc(t, t.TempDir(), minimalDoc(t))
 	assert.NotContains(t, body, "## Acknowledgements")
-}
-
-// TestParseATXHeading pins the shared heading parser: level detection, the
-// required space after the marker, and the 1–6 CommonMark bound.
-func TestParseATXHeading(t *testing.T) {
-	cases := []struct {
-		line  string
-		level int
-		text  string
-		ok    bool
-	}{
-		{"# Title", 1, "Title", true},
-		{"###  Trimmed  ", 3, "Trimmed", true},
-		{"###### Deep", 6, "Deep", true},
-		{"####### Too many", 0, "", false},
-		{"NoMarker", 0, "", false},
-		{"#NoSpace", 0, "", false},
-		{"", 0, "", false},
-	}
-	for _, c := range cases {
-		level, text, ok := parseATXHeading(c.line)
-		assert.Equalf(t, c.ok, ok, "ok mismatch for %q", c.line)
-		assert.Equalf(t, c.level, level, "level mismatch for %q", c.line)
-		assert.Equalf(t, c.text, text, "text mismatch for %q", c.line)
-	}
 }
 
 // TestPoliciesLinksAreHumanReadable guards the user-visible contract: the

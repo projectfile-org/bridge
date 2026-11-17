@@ -71,7 +71,7 @@ func parseUsageSections(text string) []usageSection {
 		if strings.HasPrefix(line, "```") {
 			fenced = !fenced
 		}
-		level, title, ok := parseATXHeading(line)
+		level, title, ok := core.ParseATXHeading(line)
 		switch {
 		case !fenced && strings.HasPrefix(line, "<!-- textlint-"):
 			genlog.DebugRow("usage_directive_dropped", line, fileUsage, "")
@@ -99,7 +99,7 @@ func usageSectionDepth(lines []string) int {
 		if strings.HasPrefix(line, "```") {
 			fenced = !fenced
 		}
-		if level, _, ok := parseATXHeading(line); !fenced && ok && level > 1 {
+		if level, _, ok := core.ParseATXHeading(line); !fenced && ok && level > 1 {
 			if levels = append(levels, level); len(levels) == 2 {
 				break
 			}
