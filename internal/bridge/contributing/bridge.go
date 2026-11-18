@@ -171,6 +171,8 @@ func (Bridge) Render(pf *projectfile.Document, opts core.Options) (core.Output, 
 			// rebased relative to CONTRIBUTING's own path so the link resolves
 			// from the root and from docs/<lang>/ alike.
 			strLang := core.ResolveLang(lang, pf)
+			docsTarget, docsLabel := docsLink(docsURL, lang)
+			genlog.Debug("contributing docs link", "lang", strLang, "target", docsTarget)
 			return contribView{
 				ProjectName:          pfmodel.DisplayNameForLang(pf, strLang),
 				Summary:              projectfile.ExtractLocalizedStringForLang(pf.Identity.Summary, strLang),
@@ -179,7 +181,8 @@ func (Bridge) Render(pf *projectfile.Document, opts core.Options) (core.Output, 
 				Badges:               contributingBadges(pf, strLang),
 				RepoURL:              repoURL(pf),
 				SourceCodeURL:        sourceCodeURL,
-				DocsURL:              docsURL,
+				DocsURL:              docsTarget,
+				DocsLabel:            docsLabel,
 				BugsURL:              bugsURL,
 				NewIssueURL:          newIssueURL,
 				ForgeLabel:           forgeLabel,
@@ -276,21 +279,23 @@ func deriveNewIssueURL(bugsURL string) string {
 // skip it and point at the project's own docs instead.
 const specArticleHost = "projectfile.org"
 
-// docsPathSuffix is the static fallback for the "Improving The Documentation"
-// section: every project in this fleet keeps its in-repo documentation at
-// this repo-relative path, so a project needs no explicit links[] entry to
-// get a working link — it renders the same on every forge mirror.
-const docsPathSuffix = "/docs"
+// docsDir is the repo-relative directory the docs section falls back to, linked relative to each CONTRIBUTING so it holds on every forge mirror.
+const docsDir = "docs"
 
-// docsSectionURL resolves the URL the "Improving The Documentation" section
-// points at. A declared links[type=documentation] entry wins when the
-// project owns it (the spec article include does not qualify); otherwise the
-// section falls back to the static fleet-wide docs path.
+// docsSectionURL returns the documentation link the project owns, "" when only the spec article include declares one.
 func docsSectionURL(declared string) string {
 	if declared != "" && !strings.Contains(declared, specArticleHost) {
 		return declared
 	}
-	return docsPathSuffix
+	return ""
+}
+
+// docsLink returns the docs section’s target and label for lang: the declared URL, else docs/ relative to that language’s CONTRIBUTING.
+func docsLink(declared, lang string) (string, string) {
+	if declared != "" {
+		return declared, declared
+	}
+	return core.RelLink(docsDir, core.LocalizedFilename(core.FileContributing, lang)), docsDir + "/"
 }
 
 // aiPolicyRowDetail is the Conventions row link text for the AI policy, per render
@@ -446,7 +451,7 @@ func emitDecisionTrace(pf *projectfile.Document, ext *pfmodel.ContributingExtens
 ) {
 	genlog.DebugRow("project_name", pfmodel.DisplayName(pf), "identity.title.en or namespace/name", "")
 	genlog.DebugRow("sections", strings.Join(sections, ", "), sectionsSrc, "[org.projectfile.contributing].sections")
-	genlog.DebugRow("docs_url", valOrUnset(docsURL), "links[type=documentation] or forge <repo>/docs", "")
+	genlog.DebugRow("docs_url", valOrUnset(docsURL), "links[type=documentation], else docs/ relative to each CONTRIBUTING", "")
 	genlog.DebugRow("bugs_url", valOrUnset(bugsURL), "links[type=bugs]", "")
 	genlog.DebugRow("chat_url", valOrUnset(chatURL), "links[type=chat] or ext.chat-url", "")
 	genlog.DebugRow("coc_url", valOrUnset(cocURL), "links[type=enforcement] or ext.coc-url", "")

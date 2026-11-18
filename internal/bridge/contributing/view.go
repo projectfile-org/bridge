@@ -18,6 +18,7 @@ type contribView struct {
 	RepoURL       string
 	SourceCodeURL string
 	DocsURL       string
+	DocsLabel     string
 	BugsURL       string
 	NewIssueURL   string
 	// ForgeLabel names the forge the issue tracker sits on ("Codeberg",

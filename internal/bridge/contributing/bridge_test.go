@@ -470,15 +470,18 @@ func docWithDocsInclude() *projectfile.Document {
 
 // TestRenderDocsURLSkipsSpecArticle: the specification article the shared
 // m6e include merges under type=documentation is not THIS project's
-// documentation — the section must fall back to the static fleet-wide
-// "/docs" path instead.
+// documentation — the section falls back to docs/, relative to each language’s CONTRIBUTING.
 func TestRenderDocsURLSkipsSpecArticle(t *testing.T) {
 	b := contributing.Bridge{}
-	out, err := b.Render(docWithDocsInclude(), core.Options{Offline: true})
+	pf := docWithDocsInclude()
+	projectfile.SetExtension(pf, pfmodel.I18NExtensionNS, map[string]any{"languages": []any{"es"}})
+	out, err := b.Render(pf, core.Options{Offline: true})
 	require.NoError(t, err)
 	body := string(out.Files["CONTRIBUTING.md"])
-	assert.Contains(t, body, "Documentation lives at [/docs](/docs)",
-		"the docs section must fall back to the static fleet-wide docs path")
+	assert.Contains(t, body, "Documentation lives at [docs/](docs)",
+		"the docs section must fall back to the repo docs directory")
+	assert.NotContains(t, body, "](/docs)", "a root-absolute path points at the forge host, never the repository")
+	assert.Contains(t, string(out.Files["docs/es/CONTRIBUTING.md"]), "[docs/](..)", "a variant links the same directory from docs/es/")
 	assert.NotContains(t, body, "https://projectfile.org)",
 		"the specification article must not stand in as the project's documentation")
 }
