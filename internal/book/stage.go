@@ -10,7 +10,6 @@ import (
 	"os"
 	"path"
 	"path/filepath"
-	"regexp"
 
 	"kiota.ch/projectfile/core/v2/pkg/genlog"
 	"kiota.ch/projectfile/core/v2/pkg/projectfile"
@@ -20,9 +19,6 @@ import (
 
 // srcDir is the book.toml source root every staged book uses.
 const srcDir = "src"
-
-// linkTarget captures the target of a Markdown inline link or image: an angle-bracketed one in group 1, a bare one in group 2, title excluded.
-var linkTarget = regexp.MustCompile(`\]\(\s*(?:<([^>\n]+)>|([^)\s]+))(?:\s+"[^"]*")?\s*\)`)
 
 // Stage writes one book per language under out/<lang>/, reading collections rendered under rendered/<lang>/; it returns the languages staged.
 func Stage(dir, rendered, out string, pf *projectfile.Document) ([]string, error) {

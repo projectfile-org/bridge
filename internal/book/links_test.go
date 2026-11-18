@@ -72,26 +72,3 @@ func TestStageRewritesLinks(t *testing.T) {
 	assert.Contains(t, beta, "[features](../FEATURES.md)", "a fallback page stays in its own language book")
 	assert.Contains(t, beta, "[readme](../../index.md)")
 }
-
-// TestForgeFileURL pins the file page of each forge kind, with and without a declared branch, and none without a forge.
-func TestForgeFileURL(t *testing.T) {
-	for _, tc := range []struct {
-		name, url, branch, want string
-	}{
-		{"github default branch", forgeGitHub, "", forgeGitHub + "/blob/HEAD/docs/a%20b.md"},
-		{"github branch", forgeGitHub, "dev", forgeGitHub + "/blob/dev/docs/a%20b.md"},
-		{"forgejo default branch", forgeKiota, "", forgeKiota + "/src/docs/a%20b.md"},
-		{"forgejo branch", forgeKiota, "dev", forgeKiota + "/src/branch/dev/docs/a%20b.md"},
-		{"gitlab default branch", "https://gitlab.com/o/tool", "", "https://gitlab.com/o/tool/-/blob/HEAD/docs/a%20b.md"},
-		{"unknown forge", "https://git.example.test/o/tool", "", ""},
-	} {
-		t.Run(tc.name, func(t *testing.T) {
-			pf := &projectfile.Document{
-				Links:        []projectfile.Link{{Type: projectfile.LinkSourceCode, URL: tc.url, Preferred: true}},
-				Repositories: []projectfile.Repository{{URL: tc.url, Branch: tc.branch}},
-			}
-			assert.Equal(t, tc.want, ForgeFileURL(pf)("docs/a b.md"))
-		})
-	}
-	assert.Empty(t, ForgeFileURL(&projectfile.Document{})("LICENSE"), "no source-code link, no forge page")
-}

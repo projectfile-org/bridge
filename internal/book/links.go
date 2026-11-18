@@ -5,7 +5,6 @@
 package book
 
 import (
-	"bytes"
 	"mime"
 	"net/url"
 	"os"
@@ -16,13 +15,10 @@ import (
 
 	"kiota.ch/projectfile/core/v2/pkg/genlog"
 	"kiota.ch/projectfile/core/v2/pkg/projectfile"
+	"projectfile.org/projectfile/bridge/v4/internal/bridge/core"
 	"projectfile.org/projectfile/bridge/v4/internal/derive/forges"
-	"projectfile.org/projectfile/bridge/v4/internal/forge/hostmatch"
 	"projectfile.org/projectfile/bridge/v4/internal/pfmodel"
 )
-
-// hasScheme matches a target carrying a URL scheme (https:, mailto:), which no book rewrites.
-var hasScheme = regexp.MustCompile(`^[A-Za-z][A-Za-z0-9+.-]*:`)
 
 // readmeStem matches the file stem mdBook renders as index.html without rewriting links to it.
 var readmeStem = regexp.MustCompile(`(?i)^readme$`)
@@ -42,7 +38,11 @@ type linkStats struct {
 
 // newSite indexes books, the default language first, and the public forge their unstaged targets link to.
 func newSite(books []Book, pf *projectfile.Document) *site {
-	s := &site{origins: map[string]map[string]string{}, paths: map[string]map[string]bool{}, forge: ForgeFileURL(pf)}
+	var kinds map[string]string
+	if ext, err := pfmodel.GetForgeExtension(pf); err == nil && ext != nil {
+		kinds = ext.Kinds
+	}
+	s := &site{origins: map[string]map[string]string{}, paths: map[string]map[string]bool{}, forge: forges.FileURL(pf, kinds)}
 	for _, b := range books {
 		s.order = append(s.order, b.Lang)
 		s.origins[b.Lang] = map[string]string{}
@@ -57,107 +57,25 @@ func newSite(books []Book, pf *projectfile.Document) *site {
 	return s
 }
 
-// ForgeFileURL returns the builder of a project path’s page on the public forge (the `public` remote, else the preferred one); it yields "" when there is none.
-func ForgeFileURL(pf *projectfile.Document) func(rel string) string {
-	var kinds map[string]string
-	if ext, err := pfmodel.GetForgeExtension(pf); err == nil && ext != nil {
-		kinds = ext.Kinds
-	}
-	remotes := forges.Remotes(pf, kinds)
-	remote, _ := remotes["public"].(map[string]any)
-	if remote == nil {
-		remote, _ = remotes[forges.AliasPreferred].(map[string]any)
-	}
-	base, _ := remote[forges.KeyURL].(string)
-	kind, _ := remote[forges.KeyKind].(string)
-	branch := ""
-	if r := pfmodel.PrimaryRepository(pf); r != nil {
-		branch = r.Branch
-	}
-	genlog.Debug("book forge for unstaged targets", "url", base, "kind", kind, "branch", branch)
-	return func(rel string) string {
-		escaped := (&url.URL{Path: rel}).EscapedPath()
-		switch hostmatch.Kind(kind) {
-		case hostmatch.KindGitHub:
-			return base + "/blob/" + orHead(branch) + "/" + escaped
-		case hostmatch.KindGitLab:
-			return base + "/-/blob/" + orHead(branch) + "/" + escaped
-		case hostmatch.KindForgejo:
-			if branch == "" {
-				return base + "/src/" + escaped
-			}
-			return base + "/src/branch/" + branch + "/" + escaped
-		default:
-			return ""
-		}
-	}
-}
-
-// orHead names the branch, else HEAD, which a forge resolves to its default branch.
-func orHead(branch string) string {
-	if branch == "" {
-		return "HEAD"
-	}
-	return branch
-}
-
 // rewrite points every relative link of c’s body, outside fenced code, at its page in this or another book, a copied asset, or the forge; it returns the assets to copy.
 func (s *site) rewrite(project *os.Root, lang string, c Chapter, body []byte, stats *linkStats) ([]byte, []string) {
-	var out bytes.Buffer
 	var assets []string
-	fence := ""
-	for _, line := range bytes.SplitAfter(body, []byte("\n")) {
-		trimmed := strings.TrimLeft(string(line), " \t")
-		if marker := fenceMarker(trimmed); marker != "" && (fence == "" || strings.HasPrefix(trimmed, fence)) {
-			if fence == "" {
-				fence = marker
-			} else {
-				fence = ""
-			}
-			out.Write(line)
-			continue
+	out := core.RewriteLinks(body, func(raw string) string {
+		target, asset := s.resolve(project, lang, c, raw, stats)
+		if asset != "" {
+			assets = append(assets, asset)
 		}
-		if fence != "" {
-			out.Write(line)
-			continue
-		}
-		last := 0
-		for _, m := range linkTarget.FindAllSubmatchIndex(line, -1) {
-			if m[2] < 0 {
-				m = []int{m[0], m[1], m[4], m[5]}
-			}
-			target, asset := s.resolve(project, lang, c, string(line[m[2]:m[3]]), stats)
-			if asset != "" {
-				assets = append(assets, asset)
-			}
-			out.Write(line[last:m[2]])
-			out.WriteString(target)
-			last = m[3]
-		}
-		out.Write(line[last:])
-	}
-	return out.Bytes(), assets
-}
-
-// fenceMarker returns the ``` or ~~~ run a line opens or closes a fenced block with, else "".
-func fenceMarker(line string) string {
-	for _, ch := range []string{"`", "~"} {
-		if strings.HasPrefix(line, ch+ch+ch) {
-			return ch + ch + ch
-		}
-	}
-	return ""
+		return target
+	})
+	return out, assets
 }
 
 // resolve rewrites one link target of c; the second result is the project path of an asset to copy into the book.
 func (s *site) resolve(project *os.Root, lang string, c Chapter, raw string, stats *linkStats) (string, string) {
-	if raw == "" || strings.HasPrefix(raw, "#") || strings.HasPrefix(raw, "/") || hasScheme.MatchString(raw) {
+	if !core.IsRelativeLink(raw) {
 		return raw, ""
 	}
-	target, suffix := raw, ""
-	if i := strings.IndexAny(raw, "#?"); i >= 0 {
-		target, suffix = raw[:i], raw[i:]
-	}
+	target, suffix := core.SplitLinkSuffix(raw)
 	if decoded, err := url.PathUnescape(target); err == nil {
 		target = decoded
 	}
