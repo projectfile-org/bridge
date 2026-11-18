@@ -20,6 +20,8 @@ type inheritedCopy struct {
 	SPDX     string // the parent's REUSE header, kept with the text it licenses
 	Body     string // H3 entry blocks, ready to nest
 	Lang     string // language the Body is translated into; empty when canonical
+	// PagePrefix is the parent’s public forge page a file path is appended to, "" without a known forge.
+	PagePrefix string
 }
 
 // Heading is the H2 the copy renders under. It names the parent only: a

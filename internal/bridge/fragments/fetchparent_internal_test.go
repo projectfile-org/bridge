@@ -157,3 +157,38 @@ func TestParentTitleReadsEachProjectfileEncoding(t *testing.T) {
 	assert.Empty(t, parentTitle(ctx, none, "v1.0.0"))
 	assert.Equal(t, testParent, ownerRepo(none), "a parent with no title is named by its repository")
 }
+
+// TestFetchParentRebasesLinksOntoItsForge: a relative link in a parent’s copy, canonical or localized, points at the parent’s public forge page.
+func TestFetchParentRebasesLinksOntoItsForge(t *testing.T) {
+	url := gitFixture(t, map[string]string{
+		pfYAML:                upstreamProjectfile,
+		"docs/FEATURES.md":    upstreamDoc("### Entry", "", "See [use](how-to/use.md#top) and [web](https://w.test/)."),
+		"docs/es/FEATURES.md": upstreamDoc("### Entrada", "", "Ver [uso](../how-to/use.md)."),
+	}, "v1.0.0")
+	cop, translated, err := fetchParent(context.Background(), pfmodel.FragmentParent{URL: url}, "docs/FEATURES.md", []string{"es"})
+	require.NoError(t, err)
+	assert.Equal(t, "https://github.com/o/parent/blob/HEAD/", cop.PagePrefix)
+	assert.Contains(t, cop.Body, "[use](https://github.com/o/parent/blob/HEAD/docs/how-to/use.md#top) and [web](https://w.test/)")
+	assert.Contains(t, translated["es"].Body, "[uso](https://github.com/o/parent/blob/HEAD/docs/how-to/use.md)")
+}
+
+// upstreamProjectfile is a parent declaring a public GitHub page and a preferred unknown forge.
+const upstreamProjectfile = `identity:
+  title: Parent
+links:
+  - type: source-code
+    url: https://git.example.test/o/parent
+    preferred: true
+  - type: source-code
+    url: https://github.com/o/parent
+    tags: [public]
+`
+
+// TestRebaseInherited pins each link shape: same directory, parent directory, fragment, outside the tree, fenced code, absolute, anchor and no forge.
+func TestRebaseInherited(t *testing.T) {
+	const prefix = "https://codeberg.org/o/p/src/"
+	body := "[a](a.md) [b](../b.md#x) [c](<c d.md>) [out](../../../x.md) [w](https://w.test/) [h](#h) [r](/r.md)\n```\n[f](f.md)\n```\n"
+	got := rebaseInherited(body, "docs/FEATURES.md", prefix, "o/p")
+	assert.Equal(t, "[a]("+prefix+"docs/a.md) [b]("+prefix+"b.md#x) [c](<"+prefix+"docs/c%20d.md>) [out](../../../x.md) [w](https://w.test/) [h](#h) [r](/r.md)\n```\n[f](f.md)\n```\n", got)
+	assert.Equal(t, body, rebaseInherited(body, "docs/FEATURES.md", "", "o/p"), "a parent without a known forge keeps its links")
+}

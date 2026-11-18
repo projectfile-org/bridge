@@ -11,8 +11,10 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net/url"
 	"os/exec"
 	"path"
+	"path/filepath"
 	"regexp"
 	"sort"
 	"strings"
@@ -23,7 +25,9 @@ import (
 	"go.yaml.in/yaml/v3"
 	"kiota.ch/projectfile/core/v2/pkg/genlog"
 	"kiota.ch/projectfile/core/v2/pkg/netfetch"
+	"kiota.ch/projectfile/core/v2/pkg/projectfile"
 	"projectfile.org/projectfile/bridge/v4/internal/bridge/core"
+	"projectfile.org/projectfile/bridge/v4/internal/derive/forges"
 	"projectfile.org/projectfile/bridge/v4/internal/pfmodel"
 	"projectfile.org/projectfile/bridge/v4/internal/warn"
 )
@@ -201,7 +205,7 @@ var fetchParent = func(ctx context.Context, parent pfmodel.FragmentParent, docum
 	var body string
 	var bodyErr error
 	var batch map[string]string
-	var title string
+	var meta parentMeta
 	var wg sync.WaitGroup
 	wg.Add(3)
 	go func() {
@@ -214,13 +218,15 @@ var fetchParent = func(ctx context.Context, parent pfmodel.FragmentParent, docum
 	}()
 	go func() {
 		defer wg.Done()
-		title = parentTitle(ctx, parent.URL, aref)
+		meta = parentMetadata(ctx, parent.URL, aref)
 	}()
 	wg.Wait()
 	// A parent that keeps the document at its root publishes it under the bare basename.
+	docPath := document
 	if errors.Is(bodyErr, errNotPublished) && path.Base(document) != document {
 		genlog.Debug("fragments: parent misses document, trying its root", "parent", name, "document", document)
-		body, bodyErr = fetchDocument(ctx, parent.URL, aref, path.Base(document))
+		docPath = path.Base(document)
+		body, bodyErr = fetchDocument(ctx, parent.URL, aref, docPath)
 	}
 	if bodyErr != nil {
 		return inheritedCopy{}, nil, bodyErr
@@ -235,14 +241,15 @@ var fetchParent = func(ctx context.Context, parent pfmodel.FragmentParent, docum
 	}
 
 	cop := inheritedCopy{
-		Name:     name,
-		Title:    title,
-		URL:      parent.URL,
-		Ref:      ref,
-		Commit:   commit,
-		Document: document,
-		SPDX:     spdx,
-		Body:     normalizeInherited(rest),
+		Name:       name,
+		Title:      meta.title,
+		URL:        parent.URL,
+		Ref:        ref,
+		Commit:     commit,
+		Document:   document,
+		SPDX:       spdx,
+		Body:       rebaseInherited(normalizeInherited(rest), docPath, meta.pagePrefix, name),
+		PagePrefix: meta.pagePrefix,
 	}
 	return cop, translationsFromBatch(ctx, parent, cop, aref, document, langs, batch), nil
 }
@@ -329,7 +336,7 @@ func localizedCopyFromBody(canonical inheritedCopy, lang, path, body string) (in
 	}
 	cop := canonical
 	cop.SPDX = spdx
-	cop.Body = normalizeInherited(rest)
+	cop.Body = rebaseInherited(normalizeInherited(rest), path, canonical.PagePrefix, canonical.Name)
 	cop.Document = path
 	cop.Lang = lang
 	return cop, nil
@@ -338,8 +345,14 @@ func localizedCopyFromBody(canonical inheritedCopy, lang, path, body string) (in
 // refCache memoizes which version of a parent to read, keyed by repository plus wanted ref.
 var refCache sync.Map // string → refResult
 
-// titleCache memoizes what the parent calls itself, keyed by repository plus archive ref.
-var titleCache sync.Map // string → string
+// titleCache memoizes what the parent calls itself and where its files are read, keyed by repository plus archive ref.
+var titleCache sync.Map // string → parentMeta
+
+// parentMeta is what a child reads from its parent’s projectfile: its title and the public page prefix of its files.
+type parentMeta struct {
+	title      string
+	pagePrefix string
+}
 
 // refMu serializes concurrent first misses so one shared parent resolves once.
 var refMu sync.Mutex
@@ -361,22 +374,27 @@ type refResult struct {
 // parent by owner/repo — which the URL always yields. A parent that publishes
 // no projectfile, or one that omits the title, stays inheritable.
 func parentTitle(ctx context.Context, repoURL, ref string) string {
+	return parentMetadata(ctx, repoURL, ref).title
+}
+
+// parentMetadata memoizes parentMetaUncached per repository and ref.
+func parentMetadata(ctx context.Context, repoURL, ref string) parentMeta {
 	key := repoURL + "\x00" + ref
 	if v, ok := titleCache.Load(key); ok {
-		return v.(string)
+		return v.(parentMeta)
 	}
 	titleMu.Lock()
 	defer titleMu.Unlock()
 	if v, ok := titleCache.Load(key); ok {
-		return v.(string)
+		return v.(parentMeta)
 	}
-	title := parentTitleUncached(ctx, repoURL, ref)
-	titleCache.Store(key, title)
-	return title
+	meta := parentMetaUncached(ctx, repoURL, ref)
+	titleCache.Store(key, meta)
+	return meta
 }
 
-// parentTitleUncached tries each projectfile encoding in turn for the parent's title.
-func parentTitleUncached(ctx context.Context, repoURL, ref string) string {
+// parentMetaUncached tries each projectfile encoding in turn for the parent's title and public forge.
+func parentMetaUncached(ctx context.Context, repoURL, ref string) parentMeta {
 	for _, name := range projectfileNames {
 		body, err := fetchDocument(ctx, repoURL, ref, name)
 		switch {
@@ -385,14 +403,48 @@ func parentTitleUncached(ctx context.Context, repoURL, ref string) string {
 		case err != nil:
 			genlog.Debug("fragments: parent projectfile unreadable, naming the parent by repository",
 				"parent", repoURL, "file", name, "error", err.Error())
-			return ""
+			return parentMeta{}
 		}
-		title := identityTitle([]byte(body), name)
-		genlog.Debug("fragments: read the parent title", "parent", repoURL, "file", name, "title", title)
-		return title
+		meta := parentMeta{title: identityTitle([]byte(body), name), pagePrefix: pagePrefix([]byte(body), name)}
+		genlog.Debug("fragments: read the parent title", "parent", repoURL, "file", name, "title", meta.title, "pages", meta.pagePrefix)
+		return meta
 	}
 	genlog.Debug("fragments: parent publishes no projectfile, naming it by repository", "parent", repoURL)
-	return ""
+	return parentMeta{}
+}
+
+// pagePrefix is the public forge page every parent file path is appended to, read from the parent’s own links; "" when it declares no known forge.
+func pagePrefix(body []byte, name string) string {
+	raw, err := projectfile.ReadRawFromBytes(name, body)
+	if err != nil {
+		genlog.Debug("fragments: parent projectfile did not parse, its links stay relative", "file", name, "error", err.Error())
+		return ""
+	}
+	doc := projectfile.FromMap(raw)
+	var kinds map[string]string
+	if ext, err := pfmodel.GetForgeExtension(doc); err == nil && ext != nil {
+		kinds = ext.Kinds
+	}
+	return forges.FileURL(doc, kinds)("")
+}
+
+// rebaseInherited points every relative link of a parent’s body, read from docPath, at the parent’s public forge page.
+func rebaseInherited(body, docPath, prefix, parent string) string {
+	return string(core.RewriteLinks([]byte(body), func(raw string) string {
+		if !core.IsRelativeLink(raw) {
+			return raw
+		}
+		target, suffix := core.SplitLinkSuffix(raw)
+		if decoded, err := url.PathUnescape(target); err == nil {
+			target = decoded
+		}
+		resolved := path.Clean(path.Join(path.Dir(docPath), target))
+		if prefix == "" || !filepath.IsLocal(filepath.FromSlash(resolved)) {
+			genlog.Warn("fragments: inherited link left relative to the parent", "parent", parent, "target", raw)
+			return raw
+		}
+		return prefix + (&url.URL{Path: resolved}).EscapedPath() + suffix
+	}))
 }
 
 // identityTitle pulls identity.title out of one projectfile. Only the document
