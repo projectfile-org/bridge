@@ -87,6 +87,7 @@ type bookToml struct {
 	Output struct {
 		HTML struct {
 			GitRepositoryURL string `toml:"git-repository-url,omitempty"`
+			SidebarHeaderNav bool   `toml:"sidebar-header-nav"` // false: the sidebar lists chapters, never a page’s headings
 		} `toml:"html"`
 	} `toml:"output"`
 }

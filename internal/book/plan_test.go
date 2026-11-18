@@ -176,7 +176,7 @@ func TestFallbackNoteFallsBackToEnglish(t *testing.T) {
 	assert.Equal(t, "> This page is not translated yet.\n\n", FallbackNote("pt-BR"))
 }
 
-// TestTomlNamesTheBookAndItsSources pins book.toml: title, language, source root and repository link.
+// TestTomlNamesTheBookAndItsSources pins book.toml: title, language, source root, repository link and a heading-free sidebar.
 func TestTomlNamesTheBookAndItsSources(t *testing.T) {
 	pf := &projectfile.Document{Repositories: []projectfile.Repository{{URL: "https://kiota.ch/o/tool"}}}
 	got, err := Toml(Book{Lang: langES, Title: `Herra "mienta"`}, pf, "src")
@@ -189,5 +189,6 @@ src = 'src'
 [output]
 [output.html]
 git-repository-url = 'https://kiota.ch/o/tool'
+sidebar-header-nav = false
 `, string(got))
 }
