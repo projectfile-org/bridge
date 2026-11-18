@@ -29,6 +29,9 @@ const (
 	groupOther     = "other"
 )
 
+// licenseFile is the repository licence the License section links.
+const licenseFile = "LICENSE"
+
 // linkTypeSourceCode is the `links[].type` value for a source-code mirror —
 // the most common link type in the fleet, declared once so the production map
 // and the tests share one literal (goconst).

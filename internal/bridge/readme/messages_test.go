@@ -61,8 +61,8 @@ func TestCatalogBodyPlaceholders(t *testing.T) {
 				continue
 			}
 			if key == "license.body" {
-				assert.Equalf(t, 1, strings.Count(msg, "%s"),
-					"messages/%s.yaml: %q must carry exactly one %%s", lang, key)
+				assert.Equalf(t, 2, strings.Count(msg, "%s"),
+					"messages/%s.yaml: %q must carry the SPDX expression and the LICENSE link", lang, key)
 				continue
 			}
 			assert.Equalf(t, 1, strings.Count(msg, "%[1]s"),

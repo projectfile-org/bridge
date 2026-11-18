@@ -49,3 +49,10 @@ func TestUpstreamUnresolvedVersionOmitted(t *testing.T) {
 	assert.Contains(t, out, "This project packages PostgreSQL (its own license).\n")
 	assert.NotContains(t, out, "Thanks to")
 }
+
+// TestLicenseLinkResolvesFromEachVariant: a docs/<lang>/ readme links the repository LICENSE from its own directory.
+func TestLicenseLinkResolvesFromEachVariant(t *testing.T) {
+	out := renderLangBody(t, t.TempDir(), minimalDoc(t), langES)
+
+	assert.Contains(t, out, "consulta el archivo [LICENSE](../../LICENSE) para más detalles.")
+}

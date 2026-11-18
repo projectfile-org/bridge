@@ -43,8 +43,8 @@ links.title: Enlaces
 funding.title: Financiación
 funding.body: Consulta [%[1]s](%[2]s) si quieres apoyar este proyecto.
 license.title: Licencia
-license.body: Este proyecto se publica bajo la licencia %s — consulta el archivo [LICENSE](LICENSE) para más detalles.
-license.body.upstream: El empaquetado de este repositorio se publica bajo la licencia %s — consulta el archivo [LICENSE](LICENSE) para más detalles.
+license.body: Este proyecto se publica bajo la licencia %s — consulta el archivo [LICENSE](%s) para más detalles.
+license.body.upstream: El empaquetado de este repositorio se publica bajo la licencia %s — consulta el archivo [LICENSE](%s) para más detalles.
 upstream.title: Proyecto original
 upstream.packages: "Este proyecto empaqueta %[1]s (%[2]s)."
 upstream.fork: "Este proyecto es una bifurcación de %[1]s (%[2]s)."

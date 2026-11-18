@@ -51,8 +51,8 @@ links.title: Links
 funding.title: Funding
 funding.body: See [%[1]s](%[2]s) if you’d like to support this project.
 license.title: License
-license.body: This project is licensed under %s — see the [LICENSE](LICENSE) file for details.
-license.body.upstream: The packaging in this repository is licensed under %s — see the [LICENSE](LICENSE) file for details.
+license.body: This project is licensed under %s — see the [LICENSE](%s) file for details.
+license.body.upstream: The packaging in this repository is licensed under %s — see the [LICENSE](%s) file for details.
 upstream.title: Upstream
 upstream.packages: "This project packages %[1]s (%[2]s)."
 upstream.fork: "This project is a fork of %[1]s (%[2]s)."
