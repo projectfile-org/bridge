@@ -6,6 +6,7 @@ package forges
 
 import (
 	"net/url"
+	"slices"
 
 	"kiota.ch/projectfile/core/v2/pkg/genlog"
 	"kiota.ch/projectfile/core/v2/pkg/projectfile"
@@ -16,10 +17,13 @@ import (
 // AliasPublic is the alias of a source-code link tagged public, the mirror a stranger can read.
 const AliasPublic = "public"
 
-// FileURL returns the builder of a repository path’s page on pf’s public forge (the `public` remote, else the preferred one), at the origin’s declared branch or the forge’s default; it yields "" without a known forge.
+// FileURL returns the builder of a repository path’s page on pf’s public forge (a preferred link tagged public, else the `public` remote, else the preferred one), at the origin’s declared branch or the forge’s default; it yields "" without a known forge.
 func FileURL(pf *projectfile.Document, kinds map[string]string) func(rel string) string {
+	remote := preferredPublic(pf, kinds)
 	remotes := Remotes(pf, kinds)
-	remote, _ := remotes[AliasPublic].(map[string]any)
+	if remote == nil {
+		remote, _ = remotes[AliasPublic].(map[string]any)
+	}
 	if remote == nil {
 		remote, _ = remotes[AliasPreferred].(map[string]any)
 	}
@@ -54,4 +58,20 @@ func orHead(branch string) string {
 		return "HEAD"
 	}
 	return branch
+}
+
+// preferredPublic returns the coordinates of the source-code link both preferred and tagged public, nil when none is.
+func preferredPublic(pf *projectfile.Document, kinds map[string]string) map[string]any {
+	if pf == nil {
+		return nil
+	}
+	for _, link := range pf.Links {
+		if link.Type != projectfile.LinkSourceCode || !link.Preferred || !slices.Contains(pfmodel.LinkTags(link), AliasPublic) {
+			continue
+		}
+		if _, remote := coordinates(link.URL, kinds); remote != nil {
+			return remote
+		}
+	}
+	return nil
 }

@@ -38,3 +38,16 @@ func TestFileURL(t *testing.T) {
 	}
 	assert.Empty(t, FileURL(&projectfile.Document{}, nil)("LICENSE"), "no source-code link, no forge page")
 }
+
+// TestFileURLPrefersAPreferredPublicLink: a preferred link tagged public beats a higher-priority public one, which beats a preferred private one.
+func TestFileURLPrefersAPreferredPublicLink(t *testing.T) {
+	public := map[string]any{"tags": []any{AliasPublic}}
+	ranked := map[string]any{"tags": []any{AliasPublic}, "priority": 90}
+	pf := &projectfile.Document{Links: []projectfile.Link{
+		{Type: projectfile.LinkSourceCode, URL: codeberg, Extra: ranked},
+		{Type: projectfile.LinkSourceCode, URL: gitHub, Preferred: true, Extra: public},
+	}}
+	assert.Equal(t, gitHub+"/blob/HEAD/LICENSE", FileURL(pf, nil)("LICENSE"))
+	pf.Links[1].Extra = nil
+	assert.Equal(t, codeberg+"/src/LICENSE", FileURL(pf, nil)("LICENSE"), "without a preferred public link the public alias wins")
+}
