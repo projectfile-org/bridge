@@ -26,8 +26,10 @@ const indexPage = "index.md"
 
 // Chapter is one SUMMARY.md entry; an empty Path is an mdBook draft chapter.
 type Chapter struct {
-	Title    string
-	Path     string
+	Title string
+	Path  string
+	// Origin is the project-relative file a project page is read from, a docs/<lang>/ variant included; empty for a rendered page.
+	Origin   string
 	Source   string
 	Fallback bool
 	// Extras is the project-relative hand-written page appended to a rendered one, docs/<name>.d/<id>.md.
@@ -142,11 +144,13 @@ func expand(dir, pattern string, claimed map[string]bool) []string {
 	return out
 }
 
-// page resolves rel for lang: the docs/<lang>/ variant at its own path, so its relative links hold, else the canonical page marked Fallback.
+// page resolves rel for lang at its canonical book path: read from the docs/<lang>/ variant, else from the canonical page marked Fallback.
 func page(dir, rel, lang string) (Chapter, bool) {
 	if lang != "" {
 		if loc := core.LocalizedFilename(rel, lang); exists(dir, loc) {
-			return chapter(dir, loc, false), true
+			c := chapter(dir, loc, false)
+			c.Path = rel
+			return c, true
 		}
 	}
 	if !exists(dir, rel) {
@@ -165,7 +169,7 @@ func chapter(dir, rel string, fallback bool) Chapter {
 	if title == "" {
 		title = strings.TrimSuffix(path.Base(rel), path.Ext(rel))
 	}
-	return Chapter{Title: title, Path: rel, Source: filepath.Join(dir, filepath.FromSlash(rel)), Fallback: fallback}
+	return Chapter{Title: title, Path: rel, Origin: rel, Source: filepath.Join(dir, filepath.FromSlash(rel)), Fallback: fallback}
 }
 
 // collection plans one rendered collection as a chapter titled by its declaration, with the rendered tree under it.
@@ -222,7 +226,7 @@ func folder(abs, rel, title string) Chapter {
 			c.Children = append(c.Children, folder(filepath.Join(abs, name), path.Join(rel, name), name))
 		case name != indexPage && strings.EqualFold(path.Ext(name), ".md"):
 			child := chapter(abs, name, false)
-			child.Path = path.Join(rel, name)
+			child.Path, child.Origin = path.Join(rel, name), ""
 			c.Children = append(c.Children, child)
 		default:
 			genlog.Debug("page collection entry skipped", "dir", abs, "entry", name)

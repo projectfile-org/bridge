@@ -42,8 +42,8 @@ func TestStageWritesEveryLanguage(t *testing.T) {
 	assert.Equal(t, "# All rules\n", read(t, out, "en/src/pages/rules/index.md"))
 	assert.Equal(t, "no heading\n", read(t, out, "en/src/docs/how-to/beta.md"), "the default book carries no note")
 
-	assert.Contains(t, read(t, out, "es/src/SUMMARY.md"), "[Herramienta](docs/es/README.md)")
-	assert.Equal(t, "# Herramienta\n", read(t, out, "es/src/docs/es/README.md"))
+	assert.Contains(t, read(t, out, "es/src/SUMMARY.md"), "[Herramienta](README.md)")
+	assert.Equal(t, "# Herramienta\n", read(t, out, "es/src/README.md"), "a variant is staged at its canonical path")
 	assert.Equal(t, "> Esta página aún no está traducida.\n\nno heading\n", read(t, out, "es/src/docs/how-to/beta.md"))
 	assert.Equal(t, "# Todas las reglas\n", read(t, out, "es/src/pages/rules/index.md"))
 }

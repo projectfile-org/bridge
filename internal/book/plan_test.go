@@ -116,23 +116,26 @@ func TestSummaryOfTheDefaultLanguage(t *testing.T) {
 `, string(Summary(b)))
 }
 
-// TestTranslatedBookKeepsEachPagePath pins the language book: a variant stays at docs/<lang>/, a fallback at its canonical path.
-func TestTranslatedBookKeepsEachPagePath(t *testing.T) {
+// TestTranslatedBookUsesCanonicalPaths pins the language book: every page at its canonical path, read from its docs/<lang>/ variant or from the canonical page as a fallback.
+func TestTranslatedBookUsesCanonicalPaths(t *testing.T) {
 	in, pf := fixture(t)
 	b, err := Plan(in, pf, langES)
 	require.NoError(t, err)
 	assert.Equal(t, "Herramienta", b.Title)
 	require.NotNil(t, b.Intro)
-	assert.Equal(t, "docs/es/README.md", b.Intro.Path)
+	assert.Equal(t, readmeMD, b.Intro.Path)
+	assert.Equal(t, "docs/es/README.md", b.Intro.Origin)
 	assert.Equal(t, filepath.Join(in.Dir, "docs", langES, readmeMD), b.Intro.Source)
 	assert.False(t, b.Intro.Fallback)
 	assert.Equal(t, "Funciones", b.Parts[0].Title)
 	assert.Equal(t, "Características", b.Parts[0].Chapters[0].Title)
 	guide := b.Parts[1].Chapters[0]
 	assert.Equal(t, "docs/how-to/beta.md", guide.Path)
+	assert.Equal(t, "docs/how-to/beta.md", guide.Origin)
 	assert.Equal(t, filepath.Join(in.Dir, "docs", "how-to", "beta.md"), guide.Source)
 	assert.True(t, guide.Fallback, "an untranslated page stands in for its translation")
 	assert.Equal(t, "Reglas", b.Parts[2].Chapters[1].Title)
+	assert.Empty(t, b.Parts[2].Chapters[1].Origin, "a rendered page has no project source")
 }
 
 // TestBookWithoutPartsIsItsIntroduction pins the smallest book: a README and no conventions.
