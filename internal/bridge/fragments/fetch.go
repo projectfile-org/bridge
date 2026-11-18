@@ -248,10 +248,21 @@ var fetchParent = func(ctx context.Context, parent pfmodel.FragmentParent, docum
 		Commit:     commit,
 		Document:   document,
 		SPDX:       spdx,
-		Body:       rebaseInherited(normalizeInherited(rest), docPath, meta.pagePrefix, name),
+		Body:       normalizeInherited(rest),
 		PagePrefix: meta.pagePrefix,
 	}
-	return cop, translationsFromBatch(ctx, parent, cop, aref, document, langs, batch), nil
+	translated := translationsFromBatch(ctx, parent, cop, aref, document, langs, batch)
+	bodies := map[string]string{docPath: cop.Body}
+	for _, lc := range translated {
+		bodies[lc.Document] = lc.Body
+	}
+	files := parentFiles(ctx, parent.URL, aref, candidateDirs(bodies))
+	cop.Body = rebaseInherited(cop.Body, docPath, cop.PagePrefix, name, files)
+	for lang, lc := range translated {
+		lc.Body = rebaseInherited(lc.Body, lc.Document, cop.PagePrefix, name, files)
+		translated[lang] = lc
+	}
+	return cop, translated, nil
 }
 
 // fetchExtrasBatch reads one parent's localized documents in a single archive call, yielding nil when any language misses so the caller falls back to per-file reads.
@@ -336,7 +347,7 @@ func localizedCopyFromBody(canonical inheritedCopy, lang, path, body string) (in
 	}
 	cop := canonical
 	cop.SPDX = spdx
-	cop.Body = rebaseInherited(normalizeInherited(rest), path, canonical.PagePrefix, canonical.Name)
+	cop.Body = normalizeInherited(rest)
 	cop.Document = path
 	cop.Lang = lang
 	return cop, nil
@@ -428,8 +439,86 @@ func pagePrefix(body []byte, name string) string {
 	return forges.FileURL(doc, kinds)("")
 }
 
-// rebaseInherited points every relative link of a parent’s body, read from docPath, at the parent’s public forge page.
-func rebaseInherited(body, docPath, prefix, parent string) string {
+// linkCandidates are the parent paths a relative link of the document at docPath may name: from the document, then from its <stem>.d/ fragment directory.
+func linkCandidates(docPath, target string) []string {
+	dir := path.Dir(docPath)
+	fragDir := path.Join(dir, strings.ToLower(strings.TrimSuffix(path.Base(docPath), path.Ext(docPath)))+".d")
+	var out []string
+	for _, base := range []string{dir, fragDir} {
+		if c := path.Clean(path.Join(base, target)); filepath.IsLocal(filepath.FromSlash(c)) {
+			out = append(out, c)
+		}
+	}
+	return out
+}
+
+// relativeTargets lists the decoded path of every relative link in body, fragments and queries dropped.
+func relativeTargets(body string) []string {
+	var out []string
+	core.RewriteLinks([]byte(body), func(raw string) string {
+		if core.IsRelativeLink(raw) {
+			target, _ := core.SplitLinkSuffix(raw)
+			if decoded, err := url.PathUnescape(target); err == nil {
+				out = append(out, decoded)
+			}
+		}
+		return raw
+	})
+	return out
+}
+
+// candidateDirs collects, sorted, the parent directories every link candidate of bodies (keyed by document path) sits in.
+func candidateDirs(bodies map[string]string) []string {
+	set := map[string]bool{}
+	for docPath, body := range bodies {
+		for _, target := range relativeTargets(body) {
+			for _, c := range linkCandidates(docPath, target) {
+				set[path.Dir(c)] = true
+			}
+		}
+	}
+	dirs := make([]string, 0, len(set))
+	for d := range set {
+		dirs = append(dirs, d)
+	}
+	sort.Strings(dirs)
+	return dirs
+}
+
+// parentFiles lists every file and directory under dirs at ref, one archive per directory; nil when the parent could not be read.
+func parentFiles(ctx context.Context, repoURL, aref string, dirs []string) map[string]bool {
+	files := map[string]bool{}
+	for _, dir := range dirs {
+		if dir == "." {
+			continue
+		}
+		out, err := runGit(ctx, "archive", "--format=tar", "--remote="+repoURL, aref, dir)
+		if err != nil {
+			if strings.Contains(err.Error(), "did not match any files") {
+				genlog.Debug("fragments: parent has no such directory", "parent", repoURL, "dir", dir)
+				continue
+			}
+			genlog.Warn("fragments: parent tree unreadable, inherited links stay unverified", "parent", repoURL, "dir", dir, "error", err.Error())
+			return nil
+		}
+		reader := tar.NewReader(strings.NewReader(out))
+		for {
+			header, err := reader.Next()
+			if err != nil {
+				break
+			}
+			name := strings.TrimSuffix(header.Name, "/")
+			for p := name; p != "." && p != "" && !files[p]; p = path.Dir(p) {
+				files[p] = true
+			}
+		}
+		genlog.Debug("fragments: listed parent directory", "parent", repoURL, "dir", dir, "entries", len(files))
+	}
+	return files
+}
+
+// rebaseInherited points every relative link of a parent’s body, read from docPath, at the first candidate the parent carries on its public forge; files nil leaves the document-relative candidate unverified.
+func rebaseInherited(body, docPath, prefix, parent string, files map[string]bool) string {
 	return string(core.RewriteLinks([]byte(body), func(raw string) string {
 		if !core.IsRelativeLink(raw) {
 			return raw
@@ -438,12 +527,26 @@ func rebaseInherited(body, docPath, prefix, parent string) string {
 		if decoded, err := url.PathUnescape(target); err == nil {
 			target = decoded
 		}
-		resolved := path.Clean(path.Join(path.Dir(docPath), target))
-		if prefix == "" || !filepath.IsLocal(filepath.FromSlash(resolved)) {
-			genlog.Warn("fragments: inherited link left relative to the parent", "parent", parent, "target", raw)
+		candidates := linkCandidates(docPath, target)
+		if prefix == "" || len(candidates) == 0 {
+			genlog.Warn("fragments: inherited link left relative to the parent", "parent", parent, "target", raw, "forge", prefix)
 			return raw
 		}
-		return prefix + (&url.URL{Path: resolved}).EscapedPath() + suffix
+		chosen := ""
+		for _, c := range candidates {
+			if files == nil || files[c] {
+				chosen = c
+				break
+			}
+		}
+		if chosen == "" {
+			genlog.Warn("fragments: inherited link names no file in the parent, left as is", "parent", parent, "document", docPath, "target", raw)
+			return raw
+		}
+		if files == nil {
+			genlog.Warn("fragments: inherited link rebased unverified", "parent", parent, "target", raw, "path", chosen)
+		}
+		return prefix + (&url.URL{Path: chosen}).EscapedPath() + suffix
 	}))
 }
 

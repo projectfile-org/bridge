@@ -30,6 +30,7 @@ const (
 	itestURL        = "https://example.test/b19/ubuntu"
 	itestRef        = "2.0.0"
 	outFeaturesName = "FEATURES.md"
+	featuresDir     = "docs/features.d"
 	itestFetched    = "### Fetched Feature\n\nFetched body."
 )
 
@@ -81,7 +82,7 @@ func itestStub(t *testing.T, fn func(parent pfmodel.FragmentParent, document str
 func TestLiveFetchRendersFetchedSectionsAndReplacesCommitted(t *testing.T) {
 	dir := t.TempDir()
 	doc := itestProject(t, dir, true)
-	itestFrag(t, dir, "docs/features.d", "Own Feature", "Own body.")
+	itestFrag(t, dir, featuresDir, "Own Feature", "Own body.")
 	itestFrag(t, dir, "docs/es/features.d", "Característica Propia", "Cuerpo propio.")
 	itestFrag(t, dir, "docs/uk/features.d", "Власна Можливість", "Власний текст.")
 	stale := itestSPDX + "\n\n# Features\n\n## Project Features\n\n### Own Feature\n\nOwn body.\n\n" +
@@ -119,7 +120,7 @@ func TestLiveFetchRendersFetchedSectionsAndReplacesCommitted(t *testing.T) {
 func TestLiveFetchFailureKeepsCommittedSections(t *testing.T) {
 	dir := t.TempDir()
 	doc := itestProject(t, dir, true)
-	itestFrag(t, dir, "docs/features.d", "Own Feature", "Own body.")
+	itestFrag(t, dir, featuresDir, "Own Feature", "Own body.")
 	committed := itestSPDX + "\n\n# Features\n\n## Project Features\n\n### Own Feature\n\nOwn body.\n\n" +
 		"## Inherited from b19/ubuntu 1.0.0\n\n### Committed Feature\n\nCommitted body.\n"
 	require.NoError(t, os.WriteFile(filepath.Join(dir, outFeaturesName), []byte(committed), 0o644))
@@ -140,7 +141,7 @@ func TestLiveFetchFailureKeepsCommittedSections(t *testing.T) {
 func TestLiveOfflineGenerateKeepsCommittedSections(t *testing.T) {
 	dir := t.TempDir()
 	doc := itestProject(t, dir, true)
-	itestFrag(t, dir, "docs/features.d", "Own Feature", "Own body.")
+	itestFrag(t, dir, featuresDir, "Own Feature", "Own body.")
 	committed := itestSPDX + "\n\n# Features\n\n## Project Features\n\n### Own Feature\n\nOwn body.\n\n" +
 		"## Inherited from b19/ubuntu 1.0.0\n\n### Committed Feature\n\nCommitted body.\n"
 	require.NoError(t, os.WriteFile(filepath.Join(dir, outFeaturesName), []byte(committed), 0o644))
@@ -164,7 +165,7 @@ func TestLiveOfflineGenerateKeepsCommittedSections(t *testing.T) {
 func TestOnlineRenderRoundTripsByteStable(t *testing.T) {
 	dir := t.TempDir()
 	doc := itestProject(t, dir, true)
-	itestFrag(t, dir, "docs/features.d", "Own Feature", "Own body.")
+	itestFrag(t, dir, featuresDir, "Own Feature", "Own body.")
 	itestFrag(t, dir, "docs/es/features.d", "Característica Propia", "Cuerpo propio.")
 	itestFrag(t, dir, "docs/uk/features.d", "Власна Можливість", "Власний текст.")
 
@@ -203,7 +204,7 @@ func TestOnlineRenderRoundTripsByteStable(t *testing.T) {
 // caller can preserve the committed sections instead of mixing.
 func TestFetchParentsReportsFailure(t *testing.T) {
 	doc := pfmodel.FragmentDocument{
-		Dir: "docs/features.d", Out: outFeaturesName, Title: "Features",
+		Dir: featuresDir, Out: outFeaturesName, Title: "Features",
 		Parents: []pfmodel.FragmentParent{{URL: itestURL}, {URL: "https://example.test/b19/other"}},
 	}
 	var calls atomic.Int32
@@ -227,7 +228,7 @@ func TestFetchParentsReportsFailure(t *testing.T) {
 // copy over them.
 func TestSectionsForFetchesUnprefetchedDocument(t *testing.T) {
 	doc := pfmodel.FragmentDocument{
-		Dir: "docs/features.d", Out: outFeaturesName, Title: "Features",
+		Dir: featuresDir, Out: outFeaturesName, Title: "Features",
 		Parents: []pfmodel.FragmentParent{{URL: itestURL}},
 	}
 	itestStub(t, func(pfmodel.FragmentParent, string, []string) (inheritedCopy, map[string]inheritedCopy, error) {

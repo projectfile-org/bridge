@@ -48,7 +48,7 @@ func TestRenderWarnsOnUnreadableLocalizedFragmentDir(t *testing.T) {
 	dir := t.TempDir()
 	doc := locProject(t, dir, []string{"es"},
 		"        - {dir: docs/features.d, out: FEATURES.md, title: Features}")
-	itestFrag(t, dir, "docs/features.d", "Own Feature", "Own body.")
+	itestFrag(t, dir, featuresDir, "Own Feature", "Own body.")
 	itestFrag(t, dir, "docs/es/features.d", "Característica Propia", "Cuerpo propio.")
 	// A .md entry that is a directory matches the glob but cannot be read.
 	require.NoError(t, os.MkdirAll(filepath.Join(dir, "docs/es/features.d", "blocked.md"), 0o755))
@@ -106,7 +106,7 @@ func TestOnlineUnpublishedParentRendersNothingInherited(t *testing.T) {
 	doc := locProject(t, dir, []string{"es"},
 		"        - dir: docs/features.d\n          out: FEATURES.md\n          title: Features\n"+
 			"          parents:\n            - {url: "+itestURL+"}\n")
-	itestFrag(t, dir, "docs/features.d", "Own Feature", "Own body.")
+	itestFrag(t, dir, featuresDir, "Own Feature", "Own body.")
 	itestFrag(t, dir, "docs/es/features.d", "Característica Propia", "Cuerpo propio.")
 	itestStub(t, func(pfmodel.FragmentParent, string, []string) (inheritedCopy, map[string]inheritedCopy, error) {
 		return inheritedCopy{}, nil, errNotPublished

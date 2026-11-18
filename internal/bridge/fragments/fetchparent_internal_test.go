@@ -162,13 +162,15 @@ func TestParentTitleReadsEachProjectfileEncoding(t *testing.T) {
 func TestFetchParentRebasesLinksOntoItsForge(t *testing.T) {
 	url := gitFixture(t, map[string]string{
 		pfYAML:                upstreamProjectfile,
-		"docs/FEATURES.md":    upstreamDoc("### Entry", "", "See [use](how-to/use.md#top) and [web](https://w.test/)."),
+		"docs/FEATURES.md":    upstreamDoc("### Entry", "", "See [use](how-to/use.md#top), [frag](../how-to/use.md), [gone](how-to/gone.md) and [web](https://w.test/)."),
+		"docs/how-to/use.md":  "# Use\n",
 		"docs/es/FEATURES.md": upstreamDoc("### Entrada", "", "Ver [uso](../how-to/use.md)."),
 	}, "v1.0.0")
 	cop, translated, err := fetchParent(context.Background(), pfmodel.FragmentParent{URL: url}, "docs/FEATURES.md", []string{"es"})
 	require.NoError(t, err)
 	assert.Equal(t, "https://github.com/o/parent/blob/HEAD/", cop.PagePrefix)
-	assert.Contains(t, cop.Body, "[use](https://github.com/o/parent/blob/HEAD/docs/how-to/use.md#top) and [web](https://w.test/)")
+	assert.Contains(t, cop.Body, "[use](https://github.com/o/parent/blob/HEAD/docs/how-to/use.md#top), [frag](https://github.com/o/parent/blob/HEAD/docs/how-to/use.md), [gone](how-to/gone.md) and [web](https://w.test/)",
+		"a link written from the fragment directory resolves there, and one naming no parent file stays as is")
 	assert.Contains(t, translated["es"].Body, "[uso](https://github.com/o/parent/blob/HEAD/docs/how-to/use.md)")
 }
 
@@ -184,11 +186,14 @@ links:
     tags: [public]
 `
 
-// TestRebaseInherited pins each link shape: same directory, parent directory, fragment, outside the tree, fenced code, absolute, anchor and no forge.
+// TestRebaseInherited pins each link shape: from the document, from its fragment directory, missing, outside the tree, fenced, absolute, anchor, no forge and an unread tree.
 func TestRebaseInherited(t *testing.T) {
 	const prefix = "https://codeberg.org/o/p/src/"
-	body := "[a](a.md) [b](../b.md#x) [c](<c d.md>) [out](../../../x.md) [w](https://w.test/) [h](#h) [r](/r.md)\n```\n[f](f.md)\n```\n"
-	got := rebaseInherited(body, "docs/FEATURES.md", prefix, "o/p")
-	assert.Equal(t, "[a]("+prefix+"docs/a.md) [b]("+prefix+"b.md#x) [c](<"+prefix+"docs/c%20d.md>) [out](../../../x.md) [w](https://w.test/) [h](#h) [r](/r.md)\n```\n[f](f.md)\n```\n", got)
-	assert.Equal(t, body, rebaseInherited(body, "docs/FEATURES.md", "", "o/p"), "a parent without a known forge keeps its links")
+	files := map[string]bool{"docs/a.md": true, "b.md": true, "docs/c d.md": true, "docs/how-to/u.md": true}
+	body := "[a](a.md) [b](../b.md#x) [c](<c d.md>) [u](../how-to/u.md) [m](missing.md) [out](../../../x.md) [w](https://w.test/) [h](#h) [r](/r.md)\n```\n[f](f.md)\n```\n"
+	got := rebaseInherited(body, "docs/FEATURES.md", prefix, "o/p", files)
+	assert.Equal(t, "[a]("+prefix+"docs/a.md) [b]("+prefix+"b.md#x) [c](<"+prefix+"docs/c%20d.md>) [u]("+prefix+"docs/how-to/u.md) [m](missing.md) [out](../../../x.md) [w](https://w.test/) [h](#h) [r](/r.md)\n```\n[f](f.md)\n```\n", got)
+	assert.Equal(t, body, rebaseInherited(body, "docs/FEATURES.md", "", "o/p", files), "a parent without a known forge keeps its links")
+	assert.Equal(t, "[m]("+prefix+"docs/missing.md)", rebaseInherited("[m](missing.md)", "docs/FEATURES.md", prefix, "o/p", nil), "an unread tree takes the document-relative path")
+	assert.Equal(t, []string{"docs", featuresDir, "docs/how-to", "how-to"}, candidateDirs(map[string]string{"docs/FEATURES.md": "[u](../how-to/u.md) [a](a.md)"}))
 }

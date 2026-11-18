@@ -119,7 +119,7 @@ func TestRebaseOwnLinks(t *testing.T) {
 	}
 	body := "[f](../how-to/use.md#x) [d](how-to/use.md) [s](<../how-to/a b.md>) [l](../../LICENSE) [m](../missing.md) [w](https://w.test/)\n```\n[c](../how-to/use.md)\n```"
 	assert.Equal(t, "[f](how-to/use.md#x) [d](how-to/use.md) [s](<how-to/a%20b.md>) [l](../LICENSE) [m](../missing.md) [w](https://w.test/)\n```\n[c](../how-to/use.md)\n```",
-		rebaseOwn(dir, "docs/features.d", "docs/FEATURES.md", body))
+		rebaseOwn(dir, featuresDir, "docs/FEATURES.md", body))
 	es := "[f](../../how-to/use.md) [d](../how-to/use.md)"
 	assert.Equal(t, "[f](../how-to/use.md) [d](../how-to/use.md)", rebaseOwn(dir, "docs/es/features.d", "docs/es/FEATURES.md", es))
 }
