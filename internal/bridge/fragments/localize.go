@@ -71,7 +71,7 @@ func resolveVariantLangs(projectDir string, doc pfmodel.FragmentDocument, langs 
 	}
 	out2 := make([]variantFragments, 0, len(langs))
 	for _, lang := range langs {
-		frags, err := loadFragments(projectDir, localizedFragDir(doc.Dir, lang))
+		frags, err := loadFragments(projectDir, localizedFragDir(doc.Dir, lang), core.LocalizedFilename(doc.Out, lang))
 		if err != nil {
 			genlog.Warn("unreadable localized fragment dir — language skipped",
 				"dir", localizedFragDir(doc.Dir, lang), "error", err.Error())

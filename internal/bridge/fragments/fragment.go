@@ -5,11 +5,16 @@
 package fragments
 
 import (
+	"net/url"
 	"os"
+	"path"
 	"path/filepath"
 	"regexp"
 	"sort"
 	"strings"
+
+	"kiota.ch/projectfile/core/v2/pkg/genlog"
+	"projectfile.org/projectfile/bridge/v4/internal/bridge/core"
 )
 
 // leadingSPDXRE matches a leading `<!-- … -->` REUSE HTML comment so the
@@ -73,8 +78,8 @@ func parseFragment(path string) (Fragment, error) {
 // loadFragments reads docs/<dir>/*.md from projectDir, sorted by path for
 // deterministic output regardless of filesystem glob order — load-bearing
 // for reproducible builds. Missing dir yields (nil, nil) (an empty
-// section, not an error).
-func loadFragments(projectDir, dir string) ([]Fragment, error) {
+// section, not an error). Each body's links are rebased onto out, the document it assembles into.
+func loadFragments(projectDir, dir, out string) ([]Fragment, error) {
 	absDir := filepath.Join(projectDir, dir)
 	entries, err := filepath.Glob(filepath.Join(absDir, "*.md"))
 	if err != nil {
@@ -86,13 +91,49 @@ func loadFragments(projectDir, dir string) ([]Fragment, error) {
 	sort.Slice(entries, func(i, j int) bool { // by stem, so a.md precedes a-b.md
 		return strings.TrimSuffix(entries[i], ".md") < strings.TrimSuffix(entries[j], ".md")
 	})
-	out := make([]Fragment, 0, len(entries))
+	frags := make([]Fragment, 0, len(entries))
 	for _, p := range entries {
 		f, err := parseFragment(p)
 		if err != nil {
 			return nil, err
 		}
-		out = append(out, f)
+		f.Body = rebaseOwn(projectDir, filepath.ToSlash(dir), out, f.Body)
+		frags = append(frags, f)
 	}
-	return out, nil
+	return frags, nil
+}
+
+// rebaseOwn points each relative link of a fragment in dir at the same file from out: read against the fragment first, then against out, whichever exists.
+func rebaseOwn(projectDir, dir, out, body string) string {
+	return string(core.RewriteLinks([]byte(body), func(raw string) string {
+		if !core.IsRelativeLink(raw) {
+			return raw
+		}
+		target, suffix := core.SplitLinkSuffix(raw)
+		decoded, err := url.PathUnescape(target)
+		if err != nil {
+			return raw
+		}
+		fromFragment := path.Clean(path.Join(dir, decoded))
+		if exists(projectDir, fromFragment) {
+			rebased := core.RelLink(fromFragment, out)
+			if rebased != target {
+				genlog.Debug("fragments: own link rebased onto the document", "dir", dir, "target", raw, "rebased", rebased)
+			}
+			return strings.ReplaceAll(rebased, " ", "%20") + suffix
+		}
+		if !exists(projectDir, path.Clean(path.Join(path.Dir(out), decoded))) {
+			genlog.Warn("fragments: own link resolves neither from its fragment nor from the document", "dir", dir, "target", raw)
+		}
+		return raw
+	}))
+}
+
+// exists reports whether the repository-relative rel names a file or directory inside projectDir.
+func exists(projectDir, rel string) bool {
+	if !filepath.IsLocal(filepath.FromSlash(rel)) {
+		return false
+	}
+	_, err := os.Stat(filepath.Join(projectDir, filepath.FromSlash(rel)))
+	return err == nil
 }

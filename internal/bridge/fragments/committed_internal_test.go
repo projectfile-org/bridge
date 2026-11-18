@@ -105,7 +105,21 @@ func TestShortCommitAbbreviatesForDisplay(t *testing.T) {
 // TestLoadFragmentsFailsOnMalformedPattern verifies a fragment dir whose glob
 // is malformed fails the load — the one error a call site can hand the reader.
 func TestLoadFragmentsFailsOnMalformedPattern(t *testing.T) {
-	_, err := loadFragments(t.TempDir(), "docs/[features.d")
+	_, err := loadFragments(t.TempDir(), "docs/[features.d", "docs/FEATURES.md")
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "syntax error in pattern")
+}
+
+// TestRebaseOwnLinks pins an own fragment’s links: written from the fragment, from the document, missing, fenced and absolute, in the canonical and a language document.
+func TestRebaseOwnLinks(t *testing.T) {
+	dir := t.TempDir()
+	for _, rel := range []string{"docs/how-to/use.md", "docs/how-to/a b.md", "LICENSE"} {
+		require.NoError(t, os.MkdirAll(filepath.Dir(filepath.Join(dir, rel)), 0o750))
+		require.NoError(t, os.WriteFile(filepath.Join(dir, rel), []byte("x"), 0o600))
+	}
+	body := "[f](../how-to/use.md#x) [d](how-to/use.md) [s](<../how-to/a b.md>) [l](../../LICENSE) [m](../missing.md) [w](https://w.test/)\n```\n[c](../how-to/use.md)\n```"
+	assert.Equal(t, "[f](how-to/use.md#x) [d](how-to/use.md) [s](<how-to/a%20b.md>) [l](../LICENSE) [m](../missing.md) [w](https://w.test/)\n```\n[c](../how-to/use.md)\n```",
+		rebaseOwn(dir, "docs/features.d", "docs/FEATURES.md", body))
+	es := "[f](../../how-to/use.md) [d](../how-to/use.md)"
+	assert.Equal(t, "[f](../how-to/use.md) [d](../how-to/use.md)", rebaseOwn(dir, "docs/es/features.d", "docs/es/FEATURES.md", es))
 }

@@ -109,7 +109,7 @@ func (Bridge) Render(pf *projectfile.Document, opts core.Options) (core.Output, 
 	reuse := core.REUSEHeader(pf, core.StyleHTML)
 	owns := make([][]Fragment, len(docs))
 	for i, doc := range docs {
-		own, err := loadFragments(opts.Dir, doc.Dir)
+		own, err := loadFragments(opts.Dir, doc.Dir, doc.Out)
 		if err != nil {
 			return core.Output{}, fmt.Errorf("%s: %w", doc.Out, err)
 		}
