@@ -18,6 +18,9 @@ import (
 // DocumentReadme is the document a shield declaring no `documents` renders on.
 const DocumentReadme = "readme"
 
+// DocumentContributing is the document CONTRIBUTING.md badges render on.
+const DocumentContributing = "contributing"
+
 // ciNS is where the CI matrix axes a badge must not name are declared.
 const ciNS = "org.projectfile.ci"
 
@@ -59,6 +62,7 @@ func Badges(doc *projectfile.Document, shields []pfmodel.Shield, document, lang 
 		if alt == "" {
 			alt = s.Name
 		}
+		href = rebaseHref(doc, href, document, lang)
 		r := resolvedShield{Badge{Alt: alt, Img: linkDestination(img), Href: linkDestination(href), Row: s.Row, Priority: pfmodel.RankOf(s.Priority)}, s.Documents}
 		if at, seen := position[s.Name]; seen {
 			genlog.DebugRow("badge", s.Name, "redeclared (last wins)", resolved[at].Img)
@@ -159,4 +163,27 @@ func namesMatrixAxis(s string, axes map[string][]string) bool {
 		}
 	}
 	return false
+}
+
+// documentFiles is the canonical file each badge-carrying document renders to.
+var documentFiles = map[string]string{DocumentReadme: FileReadme, DocumentContributing: FileContributing}
+
+// localizedSiblings are the files rendered per language, so a badge naming one links this language’s copy.
+var localizedSiblings = map[string]bool{FileReadme: true, FileContributing: true, FileCodeOfConduct: true, FileDEI: true, FileSecurity: true, FileSupport: true, FileAIPolicy: true}
+
+// rebaseHref rewrites a repo-relative badge href so it resolves from document’s lang variant under docs/<lang>/.
+func rebaseHref(doc *projectfile.Document, href, document, lang string) string {
+	file, ok := documentFiles[document]
+	if !ok || href == "" || strings.HasPrefix(href, "#") || strings.HasPrefix(href, "/") || strings.Contains(href, ":") {
+		return href
+	}
+	if lang == pfmodel.DefaultLanguage(doc) {
+		lang = ""
+	}
+	if localizedSiblings[href] {
+		return RelLinkSibling(href, lang, file)
+	}
+	rebased := RelLink(href, LocalizedFilename(file, lang))
+	genlog.Debug("badge href rebased", "document", document, "lang", lang, "href", href, "rebased", rebased)
+	return rebased
 }

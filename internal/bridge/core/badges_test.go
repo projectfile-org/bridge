@@ -98,3 +98,23 @@ func TestBadgeRowLabelNamesTheUnnamedRow(t *testing.T) {
 	assert.Equal(t, "(unnamed)", BadgeRowLabel(""))
 	assert.Equal(t, "top", BadgeRowLabel("top"))
 }
+
+// TestBadgeHrefRebasedPerLanguage: a repo-relative href resolves from docs/<lang>/, a localized sibling stays in its language, absolute ones are untouched.
+func TestBadgeHrefRebasedPerLanguage(t *testing.T) {
+	shields := []pfmodel.Shield{
+		{Name: badgeLicense, Img: "https://img.test/l", Href: "LICENSE"},
+		{Name: "prs", Img: "https://img.test/p", Href: FileContributing},
+		{Name: "cite", Img: "https://img.test/c", Href: "CITATION.cff", Documents: []string{DocumentContributing}},
+		{Name: "web", Img: "https://img.test/w", Href: "https://w.test/"},
+		{Name: "top", Img: "https://img.test/t", Href: "#top"},
+	}
+	assert.Equal(t, "[![license](https://img.test/l)](LICENSE) [![prs](https://img.test/p)](CONTRIBUTING.md) [![web](https://img.test/w)](https://w.test/) [![top](https://img.test/t)](#top)",
+		BadgeMarkdown(BadgeRows(nil, shields, DocumentReadme, "")), "the root readme keeps every href")
+	assert.Equal(t, "[![license](https://img.test/l)](LICENSE) [![prs](https://img.test/p)](CONTRIBUTING.md) [![web](https://img.test/w)](https://w.test/) [![top](https://img.test/t)](#top)",
+		BadgeMarkdown(BadgeRows(nil, shields, DocumentReadme, "en")), "the default language is the root readme")
+	assert.Equal(t, "[![license](https://img.test/l)](../../LICENSE) [![prs](https://img.test/p)](CONTRIBUTING.md) [![web](https://img.test/w)](https://w.test/) [![top](https://img.test/t)](#top)",
+		BadgeMarkdown(BadgeRows(nil, shields, DocumentReadme, "es")))
+	assert.Equal(t, "[![cite](https://img.test/c)](../../CITATION.cff)", BadgeMarkdown(BadgeRows(nil, shields, DocumentContributing, "es")))
+	other := []pfmodel.Shield{{Name: "cite", Img: "https://img.test/c", Href: "CITATION.cff", Documents: []string{"security"}}}
+	assert.Equal(t, "[![cite](https://img.test/c)](CITATION.cff)", BadgeMarkdown(BadgeRows(nil, other, "security", "es")), "a document without a known file is never rebased")
+}
