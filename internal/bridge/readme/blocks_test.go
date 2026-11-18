@@ -266,6 +266,53 @@ func TestDocumentationBlockListsHowToMarkdown(t *testing.T) {
 		"an article outside docs/how-to/ is not listed")
 }
 
+// TestDocumentationBlockNoDevelopDir verifies no contributor group renders without docs/develop/.
+func TestDocumentationBlockNoDevelopDir(t *testing.T) {
+	dir := t.TempDir()
+	writeFile(t, dir, "docs/how-to/deploy.md", "# Deploy\n")
+	body := renderDoc(t, dir, minimalDoc(t))
+	assert.Contains(t, body, "## Documentation")
+	assert.NotContains(t, body, "For contributors")
+}
+
+// TestDocumentationBlockEmptyDevelopDir verifies an empty docs/develop/ adds no group or block.
+func TestDocumentationBlockEmptyDevelopDir(t *testing.T) {
+	dir := t.TempDir()
+	writeFile(t, dir, "docs/develop/MAKEFILE.md", "# Makefile\n")
+	body := renderDoc(t, dir, minimalDoc(t))
+	assert.NotContains(t, body, "## Documentation")
+	assert.NotContains(t, body, "For contributors")
+}
+
+// TestDocumentationBlockDevelopOnly verifies one develop file renders under its own group.
+func TestDocumentationBlockDevelopOnly(t *testing.T) {
+	dir := t.TempDir()
+	writeFile(t, dir, "docs/develop/RUN-FROM-A-CHECKOUT.md", "# Run from a checkout\n")
+	body := renderDoc(t, dir, minimalDoc(t))
+	assert.Contains(t, body, "## Documentation\n\n### For contributors\n\n- [Run from a checkout](docs/develop/RUN-FROM-A-CHECKOUT.md)\n")
+}
+
+// TestDocumentationBlockHowToThenDevelop verifies the develop group follows the how-to entries and the Makefile reference is not listed twice.
+func TestDocumentationBlockHowToThenDevelop(t *testing.T) {
+	dir := t.TempDir()
+	writeFile(t, dir, "docs/how-to/deploy.md", "# Deploy\n")
+	writeFile(t, dir, "docs/develop/MAKEFILE.md", "# Makefile Targets\n")
+	writeFile(t, dir, "docs/develop/RUN-FROM-A-CHECKOUT.md", "# Run from a checkout\n")
+	body := renderDoc(t, dir, minimalDoc(t))
+	assert.Contains(t, body, "- [Deploy](docs/how-to/deploy.md)\n\n### For contributors\n\n- [Run from a checkout](docs/develop/RUN-FROM-A-CHECKOUT.md)\n")
+	assert.NotContains(t, body, "[Makefile Targets]")
+	assert.Equal(t, 1, strings.Count(body, "MAKEFILE.md"), "the Makefile reference is linked once, by the building block")
+	assert.Contains(t, body, "[Makefile reference](docs/develop/MAKEFILE.md)")
+}
+
+// TestDocumentationBlockDevelopLanguageVariant verifies a variant render localizes the group label and rebases links.
+func TestDocumentationBlockDevelopLanguageVariant(t *testing.T) {
+	dir := t.TempDir()
+	writeFile(t, dir, "docs/develop/RUN-FROM-A-CHECKOUT.md", "# Run from a checkout\n")
+	body := renderLangBody(t, dir, minimalDoc(t), "es")
+	assert.Contains(t, body, "## Documentación\n\n### Para colaboradores\n\n- [Run from a checkout](../develop/RUN-FROM-A-CHECKOUT.md)\n")
+}
+
 // TestLogoBlockFromDocsLogo verifies the logo block renders when an image
 // named logo.<ext> lives under docs/.
 func TestLogoBlockFromDocsLogo(t *testing.T) {

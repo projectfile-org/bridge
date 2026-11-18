@@ -30,6 +30,7 @@ building.intro.make: "Виконайте `make` без аргументів дл
 building.intro.dev: "Для локального циклу розробки `make dev-container` піднімає dev-container."
 building.doc: "Клонуйте репозиторій і виконайте `make` — кожен крок збирання, ціль і точка входу описані в [Збирання](%s)."
 documentation.title: Документація
+documentation.develop: Для контриб’юторів
 faq.title: Поширені запитання
 faq.body: Див. [%[1]s](%[2]s), щоб знайти відповіді на типові питання.
 roadmap.title: Дорожня карта

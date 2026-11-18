@@ -38,6 +38,7 @@ building.intro.dev: "For the local dev loop, `make dev-container` brings up the 
 # The whole Building section when it lives in docs/BUILD.md; %s is the link target.
 building.doc: "Clone the repository and run `make` — every build step, target and entry point is in [Building](%s)."
 documentation.title: Documentation
+documentation.develop: For contributors
 faq.title: FAQ
 faq.body: See [%[1]s](%[2]s) for common questions.
 roadmap.title: Roadmap

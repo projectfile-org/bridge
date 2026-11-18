@@ -443,10 +443,12 @@ var docMarkdownExcluded = map[string]bool{
 const (
 	docsDir           = "docs"
 	howToSubdir       = "how-to"
+	developSubdir     = "develop"
 	screenshotsSubdir = "screenshots"
 	logoBasename      = "logo"
 	mkDirAssets       = "assets"
 	makefileDocPath   = "docs/how-to/MAKEFILE.md"
+	makefileDevPath   = "docs/develop/MAKEFILE.md"
 	makefileDocKey    = "build.makefile"
 	buildDocFile      = "BUILD.md"
 	buildDocKey       = "build.build"
@@ -757,12 +759,12 @@ func probeHealthFiles(pf *projectfile.Document, dir, docPath, pathLang, strLang 
 	return out
 }
 
-// listDocsMarkdown lists every docs/how-to/*.md file as a static link,
+// listDocsMarkdown lists every docs/<subdir>/*.md file as a static link,
 // excluding the meta-docs in docMarkdownExcluded. Label is the file's first
 // Markdown heading, falling back to the humanized filename when the file has
-// no heading. Returns nil when docs/how-to/ is absent or empty.
-func listDocsMarkdown(dir, docPath string) []staticLink {
-	entries := readDir(dir, filepath.Join(docsDir, howToSubdir))
+// no heading. Returns nil when docs/<subdir>/ is absent or empty.
+func listDocsMarkdown(dir, docPath, subdir string) []staticLink {
+	entries := readDir(dir, filepath.Join(docsDir, subdir))
 	var out []staticLink
 	for _, e := range entries {
 		if e.IsDir() {
@@ -775,7 +777,7 @@ func listDocsMarkdown(dir, docPath string) []staticLink {
 		if docMarkdownExcluded[strings.ToLower(name)] {
 			continue
 		}
-		rel := filepath.Join(docsDir, howToSubdir, name)
+		rel := filepath.Join(docsDir, subdir, name)
 		label := core.FirstHeading(dir, rel)
 		if label == "" {
 			label = humanizeFilename(name)
@@ -786,15 +788,18 @@ func listDocsMarkdown(dir, docPath string) []staticLink {
 }
 
 // probeBuildLinks builds the multi-link building block: BUILD.md at the root
-// plus the generated Makefile reference at docs/how-to/MAKEFILE.md if either
-// exists.
+// plus the generated Makefile reference at docs/develop/MAKEFILE.md (or the
+// older docs/how-to/MAKEFILE.md) if either exists.
 func probeBuildLinks(dir, docPath, lang string) []staticLink {
 	var out []staticLink
 	if link := docLink(dir, docPath, buildDocFile, translate(lang, buildDocKey)); link != nil {
 		out = append(out, *link)
 	}
-	if fileExists(dir, makefileDocPath) {
-		out = append(out, staticLink{Name: makefileDocPath, Filename: core.RelLink(makefileDocPath, docPath), Label: translate(lang, makefileDocKey)})
+	for _, p := range []string{makefileDevPath, makefileDocPath} {
+		if fileExists(dir, p) {
+			out = append(out, staticLink{Name: p, Filename: core.RelLink(p, docPath), Label: translate(lang, makefileDocKey)})
+			break
+		}
 	}
 	return out
 }
@@ -1114,8 +1119,10 @@ func formatDecisionTrace(dir, lang string, v readmeView, ext *pfmodel.ReadmeExte
 	for _, s := range probeScreenshots(dir) {
 		genlog.DebugRow("screenshot", s.Path, "docs/screenshots probe", "")
 	}
-	for _, d := range listDocsMarkdown(dir, readmeDocPath(lang)) {
-		genlog.DebugRow("doc_link", d.Label+" → "+d.Filename, "docs/how-to/*.md probe", "")
+	for _, sub := range []string{howToSubdir, developSubdir} {
+		for _, d := range listDocsMarkdown(dir, readmeDocPath(lang), sub) {
+			genlog.DebugRow("doc_link", d.Label+" → "+d.Filename, "docs/"+sub+"/*.md probe", "")
+		}
 	}
 	for _, b := range probeBuildLinks(dir, readmeDocPath(lang), lang) {
 		genlog.DebugRow("build_link", b.Label+" → "+b.Filename, "BUILD/MAKEFILE probe", "")

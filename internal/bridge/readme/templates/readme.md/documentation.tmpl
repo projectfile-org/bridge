@@ -1,5 +1,9 @@
-{{- with docLinks}}
+{{- $how := docLinks}}{{$dev := developLinks}}{{if or $how $dev}}
 ## {{t "documentation.title"}}
 
+{{range $how}}- [{{.Label}}]({{.Filename}})
+{{end}}{{with $dev}}{{if $how}}
+{{end}}### {{t "documentation.develop"}}
+
 {{range .}}- [{{.Label}}]({{.Filename}})
-{{end}}{{end -}}
+{{end}}{{end}}{{end -}}

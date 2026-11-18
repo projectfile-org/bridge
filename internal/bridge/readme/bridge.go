@@ -369,10 +369,11 @@ func execBlockTemplate(name string, body []byte, data readmeView, dir string, ex
 			},
 			// logo / screenshots / docLinks / buildLinks probe the filesystem;
 			// each returns nil/empty when its directory is absent.
-			"logo":        func() []string { return probeLogo(dir) },
-			"screenshots": func() []screenshot { return probeScreenshots(dir) },
-			"docLinks":    func() []staticLink { return listDocsMarkdown(dir, data.DocPath) },
-			"buildLinks":  func() []staticLink { return probeBuildLinks(dir, data.DocPath, data.StrLang) },
+			"logo":         func() []string { return probeLogo(dir) },
+			"screenshots":  func() []screenshot { return probeScreenshots(dir) },
+			"docLinks":     func() []staticLink { return listDocsMarkdown(dir, data.DocPath, howToSubdir) },
+			"developLinks": func() []staticLink { return listDocsMarkdown(dir, data.DocPath, developSubdir) },
+			"buildLinks":   func() []staticLink { return probeBuildLinks(dir, data.DocPath, data.StrLang) },
 			// buildDocShort reports a readme whose Building section only links docs/BUILD.md.
 			"buildDocShort": func() bool { return data.BuildDocShort },
 			// buildDocLink is this language's docs/BUILD.md, relative to the document linking it.

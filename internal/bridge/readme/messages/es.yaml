@@ -30,6 +30,7 @@ building.intro.make: "Ejecuta `make` sin argumentos para el destino predetermina
 building.intro.dev: "Para el bucle de desarrollo local, `make dev-container` levanta el dev-container."
 building.doc: "Clona el repositorio y ejecuta `make`: cada paso de compilación, destino y punto de entrada está en [Compilación](%s)."
 documentation.title: Documentación
+documentation.develop: Para colaboradores
 faq.title: Preguntas frecuentes
 faq.body: Consulta [%[1]s](%[2]s) para las dudas más habituales.
 roadmap.title: Hoja de ruta
